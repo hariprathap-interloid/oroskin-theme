@@ -26,7 +26,7 @@ Build a **fully custom Shopify theme** from a Figma design for a brand called Or
 
 ## Read this first
 
-`d:\shopify-oroskin\dawn\SHOPIFY-LEARNING-ROADMAP.md` — a guide I built in a previous session. Most relevant parts:
+`SHOPIFY-LEARNING-ROADMAP.md` — a guide I built in a previous session. Most relevant parts:
 
 - **Part 9.4 / 9.5** — why Skeleton, and the Theme Store eligibility rules
 - **Part 19** — the full project plan: setup, architecture, the animation system with code, the milestone tables, and a "study this Dawn file" reference table
