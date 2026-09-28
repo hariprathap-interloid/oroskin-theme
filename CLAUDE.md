@@ -17,6 +17,9 @@ A fully custom Shopify theme for the brand **Oroskin**, built from a custom Figm
 2. **Dawn is a read-only reference** at `d:\shopify-oroskin\dawn`. **Read, don't copy.** Using the same Shopify APIs is fine. Copying Dawn's files, markup or JS classes is not.
 3. **Animations:** native `IntersectionObserver` + CSS `opacity`/`transform`, inside an `<animate-on-scroll>` web component. There is a global "Enable animations" setting plus a per-section style. Respect `prefers-reduced-motion`, never hide the hero/LCP content, and keep content visible without JS. GSAP only if an effect truly needs it, bundled in `assets/`, never from a CDN. See roadmap Part 19.4.
 4. **Scope: build every Theme Store–required feature during Phase 1**, inside its milestone. Oroskin adds no extra features beyond these; it only changes the design. Track them in `THEME-STORE-CHECKLIST.md`.
+5. **Fonts (2026-09-28):** every font comes from Shopify's free font library through `font_picker` settings, so the merchant can change them in the theme editor. The Figma uses **Canela Text Trial**, a paid font with a trial licence only, so it is not used. Defaults: headings `newsreader_n4` (closest free match to Canela Text), body `plus_jakarta_sans_n4` (closest to Satoshi). The logo is an image upload, with the shop name as a text fallback.
+6. **Parked features, awaiting design and client confirmation:** wishlist, custom account pages (overview/details/orders/track/refills/rewards/preferences), rewards, refills and the notification bell. Don't build them yet. When they are confirmed, each gets a **show/hide toggle** setting. Until then the header account icon only uses `<shopify-account>`, which links to Shopify's own customer accounts.
+7. **Mobile:** there are no mobile designs yet. The developer will decide later. Build responsive CSS in a sensible way, but ask before designing mobile-specific layouts.
 
 ## Reference docs in this repo (excluded from Shopify push via `.shopifyignore`)
 
@@ -41,9 +44,11 @@ A fully custom Shopify theme for the brand **Oroskin**, built from a custom Figm
 
 - The theme is scaffolded from Skeleton at `d:\shopify-oroskin\custom-built-new-theme-oroskin\oroskin-theme`. Git has been initialised.
 - Still blocked on:
-  - [ ] Figma link or screenshots (needed before any section work)
+  - [x] Figma: https://www.figma.com/design/EcvT6hH5DXNRzan3G8uVwf/Dev-OroSkin (file key `EcvT6hH5DXNRzan3G8uVwf`, one page, desktop 1920px frames; Figma MCP connected)
   - [x] Development store created: `oroskin-dev` (admin.shopify.com/store/oroskin-dev). Preview with `shopify theme dev -e dev` (see `shopify.theme.toml`)
-  - [ ] Brand assets: logo, fonts (with licences), product photography
+  - [ ] Brand assets: logo and product photography (fonts are decided, see decision 5)
+  - [ ] Designs for the parked features (decision 6) and for mobile (decision 7)
+- Work branch: `feature/m1-foundation` (created from `main`).
 - **Next milestone: 1, Foundation.** Figma tokens go into `config/settings_schema.json` and CSS variables in `layout/theme.liquid`. Add `base.css` (reset, typography, buttons, forms) and the animation system.
 
 ## Build order (Phase 1 milestones)

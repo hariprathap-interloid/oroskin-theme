@@ -17,7 +17,7 @@ Why first: every later section reads these settings, CSS variables and base styl
 ### Global settings (`config/settings_schema.json`)
 - [ ] ❌ Rename `theme_info` to Oroskin, with a version and documentation/support URLs. *Why: required (§14), and it's what merchants see.*
 - [ ] 🟡 **At least 4 colour settings**, each background paired with a foreground (text) colour. Skeleton has 2. *§16*
-- [ ] 🟡 All fonts use `font_picker`, with a default from Shopify's font library. **No custom fonts.** *§15. Pick the closest library font to the Figma font now.*
+- [ ] 🟡 All fonts use `font_picker`, with a default from Shopify's font library. **No custom fonts.** *§15. Decided: two font pickers, heading font (default `newsreader_n4`, replacing Canela) and body font (default `plus_jakarta_sans_n4`, replacing Satoshi).*
 - [ ] ❌ Favicon setting. *§14*
 - [ ] ❌ Logo setting that works with wide, square and tall logos. *§14*
 - [ ] ❌ Social media link settings. Leave the placeholders empty. *§13*
@@ -153,6 +153,20 @@ Why first: every later section reads these settings, CSS variables and base styl
 - [ ] No Sass and no minified files of our own. *§10*
 - [ ] Setting labels: sentence case, American English, and Shopify's terminology list ("home page", "main menu", "button label"…). *§14*
 - [ ] No fake urgency, countdowns, stock counts or "people viewing" features. *§8*
+
+---
+
+## Parked: awaiting design and client confirmation
+
+These are in the Figma but aren't native Shopify features. Don't build them until they're confirmed. Each one gets a **show/hide toggle** setting.
+
+- [ ] Wishlist (heart icons plus the account wishlist). *Needs an app. Not allowed in the Theme Store version (§8), so it must be possible to switch it off.*
+- [ ] Custom account pages: overview, details, orders, track order, refills, rewards, preferences. *Shopify hosts customer accounts itself; for now the theme only uses `<shopify-account>`.*
+- [ ] Rewards and refills. *Need apps.*
+- [ ] Notification bell with a badge. *Needs an app.*
+- [ ] Compare products bar (collection page)
+- [ ] Countdown timer ("Glow-Up Event"). *Only for real sales; §8 bans fake urgency.*
+- [ ] Mobile layouts. *No mobile designs yet; to be decided later.*
 
 ---
 
