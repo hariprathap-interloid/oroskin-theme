@@ -37,6 +37,7 @@ A fully custom Shopify theme for the brand **Oroskin**, built from a custom Figm
   - Stage 9: Theme Store submission, the review stages, rejection reasons
   - "Recommendations": stay on Skeleton v1 (`main`, not `rc-v2.0.0`), plus extra details for the animation system
   - "Caveats": items the research could not verify
+- `design/figma/`: **local snapshot of the Figma design. Read it first.** It contains `tokens.md`/`tokens.json`, `typography.md`, and `screens/`, `components/` and `animations/` folders, each with a screenshot, raw MCP context and notes. It also has downloaded `assets/` and the full `metadata.xml` node tree, plus a `README.md` index. Call the Figma MCP only if something is missing or the design has changed. The `context*.jsx` files are React+Tailwind reference only; never copy them into the theme.
 - `THEME-STORE-CHECKLIST.md`: every Theme Store requirement, grouped by milestone. Each item shows its Skeleton status (✅/🟡/❌). Tick items off as you finish them.
 - `d:\shopify-oroskin\dawn\DEVELOPER-GUID.md`: CLI commands, Theme Check, Prettier, commit checklist.
 

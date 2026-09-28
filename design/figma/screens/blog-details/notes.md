@@ -1,0 +1,217 @@
+# blog-details (1:18396)
+
+Frame: `BLOG details` 1920x10764
+
+## CAPTURE FAILED (2026-09-28)
+
+get_screenshot and get_design_context both returned: "You've reached the Figma MCP tool call limit on the Starter plan." Retried once; still blocked. No screenshot.png, context*.jsx or assets-map.json were saved. Re-run this screen once the Figma MCP quota resets or the plan is upgraded.
+
+## What metadata.xml tells us (direct children, sorted top to bottom)
+
+- y=24 `1:18619` frame "Frame 26080041" 1380x77 -- shared header bar (captured by another agent)
+- y=134 `1:18401` instance "Button" 49x33
+- y=134 `1:18402` instance "Button" 49x33
+- y=136 `1:18403` text "blog details" 117x28
+- y=154 `1:18404` vector "Vector" 5x8
+- y=154 `1:18405` vector "Vector" 5x8
+- y=202 `1:18399` rounded-rectangle "image 698" 1818x792
+- y=239 `1:18413` frame "Frame 26080056" 203x40
+- y=418 `1:18400` rounded-rectangle "image 699" 1818x576
+- y=490 `1:18406` text "The Art of the Golden Hour Morning Ritual" 570x216
+- y=718 `1:18407` text "How the most luminous skin in the world begins not with products, but with intention — and the five-step morni..." 798x54
+- y=883 `1:18511` frame "Group 1000003698" 1694x77
+- y=1043 `1:18590` rounded-rectangle "Rectangle 18229" 354x338
+- y=1079 `1:18615` text "Dr. Céleste Arnaud" 170x27
+- y=1079 `1:18617` rounded-rectangle "image 713" 64x64
+- y=1084 `1:18408` text "There is a certain quality of light that exists only in the first thirty minutes of morning — a soft, golden d..." 1080x156
+- y=1092 `1:18415` rounded-rectangle "Rectangle 4430" 2x140
+- y=1116 `1:18616` text "Paris &amp; London" 167x27
+- y=1178 `1:18618` text "18 years at the intersection of dermatology and luxury beauty. Paris &amp; London." 292x87
+- y=1292 `1:18608` instance "Liquid Glass Button" 202x50
+- y=1313 `1:18416` frame "Group 1000003654" 231x24
+- y=1379 `1:18434` text "The Philosophy of Intention" 464x43
+- y=1430 `1:18591` text "In This Article" 191x24
+- y=1455 `1:18441` text "Modern skincare has trained us to think about results — about percentages, actives, and before-and-after photo..." 1102x105
+- y=1481 `1:18595` instance "Component 1512" 268x31
+- y=1526 `1:18596` instance "Component 1950" 237x31
+- y=1571 `1:18597` instance "Component 1951" 268x31
+- y=1600 `1:18454` text "The science supports this. Cortisol, the stress hormone that accelerates skin aging, spikes when we rush throu..." 1102x105
+- y=1616 `1:18598` instance "Component 1952" 291x31
+- y=1661 `1:18599` instance "Component 1953" 362x31
+- y=1706 `1:18600` instance "Component 1954" 311x31
+- y=1755 `1:18509` frame "sidekickicons:quotation-mark-solid" 66x66
+- y=1766 `1:18397` rounded-rectangle "Rectangle 18221" 1114x244
+- y=1786 `1:18592` text "Products in This Ritual" 311x24
+- y=1804 `1:18409` text "&quot;The way you touch your skin in the morning is the way you will carry yourself through the entire day. Sl..." 975x117
+- y=1854 `1:18610` instance "Component 1962" 356x438
+- y=1948 `1:18411` text "— Dr. Céleste Arnaud, Chief Dermatologist" 455x36
+- y=2075 `1:18455` rounded-rectangle "image 701" 1114x548
+- y=2323 `1:18611` instance "Component 1963" 356x438
+- y=2500 `1:18456` rounded-rectangle "image 702" 1114x123
+- y=2571 `1:18457` text "A carefully curated morning ritual: cleanse, treat, protect. Three acts. One intention." 712x27
+- y=2705 `1:18419` frame "Group 1000003692" 235x24
+- y=2771 `1:18435` text "Cleansing as Ceremony" 388x43
+- y=2817 `1:18593` text "Tags" 56x24
+- y=2847 `1:18442` text "The morning cleanse is, for many people, an afterthought. A quick splash of water, perhaps a disposable wipe, ..." 1093x105
+- y=2872 `1:18601` instance "Component 1955" 92x41
+- y=2872 `1:18604` instance "Component 1956" 121x41
+- y=2872 `1:18606` instance "Component 1957" 101x41
+- y=2934 `1:18602` instance "Component 1958" 75x41
+- y=2934 `1:18605` instance "Component 1959" 92x41
+- y=2934 `1:18607` instance "Component 1960" 84x41
+- y=2992 `1:18453` text "A proper morning cleanse is not about removing grime — your skin has been protected all night by your evening ..." 1093x105
+- y=2996 `1:18603` instance "Component 1961" 139x41
+- y=3086 `1:18594` text "Share" 73x24
+- y=3129 `1:18533` instance "Liquid Glass Button" 50x50
+- y=3129 `1:18535` instance "Liquid Glass Button" 50x50
+- y=3129 `1:18537` instance "Liquid Glass Button" 50x50
+- y=3129 `1:18539` instance "Liquid Glass Button" 50x50
+- y=3129 `1:18541` instance "Liquid Glass Button" 50x50
+- y=3154 `1:18458` rounded-rectangle "Rectangle 4446" 1116x415
+- y=3188 `1:18459` text "Expert Tips for a Ceremonial Cleanse" 418x29
+- y=3188 `1:18635` frame "heroicons:sparkles" 29x29
+- y=3248 `1:18460` text "Use water at exactly 37°C — the same temperature as your skin. Anything cooler constricts capillaries; anythin..." 983x70
+- y=3322 `1:18461` text "Spend a minimum of 60 seconds working the cleanser into your skin using gentle upward circular motions, follow..." 983x70
+- y=3396 `1:18462` text "Pat — never rub — your skin dry with a clean cloth. The act of patting creates gentle pressure that stimulates..." 983x70
+- y=3470 `1:18463` text "Apply your first product within 60 seconds of patting dry, while your skin is still warm and slightly damp. Ab..." 983x70
+- y=3642 `1:18422` frame "Group 1000003693" 256x24
+- y=3708 `1:18436` text "The Five Steps That Change Everything" 658x43
+- y=3784 `1:18443` text "The golden hour ritual is not about layering as many products as possible. It is about five deliberate acts, e..." 1093x105
+- y=3952 `1:18479` text "01" 45x58
+- y=3955 `1:18469` frame "Frame 26080051" 108x40
+- y=4015 `1:18464` text "The Ceremonial Cleanse: Setting the Canvas" 455x26
+- y=4058 `1:18448` text "A gentle, pH-balanced cleanser that removes without stripping. The act of cleansing is not just physical prepa..." 1036x70
+- y=4169 `1:18480` text "02" 52x58
+- y=4172 `1:18471` frame "Frame 26080057" 108x40
+- y=4232 `1:18465` text "The First Drink: Hydrating Essence" 351x26
+- y=4275 `1:18449` text "A lightweight, water-based essence applied with gentle pressing motions — not rubbing — delivers the first lay..." 1036x70
+- y=4386 `1:18481` text "03" 53x58
+- y=4389 `1:18473` frame "Frame 26080058" 98x40
+- y=4449 `1:18466` text "The Golden Serum: Concentrated Intention" 439x26
+- y=4492 `1:18450` text "This is the heart of the ritual. A vitamin C serum applied in three drops — left cheek, right cheek, forehead ..." 1036x70
+- y=4603 `1:18482` text "04" 54x58
+- y=4606 `1:18475` frame "Frame 26080059" 128x40
+- y=4666 `1:18467` text "The Seal: Moisturiser as Meditation" 359x26
+- y=4709 `1:18451` text "A rich but fast-absorbing moisturiser applied using a facial massage technique. Upward strokes along the jawli..." 1036x70
+- y=4820 `1:18483` text "05" 52x58
+- y=4823 `1:18477` frame "Frame 26080060" 108x40
+- y=4883 `1:18468` text "The Shield: SPF as a Declaration of Worth" 431x26
+- y=4923 `1:18452` text "The final step is perhaps the most powerful act of self-care in the entire ritual. Applying sunscreen is a dec..." 1036x105
+- y=5098 `1:18425` frame "Group 1000003694" 178x24
+- y=5164 `1:18437` text "Products Featured in This Ritual" 532x43
+- y=5238 `1:18444` text "Every product mentioned in this article is available through Lumière. Curated, verified, and loved by our edit..." 1116x70
+- y=5354 `1:18484` rounded-rectangle "Rectangle 2214" 1116x187
+- y=5380 `1:18612` rounded-rectangle "image 703" 141x134
+- y=5382 `1:18489` text "La Mer" 62x29
+- y=5421 `1:18492` text "The Concentrate Vitamin C Brightening Serum" 428x29
+- y=5423 `1:18501` instance "Liquid Glass Button" 205x50
+- y=5433 `1:18495` text "$185" 53x29
+- y=5461 `1:18498` text "A potent blend of stabilised vitamin C and marine actives that delivers visible luminosity from the first appl..." 507x58
+- y=5561 `1:18485` rounded-rectangle "Rectangle 18222" 1116x187
+- y=5587 `1:18613` rounded-rectangle "image 704" 141x134
+- y=5589 `1:18490` text "Sisley Paris" 99x29
+- y=5628 `1:18493` text "Sisley Integral Anti-Age Day Moisturizer" 363x29
+- y=5630 `1:18502` instance "Liquid Glass Button" 205x50
+- y=5640 `1:18496` text "$320" 59x29
+- y=5668 `1:18499` text "Clinically proven to reduce visible signs of aging while delivering 24-hour hydration and a luminous glow." 507x58
+- y=5768 `1:18486` rounded-rectangle "Rectangle 18223" 1116x187
+- y=5794 `1:18614` rounded-rectangle "image 705" 141x134
+- y=5796 `1:18491` text "Charlotte Tilbury" 149x29
+- y=5835 `1:18494` text "Beautiful Skin SPF 50 Serum Foundation" 372x29
+- y=5837 `1:18503` instance "Liquid Glass Button" 205x50
+- y=5847 `1:18497` text "$64" 45x29
+- y=5875 `1:18500` text "Weightless sun protection with a barely-there tint that lets your skin&#39;s natural radiance speak for itself..." 507x58
+- y=6009 `1:18504` rounded-rectangle "image 706" 1114x628
+- y=6514 `1:18505` rounded-rectangle "image 707" 1114x123
+- y=6581 `1:18506` text "The ritual in motion: sixty seconds of presence is worth more than sixty minutes of rushed application." 869x27
+- y=6721 `1:18428` frame "Group 1000003695" 275x24
+- y=6787 `1:18438` text "What the Experts Really Say" 463x43
+- y=6863 `1:18445` text "We spoke with five of the world&#39;s leading dermatologists and estheticians about what separates a great mor..." 1114x105
+- y=7008 `1:18446` text "&quot;The biggest mistake I see is inconsistency,&quot; says Dr. Arnaud. &quot;A simple five-step routine perf..." 1114x105
+- y=7153 `1:18447` text "Dr. Keiko Yamamoto of Tokyo&#39;s NODO Skin Institute adds: &quot;Western skincare is obsessed with transforma..." 1114x140
+- y=7345 `1:18507` frame "sidekickicons:quotation-mark-solid" 66x66
+- y=7354 `1:18398` rounded-rectangle "Rectangle 18224" 1114x213
+- y=7393 `1:18410` text "&quot;Your morning ritual is not a beauty routine. It is the first conversation you have with yourself each da..." 975x78
+- y=7498 `1:18412` text "— Dr. Keiko Yamamoto, NODO Skin Institute, Tokyo" 541x36
+- y=7606 `1:18532` instance "Liquid Glass Button" 50x50
+- y=7606 `1:18534` instance "Liquid Glass Button" 50x50
+- y=7606 `1:18536` instance "Liquid Glass Button" 50x50
+- y=7606 `1:18538` instance "Liquid Glass Button" 50x50
+- y=7606 `1:18540` instance "Liquid Glass Button" 50x50
+- y=7608 `1:18542` instance "Liquid Glass Button" 290x50
+- y=7608 `1:18543` instance "Liquid Glass Button" 173x50
+- y=7619 `1:18531` text "share" 73x24
+- y=7732 `1:18487` rounded-rectangle "Rectangle 18225" 1116x319
+- y=7759 `1:18574` rounded-rectangle "Rectangle 18227" 237x35
+- y=7762 `1:18552` text "Dr. Céleste Arnaud" 170x27
+- y=7766 `1:18576` rounded-rectangle "image 708" 77x77
+- y=7767 `1:18575` text "Chief Dermatologist" 212x19
+- y=7799 `1:18553` text "Lumière Beauty · Paris &amp; London" 285x27
+- y=7850 `1:18573` text "Dr. Arnaud has spent 18 years at the intersection of dermatology and luxury beauty. A graduate of the Sorbonne..." 817x81
+- y=7967 `1:18547` frame "Liquid Glass Button" 173x50
+- y=7967 `1:18609` instance "Liquid Glass Button" 202x50
+- y=8136 `1:18440` text "Thoughts &amp; Reflections" 389x43
+- y=8136 `1:18589` instance "Component 1943" 189x50
+- y=8189 `1:18554` text "38 comments · Join the conversation" 325x27
+- y=8235 `1:18488` rounded-rectangle "Rectangle 18228" 1116x123
+- y=8259 `1:18583` instance "Component 1949" 303x27
+- y=8260 `1:18577` rounded-rectangle "image 709" 58x58
+- y=8283 `1:18582` instance "Liquid Glass Button" 127x50
+- y=8289 `1:18581` instance "Component 1948" 196x40
+- y=8411 `1:18555` text "Priya Sharma" 120x27
+- y=8411 `1:18570` text "2 days ago" 96x27
+- y=8411 `1:18578` rounded-rectangle "image 710" 58x58
+- y=8459 `1:18558` text "This article completely changed the way I think about my morning routine. I used to rush through it in 3 minut..." 1037x81
+- y=8561 `1:18561` text "98" 25x27
+- y=8561 `1:18564` text "Reply" 49x27
+- y=8561 `1:18567` text "Share" 51x27
+- y=8563 `1:18637` frame "iconamoon:comment" 24x24
+- y=8563 `1:18643` frame "solar:share-linear" 24x24
+- y=8567 `1:18544` vector "Vector" 18x16
+- y=8628 `1:18556` text "Sophie Leclerc" 133x27
+- y=8628 `1:18571` text "4 days ago" 98x27
+- y=8628 `1:18579` rounded-rectangle "image 711" 58x58
+- y=8676 `1:18559` text "The &quot;60-second rule&quot; after patting dry — I&#39;ve been doing this for years but never understood the..." 1037x81
+- y=8778 `1:18562` text "65" 24x27
+- y=8778 `1:18565` text "Reply" 49x27
+- y=8778 `1:18568` text "Share" 51x27
+- y=8780 `1:18639` frame "iconamoon:comment" 24x24
+- y=8780 `1:18648` frame "solar:share-linear" 24x24
+- y=8784 `1:18545` vector "Vector" 18x16
+- y=8845 `1:18557` text "Yuna Kim" 85x27
+- y=8845 `1:18572` text "5 days ago" 97x27
+- y=8845 `1:18580` rounded-rectangle "image 712" 58x58
+- y=8893 `1:18560` text "The Dr. Yamamoto quote about &quot;preservation vs. transformation&quot; is something I want to frame. As some..." 1037x81
+- y=8995 `1:18563` text "58" 24x27
+- y=8995 `1:18566` text "Reply" 49x27
+- y=8995 `1:18569` text "Share" 51x27
+- y=8997 `1:18641` frame "iconamoon:comment" 24x24
+- y=8997 `1:18653` frame "solar:share-linear" 24x24
+- y=9001 `1:18546` vector "Vector" 18x16
+- y=9090 `1:18584` instance "Liquid Glass Button" 245x37
+- y=9212 `1:18431` frame "Group 1000003699" 307x24
+- y=9278 `1:18439` text "More from the Journal" 371x43
+- y=9281 `1:18587` instance "Liquid Glass Button" 192x37
+- y=9389 `1:18585` instance "Component 1934" 484x406
+- y=9389 `1:18586` instance "Component 1935" 484x406
+- y=9738 `1:18588` instance "Component 85" 1920x974 -- shared footer (captured by another agent)
+
+## Plain-English reading (from metadata only, not verified visually)
+
+- Shared header bar (1:18619). Breadcrumb buttons + "blog details" label (y~134).
+- Hero: full-width image (1:18399, 1818x792, radius likely) with overlay title "The Art of the Golden Hour Morning Ritual", subtitle, a pill/tag (1:18413) and a meta row (1:18511, y=883).
+- Article body column (x=224, ~1114 wide) with section eyebrow groups + H2s: "The Philosophy of Intention", "Cleansing as Ceremony", "The Five Steps That Change Everything", "Products Featured in This Ritual", "What the Experts Really Say", "Thoughts & Reflections", "More from the Journal".
+- Pull quotes with quotation-mark icon (y=1755, y=7345); captioned images (y=2075, y=6009).
+- "Expert Tips for a Ceremonial Cleanse" tip box (1:18458) with sparkles icon.
+- Numbered steps 01-05 with small tag frames.
+- Three featured product rows (La Mer $185, Sisley Paris $320, Charlotte Tilbury $64) each with image and a "Liquid Glass Button" (add to cart / shop).
+- Share row with 5 round glass icon buttons + 2 wider buttons (y=7606).
+- Author bio card (Dr. Celeste Arnaud, "Chief Dermatologist" badge, 2 buttons).
+- Comments: "38 comments - Join the conversation", comment input, 3 comments with like counts, Reply, Share, time ago; "load more" button.
+- "More from the Journal": 2 article cards (Components 1934/1935) + view-all button.
+- Right sidebar (x~1507): author card, "In This Article" TOC (6 links), "Products in This Ritual" (2 product cards), "Tags" (7 chips), "Share" (5 icon buttons).
+- Footer Component 85 (1:18588) -- shared footer.
+
+Interactive: TOC anchor links, tag chips, share buttons, product buttons, comment form, reply/like, load more, related article cards.
+**PARKED:** comment likes, reply threads and comment sharing (Shopify blog comments are flat, moderated, no likes/replies); "follow author" style buttons if that is what the bio buttons are.
+Animation hints: unknown. Colours/fonts/shadows: unknown until design context can be fetched.

@@ -1,0 +1,136 @@
+# account-order-details (1:17802)
+
+Frame: `My Account - Orders Details` 1920x2643
+
+## CAPTURE STATUS: INCOMPLETE
+
+The Figma MCP returned "You've reached the Figma MCP tool call limit on the Starter plan" on 2026-09-28 (retried once).
+- screenshot.png: saved
+- context-*.jsx / assets: NOT captured (rate limit). Re-run get_design_context once the quota resets.
+- Exact fonts, sizes, radii and shadows are unknown; colours in notes.md are sampled from screenshot.png pixels.
+
+Shared header (`Frame 26080041`, 1380x77) and footer (`Component 85`, 1920x974): shared header/footer, captured elsewhere (subtrees omitted below).
+
+## Layers from metadata.xml (direct children sorted top to bottom; indent = nesting; coords relative to frame for children)
+
+- `1:17950` frame "Frame 26080041" @(270,24) 1380x77 (shared header/footer, omitted)
+- `1:17850` instance "Component 12" @(135,162) 231.5131072998047x24
+- `1:17803` rounded-rectangle "Rectangle 18279" @(135,237) 1646x1436
+- `1:17814` text "Order Details" @(211,282) 221x54
+- `1:17804` instance "Component 31" @(1498,306) 206.9470977783203x50
+- `1:17815` instance "Liquid Glass Button" @(1286,306) 179x50
+- `1:17806` frame "Frame 2" @(214,342) 446x24
+  - `1:17807` frame "Frame 2" @(0,0) 197x24
+    - `1:17808` text "Order date:" @(0,0) 84x24
+    - `1:17809` text "June 28, 2026" @(90,0) 107x24
+  - `1:17810` line "Line 1" @(214,0) 8.742281352169812e-7x20
+  - `1:17811` frame "Frame 2" @(231,0) 215x24
+    - `1:17812` instance "vuesax/outline/truck-tick" @(0,2) 20x20
+    - `1:17813` text "Delivered: June 30, 2026" @(30,0) 185x24
+- `1:17853` rounded-rectangle "Rectangle 18281" @(214,396) 1491x155
+- `1:17859` frame "Component 1428" @(391,423) 55x55
+  - `1:17860` ellipse "Ellipse 34" @(5.978515625,5.978515625) 43.043479919433594x43.043479919433594
+  - `1:17861` ellipse "Ellipse 35" @(0,0) 55x55
+  - `1:17862` frame "solar:box-linear" @(19,19) 18x18
+- `1:17864` frame "Component 1429" @(655,423) 55x55
+  - `1:17865` ellipse "Ellipse 34" @(5.978515625,5.978515625) 43.043479919433594x43.043479919433594
+  - `1:17866` ellipse "Ellipse 35" @(0,0) 55x55
+  - `1:17867` frame "solar:box-linear" @(19,19) 18x18
+- `1:17869` frame "Component 1430" @(919,423) 55x55
+  - `1:17870` ellipse "Ellipse 34" @(5.978515625,5.978515625) 43.043479919433594x43.043479919433594
+  - `1:17871` ellipse "Ellipse 35" @(0,0) 55x55
+  - `1:17872` frame "solar:box-linear" @(19,19) 18x18
+- `1:17873` frame "Component 1431" @(1183,423) 55x55
+  - `1:17874` ellipse "Ellipse 34" @(5.978515625,5.978515625) 43.043479919433594x43.043479919433594
+  - `1:17875` ellipse "Ellipse 35" @(0,0) 55x55
+  - `1:17876` frame "solar:box-linear" @(19,19) 18x18
+- `1:17880` frame "Component 1432" @(1447,423) 55x55
+  - `1:17881` ellipse "Ellipse 34" @(5.978515625,5.978515625) 43.043479919433594x43.043479919433594
+  - `1:17882` ellipse "Ellipse 35" @(0,0) 55x55
+  - `1:17883` frame "solar:box-linear" @(19,19) 18x18
+- `1:17897` frame "hugeicons:delivery-truck-01" @(938,441) 19x19
+  - `1:17898` frame "hugeicons:delivery-truck-01" @(0,0) 19x19
+- `1:17892` line "Line 94" @(443,451) 160x0
+- `1:17893` line "Line 95" @(715,451) 160x0
+- `1:17894` line "Line 96" @(977,451) 160x0
+- `1:17895` line "Line 97" @(1241,451) 160x0
+- `1:17902` frame "proicons:location" @(1254,460) 21x21
+- `1:17849` frame "tabler:home-check" @(1520,461) 19x19
+- `1:17896` frame "fluent:box-arrow-up-24-regular" @(674,461) 19x19
+- `1:17887` text "Placed" @(394,484) 50x24
+- `1:17888` text "Prepared" @(650,484) 67x24
+- `1:17889` text "Shipped" @(921,484) 60x24
+- `1:17890` text "Out of delivery" @(1161,484) 106x24
+- `1:17891` text "Delivered" @(1444,484) 68x24
+- `1:17816` rounded-rectangle "Rectangle 18277" @(1094,583) 611x383
+- `1:17854` rounded-rectangle "Rectangle 18282" @(214,583) 848x547
+- `1:17851` text "Order Summary" @(1169,609) 173x36
+- `1:17903` text "Tracking Timeline" @(270,609) 190x36
+- `1:17847` frame "solar:document-text-outline" @(1130,616) 29x29
+- `1:17817` text "Subtotal" @(1130,667) 58x26
+- `1:17820` text "$285" @(1628,667) 38x26
+- `1:17923` text "Order Confirmed" @(329,681) 124x24
+- `1:17910` ellipse "Ellipse 37" @(275,683) 43.043479919433594x43.043479919433594
+- `1:17925` frame "hugeicons:tick-01" @(285,692) 24x24
+- `1:17818` text "Discount" @(1130,705) 62x26
+- `1:17821` text "-$10" @(1632,705) 34x26
+- `1:17924` text "July 10, 2026 -10:30 AM" @(333,712) 131x18
+- `1:17904` line "Line 98" @(296,726) 0.0000019233048078604043x44
+- `1:17819` text "Gift Wrap" @(1130,743) 68x26
+- `1:17822` text "$5" @(1647,743) 19x26
+- `1:17915` text "Order Packed" @(329,765) 100x24
+- `1:17911` ellipse "Ellipse 38" @(275,767) 43.043479919433594x43.043479919433594
+- `1:17927` frame "hugeicons:tick-01" @(285,776) 24x24
+- `1:17824` text "FREE" @(1628,781) 38x26
+- `1:17825` text "Shipping" @(1130,781) 62x26
+- `1:17919` text "July 10, 2026 -1:30 PM" @(331,796) 123x18
+- `1:17905` line "Line 102" @(296,800) 0.0000027538189897313714x63
+- `1:17823` text "$21" @(1641,819) 25x26
+- `1:17828` text "Tax" @(1130,819) 24x26
+- `1:17916` text "Shipped" @(330,851) 60x24
+- `1:17912` ellipse "Ellipse 39" @(275,854) 43.043479919433594x43.043479919433594
+- `1:17929` frame "hugeicons:tick-01" @(285,863) 24x24
+- `1:17829` line "Line 9" @(1113,877) 567x0.00004956871998729184
+- `1:17920` text "July 10, 2026 -1:30 PM" @(331,882) 123x18
+- `1:17908` line "Line 100" @(296,883) 0.0000027538189897313714x63
+- `1:17906` line "Line 103" @(296,894) 0.000002185566700063646x50
+- `1:17826` text "Total" @(1130,909) 43x26
+- `1:17827` text "$301" @(1620,909) 46x26
+- `1:17917` text "Nearby" @(330,936) 53x24
+- `1:17913` ellipse "Ellipse 40" @(275,938) 43.043479919433594x43.043479919433594
+- `1:17931` frame "hugeicons:tick-01" @(285,947) 24x24
+- `1:17921` text "July 10, 2026 -1:30 PM" @(331,967) 123x18
+- `1:17909` line "Line 101" @(296,968) 0.0000027538189897313714x63
+- `1:17907` line "Line 104" @(296,982) 0.000002141860022675246x49
+- `1:17830` frame "Group 1000003713" @(1094,998) 611x206
+  - `1:17831` rounded-rectangle "Rectangle 18277" @(1094,998) 611x206
+  - `1:17832` frame "Frame 26080042" @(1543,1114) 114x24
+    - `1:17833` frame "Frame 2" @(0,0) 110x24
+      - `1:17834` text "Visa **56" @(0,2) 65x20
+      - `1:17835` instance "Payment method icon" @(76,0) 34x24
+  - `1:17836` text "John Doe 789 Boulevard Street, Apt 3C, New York, NY 10011 (555) 019-2834" @(1170,1075) 209x104
+  - `1:17837` text "Payment" @(1543,1075) 63x26
+  - `1:17838` frame "hugeicons:shipping-truck-01" @(1130,1029) 24x24
+  - `1:17842` frame "streamline-freehand:money-cash-bill" @(1503,1077) 24x24
+- `1:17852` text "Shipping &amp; Delivery" @(1169,1023) 212x36
+- `1:17918` text "Delivered" @(330,1027) 68x24
+- `1:17914` ellipse "Ellipse 41" @(275,1031) 43.043479919433594x43.043479919433594
+- `1:17933` frame "hugeicons:tick-01" @(285,1040) 24x24
+- `1:17922` text "July 10, 2026 -1:30 PM" @(331,1058) 123x18
+- `1:17855` rounded-rectangle "Rectangle 18283" @(214,1162) 848x310
+- `1:17935` text "Items" @(270,1188) 59x36
+- `1:17856` rounded-rectangle "Rectangle 18284" @(1094,1230) 611x242
+- `1:17857` instance "Component 2027" @(279,1243) 719x92
+- `1:17936` text "Tracking Information" @(1130,1256) 223x36
+- `1:17947` instance "Liquid Glass Button" @(1476,1261) 192x37
+- `1:17937` text "tracking number" @(1161,1314) 161x28
+- `1:17940` frame "mage:delivery-truck" @(1130,1315) 24x24
+- `1:17858` instance "Component 2028" @(279,1347) 719x92
+- `1:17938` frame "Frame 1984077952" @(1130,1354) 193x26
+  - `1:17939` text "1Z999AA10123456784" @(0,0) 185x26
+- `1:17944` text "Estimated Delivery: June 30, 2026" @(1132,1398) 244x26
+- `1:17945` rounded-rectangle "Rectangle 18234" @(214,1504) 1491x100
+- `1:17948` instance "Liquid Glass Button" @(1424,1529) 233x50
+- `1:17949` instance "Liquid Glass Button" @(1252,1536) 142x36
+- `1:17946` text "Have a question about this order?" @(271,1537) 319x35
+- `1:17805` instance "Component 85" @(0,1588) 1920x974 (shared header/footer, omitted)
