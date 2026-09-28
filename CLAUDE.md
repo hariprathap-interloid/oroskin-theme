@@ -25,6 +25,14 @@ A fully custom Shopify theme for the brand **Oroskin**, built from a custom Figm
   - Parts 9.4/9.5: why Skeleton and the Theme Store rules
   - Parts 2–7: Liquid, structure, sections/blocks/snippets, data, metafields
   - Part 12: performance. Part 13: the production process.
+- `SHOPIFY-DEV-TO-LAUNCH-RESEARCH.md`: research report (Claude.ai, 2026-09-28) covering setup to live store to Theme Store approval, with sources. The most relevant parts:
+  - Stage 1 and Stage 8: dev stores can't go live. Use a client transfer store or a paid store for the Phase 1 showcase.
+  - Stage 3: CLI environments and rules for protecting the live theme
+  - Stage 4: design tokens (at least 4 colours, each background paired with a foreground), `font_picker` only (no custom fonts on the Theme Store), images
+  - Stage 7: SEO (what Shopify does automatically vs what the theme must add)
+  - Stage 9: Theme Store submission, the review stages, rejection reasons
+  - "Recommendations": stay on Skeleton v1 (`main`, not `rc-v2.0.0`), plus extra details for the animation system
+  - "Caveats": items the research could not verify
 - `d:\shopify-oroskin\dawn\DEVELOPER-GUID.md`: CLI commands, Theme Check, Prettier, commit checklist.
 
 ## Current state (update as it changes)

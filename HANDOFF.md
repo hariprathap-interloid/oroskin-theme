@@ -33,6 +33,11 @@ Build a **fully custom Shopify theme** from a Figma design for a brand called Or
 - Parts 2–7 explain Liquid, theme structure, sections/blocks/snippets, data and metafields
 - Part 12 covers performance and Part 13 covers the production process
 
+Also `SHOPIFY-DEV-TO-LAUNCH-RESEARCH.md`: a research report (2026-09-28) covering the full path from dev to live store to Theme Store approval, including SEO, with sources. Its key findings:
+- Stay on Skeleton v1 (`main`).
+- Dev stores can't go live, so use a client transfer store or a paid store for the showcase.
+- The Theme Store doesn't accept custom fonts.
+
 Also at `d:\shopify-oroskin\dawn\DEVELOPER-GUID.md`: CLI commands, Theme Check, Prettier, commit checklist.
 
 ## Current state
