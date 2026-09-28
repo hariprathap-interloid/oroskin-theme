@@ -1,0 +1,25 @@
+# Shopify CLI environments for the Oroskin theme.
+# Reference: https://shopify.dev/docs/storefronts/themes/tools/cli/environments
+# Flags:     https://shopify.dev/docs/api/shopify-cli/theme (each key = a CLI flag)
+#
+# Usage: shopify theme dev -e dev
+#        shopify theme push -e showcase
+#
+# SAFETY RULES
+# - Never add live / allow-live / publish here. Publish by hand in the admin.
+# - Only list UNPUBLISHED theme IDs.
+# - Never commit a `password` (Theme Access token). Keep any environment that
+#   needs one out of git.
+
+[environments.dev]
+store = "oroskin-dev" # TODO: your dev store handle (the part before .myshopify.com)
+
+# Performance benchmark store, loaded with Shopify's test product CSV (enable later)
+# [environments.bench]
+# store = "oroskin-bench"
+
+# Phase 1 public showcase store (client transfer store or paid store, never a dev store)
+# [environments.showcase]
+# store = "oroskin-showcase"
+# theme = "000000000000"  # UNPUBLISHED theme ID only
+# ignore = ["config/settings_data.json", "templates/*.json"]  # protect editor changes
