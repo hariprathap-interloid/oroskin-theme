@@ -44,13 +44,13 @@ Also at `d:\shopify-oroskin\dawn\DEVELOPER-GUID.md`: CLI commands, Theme Check, 
 
 - Nothing built yet. The new theme folder does not exist.
 - `d:\shopify-oroskin\dawn` is a git repo holding Dawn 15.5.0 and the guide files.
-- **No development store yet.** I need to create a Shopify Partner account and a dev store as the first step.
+- **Development store created:** `oroskin-dev` (admin.shopify.com/store/oroskin-dev). Preview with `shopify theme dev -e dev`.
 - **Figma design is ready, but the link has not been shared with me yet.** I am waiting on it from the designer/client.
 
 ### Blocked until I get these
 
 - [ ] Figma link (or exported screenshots) — needed before any section work
-- [ ] Development store created — needed before anything can be previewed
+- [x] Development store created (`oroskin-dev`)
 - [ ] Brand assets: logo files, fonts (and their licences), product photography
 
 ## Where we're starting

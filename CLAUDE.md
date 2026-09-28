@@ -40,7 +40,7 @@ A fully custom Shopify theme for the brand **Oroskin**, built from a custom Figm
 - The theme is scaffolded from Skeleton at `d:\shopify-oroskin\custom-built-new-theme-oroskin\oroskin-theme`. Git has been initialised.
 - Still blocked on:
   - [ ] Figma link or screenshots (needed before any section work)
-  - [ ] A development store (needed to preview): `shopify theme dev --store <store>.myshopify.com`
+  - [x] Development store created: `oroskin-dev` (admin.shopify.com/store/oroskin-dev). Preview with `shopify theme dev -e dev` (see `shopify.theme.toml`)
   - [ ] Brand assets: logo, fonts (with licences), product photography
 - **Next milestone: 1, Foundation.** Figma tokens go into `config/settings_schema.json` and CSS variables in `layout/theme.liquid`. Add `base.css` (reset, typography, buttons, forms) and the animation system.
 
