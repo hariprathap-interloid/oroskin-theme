@@ -38,6 +38,8 @@ Also `SHOPIFY-DEV-TO-LAUNCH-RESEARCH.md`: a research report (2026-09-28) coverin
 - Dev stores can't go live, so use a client transfer store or a paid store for the showcase.
 - The Theme Store doesn't accept custom fonts.
 
+Also `THEME-STORE-CHECKLIST.md`: every Theme Store requirement, grouped by milestone and marked with its Skeleton status. **Scope decision:** every required feature is built during Phase 1. Oroskin adds no extra features, only design.
+
 Also at `d:\shopify-oroskin\dawn\DEVELOPER-GUID.md`: CLI commands, Theme Check, Prettier, commit checklist.
 
 ## Current state

@@ -16,6 +16,7 @@ A fully custom Shopify theme for the brand **Oroskin**, built from a custom Figm
 1. **Built on Shopify's Skeleton theme.** Dawn- or Horizon-derived themes are not eligible for the Theme Store. Skeleton is the only approved base.
 2. **Dawn is a read-only reference** at `d:\shopify-oroskin\dawn`. **Read, don't copy.** Using the same Shopify APIs is fine. Copying Dawn's files, markup or JS classes is not.
 3. **Animations:** native `IntersectionObserver` + CSS `opacity`/`transform`, inside an `<animate-on-scroll>` web component. There is a global "Enable animations" setting plus a per-section style. Respect `prefers-reduced-motion`, never hide the hero/LCP content, and keep content visible without JS. GSAP only if an effect truly needs it, bundled in `assets/`, never from a CDN. See roadmap Part 19.4.
+4. **Scope: build every Theme Store–required feature during Phase 1**, inside its milestone. Oroskin adds no extra features beyond these; it only changes the design. Track them in `THEME-STORE-CHECKLIST.md`.
 
 ## Reference docs in this repo (excluded from Shopify push via `.shopifyignore`)
 
@@ -33,6 +34,7 @@ A fully custom Shopify theme for the brand **Oroskin**, built from a custom Figm
   - Stage 9: Theme Store submission, the review stages, rejection reasons
   - "Recommendations": stay on Skeleton v1 (`main`, not `rc-v2.0.0`), plus extra details for the animation system
   - "Caveats": items the research could not verify
+- `THEME-STORE-CHECKLIST.md`: every Theme Store requirement, grouped by milestone. Each item shows its Skeleton status (✅/🟡/❌). Tick items off as you finish them.
 - `d:\shopify-oroskin\dawn\DEVELOPER-GUID.md`: CLI commands, Theme Check, Prettier, commit checklist.
 
 ## Current state (update as it changes)
