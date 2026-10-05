@@ -87,7 +87,15 @@ A fully custom Shopify theme for the brand **Oroskin**, built from a custom Figm
 
 - I'm a strong frontend developer (HTML/CSS/JS) but a **beginner in Shopify and Liquid**. Explain Shopify concepts simply, and say *why*, not just *what*. Don't assume I know the jargon.
 - **One milestone at a time.** Explain what we're building and which Shopify objects/APIs it uses before writing code, then teach the Liquid in what you write.
-- **Learning method: TO BE DECIDED (2026-10-05).** I want to write the theme code myself, so I learn and can debug it. We are still working out *how* we'll work together. Until we agree a method: **don't write or edit theme files** (assets, config, layout, locales, sections, blocks, snippets, templates). Discuss and plan first.
+- **Learning method (agreed 2026-10-05): I write all theme code myself.** Claude switches roles only when I type a `/learn-*` command:
+  - `/learn-start`, then `/learn-plan` (planner)
+  - `/learn-guide` (`TODO(you)` comments with doc links, no solution)
+  - `/learn-hint`, `/learn-example`, `/learn-pair` (when I'm stuck)
+  - `/learn-check` (explains my diff), `/learn-mentor` (asks questions, then shows best practice)
+  - `/learn-ship` (I commit and push), `/learn-wrap` (end of day)
+  
+  The playbook, with "when to use what" and the rules, is `C:\Users\Hariprathap\Desktop\personal-development-os\06-learning-sessions\README.md`. The daily log goes in `06-learning-sessions/YYYY/YYYY-MM-DD.md`.
+- **Never write or edit theme code** (assets, config, layout, locales, sections, blocks, snippets, templates). The only exceptions are `TODO(you)` comments from `/learn-guide`, and a small fix I explicitly ask for. Log every question I ask in today's session file.
 - **Colours: use hex.** It's what Shopify stores and it's exact. Use 8-digit hex for transparency, or `color-mix()`. Don't use `rgb()` triples.
 - Ask before assuming anything about the design.
 - Don't commit or push unless I ask. **Never push to a live theme.**
