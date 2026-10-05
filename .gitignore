@@ -15,3 +15,7 @@ node_modules/
 ## Release files
 release
 *.zip
+
+# Local Figma snapshot (~300 MB): screenshots, images, notes. Kept on disk only, not in git.
+# Rebuild images with: python design/figma/tools/figma_rest_export.py
+design/

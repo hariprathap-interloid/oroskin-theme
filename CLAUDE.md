@@ -50,7 +50,8 @@ A fully custom Shopify theme for the brand **Oroskin**, built from a custom Figm
   - [ ] Brand assets: logo and product photography (fonts are decided, see decision 5)
   - [ ] Designs for the parked features (decision 6) and for mobile (decision 7)
 - Work branch: `feature/m1-foundation` (created from `main`).
-- **Next milestone: 1, Foundation.** Figma tokens go into `config/settings_schema.json` and CSS variables in `layout/theme.liquid`. Add `base.css` (reset, typography, buttons, forms) and the animation system.
+- **Next milestone: 1, Foundation.** Not started: theme files are still Skeleton's originals, because an earlier attempt was reverted on 2026-10-05. The developer will write it once the learning method is agreed. Figma tokens go into `config/settings_schema.json` and CSS variables in `snippets/css-variables.liquid`. Add base styles (typography, buttons, forms) and the animation system.
+- `design/` is ignored by git (local only, ~300 MB). Tokens are in `design/figma/tokens.md`.
 
 ## Build order (Phase 1 milestones)
 
@@ -86,5 +87,7 @@ A fully custom Shopify theme for the brand **Oroskin**, built from a custom Figm
 
 - I'm a strong frontend developer (HTML/CSS/JS) but a **beginner in Shopify and Liquid**. Explain Shopify concepts simply, and say *why*, not just *what*. Don't assume I know the jargon.
 - **One milestone at a time.** Explain what we're building and which Shopify objects/APIs it uses before writing code, then teach the Liquid in what you write.
+- **Learning method: TO BE DECIDED (2026-10-05).** I want to write the theme code myself, so I learn and can debug it. We are still working out *how* we'll work together. Until we agree a method: **don't write or edit theme files** (assets, config, layout, locales, sections, blocks, snippets, templates). Discuss and plan first.
+- **Colours: use hex.** It's what Shopify stores and it's exact. Use 8-digit hex for transparency, or `color-mix()`. Don't use `rgb()` triples.
 - Ask before assuming anything about the design.
 - Don't commit or push unless I ask. **Never push to a live theme.**
