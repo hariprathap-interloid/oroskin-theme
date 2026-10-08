@@ -16,9 +16,15 @@
       },
       {
         "type": "font_picker",
-        "id": "type_primary_font",
-        "default": "work_sans_n4",
-        "label": "t:general.primary"
+        "id": "type_heading_font",
+        "default": "newsreader_n4",
+        "label": "t:labels.heading_font"
+      },
+      {
+        "type": "font_picker",
+        "id": "type_body_font",
+        "default": "plus_jakarta_sans_n4",
+        "label": "t:labels.body_font"
       }
     ]
   },
