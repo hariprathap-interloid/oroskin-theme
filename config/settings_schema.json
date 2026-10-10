@@ -63,6 +63,92 @@
     "name": "t:general.colors",
     "settings": [
       {
+        "type": "color_scheme_group",
+        "id": "color_schemes",
+        "definition": [
+          {
+            "type": "color",
+            "id": "background",
+            "label": "t:color_scheme.background",
+            "default": "#fffaf0"
+          },
+          {
+            "type": "color",
+            "id": "text",
+            "label": "t:color_scheme.text",
+            "default": "#1f1f1f"
+          },
+          {
+            "type": "color",
+            "id": "accent",
+            "label": "t:color_scheme.accent",
+            "default": "#7d0000"
+          },
+          {
+            "type": "color",
+            "id": "border",
+            "label": "t:color_scheme.border",
+            "default": "#eedede"
+          },
+          {
+            "type": "header",
+            "content": "t:color_scheme.primary_button"
+          },
+          {
+            "type": "color",
+            "id": "button",
+            "label": "t:color_scheme.button_background",
+            "default": "#7d0000"
+          },
+          {
+            "type": "color",
+            "id": "button_label",
+            "label": "t:color_scheme.button_text",
+            "default": "#ffffff"
+          },
+          {
+            "type": "color",
+            "id": "button_border",
+            "label": "t:color_scheme.button_border",
+            "default": "#7d0000"
+          },
+          {
+            "type": "header",
+            "content": "t:color_scheme.secondary_button"
+          },
+          {
+            "type": "color",
+            "id": "secondary_button",
+            "label": "t:color_scheme.button_background",
+            "default": "#fffaf0"
+          },
+          {
+            "type": "color",
+            "id": "secondary_button_label",
+            "label": "t:color_scheme.button_text",
+            "default": "#7d0000"
+          },
+          {
+            "type": "color",
+            "id": "secondary_button_border",
+            "label": "t:color_scheme.button_border",
+            "default": "#7d0000"
+          }
+        ],
+        "role": {
+          "background": "background",
+          "text": "text",
+          "links": "accent",
+          "icons": "text",
+          "primary_button": "button",
+          "on_primary_button": "button_label",
+          "primary_button_border": "button_border",
+          "secondary_button": "secondary_button",
+          "on_secondary_button": "secondary_button_label",
+          "secondary_button_border": "secondary_button_border"
+        }
+      },
+      {
         "type": "color",
         "id": "background_color",
         "default": "#FFFFFF",

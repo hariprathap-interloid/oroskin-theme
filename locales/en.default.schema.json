@@ -75,5 +75,16 @@
       "subtitle": "Subtitle",
       "normal": "Normal text"
     }
+  },
+  "color_scheme": {
+    "background": "Background",
+    "text": "Text",
+    "accent": "Links and highlights",
+    "border": "Borders and dividers",
+    "primary_button": "Primary button",
+    "secondary_button": "Secondary button",
+    "button_background": "Background",
+    "button_text": "Text",
+    "button_border": "Border"
   }
 }

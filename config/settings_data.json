@@ -8,5 +8,78 @@
  * ------------------------------------------------------------
  */
 {
-  "current": {}
+  "current": {
+    "color_schemes": {
+      "scheme-1": {
+        "settings": {
+          "background": "#fffaf0",
+          "text": "#1f1f1f",
+          "accent": "#7d0000",
+          "border": "#eedede",
+          "button": "#7d0000",
+          "button_label": "#ffffff",
+          "button_border": "#7d0000",
+          "secondary_button": "#fffaf0",
+          "secondary_button_label": "#7d0000",
+          "secondary_button_border": "#7d0000"
+        }
+      },
+      "scheme-2": {
+        "settings": {
+          "background": "#ffffff",
+          "text": "#1f1f1f",
+          "accent": "#7d0000",
+          "border": "#f6ecec",
+          "button": "#7d0000",
+          "button_label": "#ffffff",
+          "button_border": "#7d0000",
+          "secondary_button": "#ffffff",
+          "secondary_button_label": "#7d0000",
+          "secondary_button_border": "#7d0000"
+        }
+      },
+      "scheme-3": {
+        "settings": {
+          "background": "#7d0000",
+          "text": "#ffffff",
+          "accent": "#ffffff",
+          "border": "#ffffff",
+          "button": "#ffffff",
+          "button_label": "#7d0000",
+          "button_border": "#ffffff",
+          "secondary_button": "#7d0000",
+          "secondary_button_label": "#ffffff",
+          "secondary_button_border": "#ffffff"
+        }
+      },
+      "scheme-4": {
+        "settings": {
+          "background": "#c8a34c",
+          "text": "#1f1f1f",
+          "accent": "#7d0000",
+          "border": "#1f1f1f",
+          "button": "#7d0000",
+          "button_label": "#ffffff",
+          "button_border": "#7d0000",
+          "secondary_button": "#c8a34c",
+          "secondary_button_label": "#1f1f1f",
+          "secondary_button_border": "#1f1f1f"
+        }
+      },
+      "scheme-5": {
+        "settings": {
+          "background": "#1f1f1f",
+          "text": "#fffaf0",
+          "accent": "#c8a34c",
+          "border": "#fffaf0",
+          "button": "#c8a34c",
+          "button_label": "#1f1f1f",
+          "button_border": "#c8a34c",
+          "secondary_button": "#1f1f1f",
+          "secondary_button_label": "#fffaf0",
+          "secondary_button_border": "#fffaf0"
+        }
+      }
+    }
+  }
 }
