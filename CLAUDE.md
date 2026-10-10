@@ -50,7 +50,8 @@ A fully custom Shopify theme for the brand **Oroskin**, built from a custom Figm
   - [ ] Brand assets: logo and product photography (fonts are decided, see decision 5)
   - [ ] Designs for the parked features (decision 6) and for mobile (decision 7)
 - Work branch: `feature/m1-foundation` (created from `main`).
-- **Next milestone: 1, Foundation.** Not started: theme files are still Skeleton's originals, because an earlier attempt was reverted on 2026-10-05. The developer will write it once the learning method is agreed. Figma tokens go into `config/settings_schema.json` and CSS variables in `snippets/css-variables.liquid`. Add base styles (typography, buttons, forms) and the animation system.
+- **Deadline: theme development done by 22 Oct 2026** (set 2026-10-10); documentation starts after that.
+- **Milestone 1, Foundation: in progress.** Steps 1–3 done (test content; theme identity + homepage clean-up, `8cada3a`; heading/body font pickers, `1072d87`). Step 4 (colour schemes) is next. The step plan is in the PDOS session file of 2026-10-05; step status is in the latest session file. Figma tokens go into `config/settings_schema.json`, CSS variables in `snippets/css-variables.liquid`, base styles and the animation-hiding CSS in `assets/critical.css`.
 - `design/` is ignored by git (local only, ~300 MB). Tokens are in `design/figma/tokens.md`.
 
 ## Build order (Phase 1 milestones)
@@ -87,7 +88,8 @@ A fully custom Shopify theme for the brand **Oroskin**, built from a custom Figm
 
 - I'm a strong frontend developer (HTML/CSS/JS) but a **beginner in Shopify and Liquid**. Explain Shopify concepts simply, and say *why*, not just *what*. Don't assume I know the jargon.
 - **One milestone at a time.** Explain what we're building and which Shopify objects/APIs it uses before writing code, then teach the Liquid in what you write.
-- **Learning method (agreed 2026-10-05): I write all theme code myself.** Claude switches roles only when I type a `/learn-*` command:
+- **Deadline mode (agreed 2026-10-10, until 22 Oct 2026): Claude drafts the code, I review, test and commit.** `/learn-guide <step>` explains the concepts fully, writes the step's code, then walks me through it line by line with a review-and-test list. If I ask to write a part myself, Claude leaves a `TODO(you)` there. Explanations must make sense without opening links; links are given last as "Cross-check".
+- **Learning method (agreed 2026-10-05, paused by deadline mode): I write all theme code myself.** Claude switches roles only when I type a `/learn-*` command:
   - `/learn-start`, then `/learn-plan` (planner)
   - `/learn-guide` (`TODO(you)` comments with doc links, no solution)
   - `/learn-hint`, `/learn-example`, `/learn-pair` (when I'm stuck)
@@ -95,7 +97,7 @@ A fully custom Shopify theme for the brand **Oroskin**, built from a custom Figm
   - `/learn-ship` (I commit and push), `/learn-wrap` (end of day)
   
   The playbook, with "when to use what" and the rules, is `C:\Users\Hariprathap\Desktop\personal-development-os\06-learning-sessions\README.md`. The daily log goes in `06-learning-sessions/YYYY/YYYY-MM-DD.md`.
-- **Never write or edit theme code** (assets, config, layout, locales, sections, blocks, snippets, templates). The only exceptions are `TODO(you)` comments from `/learn-guide`, and a small fix I explicitly ask for. Log every question I ask in today's session file.
+- **Theme code:** in deadline mode, Claude writes theme code only through `/learn-guide` (one step at a time, explained) or when I ask for a fix. Outside deadline mode: never write or edit theme code except `TODO(you)` comments and small fixes I ask for. Log every question I ask in today's session file.
 - **Colours: use hex.** It's what Shopify stores and it's exact. Use 8-digit hex for transparency, or `color-mix()`. Don't use `rgb()` triples.
 - Ask before assuming anything about the design.
 - Don't commit or push unless I ask. **Never push to a live theme.**
