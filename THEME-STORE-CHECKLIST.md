@@ -15,35 +15,35 @@ This checklist lists everything Shopify requires, in the order we build it. Tick
 Why first: every later section reads these settings, CSS variables and base styles. If they change later, you have to rework everything.
 
 ### Global settings (`config/settings_schema.json`)
-- [ ] ❌ Rename `theme_info` to Oroskin, with a version and documentation/support URLs. *Why: required (§14), and it's what merchants see.*
-- [ ] 🟡 **At least 4 colour settings**, each background paired with a foreground (text) colour. Skeleton has 2. *§16*
-- [ ] 🟡 All fonts use `font_picker`, with a default from Shopify's font library. **No custom fonts.** *§15. Decided: two font pickers, heading font (default `newsreader_n4`, replacing Canela) and body font (default `plus_jakarta_sans_n4`, replacing Satoshi).*
-- [ ] ❌ Favicon setting. *§14*
-- [ ] ❌ Logo setting that works with wide, square and tall logos. *§14*
-- [ ] ❌ Social media link settings. Leave the placeholders empty. *§13*
-- [ ] ❌ "Enable animations" setting. *Our own decision.*
+- [x] ❌ Rename `theme_info` to Oroskin, with a version and documentation/support URLs. *Why: required (§14), and it's what merchants see.* *Done 2026-10-08 (`8cada3a`); the documentation URL is a placeholder until the docs exist (after 22 Oct).*
+- [x] 🟡 **At least 4 colour settings**, each background paired with a foreground (text) colour. Skeleton has 2. *§16* *Done: `color_scheme_group` with 10 slots and 5 schemes (`50e7f8d`, `e99f4b9`).*
+- [x] 🟡 All fonts use `font_picker`, with a default from Shopify's font library. **No custom fonts.** *§15. Decided: two font pickers, heading font (default `newsreader_n4`, replacing Canela) and body font (default `plus_jakarta_sans_n4`, replacing Satoshi).*
+- [x] ❌ Favicon setting. *§14*
+- [x] ❌ Logo setting that works with wide, square and tall logos. *§14* *Setting done (`13dc0aa`); rendering in the header is M2.*
+- [x] ❌ Social media link settings. Leave the placeholders empty. *§13* *Done: 6 empty `url` settings; icons rendered in M2.*
+- [x] ❌ "Enable animations" setting. *Our own decision.*
 
 ### CSS variables and base styles
-- [ ] 🟡 Figma tokens (colours, type scale, spacing, radius) output once as `:root` variables in `snippets/css-variables.liquid`
-- [ ] ✅ Bold, italic and bold-italic font variants loaded through `font_modify`. *§15*
-- [ ] ❌ Rich-text styles for h1–h6, blockquote, ul and ol. **Each heading level must look different.** *§8, §12*
-- [ ] ❌ Visible focus style on every link, button and input. *§12, for keyboard users.*
-- [ ] ❌ Touch targets of at least 24×24px. *§12*
-- [ ] ❌ Consistent button, link and form styles. *§3*
+- [x] 🟡 Figma tokens (colours, type scale, spacing, radius) output once as `:root` variables in `snippets/css-variables.liquid`
+- [x] ✅ Bold, italic and bold-italic font variants loaded through `font_modify`. *§15*
+- [x] ❌ Rich-text styles for h1–h6, blockquote, ul and ol. **Each heading level must look different.** *§8, §12*
+- [x] ❌ Visible focus style on every link, button and input. *§12, for keyboard users.*
+- [x] ❌ Touch targets of at least 24×24px. *§12* *Buttons 50px and text buttons 24px; check header/footer icons in M2.*
+- [x] ❌ Consistent button, link and form styles. *§3*
 
 ### Images
-- [ ] 🟡 `snippets/image.liquid`: add `widths`, `sizes`, the `alt` text, and **eager loading + `fetchpriority="high"` for the hero, lazy loading below the fold**. Support focal points. *§4, §17. Lazy-loading the hero slows the page's main paint (LCP).*
+- [x] 🟡 `snippets/image.liquid`: add `widths`, `sizes`, the `alt` text, and **eager loading + `fetchpriority="high"` for the hero, lazy loading below the fold**. Support focal points. *§4, §17. Lazy-loading the hero slows the page's main paint (LCP).*
 
 ### Animation system
-- [ ] ❌ A `<animate-on-scroll>` web component: IntersectionObserver with `opacity` and `transform` only
-- [ ] ❌ Content is hidden only when both the `.js` class and `prefers-reduced-motion: no-preference` apply. It stays visible without JavaScript.
-- [ ] ❌ Never animate the hero or first-section content
-- [ ] ❌ Animations are off inside the theme editor (`request.design_mode`). *§14: editor changes must show in the preview.*
+- [x] ❌ A `<animate-on-scroll>` web component: IntersectionObserver with `opacity` and `transform` only
+- [x] ❌ Content is hidden only when both the `.js` class and `prefers-reduced-motion: no-preference` apply. It stays visible without JavaScript.
+- [x] ❌ Never animate the hero or first-section content
+- [x] ❌ Animations are off inside the theme editor (`request.design_mode`). *§14: editor changes must show in the preview.*
 
 ### Clean-up and layout rules
-- [ ] ❌ Delete `sections/hello-world.liquid` and use a real section in `templates/index.json`. *It contains hard-coded text.*
-- [ ] ✅ `<html lang="{{ request.locale.iso_code }}">`; `content_for_header` left untouched. *§7*
-- [ ] ✅ `routes` used for URLs. Keep doing this; never hard-code `/`. *§7*
+- [x] ❌ Delete `sections/hello-world.liquid` and use a real section in `templates/index.json`. *It contains hard-coded text.*
+- [x] ✅ `<html lang="{{ request.locale.iso_code }}">`; `content_for_header` left untouched. *§7*
+- [x] ✅ `routes` used for URLs. Keep doing this; never hard-code `/`. *§7*
 
 ---
 

@@ -51,7 +51,8 @@ A fully custom Shopify theme for the brand **Oroskin**, built from a custom Figm
   - [ ] Designs for the parked features (decision 6) and for mobile (decision 7)
 - Work branch: `feature/m1-foundation` (created from `main`).
 - **Deadline: theme development done by 22 Oct 2026** (set 2026-10-10); documentation starts after that.
-- **Milestone 1, Foundation: in progress.** Steps 1–3 done (test content; theme identity + homepage clean-up, `8cada3a`; heading/body font pickers, `1072d87`). Step 4 (colour schemes) is next. The step plan is in the PDOS session file of 2026-10-05; step status is in the latest session file. Figma tokens go into `config/settings_schema.json`, CSS variables in `snippets/css-variables.liquid`, base styles and the animation-hiding CSS in `assets/critical.css`.
+- **Milestone 1, Foundation: done (2026-10-12).** Built: theme identity, heading/body font pickers, colour schemes (`settings.color_schemes` → `.color-<id>` classes that set `--color-*` and paint; sections add `color-{{ section.settings.color_scheme.id }}`), type/spacing/radius/shadow/motion tokens (`snippets/css-variables.liquid`), Standard page width (1650px content at 1920px), logo/favicon/social/animation settings, base typography + `.rte` + `.eyebrow`, buttons (`.button`, `--secondary`, `--text`), focus ring, forms, responsive `image` snippet (auto eager/lazy by `section.index`, `priority`), and the `<animate-on-scroll>` system (`data-animate="fade-up|zoom-in"`, never on section 1). Step log: PDOS session files 2026-10-05 → 2026-10-12.
+- **Next: Milestone 2, Header & footer.** Open before starting: which pages use header style 1 (pill) vs style 2 (LOGIN + vertical band); which social icons the footer shows; footer link grey `#787878` fails contrast on cream. The logo setting exists but isn't rendered yet. Skeleton's Text block still has fixed sizes (rebuilt in M3).
 - `design/` is ignored by git (local only, ~300 MB). Tokens are in `design/figma/tokens.md`.
 
 ## Build order (Phase 1 milestones)
@@ -73,7 +74,8 @@ A fully custom Shopify theme for the brand **Oroskin**, built from a custom Figm
 - Theme blocks in `blocks/` (heading, text, button, image) are written once and reused across sections.
 - CSS and JS are scoped per component and load only where used.
 - Every section has `{% schema %}` settings, a **preset**, `{{ block.shopify_attributes }}` on blocks, empty states (`!= blank`), placeholder content, and locale strings (no hardcoded text).
-- Performance targets from day one: Lighthouse mobile **≥ 60 performance, ≥ 90 accessibility** on home, collection and product.
+- Performance targets from day one: Lighthouse mobile on home, collection and product. **Our goal: 100 in all four categories (never below 90).** Theme Store minimum: ≥ 60 performance, ≥ 90 accessibility. Measure on the real store in an incognito window; the local `theme dev` proxy and browser extensions distort scores.
+- **Lighthouse baseline (2026-10-12, end of M1, local 127.0.0.1 with extensions, mobile):** performance 81 (FCP 3.2 s, LCP 3.6 s, TBT 90 ms, CLS 0, SI 4.7 s), accessibility 98, best practices 54, SEO 92.
 
 ## Mistakes to watch for
 
