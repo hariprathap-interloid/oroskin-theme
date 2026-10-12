@@ -34,11 +34,6 @@ select {
   border-radius: var(--style-border-radius-inputs);
 }
 
-select {
-  background-color: var(--color-background);
-  color: currentcolor;
-}
-
 dialog {
   background-color: var(--color-background);
   color: var(--color-text);
@@ -227,6 +222,15 @@ small {
   outline-offset: 3px;
 }
 
+/* Fields and buttons: the ring sits directly on the border, with no gap */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible,
+.button:focus-visible {
+  outline-offset: 0;
+}
+
 /**
  * Buttons: the Figma pill. .button is the primary style; .button--secondary is the outline style.
  * Native submit inputs share the primary style so Shopify forms look right without extra classes.
@@ -303,6 +307,138 @@ input[type='submit']:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   box-shadow: none;
+}
+
+/**
+ * Forms. Borders mix 65% of the scheme's text colour into its background, which keeps them
+ * at 3:1 contrast or more on every scheme (WCAG 1.4.11). Placeholders use 80% (4.5:1 or more).
+ */
+.field {
+  display: grid;
+  gap: var(--space-xs);
+}
+
+label {
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Not wrapped in :where(): these must beat the reset's `font: inherit` above */
+input:not([type]),
+input[type='text'],
+input[type='email'],
+input[type='password'],
+input[type='search'],
+input[type='tel'],
+input[type='url'],
+input[type='number'],
+input[type='date'],
+select,
+textarea {
+  inline-size: 100%;
+  min-block-size: 3.125rem; /* 50px, same height as buttons */
+  padding-block: var(--space-sm);
+  padding-inline: var(--space-md);
+  border: 1px solid color-mix(in srgb, var(--color-text) 65%, var(--color-background));
+  background-color: var(--color-background);
+  color: var(--color-text);
+  font-size: var(--font-size-body-sm);
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: var(--color-text);
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  border-color: var(--color-accent);
+}
+
+textarea {
+  min-block-size: 8rem;
+  resize: vertical;
+}
+
+::placeholder {
+  color: color-mix(in srgb, var(--color-text) 80%, var(--color-background));
+  opacity: 1;
+}
+
+input[type='checkbox'],
+input[type='radio'] {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+/* A checkbox or radio with its label: the whole row is the touch target */
+.field--check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-block-size: 1.5rem;
+}
+
+.field--check label {
+  font-weight: inherit;
+  cursor: pointer;
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+input[aria-invalid='true'],
+select[aria-invalid='true'],
+textarea[aria-invalid='true'] {
+  border-color: var(--color-error);
+}
+
+/*
+ * Default spacing between form controls that sit next to each other, so plain Shopify forms
+ * (product, cart, password) don't stack fields touching. :where() keeps it easy to override.
+ */
+:where(label) + :where(input, select, textarea) {
+  margin-block-start: var(--space-xs);
+}
+
+:where(input, select, textarea, button, .button, .shopify-payment-button)
+  + :where(input, select, textarea, button, .button, .shopify-payment-button, label) {
+  margin-block-start: var(--space-sm);
+}
+
+.form-message {
+  font-size: var(--font-size-caption);
+}
+
+.form-message--error {
+  color: var(--color-error);
+}
+
+/* Shopify's `default_errors` filter outputs <div class="errors"><ul><li>… */
+.errors {
+  margin-block-end: var(--space-md);
+  color: var(--color-error);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+}
+
+.errors ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.form-message--success {
+  color: var(--color-success);
 }
 
 /** Section layout utilities */
