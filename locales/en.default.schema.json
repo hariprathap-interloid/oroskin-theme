@@ -31,7 +31,10 @@
     "sidebar": "Sidebar",
     "text": "Text",
     "theme": "Theme",
-    "typography": "Typography"
+    "typography": "Typography",
+    "logo": "Logo and favicon",
+    "social_media": "Social media",
+    "animations": "Animations"
   },
   "labels": {
     "alignment": "Alignment",
@@ -51,7 +54,21 @@
     "heading_font": "Heading font",
     "body_font": "Body font",
     "color_scheme": "Color scheme",
-    "page_width_info": "Standard matches the design: about 1650px of content on a 1920px screen, with the page margin on each side on smaller screens."
+    "page_width_info": "Standard matches the design: about 1650px of content on a 1920px screen, with the page margin on each side on smaller screens.",
+    "logo": "Logo",
+    "logo_info": "Works with wide, square and tall logos. Without a logo, the store name is shown.",
+    "logo_width": "Logo width",
+    "favicon": "Favicon",
+    "favicon_info": "Shown in the browser tab. Scaled down to 32 × 32px.",
+    "social_accounts": "Social accounts",
+    "social_instagram": "Instagram",
+    "social_facebook": "Facebook",
+    "social_tiktok": "TikTok",
+    "social_pinterest": "Pinterest",
+    "social_youtube": "YouTube",
+    "social_x": "X (Twitter)",
+    "animations_enabled": "Reveal sections on scroll",
+    "animations_enabled_info": "Content fades in as visitors scroll. Visitors who turn on reduced motion in their device settings never see the animation."
   },
   "options": {
     "alignment": {
