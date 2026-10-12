@@ -218,6 +218,93 @@ small {
   line-height: 1.4;
 }
 
+/**
+ * Focus: a clear ring for keyboard users on everything they can reach (Theme Store accessibility).
+ * :focus-visible shows it for keyboard and not for mouse clicks.
+ */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+/**
+ * Buttons: the Figma pill. .button is the primary style; .button--secondary is the outline style.
+ * Native submit inputs share the primary style so Shopify forms look right without extra classes.
+ */
+.button,
+button[type='submit'],
+input[type='submit'] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  min-block-size: 3.125rem; /* 50px, Figma */
+  padding-block: var(--space-sm);
+  padding-inline: 2.1875rem; /* 35px, Figma */
+  border: 1px solid var(--color-button-border);
+  border-radius: var(--radius-pill);
+  background-color: color-mix(in srgb, var(--color-button) 85%, transparent);
+  color: var(--color-button-text);
+  box-shadow: var(--shadow-button);
+  font-family: var(--font-body--family);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.2;
+  letter-spacing: var(--letter-spacing-nav);
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.button:hover,
+button[type='submit']:hover,
+input[type='submit']:hover {
+  background-color: var(--color-button);
+  box-shadow: none;
+}
+
+.button--secondary {
+  border-color: var(--color-secondary-button-border);
+  background-color: var(--color-secondary-button);
+  color: var(--color-secondary-button-text);
+  box-shadow: var(--shadow-glass-edge);
+}
+
+.button--secondary:hover {
+  background-color: color-mix(in srgb, var(--color-secondary-button-text) 8%, var(--color-secondary-button));
+}
+
+/* Text button: the Figma "NEW ARRIVALS →" link. Still at least 24px tall for touch. */
+.button--text {
+  min-block-size: 1.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.4em;
+}
+
+.button--text:hover {
+  background: none;
+  text-decoration-thickness: 2px;
+}
+
+.button:disabled,
+.button[aria-disabled='true'],
+button[type='submit']:disabled,
+input[type='submit']:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
 /** Section layout utilities */
 
 /**
