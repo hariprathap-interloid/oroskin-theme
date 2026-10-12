@@ -1,43 +1,70 @@
 {% doc %}
-  Renders a responsive image that might be wrapped in a link.
+  Renders a responsive image (optionally wrapped in a link) with a srcset, alt text,
+  focal point support and the right loading behaviour for its position on the page.
 
-  When `width`, `height` and `crop` are provided, the image will be rendered
-  with a fixed aspect ratio.
+  Loading, if not set:
+  - first section on the page (the hero): eager + fetchpriority high, so it paints fast
+  - sections 2–3: eager
+  - section 4 onwards: lazy, so it only downloads when scrolled near
+  Focal points set by the merchant are applied automatically by `image_tag`.
 
-  Serves as an example of how to use the `image_url` filter and `image_tag` filter
-  as well as how you can use LiquidDoc to document your code.
-
-  @param {image} image - The image to be rendered
-  @param {string} [url] - An optional destination URL for the image
-  @param {string} [class] - Optional class to be added to the image wrapper
-  @param {number} [width] - The highest resolution width of the image to be rendered
-  @param {number} [height] - The highest resolution height of the image to be rendered
-  @param {string} [crop] - The crop position of the image
+  @param {image} image - The image to render. Shows a placeholder when blank.
+  @param {string} [url] - Wraps the image in a link to this URL
+  @param {string} [class] - Extra class for the wrapper (e.g. `image--cover` to fill its box)
+  @param {string} [alt] - Alt text; defaults to the image's own alt text. Pass '' for decorative images
+  @param {string} [sizes] - The `sizes` attribute, e.g. '(min-width: 990px) 50vw, 100vw'. Default '100vw'
+  @param {string} [widths] - Comma-separated srcset widths. Default covers phones to 4K screens
+  @param {number} [width] - Largest width to request; with `height` and `crop`, gives a fixed ratio
+  @param {number} [height] - Height to crop to (use with `width`)
+  @param {string} [crop] - Crop position: 'center', 'top', 'bottom', 'left' or 'right'
+  @param {string} [loading] - 'eager' or 'lazy' to override the automatic choice
+  @param {boolean} [priority] - true for the page's main (LCP) image: eager + fetchpriority high
 
   @example
-  {% render 'image', image: product.featured_image %}
-  {% render 'image', image: product.featured_image, url: product.url %}
-  {% render 'image',
-    class: 'product__image',
-    image: product.featured_image,
-    url: product.url,
-    width: 1200,
-    height: 800,
-    crop: 'center',
-  %}
+  {% render 'image', image: product.featured_image, url: product.url, sizes: '(min-width: 990px) 25vw, 50vw' %}
+  {% render 'image', image: section.settings.image, class: 'image--cover', priority: true %}
+  {% render 'image', image: block.settings.image, width: 800, height: 800, crop: 'center' %}
 {% enddoc %}
 
-{% liquid
-  unless height
-    assign width = width | default: image.width
-  endunless
-
+{%- liquid
   if url
     assign wrapper = 'a'
   else
     assign wrapper = 'div'
   endif
-%}
+
+  assign image_sizes = sizes | default: '100vw'
+  assign image_widths = widths | default: '310, 375, 550, 750, 1100, 1500, 1780, 2000, 3000, 3840'
+
+  if width
+    assign max_width = width
+  else
+    assign max_width = image.width | at_most: 3840
+  endif
+
+  # Loading: priority > explicit `loading` > position of the section on the page
+  assign image_loading = loading
+  assign image_priority = 'auto'
+  if priority
+    assign image_loading = 'eager'
+    assign image_priority = 'high'
+  elsif image_loading == blank
+    if section.index > 3
+      assign image_loading = 'lazy'
+    else
+      assign image_loading = 'eager'
+      if section.index == 1
+        assign image_priority = 'high'
+      endif
+    endif
+  endif
+
+  if alt == nil
+    assign image_alt = image.alt | escape
+  else
+    assign image_alt = alt | escape
+  endif
+-%}
 
 <{{ wrapper }}
   class="image {{ class }}"
@@ -45,7 +72,20 @@
     href="{{ url }}"
   {% endif %}
 >
-  {{ image | image_url: width: width, height: height, crop: crop | image_tag }}
+  {%- if image != blank -%}
+    {{
+      image
+      | image_url: width: max_width, height: height, crop: crop
+      | image_tag:
+        widths: image_widths,
+        sizes: image_sizes,
+        loading: image_loading,
+        fetchpriority: image_priority,
+        alt: image_alt
+    }}
+  {%- else -%}
+    {{ 'image' | placeholder_svg_tag: 'image__placeholder' }}
+  {%- endif -%}
 </{{ wrapper }}>
 
 {% stylesheet %}
@@ -57,8 +97,26 @@
     height: auto;
   }
 
-  .image > img {
+  .image > img,
+  .image > .image__placeholder {
+    display: block;
     width: 100%;
     height: auto;
+  }
+
+  /* Fills its parent box (hero backgrounds, fixed-ratio cards). The focal point decides what stays visible. */
+  .image--cover,
+  .image--cover > img,
+  .image--cover > .image__placeholder {
+    height: 100%;
+  }
+
+  .image--cover > img {
+    object-fit: cover;
+  }
+
+  .image__placeholder {
+    background-color: var(--color-tint-subtle);
+    fill: var(--color-tint-border);
   }
 {% endstylesheet %}
