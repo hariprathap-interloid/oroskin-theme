@@ -441,6 +441,36 @@ textarea[aria-invalid='true'] {
   color: var(--color-success);
 }
 
+/**
+ * Scroll reveal. Elements are hidden ONLY when all three are true:
+ * JS runs (.js), the merchant enabled animations and we're not in the editor (.animations-on),
+ * and the visitor hasn't asked for reduced motion. Otherwise everything stays visible.
+ */
+animate-on-scroll {
+  display: block;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .js.animations-on [data-animate] {
+    transition:
+      opacity var(--duration-slow) var(--ease-out),
+      transform var(--duration-slow) var(--ease-out);
+    transition-delay: var(--animate-delay, 0ms);
+  }
+
+  .js.animations-on [data-animate]:not(.is-visible) {
+    opacity: 0;
+  }
+
+  .js.animations-on [data-animate='fade-up']:not(.is-visible) {
+    transform: translateY(2rem);
+  }
+
+  .js.animations-on [data-animate='zoom-in']:not(.is-visible) {
+    transform: scale(0.96);
+  }
+}
+
 /** Section layout utilities */
 
 /**

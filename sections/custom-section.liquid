@@ -5,9 +5,21 @@
     </div>
   {% endif %}
 
-  <div class="custom-section__content">
+  {%- liquid
+    # Never animate the first section: it's the hero, and hiding it would delay the main paint (LCP)
+    assign animation = section.settings.animation
+    if section.index == 1
+      assign animation = 'none'
+    endif
+  -%}
+  <animate-on-scroll
+    class="custom-section__content"
+    {% if animation != 'none' %}
+      data-animate="{{ animation }}"
+    {% endif %}
+  >
     {% content_for 'blocks' %}
-  </div>
+  </animate-on-scroll>
 </div>
 
 {% stylesheet %}
@@ -43,6 +55,18 @@
       "id": "color_scheme",
       "label": "t:labels.color_scheme",
       "default": "scheme-1"
+    },
+    {
+      "type": "select",
+      "id": "animation",
+      "label": "t:labels.animation",
+      "info": "t:labels.animation_info",
+      "options": [
+        { "value": "none", "label": "t:options.animation.none" },
+        { "value": "fade-up", "label": "t:options.animation.fade_up" },
+        { "value": "zoom-in", "label": "t:options.animation.zoom_in" }
+      ],
+      "default": "fade-up"
     },
     {
       "type": "image_picker",

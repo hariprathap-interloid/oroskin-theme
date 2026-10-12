@@ -68,7 +68,9 @@
     "social_youtube": "YouTube",
     "social_x": "X (Twitter)",
     "animations_enabled": "Reveal sections on scroll",
-    "animations_enabled_info": "Content fades in as visitors scroll. Visitors who turn on reduced motion in their device settings never see the animation."
+    "animations_enabled_info": "Content fades in as visitors scroll. Visitors who turn on reduced motion in their device settings never see the animation.",
+    "animation": "Scroll animation",
+    "animation_info": "Not applied to the first section on a page, so the top of the page shows instantly."
   },
   "options": {
     "alignment": {
@@ -93,6 +95,11 @@
       "title": "Title",
       "subtitle": "Subtitle",
       "normal": "Normal text"
+    },
+    "animation": {
+      "none": "None",
+      "fade_up": "Fade up",
+      "zoom_in": "Zoom in"
     }
   },
   "color_scheme": {

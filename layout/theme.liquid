@@ -1,6 +1,28 @@
 <!doctype html>
-<html lang="{{ request.locale.iso_code }}">
+{%- liquid
+  # Scroll animations run only when the merchant turned them on, and never inside the theme editor
+  # (merchants must see and edit all content there).
+  assign animations_on = false
+  if settings.animations_enabled and request.design_mode == false
+    assign animations_on = true
+  endif
+-%}
+<html class="no-js{% if animations_on %} animations-on{% endif %}" lang="{{ request.locale.iso_code }}">
   <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+
+    <script>
+      // JS is running: allow the reveal CSS to hide elements. If the animation script fails to
+      // load within 3 seconds, switch animations off so no content stays hidden.
+      document.documentElement.classList.replace('no-js', 'js');
+      setTimeout(function () {
+        if (!window.customElements || !customElements.get('animate-on-scroll')) {
+          document.documentElement.classList.remove('animations-on');
+        }
+      }, 3000);
+    </script>
+
     {%- if settings.favicon != blank -%}
       <link rel="icon" type="image/png" href="{{ settings.favicon | image_url: width: 32, height: 32 }}">
     {%- endif -%}
@@ -30,6 +52,10 @@
 
     {% # Social, title, etc. %}
     {% render 'meta-tags' %}
+
+    {%- if animations_on -%}
+      <script src="{{ 'animate-on-scroll.js' | asset_url }}" defer></script>
+    {%- endif -%}
 
     {{ content_for_header }}
   </head>
