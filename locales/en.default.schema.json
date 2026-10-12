@@ -50,7 +50,8 @@
     "text": "Text",
     "heading_font": "Heading font",
     "body_font": "Body font",
-    "color_scheme": "Color scheme"
+    "color_scheme": "Color scheme",
+    "page_width_info": "Standard matches the design: about 1650px of content on a 1920px screen, with the page margin on each side on smaller screens."
   },
   "options": {
     "alignment": {
@@ -64,6 +65,7 @@
     },
     "page_width": {
       "narrow": "Narrow",
+      "standard": "Standard",
       "wide": "Wide"
     },
     "size": {
