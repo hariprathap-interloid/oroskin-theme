@@ -41,7 +41,7 @@ select {
 
 dialog {
   background-color: var(--color-background);
-  color: var(--color-foreground);
+  color: var(--color-text);
 }
 
 p {
@@ -75,7 +75,7 @@ p:empty {
 body {
   font-family: var(--font-body--family);
   background-color: var(--color-background);
-  color: var(--color-foreground);
+  color: var(--color-text);
 }
 
 h1,

@@ -36,7 +36,6 @@
   "labels": {
     "alignment": "Alignment",
     "background": "Background",
-    "foreground": "Foreground",
     "grid_gap": "Grid spacing",
     "grid_item_width": "Grid item width",
     "input_corner_radius": "Input corner radius",
@@ -50,7 +49,8 @@
     "text_style": "Text style",
     "text": "Text",
     "heading_font": "Heading font",
-    "body_font": "Body font"
+    "body_font": "Body font",
+    "color_scheme": "Color scheme"
   },
   "options": {
     "alignment": {

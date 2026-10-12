@@ -23,8 +23,31 @@
 
     --page-width: {{ settings.max_page_width }};
     --page-margin: {{ settings.min_page_margin }}px;
-    --color-background: {{ settings.background_color }};
-    --color-foreground: {{ settings.foreground_color }};
     --style-border-radius-inputs: {{ settings.input_corner_radius }}px;
   }
+
+  {% comment %}
+    Colour schemes: one CSS class per scheme. It sets that scheme's colours as variables
+    and paints its own background and text, so one class is all a section needs.
+    The first scheme also sets :root, so the whole page defaults to it.
+    A section applies a scheme with: class="color-{{ section.settings.color_scheme.id }}"
+  {% endcomment %}
+  {%- for scheme in settings.color_schemes -%}
+    {% if forloop.first %}:root,{% endif %}
+    .color-{{ scheme.id }} {
+      --color-background: {{ scheme.settings.background }};
+      --color-text: {{ scheme.settings.text }};
+      --color-accent: {{ scheme.settings.accent }};
+      --color-border: {{ scheme.settings.border }};
+      --color-button: {{ scheme.settings.button }};
+      --color-button-text: {{ scheme.settings.button_label }};
+      --color-button-border: {{ scheme.settings.button_border }};
+      --color-secondary-button: {{ scheme.settings.secondary_button }};
+      --color-secondary-button-text: {{ scheme.settings.secondary_button_label }};
+      --color-secondary-button-border: {{ scheme.settings.secondary_button_border }};
+
+      background-color: var(--color-background);
+      color: var(--color-text);
+    }
+  {%- endfor %}
 {% endstyle %}
