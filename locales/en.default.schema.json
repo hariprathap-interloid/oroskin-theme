@@ -46,9 +46,9 @@
     "body_font": "Body font",
     "color_scheme": "Color scheme",
     "page_width_info": "Standard matches the design: about 1650px of content on a 1920px screen, with the page margin on each side on smaller screens.",
-    "logo": "Logo",
-    "logo_info": "Works with wide, square and tall logos. Without a logo, the store name is shown.",
-    "logo_width": "Logo width",
+    "logo": "Logo image",
+    "logo_info": "E.g. the brand mark. Works with wide, square and tall images. Without an image or logo text, the store name is shown.",
+    "logo_width": "Logo image width",
     "favicon": "Favicon",
     "favicon_info": "Shown in the browser tab. Scaled down to 32 × 32px.",
     "social_accounts": "Social accounts",
@@ -83,7 +83,14 @@
     "shop_all_label_info": "Leave empty to use Shop all.",
     "shop_all_link": "Link",
     "shop_all_link_info": "Leave empty to use the menu item's own link, set in Navigation. With no link, it points to #.",
-    "shop_all_group": "Shop all link"
+    "shop_all_group": "Shop all link",
+    "logo_text_group": "Logo text",
+    "logo_text": "Text",
+    "logo_text_info": "Shown after the logo image, e.g. Oro.",
+    "logo_text_accent": "Accent text",
+    "logo_text_accent_info": "Shown right after the text, in italic and the primary colour, e.g. Skin.",
+    "logo_font": "Font",
+    "logo_text_size": "Size"
   },
   "options": {
     "alignment": {

@@ -27,6 +27,38 @@
         "default": 140
       },
       {
+        "type": "header",
+        "content": "t:labels.logo_text_group"
+      },
+      {
+        "type": "text",
+        "id": "logo_text",
+        "label": "t:labels.logo_text",
+        "info": "t:labels.logo_text_info"
+      },
+      {
+        "type": "text",
+        "id": "logo_text_accent",
+        "label": "t:labels.logo_text_accent",
+        "info": "t:labels.logo_text_accent_info"
+      },
+      {
+        "type": "font_picker",
+        "id": "type_logo_font",
+        "label": "t:labels.logo_font",
+        "default": "cormorant_n6"
+      },
+      {
+        "type": "range",
+        "id": "logo_text_size",
+        "min": 24,
+        "max": 64,
+        "step": 1,
+        "unit": "px",
+        "label": "t:labels.logo_text_size",
+        "default": 47
+      },
+      {
         "type": "image_picker",
         "id": "favicon",
         "label": "t:labels.favicon",

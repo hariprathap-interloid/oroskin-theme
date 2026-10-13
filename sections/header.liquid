@@ -8,11 +8,24 @@
 -%}
 
 <header
-  class="header color-{{ section.settings.color_scheme.id }}"
-  style="--logo-width: {{ settings.logo_width }}px; --nav-underline: url('{{ 'nav-underline.svg' | asset_url }}'); --mega-columns: {{ section.settings.mega_menu_columns }};"
+  class="header"
+  style="--logo-width: {{ settings.logo_width }}px; --logo-text-size: {{ settings.logo_text_size }}px; --nav-underline: url('{{ 'nav-underline.svg' | asset_url }}'); --mega-columns: {{ section.settings.mega_menu_columns }};"
 >
-  <div class="header__bar">
+  <div class="header__bar color-{{ section.settings.color_scheme.id }}">
     <a class="header__logo" href="{{ routes.root_url }}">
+      {%- liquid
+        # Logo = optional image (e.g. the flame mark) + optional text ("Oro" + italic accent "Skin").
+        # With neither, the shop name is shown. The image's alt is empty when text is shown, so the
+        # link isn't announced twice.
+        assign has_logo_text = false
+        if settings.logo_text != blank or settings.logo_text_accent != blank
+          assign has_logo_text = true
+        endif
+        assign logo_alt = shop.name
+        if has_logo_text
+          assign logo_alt = ''
+        endif
+      -%}
       {%- if settings.logo != blank -%}
         {{
           settings.logo
@@ -22,10 +35,16 @@
             widths: logo_widths,
             sizes: logo_sizes,
             loading: 'eager',
-            alt: shop.name
+            alt: logo_alt
         }}
-      {%- else -%}
-        <span class="header__shop-name">{{ shop.name }}</span>
+      {%- endif -%}
+      {%- if has_logo_text -%}
+        <span class="header__logo-text">
+          {{- settings.logo_text | escape -}}
+          {%- if settings.logo_text_accent != blank -%}<em>{{ settings.logo_text_accent | escape }}</em>{%- endif -%}
+        </span>
+      {%- elsif settings.logo == blank -%}
+        <span class="header__logo-text">{{ shop.name | escape }}</span>
       {%- endif -%}
     </a>
 
@@ -77,21 +96,52 @@
 </header>
 
 {% stylesheet %}
-  .header {
-    padding-block: var(--space-lg);
+  /*
+    Sticky header. Shopify wraps the header in a section element (class shopify-section-group-header-group);
+    that wrapper is what has to stick. A sticky element only sticks inside its parent, and the <header> fills
+    its wrapper exactly, so making <header> itself sticky would do nothing.
+  */
+  .shopify-section-group-header-group {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 20;
   }
 
+  /* The space around the pill stays see-through: only the pill has a surface */
+  .header {
+    padding-block-start: 1.25rem; /* 20px from the top, Figma */
+  }
+
+  /*
+    The floating pill (Figma: 1363 x 77 at 1920 wide, radius 50px, 25% white "glass", soft shadow).
+    The colour scheme class gives it its text colours; its background is replaced by the glass,
+    and backdrop-filter blurs whatever scrolls underneath so the menu stays readable.
+  */
   .header__bar {
-    position: relative; /* the mega menu panel is positioned against the whole bar */
+    position: relative; /* the mega menu panel is positioned against the pill */
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--space-xl);
+    max-inline-size: 85.25rem; /* 1364px */
+    block-size: 4.8125rem; /* 77px, Figma */
+    margin-inline: auto;
+    padding-block: 0;
+    padding-inline: var(--space-2xl) var(--space-sm);
+    border-radius: var(--radius-pill);
+    box-shadow: var(--shadow-header);
+  }
+
+  .header .header__bar {
+    background-color: var(--color-glass);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    backdrop-filter: blur(20px) saturate(1.4);
   }
 
   .header__logo {
     display: flex;
     align-items: center;
+    gap: 0.625rem;
     flex: none;
     min-block-size: 1.5rem;
     color: var(--color-text);
@@ -102,14 +152,25 @@
   .header__logo-image {
     inline-size: var(--logo-width);
     block-size: auto;
-    max-block-size: 4rem;
+    max-block-size: 3.25rem; /* fits inside the 77px pill */
     object-fit: contain;
   }
 
-  .header__shop-name {
-    font-family: var(--font-heading--family);
-    font-size: var(--font-size-h3);
+  /* Text logo (Figma: Cormorant Garamond SemiBold 46.78px, line-height 100%; accent word italic, primary).
+     The size follows the "Logo text size" setting and scales down on small screens. */
+  .header__logo-text {
+    color: var(--color-text);
+    font-family: var(--font-logo--family);
+    font-size: clamp(1.75rem, 1.4rem + 1.4vw, var(--logo-text-size));
+    font-weight: var(--font-logo--weight);
     line-height: 1;
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+
+  .header__logo-text em {
+    color: var(--color-primary);
+    font-style: italic;
   }
 
   .header__menu,
