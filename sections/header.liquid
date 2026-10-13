@@ -44,19 +44,34 @@
     </nav>
 
     <div class="header__actions">
-      {% if shop.customer_accounts_enabled %}
-        <shopify-account menu="{{ section.settings.customer_account_menu }}">
-          {{ 'icon-account.svg' | inline_asset_content }}
-        </shopify-account>
-      {% endif %}
-
-      <a href="{{ routes.cart_url }}">
-        {% if cart.item_count > 0 %}
-          <sup>{{ cart.item_count }}</sup>
-        {% endif %}
-
-        {{ 'icon-cart.svg' | inline_asset_content }}
+      <a class="header__icon-button" href="{{ routes.search_url }}">
+        {{ 'icon-search.svg' | inline_asset_content }}
+        <span class="visually-hidden">{{ 'header.search' | t }}</span>
       </a>
+
+      <a class="header__icon-button" href="{{ routes.cart_url }}">
+        {{ 'icon-cart.svg' | inline_asset_content }}
+        <span class="visually-hidden">{{ 'header.cart_count' | t: count: cart.item_count }}</span>
+        {%- if cart.item_count > 0 -%}
+          <span class="header__count" aria-hidden="true">
+            {%- if cart.item_count < 100 -%}{{ cart.item_count }}{%- else -%}99+{%- endif -%}
+          </span>
+        {%- endif -%}
+      </a>
+
+      {%- comment -%}
+        Customer accounts are Shopify's own pages (decision 6). <shopify-account> is Shopify's web component:
+        signed in, it shows the customer's avatar and an account menu; signed out, it shows whatever we put
+        in its "signed-out-avatar" slot, here the Figma's red LOGIN pill.
+      {%- endcomment -%}
+      {%- if shop.customer_accounts_enabled -%}
+        <shopify-account class="header__account" menu="{{ section.settings.customer_account_menu }}">
+          <span slot="signed-out-avatar" class="button header__login">
+            {{ 'icon-account.svg' | inline_asset_content | remove: 'slot="signed-out-avatar"' }}
+            {{- 'header.login' | t -}}
+          </span>
+        </shopify-account>
+      {%- endif -%}
     </div>
   </div>
 </header>
@@ -104,21 +119,69 @@
     gap: var(--space-md);
   }
 
-  /* Scoped to the header's own icons (account, cart) so they don't override the menu and mega menu,
-     which style their own links and icons. (These were Skeleton's ".header a / svg" rules.) */
-  .header__actions a {
+  /* Header actions (Figma): round glass icon buttons, then the red LOGIN pill */
+  .header {
+    --icon-size: 1.25rem;
+  }
+
+  .header__icon-button {
     position: relative;
+    display: inline-grid;
+    place-items: center;
+    inline-size: 3.125rem; /* 50px, Figma "Liquid Glass Button" */
+    block-size: 3.125rem;
+    padding: var(--space-xs);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-glass);
+    box-shadow: var(--shadow-header);
     color: var(--color-text);
     text-decoration: none;
+    transition:
+      color var(--duration-fast) var(--ease-out),
+      background-color var(--duration-fast) var(--ease-out);
   }
 
-  .header__actions sup {
+  .header__icon-button:hover {
+    background-color: var(--color-glass-strong);
+    color: var(--color-accent);
+  }
+
+  .header__icon-button svg {
+    inline-size: var(--icon-size);
+    block-size: var(--icon-size);
+  }
+
+  /* Item count bubble on the cart (Figma: small red circle, top right) */
+  .header__count {
     position: absolute;
-    left: 100%;
+    inset-block-start: -0.125rem;
+    inset-inline-end: -0.125rem;
+    display: inline-grid;
+    place-items: center;
+    min-inline-size: 1.25rem;
+    block-size: 1.25rem;
+    padding-inline: 0.3rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-primary);
+    color: #ffffff;
+    font-size: 0.6875rem;
+    font-weight: var(--font-weight-medium);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
   }
 
-  .header__actions svg {
-    width: 2rem;
+  .header__account {
+    display: inline-flex;
+  }
+
+  .header__login {
+    gap: var(--space-xs);
+    padding-inline: var(--space-xl);
+  }
+
+  .header__login svg {
+    inline-size: var(--icon-size);
+    block-size: var(--icon-size);
   }
 {% endstylesheet %}
 

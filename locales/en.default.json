@@ -48,6 +48,13 @@
   },
   "header": {
     "menu_by_category": "{{ title }} by category",
-    "shop_all": "Shop all"
+    "shop_all": "Shop all",
+    "search": "Search",
+    "login": "Login",
+    "cart_count": {
+      "zero": "Cart",
+      "one": "Cart, {{ count }} item",
+      "other": "Cart, {{ count }} items"
+    }
   }
 }
