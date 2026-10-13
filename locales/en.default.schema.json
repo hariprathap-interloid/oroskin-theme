@@ -2,39 +2,30 @@
   "general": {
     "404": "Not found",
     "article": "Article",
-    "block": "Block",
     "blog": "Blog",
     "cart": "Cart",
     "collection": "Collection",
     "collections": "Collections",
-    "collection_card": "Collection card",
     "collections_grid": "Collections grid",
     "colors": "Colors",
     "column": "Column",
-    "content": "Content",
     "custom_section": "Custom section",
     "fonts": "Fonts",
     "footer": "Footer",
     "group": "Group",
     "header": "Header",
     "layout": "Layout",
-    "main": "Main",
     "page": "Page",
     "password": "Password",
-    "primary": "Primary",
     "product": "Product",
     "row": "Row",
     "search": "Search",
-    "secondary": "Secondary",
-    "section": "Section",
-    "settings": "Settings",
-    "sidebar": "Sidebar",
     "text": "Text",
-    "theme": "Theme",
     "typography": "Typography",
     "logo": "Logo and favicon",
     "social_media": "Social media",
-    "animations": "Animations"
+    "animations": "Animations",
+    "menu_card": "Menu card"
   },
   "labels": {
     "alignment": "Alignment",
@@ -70,7 +61,23 @@
     "animations_enabled": "Reveal sections on scroll",
     "animations_enabled_info": "Content fades in as visitors scroll. Visitors who turn on reduced motion in their device settings never see the animation.",
     "animation": "Scroll animation",
-    "animation_info": "Not applied to the first section on a page, so the top of the page shows instantly."
+    "animation_info": "Not applied to the first section on a page, so the top of the page shows instantly.",
+    "mega_menu": "Mega menu",
+    "mega_menu_width": "Width",
+    "mega_menu_columns": "Cards per row",
+    "navigation": "Navigation",
+    "mega_menu_image_fit": "Image fit",
+    "mega_menu_image_ratio": "Image shape",
+    "menu_card_help": "Customises one card in the mega menu. Pick the collection the menu item links to, or, for other menu items, the same link (page, blog, product). For a menu item that links to \"#\", leave both empty and type its exact name as the Title. Empty fields use the collection's own.",
+    "collection": "Collection",
+    "card_title": "Title",
+    "card_title_info": "Leave empty to use the menu item name. For \"#\" menu items, type the exact menu name here.",
+    "image": "Image",
+    "card_image_info": "Leave empty to use the collection image.",
+    "description": "Description",
+    "card_text_info": "Leave empty to use the collection description.",
+    "card_link": "Link",
+    "card_link_info": "Only for menu items that don't link to a collection."
   },
   "options": {
     "alignment": {
@@ -100,6 +107,19 @@
       "none": "None",
       "fade_up": "Fade up",
       "zoom_in": "Zoom in"
+    },
+    "mega_menu_width": {
+      "bar": "Same as header",
+      "screen": "Full width"
+    },
+    "image_fit": {
+      "cover": "Fill (crop to fit)",
+      "contain": "Fit (show whole image)"
+    },
+    "image_ratio": {
+      "landscape": "Landscape",
+      "square": "Square",
+      "portrait": "Portrait"
     }
   },
   "color_scheme": {

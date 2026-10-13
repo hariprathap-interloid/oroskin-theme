@@ -19,14 +19,6 @@
     "update": "Update",
     "remove": "Remove"
   },
-  "customers": {
-    "login": {
-      "email": "Email",
-      "password": "Password",
-      "submit": "Sign in",
-      "title": "Login"
-    }
-  },
   "collections": {
     "title": "Collections"
   },
@@ -50,6 +42,12 @@
     "results_for_html": "{{ count }} results found for {{ terms }}"
   },
   "accessibility": {
-    "main_menu": "Main menu"
+    "main_menu": "Main menu",
+    "previous": "Previous",
+    "next": "Next"
+  },
+  "header": {
+    "menu_by_category": "{{ title }} by category",
+    "shop_all": "Shop all"
   }
 }

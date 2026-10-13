@@ -1,0 +1,74 @@
+{% doc %}
+  One card in the header mega menu (the Figma card): image, title with an arrow, description,
+  and, when the menu item has its own sub-items (3rd level), small links under the description.
+
+  When the link points to a collection, the card uses that collection's image and description
+  (Products -> Collections -> image and description). Otherwise, or when they're empty, the card shows
+  a placeholder image and no description.
+
+  @param {link} link - The menu link this card represents
+  @param {string} [title] - Title from a Menu card block (overrides the menu item name)
+  @param {image} [image] - Image from a Menu card block (overrides the collection image)
+  @param {string} [text] - Description from a Menu card block (overrides the collection description)
+  @param {string} [attributes] - block.shopify_attributes, so clicking the card in the editor selects its block
+
+  @example
+  {% render 'mega-menu-card', link: child %}
+{% enddoc %}
+
+{%- liquid
+  assign card_image = blank
+  assign card_text = blank
+  if link.type == 'collection_link'
+    assign card_image = link.object.featured_image
+    assign card_text = link.object.description | strip_html | truncatewords: 18
+  endif
+
+  # Overrides from the Menu card block, when set
+  if image != blank
+    assign card_image = image
+  endif
+  if text != blank
+    assign card_text = text | escape
+  endif
+-%}
+
+<li class="menu__card" {{ attributes }}>
+  {%- comment -%}
+    The image is a duplicate link for mouse users only (tabindex -1, aria-hidden):
+    keyboard and screen-reader users get one link per card, the title.
+  {%- endcomment -%}
+  {%- if link.url == '#' -%}
+    <div class="menu__card-image-link">
+      {% render 'image', image: card_image, class: 'menu__card-image image--cover', alt: '', sizes: '(min-width: 990px) 25vw, 100vw', loading: 'lazy' %}
+    </div>
+  {%- else -%}
+    <a class="menu__card-image-link" href="{{ link.url }}" tabindex="-1" aria-hidden="true">
+      {% render 'image', image: card_image, class: 'menu__card-image image--cover', alt: '', sizes: '(min-width: 990px) 25vw, 100vw', loading: 'lazy' %}
+    </a>
+  {%- endif -%}
+
+  {% render 'mega-menu-card-title', link: link, title: title %}
+
+  {%- if card_text != blank -%}
+    <p class="menu__card-text">{{ card_text }}</p>
+  {%- endif -%}
+
+  {%- if link.links != blank -%}
+    <ul class="menu__card-subs" role="list">
+      {%- for grandchild in link.links -%}
+        <li>
+          <a
+            class="menu__card-sub"
+            href="{{ grandchild.url }}"
+            {% if grandchild.current %}
+              aria-current="page"
+            {% endif %}
+          >
+            {{- grandchild.title | escape -}}
+          </a>
+        </li>
+      {%- endfor -%}
+    </ul>
+  {%- endif -%}
+</li>

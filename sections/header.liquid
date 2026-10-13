@@ -9,7 +9,7 @@
 
 <header
   class="header color-{{ section.settings.color_scheme.id }}"
-  style="--logo-width: {{ settings.logo_width }}px;"
+  style="--logo-width: {{ settings.logo_width }}px; --nav-underline: url('{{ 'nav-underline.svg' | asset_url }}'); --mega-columns: {{ section.settings.mega_menu_columns }};"
 >
   <div class="header__bar">
     <a class="header__logo" href="{{ routes.root_url }}">
@@ -30,9 +30,14 @@
     </a>
 
     <nav class="header__menu" aria-label="{{ 'accessibility.main_menu' | t }}">
-      {% for link in section.settings.menu.links %}
-        {{ link.title | link_to: link.url }}
-      {% endfor %}
+      {% render 'header-menu',
+        links: section.settings.menu.links,
+        panel_width: section.settings.mega_menu_width,
+        panel_scheme: section.settings.mega_menu_color_scheme,
+        image_fit: section.settings.mega_menu_image_fit,
+        image_ratio: section.settings.mega_menu_image_ratio,
+        cards: section.blocks
+      %}
     </nav>
 
     <div class="header__actions">
@@ -59,6 +64,7 @@
   }
 
   .header__bar {
+    position: relative; /* the mega menu panel is positioned against the whole bar */
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -95,18 +101,20 @@
     gap: var(--space-md);
   }
 
-  .header a {
+  /* Scoped to the header's own icons (account, cart) so they don't override the menu and mega menu,
+     which style their own links and icons. (These were Skeleton's ".header a / svg" rules.) */
+  .header__actions a {
     position: relative;
     color: var(--color-text);
     text-decoration: none;
   }
 
-  .header sup {
+  .header__actions sup {
     position: absolute;
     left: 100%;
   }
 
-  .header svg {
+  .header__actions svg {
     width: 2rem;
   }
 {% endstylesheet %}
@@ -114,12 +122,57 @@
 {% schema %}
 {
   "name": "t:general.header",
+  "blocks": [
+    {
+      "type": "mega_menu_card",
+      "name": "t:general.menu_card",
+      "settings": [
+        {
+          "type": "paragraph",
+          "content": "t:labels.menu_card_help"
+        },
+        {
+          "type": "collection",
+          "id": "collection",
+          "label": "t:labels.collection"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "t:labels.card_link",
+          "info": "t:labels.card_link_info"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "t:labels.card_title",
+          "info": "t:labels.card_title_info"
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "t:labels.image",
+          "info": "t:labels.card_image_info"
+        },
+        {
+          "type": "textarea",
+          "id": "text",
+          "label": "t:labels.description",
+          "info": "t:labels.card_text_info"
+        }
+      ]
+    }
+  ],
   "settings": [
     {
       "type": "color_scheme",
       "id": "color_scheme",
       "label": "t:labels.color_scheme",
       "default": "scheme-1"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.navigation"
     },
     {
       "type": "link_list",
@@ -132,6 +185,56 @@
       "id": "customer_account_menu",
       "label": "t:labels.customer_account_menu",
       "default": "customer-account-main-menu"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.mega_menu"
+    },
+    {
+      "type": "select",
+      "id": "mega_menu_width",
+      "label": "t:labels.mega_menu_width",
+      "options": [
+        { "value": "bar", "label": "t:options.mega_menu_width.bar" },
+        { "value": "screen", "label": "t:options.mega_menu_width.screen" }
+      ],
+      "default": "bar"
+    },
+    {
+      "type": "range",
+      "id": "mega_menu_columns",
+      "label": "t:labels.mega_menu_columns",
+      "min": 2,
+      "max": 4,
+      "step": 1,
+      "default": 3
+    },
+    {
+      "type": "select",
+      "id": "mega_menu_image_ratio",
+      "label": "t:labels.mega_menu_image_ratio",
+      "options": [
+        { "value": "landscape", "label": "t:options.image_ratio.landscape" },
+        { "value": "square", "label": "t:options.image_ratio.square" },
+        { "value": "portrait", "label": "t:options.image_ratio.portrait" }
+      ],
+      "default": "landscape"
+    },
+    {
+      "type": "select",
+      "id": "mega_menu_image_fit",
+      "label": "t:labels.mega_menu_image_fit",
+      "options": [
+        { "value": "cover", "label": "t:options.image_fit.cover" },
+        { "value": "contain", "label": "t:options.image_fit.contain" }
+      ],
+      "default": "cover"
+    },
+    {
+      "type": "color_scheme",
+      "id": "mega_menu_color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ]
 }

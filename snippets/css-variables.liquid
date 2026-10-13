@@ -9,6 +9,12 @@
   {{ settings.type_body_font | font_modify: 'weight', 'bold' | font_face: font_display: 'swap' }}
   {{ settings.type_body_font | font_modify: 'weight', 'bold' | font_modify: 'style', 'italic' | font_face: font_display: 'swap' }}
   {{ settings.type_body_font | font_modify: 'style', 'italic' | font_face: font_display: 'swap' }}
+  {% comment %}
+    Medium (500): the Figma's labels, nav, buttons and titles use it. Only the weights loaded here exist on the
+    page; any other weight is matched to the nearest loaded one (100–500 → regular, 600–900 → bold).
+    font_modify returns nothing if the chosen font has no 500, and then 500 text falls back to regular.
+  {% endcomment %}
+  {{ settings.type_body_font | font_modify: 'weight', '500' | font_face: font_display: 'swap' }}
 
   :root {
     /* heading font */
@@ -70,6 +76,7 @@
     --shadow-collection: 0 5px 25px 0 #0000000d;
     --shadow-button: 0 4px 20px 0 #00000033;
     --shadow-header: 0 4px 15px 0 #bababa40;
+    --shadow-panel: 0 2px 30px 0 #00000026; /* mega menu */
     --shadow-glass-edge: inset -1px 0 5px 0 #ffffff80;
 
     /* Form messages (fixed, 6:1 contrast on cream and white) */
@@ -100,6 +107,10 @@
     A section applies a scheme with: class="color-{{ section.settings.color_scheme.id }}"
   {% endcomment %}
   {%- for scheme in settings.color_schemes -%}
+    {%- if forloop.first -%}
+      {%- comment -%} The brand primary colour (Scheme 1 accent), available everywhere as --color-primary {%- endcomment -%}
+      :root { --color-primary: {{ scheme.settings.accent }}; }
+    {%- endif %}
     {% if forloop.first %}:root,{% endif %}
     .color-{{ scheme.id }} {
       --color-background: {{ scheme.settings.background }};

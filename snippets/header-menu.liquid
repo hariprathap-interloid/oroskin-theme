@@ -1,0 +1,499 @@
+{% doc %}
+  Renders the desktop main menu. A top-level link with child links opens a mega menu panel.
+
+  Each child link becomes a card in the panel. Cards take their image and description from the collection
+  the menu item links to (Products -> Collections), so the menu needs no extra settings.
+
+  Dropdowns use <details>/<summary>: they open with a click, Enter or Space, and work without JavaScript.
+  The script below adds Escape to close, closing on outside click or when focus leaves, and keeps one open at a time.
+
+  @param {link[]} links - The menu's top-level links, e.g. section.settings.menu.links
+  @param {string} [panel_width] - Mega menu width: 'bar' (same as the header bar) or 'screen'
+  @param {string} [image_fit] - Card images: 'cover' (fill and crop) or 'contain' (show the whole image)
+  @param {string} [image_ratio] - Card image shape: 'landscape' (7:4, Figma), 'square' or 'portrait' (3:4)
+  @param {block[]} [cards] - The header's "Menu card" blocks (section.blocks)
+  @param {object} [panel_scheme] - Colour scheme for the mega menu panel (header setting)
+
+  @example
+  {% render 'header-menu',
+    links: section.settings.menu.links,
+    panel_width: section.settings.mega_menu_width,
+    panel_scheme: section.settings.mega_menu_color_scheme,
+    image_fit: section.settings.mega_menu_image_fit,
+    image_ratio: section.settings.mega_menu_image_ratio,
+    cards: section.blocks
+  %}
+{% enddoc %}
+
+<ul class="menu menu--panel-{{ panel_width | default: 'bar' }} menu--images-{{ image_fit | default: 'cover' }} menu--ratio-{{ image_ratio | default: 'landscape' }}" role="list">
+  {%- for link in links -%}
+    <li class="menu__item">
+      {%- if link.links != blank -%}
+        <details class="menu__dropdown">
+          <summary class="menu__link{% if link.active or link.child_active %} menu__link--active{% endif %}">
+            {{- link.title | escape -}}
+          </summary>
+
+          {% render 'mega-menu-panel', link: link, scheme: panel_scheme, cards: cards %}
+        </details>
+      {%- else -%}
+        <a
+          class="menu__link{% if link.active %} menu__link--active{% endif %}"
+          href="{{ link.url }}"
+          {% if link.current %}
+            aria-current="page"
+          {% endif %}
+        >
+          {{- link.title | escape -}}
+        </a>
+      {%- endif -%}
+    </li>
+  {%- endfor -%}
+</ul>
+
+{% stylesheet %}
+  .menu {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xl);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* Top-level menu links (Figma: Satoshi Medium 16.54px, line-height 100%, letter-spacing 12%, uppercase) */
+  .menu__link {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 1.5rem;
+    color: var(--color-text);
+    font-family: var(--font-body--family);
+    font-size: 1.0338rem;
+    font-weight: var(--font-weight-medium);
+    line-height: 1;
+    letter-spacing: var(--letter-spacing-nav);
+    text-transform: uppercase;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color var(--duration-fast) var(--ease-out);
+  }
+
+  .menu__link:hover,
+  .menu__link--active,
+  .menu__dropdown[open] > .menu__link {
+    color: var(--color-accent);
+  }
+
+  /* Hand-drawn underline from the Figma, drawn in the current text colour through a CSS mask.
+     --nav-underline is set on the header, because this CSS block can't use Liquid (asset_url). */
+  .menu__link--active::after,
+  .menu__dropdown[open] > .menu__link::after {
+    content: '';
+    position: absolute;
+    inset-inline: -0.25rem;
+    inset-block-start: calc(100% + 0.25rem);
+    block-size: 0.5rem;
+    background-color: currentcolor;
+    mask: var(--nav-underline) center / 100% 100% no-repeat;
+  }
+
+  /* Remove the browser's default triangle on <summary> */
+  summary.menu__link {
+    list-style: none;
+  }
+
+  summary.menu__link::-webkit-details-marker {
+    display: none;
+  }
+
+  /* The mega panel spans the whole header bar, so the item itself isn't the positioning box */
+  .menu__panel {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-start: calc(100% + var(--space-md));
+    margin-inline: auto;
+    z-index: 10;
+    display: grid;
+    gap: var(--space-xl);
+    padding: var(--space-lg) var(--space-2xl) var(--space-2xl);
+    border-radius: var(--radius-md);
+    background-color: var(--color-background);
+    box-shadow: var(--shadow-panel);
+  }
+
+  /* Width options (header setting "Mega menu width"). 'bar' = same width as the header bar (default);
+     'screen' breaks out of the bar: centred on it, as wide as the window minus the page margins. */
+  .menu--panel-screen .menu__panel {
+    inset-inline: 50% auto;
+    inline-size: calc(100vw - var(--page-margin) * 2);
+    translate: -50% 0;
+  }
+
+  .menu__panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-lg);
+  }
+
+  /* "Shop by category" (Figma: Satoshi Medium 12px / 28px, letter-spacing 2px, uppercase) */
+  .menu__panel-title {
+    margin: 0;
+    font-family: var(--font-body--family);
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-medium);
+    line-height: 1.75rem;
+    letter-spacing: 0.125rem;
+    text-transform: uppercase;
+  }
+
+  /* "Shop all" (Figma: Satoshi Medium 14px, line-height 100%, letter-spacing 21%, uppercase) */
+  .menu__panel-all {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    min-block-size: 1.5rem;
+    color: var(--color-text);
+    font-family: var(--font-body--family);
+    font-size: 0.875rem;
+    font-weight: var(--font-weight-medium);
+    line-height: 1;
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+    text-decoration: none;
+  }
+
+  .menu__panel-all:hover {
+    color: var(--color-accent);
+  }
+
+  .menu__panel-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xl);
+  }
+
+  /* Arrow icon from the Figma (assets/icon-arrow.svg, drawn in currentColor); the "previous" one is mirrored */
+  .menu__icon {
+    display: inline-flex;
+    transition: translate var(--duration-fast) var(--ease-out);
+  }
+
+  .menu__icon svg {
+    inline-size: 0.875rem;
+    block-size: auto;
+  }
+
+  .menu__icon--back {
+    transform: scaleX(-1);
+  }
+
+  /* Hover: the arrow nudges in the direction it points */
+  .menu__panel-all:hover .menu__icon,
+  .menu__slider-button[data-direction='1']:hover:not(:disabled) .menu__icon {
+    translate: 0.25rem 0;
+  }
+
+  .menu__slider-button[data-direction='-1']:hover:not(:disabled) .menu__icon {
+    translate: -0.25rem 0;
+  }
+
+  .menu__slider-buttons {
+    display: flex;
+    gap: var(--space-xs);
+  }
+
+  .menu__slider-buttons[hidden] {
+    display: none;
+  }
+
+  .menu__slider-button {
+    display: inline-grid;
+    place-items: center;
+    inline-size: 2.5rem;
+    block-size: 2.5rem;
+    padding: 0;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    background: none;
+    color: var(--color-text);
+    cursor: pointer;
+    transition:
+      color var(--duration-fast) var(--ease-out),
+      border-color var(--duration-fast) var(--ease-out);
+  }
+
+  .menu__slider-button:hover:not(:disabled) {
+    border-color: var(--color-accent);
+    background-color: var(--color-accent);
+    color: var(--color-background);
+  }
+
+  .menu__slider-button:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  /*
+    One row of cards, as in the Figma. "Cards per row" (--mega-columns) cards are visible;
+    any extra cards continue to the right and the row scrolls (snapping to each card).
+  */
+  .menu__cards {
+    --cards-gap: var(--space-xl);
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: calc((100% - var(--cards-gap) * (var(--mega-columns, 3) - 1)) / var(--mega-columns, 3));
+    gap: var(--cards-gap);
+    margin: 0;
+    padding: 0 0 var(--space-xs);
+    list-style: none;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+  }
+
+  .menu__cards::-webkit-scrollbar {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .menu__cards {
+      scroll-behavior: auto;
+    }
+  }
+
+  .menu__card {
+    display: grid;
+    align-content: start;
+    gap: var(--space-sm);
+    min-inline-size: 0;
+    scroll-snap-align: start;
+  }
+
+  .menu__card-image-link {
+    display: block;
+    margin-block-end: var(--space-sm);
+    overflow: hidden;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Image shape (header setting "Image shape") */
+  .menu__card-image {
+    aspect-ratio: 7 / 4;
+  }
+
+  .menu--ratio-square .menu__card-image {
+    aspect-ratio: 1;
+  }
+
+  .menu--ratio-portrait .menu__card-image {
+    aspect-ratio: 3 / 4;
+  }
+
+  /* Image fit (header setting): 'contain' shows the whole image on a soft tint instead of cropping it */
+  .menu--images-contain .menu__card-image {
+    background-color: var(--color-tint-subtle);
+  }
+
+  .menu--images-contain .menu__card-image > img {
+    object-fit: contain;
+  }
+
+  .menu__card-image img {
+    transition: transform var(--duration-base) var(--ease-out);
+  }
+
+  .menu__card:hover .menu__card-image img {
+    transform: scale(1.03);
+  }
+
+  /* Category title (Figma: Satoshi Medium 16.54px, line-height 100%, letter-spacing 12%, uppercase, primary) */
+  .menu__card-title {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-md);
+    justify-self: start;
+    min-block-size: 1.5rem;
+    padding-block-end: var(--space-xs);
+    color: var(--color-primary);
+    font-family: var(--font-body--family);
+    font-size: 1.0338rem;
+    font-weight: var(--font-weight-medium);
+    line-height: 1;
+    letter-spacing: var(--letter-spacing-nav);
+    text-transform: uppercase;
+    text-decoration: none;
+  }
+
+  /* Normal: an up-right arrow. Card hover (Figma): the arrow turns to point right and a line draws
+     under the title and arrow. Rotating the same arrow 45 degrees turns up-right into right. */
+  .menu__card-title svg {
+    inline-size: 0.75rem;
+    block-size: auto;
+    transition: rotate var(--duration-base) var(--ease-out);
+  }
+
+  .menu__card-title::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: 0;
+    block-size: 1px;
+    background-color: currentcolor;
+    scale: 0 1;
+    transform-origin: left;
+    transition: scale var(--duration-base) var(--ease-out);
+  }
+
+  .menu__card:hover .menu__card-title svg,
+  .menu__card-title:focus-visible svg {
+    rotate: 45deg;
+  }
+
+  .menu__card:hover .menu__card-title::after,
+  .menu__card-title:focus-visible::after {
+    scale: 1 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .menu__icon,
+    .menu__card-title svg,
+    .menu__card-title::after,
+    .menu__card-image img {
+      transition: none;
+    }
+  }
+
+  /* Card description (Figma: Canela Text, our heading font). Wraps naturally and stops after 2 lines. */
+  .menu__card-text {
+    display: -webkit-box;
+    margin: 0;
+    overflow: hidden;
+    color: var(--color-text);
+    font-family: var(--font-heading--family);
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-body);
+    overflow-wrap: break-word;
+    text-wrap: pretty;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  /* 3rd level on the card: small outlined pills under the description */
+  .menu__card-subs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    margin: var(--space-2xs) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .menu__card-sub {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 1.75rem;
+    padding-inline: var(--space-sm);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    color: var(--color-text);
+    font-size: var(--font-size-small);
+    text-decoration: none;
+    transition:
+      color var(--duration-fast) var(--ease-out),
+      border-color var(--duration-fast) var(--ease-out);
+  }
+
+  .menu__card-sub:hover,
+  .menu__card-sub[aria-current='page'] {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+{% endstylesheet %}
+
+{% javascript %}
+  // One listener per event on the whole document, so it keeps working when the
+  // theme editor re-renders the header.
+  function closeMenu(dropdown, returnFocus) {
+    dropdown.removeAttribute('open');
+    if (returnFocus) dropdown.querySelector('summary').focus();
+  }
+
+  // Card row slider: show the arrows only when the cards overflow, scroll one card per click,
+  // and disable an arrow at the start or end of the row.
+  function updateSlider(panel) {
+    const track = panel.querySelector('.menu__cards');
+    const buttons = panel.querySelector('.menu__slider-buttons');
+    if (!track || !buttons) return;
+    const overflow = track.scrollWidth > track.clientWidth + 1;
+    buttons.hidden = !overflow;
+    if (!overflow) return;
+    buttons.querySelector('[data-direction="-1"]').disabled = track.scrollLeft <= 1;
+    buttons.querySelector('[data-direction="1"]').disabled =
+      track.scrollLeft + track.clientWidth >= track.scrollWidth - 1;
+  }
+
+  // A dropdown opened: close any other one, then set up its card slider.
+  // ('toggle' doesn't bubble, so listen in the capture phase.)
+  document.addEventListener(
+    'toggle',
+    (event) => {
+      const opened = event.target;
+      if (!opened.matches?.('.menu__dropdown') || !opened.open) return;
+      document.querySelectorAll('.menu__dropdown[open]').forEach((other) => {
+        if (other !== opened) closeMenu(other, false);
+      });
+      updateSlider(opened.querySelector('.menu__panel'));
+    },
+    true
+  );
+
+  document.addEventListener(
+    'scroll',
+    (event) => {
+      if (event.target.matches?.('.menu__cards')) updateSlider(event.target.closest('.menu__panel'));
+    },
+    true
+  );
+
+  document.addEventListener('click', (event) => {
+    const button = event.target.closest?.('.menu__slider-button');
+    if (!button) return;
+    const track = button.closest('.menu__panel').querySelector('.menu__cards');
+    const card = track.querySelector('.menu__card');
+    const gap = parseFloat(getComputedStyle(track).columnGap) || 0;
+    const step = card ? card.getBoundingClientRect().width + gap : track.clientWidth;
+    track.scrollBy({ left: step * Number(button.dataset.direction) });
+  });
+
+  window.addEventListener('resize', () => {
+    document.querySelectorAll('.menu__dropdown[open] .menu__panel').forEach(updateSlider);
+  });
+
+  // Escape closes the open dropdown and puts focus back on its button
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    const open = document.querySelector('.menu__dropdown[open]');
+    if (open) closeMenu(open, true);
+  });
+
+  // Clicking anywhere outside closes it
+  document.addEventListener('click', (event) => {
+    document.querySelectorAll('.menu__dropdown[open]').forEach((dropdown) => {
+      if (!dropdown.contains(event.target)) closeMenu(dropdown, false);
+    });
+  });
+
+  // Tabbing out of the dropdown closes it. relatedTarget is the element receiving focus; it's null when
+  // the visitor clicks a non-focusable spot (e.g. empty space inside the panel), which must NOT close it.
+  document.addEventListener('focusout', (event) => {
+    const dropdown = event.target.closest?.('.menu__dropdown[open]');
+    if (dropdown && event.relatedTarget && !dropdown.contains(event.relatedTarget)) closeMenu(dropdown, false);
+  });
+{% endjavascript %}
