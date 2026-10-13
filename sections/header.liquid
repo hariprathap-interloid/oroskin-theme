@@ -7,8 +7,23 @@
   endif
 -%}
 
+{%- liquid
+  # Transparent header: floats over the first section and shows only the action buttons until the visitor
+  # scrolls (or tabs into it). Setting: off / homepage only / every page.
+  assign transparent = false
+  case section.settings.transparent_mode
+    when 'all'
+      assign transparent = true
+    when 'home'
+      if template.name == 'index'
+        assign transparent = true
+      endif
+  endcase
+-%}
+
+<sticky-header>
 <header
-  class="header"
+  class="header{% if transparent %} header--transparent{% endif %}"
   style="--logo-width: {{ settings.logo_width }}px; --logo-text-size: {{ settings.logo_text_size }}px; --nav-underline: url('{{ 'nav-underline.svg' | asset_url }}'); --mega-columns: {{ section.settings.mega_menu_columns }};"
 >
   <div class="header__bar color-{{ section.settings.color_scheme.id }}">
@@ -94,6 +109,7 @@
     </div>
   </div>
 </header>
+</sticky-header>
 
 {% stylesheet %}
   /*
@@ -136,6 +152,58 @@
     background-color: var(--color-glass);
     -webkit-backdrop-filter: blur(20px) saturate(1.4);
     backdrop-filter: blur(20px) saturate(1.4);
+    transition:
+      background-color var(--duration-base) var(--ease-out),
+      box-shadow var(--duration-base) var(--ease-out),
+      max-inline-size var(--duration-base) var(--ease-out);
+  }
+
+  sticky-header {
+    display: block;
+  }
+
+  /*
+    Transparent header (Figma home hero). The header's wrapper pulls the next section up underneath it
+    (negative margin = 20px gap + 77px pill), so the hero starts at the very top of the page.
+  */
+  .shopify-section-group-header-group:has(.header--transparent) {
+    margin-block-end: -6.0625rem;
+  }
+
+  /*
+    "At rest" = transparent header, page at the top, nobody using the header with the keyboard and no menu open.
+    Then: no pill surface, the bar spans the page, and the logo and menu fade out (still focusable,
+    so a keyboard user who tabs into the header brings the full pill back; :focus-visible means keyboard
+    focus only, so a mouse click on a button doesn't flash the pill).
+  */
+  .header--transparent:not(.is-scrolled):not(:has(:focus-visible)):not(:has(.menu__dropdown[open])) .header__bar {
+    max-inline-size: 100%;
+    background-color: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .header--transparent:not(.is-scrolled):not(:has(:focus-visible)):not(:has(.menu__dropdown[open]))
+    :is(.header__logo, .header__menu) {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .header--transparent :is(.header__logo, .header__menu) {
+    transition: opacity var(--duration-base) var(--ease-out);
+  }
+
+  /* The actions stay at the right edge in both states */
+  .header__actions {
+    margin-inline-start: auto;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .header .header__bar,
+    .header--transparent :is(.header__logo, .header__menu) {
+      transition: none;
+    }
   }
 
   .header__logo {
@@ -246,6 +314,35 @@
   }
 {% endstylesheet %}
 
+{% javascript %}
+  /**
+   * <sticky-header>: adds "is-scrolled" to the header once the page has scrolled a little, so a transparent
+   * header turns into the full pill. A web component, so the theme editor's re-render restarts it on its own.
+   */
+  class StickyHeader extends HTMLElement {
+    connectedCallback() {
+      this.header = this.querySelector('.header');
+      if (!this.header?.classList.contains('header--transparent')) return;
+      this.onScroll = () => {
+        if (this.ticking) return;
+        this.ticking = true;
+        requestAnimationFrame(() => {
+          this.header.classList.toggle('is-scrolled', window.scrollY > 10);
+          this.ticking = false;
+        });
+      };
+      window.addEventListener('scroll', this.onScroll, { passive: true });
+      this.onScroll();
+    }
+
+    disconnectedCallback() {
+      if (this.onScroll) window.removeEventListener('scroll', this.onScroll);
+    }
+  }
+
+  if (!customElements.get('sticky-header')) customElements.define('sticky-header', StickyHeader);
+{% endjavascript %}
+
 {% schema %}
 {
   "name": "t:general.header",
@@ -296,6 +393,18 @@
       "id": "color_scheme",
       "label": "t:labels.color_scheme",
       "default": "scheme-1"
+    },
+    {
+      "type": "select",
+      "id": "transparent_mode",
+      "label": "t:labels.transparent_header",
+      "info": "t:labels.transparent_header_info",
+      "options": [
+        { "value": "none", "label": "t:options.transparent_header.none" },
+        { "value": "home", "label": "t:options.transparent_header.home" },
+        { "value": "all", "label": "t:options.transparent_header.all" }
+      ],
+      "default": "home"
     },
     {
       "type": "header",

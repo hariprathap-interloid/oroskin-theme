@@ -90,7 +90,9 @@
     "logo_text_accent": "Accent text",
     "logo_text_accent_info": "Shown right after the text, in italic and the primary colour, e.g. Skin.",
     "logo_font": "Font",
-    "logo_text_size": "Size"
+    "logo_text_size": "Size",
+    "transparent_header": "Transparent header",
+    "transparent_header_info": "Floats over the first section, showing only the buttons, and becomes the full header when visitors scroll."
   },
   "options": {
     "alignment": {
@@ -133,6 +135,11 @@
       "landscape": "Landscape",
       "square": "Square",
       "portrait": "Portrait"
+    },
+    "transparent_header": {
+      "none": "Off",
+      "home": "Home page only",
+      "all": "All pages"
     }
   },
   "color_scheme": {
