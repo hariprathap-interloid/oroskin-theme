@@ -9,6 +9,9 @@
  */
 {
   "current": {
+    "logo": "shopify://shop_images/logo-mark-flame.png",
+    "favicon": "shopify://shop_images/logo-mark-flame.png",
+    "content_for_index": [],
     "color_schemes": {
       "scheme-1": {
         "settings": {

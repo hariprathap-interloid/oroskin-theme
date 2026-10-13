@@ -13,10 +13,56 @@
   "sections": {
     "header": {
       "type": "header",
-      "settings": {}
+      "blocks": {
+        "mega_menu_card_ddfbEt": {
+          "type": "mega_menu_card",
+          "settings": {
+            "collection": "",
+            "link": "",
+            "title": "Fragrance",
+            "image": "shopify://shop_images/Fragrance-banner.png",
+            "text": "Signature scents and eaux crafted by master perfumers for every mood."
+          }
+        },
+        "mega_menu_card_iMhUBB": {
+          "type": "mega_menu_card",
+          "settings": {
+            "collection": "",
+            "link": "",
+            "title": "Skincare",
+            "image": "shopify://shop_images/Skincare-banner.png",
+            "text": "Dermatologist-tested formulas for luminous, glass-like skin."
+          }
+        },
+        "mega_menu_card_th8bK7": {
+          "type": "mega_menu_card",
+          "settings": {
+            "collection": "",
+            "link": "",
+            "title": "Makeup",
+            "image": "shopify://shop_images/Makeup-banner.png",
+            "text": "Effortless, radiant color for the face, lips and eyes — clean and buildable."
+          }
+        }
+      },
+      "block_order": [
+        "mega_menu_card_ddfbEt",
+        "mega_menu_card_iMhUBB",
+        "mega_menu_card_th8bK7"
+      ],
+      "settings": {
+        "color_scheme": "",
+        "menu": "main-menu",
+        "customer_account_menu": "customer-account-main-menu",
+        "mega_menu_width": "bar",
+        "mega_menu_columns": 3,
+        "mega_menu_image_ratio": "landscape",
+        "mega_menu_image_fit": "cover",
+        "mega_menu_color_scheme": ""
+      }
     }
   },
   "order": [
     "header"
-  ],
+  ]
 }
