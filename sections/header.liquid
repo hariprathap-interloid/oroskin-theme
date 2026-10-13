@@ -36,7 +36,10 @@
         panel_scheme: section.settings.mega_menu_color_scheme,
         image_fit: section.settings.mega_menu_image_fit,
         image_ratio: section.settings.mega_menu_image_ratio,
-        cards: section.blocks
+        cards: section.blocks,
+        shop_all_show: section.settings.mega_menu_shop_all_show,
+        shop_all_label: section.settings.mega_menu_shop_all_label,
+        shop_all_link: section.settings.mega_menu_shop_all_link
       %}
     </nav>
 
@@ -235,6 +238,30 @@
       "id": "mega_menu_color_scheme",
       "label": "t:labels.color_scheme",
       "default": "scheme-2"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.shop_all_group"
+    },
+    {
+      "type": "checkbox",
+      "id": "mega_menu_shop_all_show",
+      "label": "t:labels.shop_all_show",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "mega_menu_shop_all_label",
+      "label": "t:labels.shop_all_label",
+      "info": "t:labels.shop_all_label_info",
+      "visible_if": "{{ section.settings.mega_menu_shop_all_show }}"
+    },
+    {
+      "type": "url",
+      "id": "mega_menu_shop_all_link",
+      "label": "t:labels.shop_all_link",
+      "info": "t:labels.shop_all_link_info",
+      "visible_if": "{{ section.settings.mega_menu_shop_all_show }}"
     }
   ]
 }

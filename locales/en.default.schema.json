@@ -77,7 +77,13 @@
     "description": "Description",
     "card_text_info": "Leave empty to use the collection description.",
     "card_link": "Link",
-    "card_link_info": "Only for menu items that don't link to a collection."
+    "card_link_info": "Only for menu items that don't link to a collection.",
+    "shop_all_show": "Show link",
+    "shop_all_label": "Label",
+    "shop_all_label_info": "Leave empty to use Shop all.",
+    "shop_all_link": "Link",
+    "shop_all_link_info": "Leave empty to use the menu item's own link, set in Navigation. With no link, it points to #.",
+    "shop_all_group": "Shop all link"
   },
   "options": {
     "alignment": {

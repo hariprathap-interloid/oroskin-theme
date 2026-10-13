@@ -12,6 +12,9 @@
   @param {link} link - The top-level menu link whose children are shown
   @param {object} [scheme] - Colour scheme for the panel (the header's mega menu setting)
   @param {block[]} [cards] - The header's "Menu card" blocks (section.blocks)
+  @param {boolean} [shop_all_show] - Show the "Shop all" link (default true)
+  @param {string} [shop_all_label] - Its text; empty = "Shop all"
+  @param {string} [shop_all_link] - Its URL; empty = this menu item's own link
 
   @example
   {% render 'mega-menu-panel', link: link, scheme: section.settings.mega_menu_color_scheme, cards: section.blocks %}
@@ -31,10 +34,25 @@
         </button>
       </div>
 
-      <a class="menu__panel-all" href="{{ link.url }}">
-        {{- 'header.shop_all' | t -}}
-        <span class="menu__icon">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
-      </a>
+      {%- liquid
+        # "Shop all": always shown while "Show link" is on. Link: the setting, else the menu item's own link,
+        # else "#" (so the merchant sees it in the preview and can set a link)
+        assign all_url = shop_all_link | default: link.url | default: '#'
+        assign all_label = shop_all_label
+        if all_label == blank
+          assign all_label = 'header.shop_all' | t
+        endif
+        assign all_visible = true
+        if shop_all_show == false
+          assign all_visible = false
+        endif
+      -%}
+      {%- if all_visible -%}
+        <a class="menu__panel-all" href="{{ all_url }}">
+          {{- all_label | escape -}}
+          <span class="menu__icon">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+        </a>
+      {%- endif -%}
     </div>
   </div>
 
