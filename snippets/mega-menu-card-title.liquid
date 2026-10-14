@@ -1,0 +1,30 @@
+{% doc %}
+  The title of a mega menu card: the menu item's name in uppercase with an arrow.
+  A menu item that points to "#" (a placeholder link that goes nowhere) shows the name only:
+  no arrow and no link.
+
+  @param {link} link - The menu link the card represents
+  @param {string} [title] - Optional title from a Menu card block; defaults to the menu item name
+
+  @example
+  {% render 'mega-menu-card-title', link: link %}
+{% enddoc %}
+
+{%- assign card_title = title | default: link.title -%}
+
+{%- if link.url == '#' -%}
+  <span class="menu__card-title">{{ card_title | escape }}</span>
+{%- else -%}
+  <a
+    class="menu__card-title"
+    href="{{ link.url }}"
+    {% if link.current %}
+      aria-current="page"
+    {% endif %}
+  >
+    {{- card_title | escape -}}
+    <svg aria-hidden="true" focusable="false" viewBox="0 0 14 14" width="12" height="12">
+      <path d="M2 12L12 2M4 2h8v8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </a>
+{%- endif -%}

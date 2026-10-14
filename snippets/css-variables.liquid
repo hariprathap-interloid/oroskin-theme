@@ -1,18 +1,145 @@
 {% style %}
   {% # Loads all font variantions with display: swap %}
-  {{ settings.type_primary_font | font_face: font_display: 'swap' }}
-  {{ settings.type_primary_font | font_modify: 'weight', 'bold' | font_face: font_display: 'swap' }}
-  {{ settings.type_primary_font | font_modify: 'weight', 'bold' | font_modify: 'style', 'italic' | font_face: font_display: 'swap' }}
-  {{ settings.type_primary_font | font_modify: 'style', 'italic' | font_face: font_display: 'swap' }}
+  {{ settings.type_heading_font | font_face: font_display: 'swap' }}
+  {{ settings.type_heading_font | font_modify: 'weight', 'bold' | font_face: font_display: 'swap' }}
+  {{ settings.type_heading_font | font_modify: 'weight', 'bold' | font_modify: 'style', 'italic' | font_face: font_display: 'swap' }}
+  {{ settings.type_heading_font | font_modify: 'style', 'italic' | font_face: font_display: 'swap' }}
+
+  {{ settings.type_body_font | font_face: font_display: 'swap' }}
+  {{ settings.type_body_font | font_modify: 'weight', 'bold' | font_face: font_display: 'swap' }}
+  {{ settings.type_body_font | font_modify: 'weight', 'bold' | font_modify: 'style', 'italic' | font_face: font_display: 'swap' }}
+  {{ settings.type_body_font | font_modify: 'style', 'italic' | font_face: font_display: 'swap' }}
+  {% comment %}
+    Medium (500): the Figma's labels, nav, buttons and titles use it. Only the weights loaded here exist on the
+    page; any other weight is matched to the nearest loaded one (100–500 → regular, 600–900 → bold).
+    font_modify returns nothing if the chosen font has no 500, and then 500 text falls back to regular.
+  {% endcomment %}
+  {{ settings.type_body_font | font_modify: 'weight', '500' | font_face: font_display: 'swap' }}
+
+  {% # Logo font: only the chosen weight and its italic (for the accent word) %}
+  {{ settings.type_logo_font | font_face: font_display: 'swap' }}
+  {{ settings.type_logo_font | font_modify: 'style', 'italic' | font_face: font_display: 'swap' }}
 
   :root {
-    --font-primary--family: {{ settings.type_primary_font.family }}, {{ settings.type_primary_font.fallback_families }};
-    --font-primary--style: {{ settings.type_primary_font.style }};
-    --font-primary--weight: {{ settings.type_primary_font.weight }};
+    /* heading font */
+    --font-heading--family: {{ settings.type_heading_font.family }}, {{ settings.type_heading_font.fallback_families }};
+    --font-heading--style: {{ settings.type_heading_font.style }};
+    --font-heading--weight: {{ settings.type_heading_font.weight }};
+
+    /* logo font (text logo in the header) */
+    --font-logo--family: {{ settings.type_logo_font.family }}, {{ settings.type_logo_font.fallback_families }};
+    --font-logo--weight: {{ settings.type_logo_font.weight }};
+
+    /* body font */
+    --font-body--family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+    --font-body--style: {{ settings.type_body_font.style }};
+    --font-body--weight: {{ settings.type_body_font.weight }};
+
+    /*
+      Type scale: fixed design tokens from the Figma (not merchant settings).
+      Each size grows smoothly from a phone (390px wide) to the 1920px Figma frame:
+      clamp(smallest, fluid value, Figma size). The rem part keeps browser zoom working.
+    */
+    --font-size-display: clamp(3rem, 2.235rem + 3.14vw, 6rem); /* 48px → 96px, big faded letters */
+    --font-size-h1: clamp(2.25rem, 1.868rem + 1.57vw, 3.75rem); /* 36px → 60px */
+    --font-size-h2: clamp(1.75rem, 1.559rem + 0.784vw, 2.5rem); /* 28px → 40px */
+    --font-size-h3: clamp(1.375rem, 1.311rem + 0.261vw, 1.625rem); /* 22px → 26px */
+    --font-size-body-lg: clamp(1.125rem, 1.061rem + 0.261vw, 1.375rem); /* 18px → 22px */
+    --font-size-body: clamp(1rem, 0.9363rem + 0.261vw, 1.25rem); /* 16px → 20px */
+    --font-size-body-sm: clamp(0.9375rem, 0.8897rem + 0.196vw, 1.125rem); /* 15px → 18px */
+    --font-size-caption: clamp(0.875rem, 0.8431rem + 0.131vw, 1rem); /* 14px → 16px */
+    --font-size-small: clamp(0.8125rem, 0.7966rem + 0.0654vw, 0.875rem); /* 13px → 14px, breadcrumbs */
+    --font-size-label: clamp(0.875rem, 0.8113rem + 0.261vw, 1.125rem); /* 14px → 18px, uppercase eyebrows */
+
+    --line-height-heading: 1.15;
+    --line-height-body: 1.65; /* Figma: 35px lines on 20–22px text */
+
+    --letter-spacing-body: 0.01em;
+    --letter-spacing-nav: 0.12em; /* nav links and buttons */
+    --letter-spacing-label: 0.21em; /* uppercase eyebrows */
+
+    --font-weight-medium: 500; /* labels, nav, buttons, subheadings */
+
+    /* Spacing scale (4px steps at the small end). Section spacing is fluid like the type scale. */
+    --space-2xs: 0.25rem; /* 4px */
+    --space-xs: 0.5rem; /* 8px */
+    --space-sm: 0.75rem; /* 12px */
+    --space-md: 1rem; /* 16px */
+    --space-lg: 1.5rem; /* 24px */
+    --space-xl: 2rem; /* 32px */
+    --space-2xl: 3rem; /* 48px */
+    --space-3xl: 4rem; /* 64px */
+    --space-section: clamp(3rem, 2.235rem + 3.14vw, 6rem); /* 48px → 96px between sections */
+
+    /* Corner radius (Figma) */
+    --radius-sm: 19px; /* small cards */
+    --radius-md: 25px; /* info boxes */
+    --radius-lg: 50px; /* footer panel */
+    --radius-pill: 999px; /* buttons, header bar, round icon buttons */
+
+    /* Shadows (Figma), colours as 8-digit hex (the last 2 digits are the opacity) */
+    --shadow-card: 0 0 10px 0 #0000000d;
+    --shadow-card-soft: 0 2px 10px 0 #7d00000f;
+    --shadow-card-rose: 0 4px 25px 0 #e6bcbc42;
+    --shadow-collection: 0 5px 25px 0 #0000000d;
+    --shadow-button: 0 4px 20px 0 #00000033;
+    --shadow-header: 0 4px 15px 0 #b9b9b940; /* also the round glass buttons (Figma "Liquid Glass Button") */
+    --shadow-panel: 0 2px 30px 0 #00000026; /* mega menu */
+    --shadow-glass-edge: inset -1px 0 5px 0 #ffffff80;
+
+    /* Form messages (fixed, 6:1 contrast on cream and white) */
+    --color-error: #b42318;
+    --color-success: #1e6b3a;
+
+    /* Glass surfaces sit on photos, so they stay white whatever the colour scheme */
+    --color-glass: #ffffff40; /* header bar, round icon buttons, footer panel */
+    --color-glass-strong: #ffffff80; /* newsletter input */
+    --color-card: #f7f3ee33;
+    --color-card-border: #f0cbcb4f;
+
+    /* Motion */
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --duration-fast: 150ms; /* hovers */
+    --duration-base: 300ms; /* menus, drawers */
+    --duration-normal: 500ms; /* menus, drawers */
+    --duration-slow: 700ms; /* scroll reveals */
+
     --page-width: {{ settings.max_page_width }};
     --page-margin: {{ settings.min_page_margin }}px;
-    --color-background: {{ settings.background_color }};
-    --color-foreground: {{ settings.foreground_color }};
     --style-border-radius-inputs: {{ settings.input_corner_radius }}px;
   }
+
+  {% comment %}
+    Colour schemes: one CSS class per scheme. It sets that scheme's colours as variables
+    and paints its own background and text, so one class is all a section needs.
+    The first scheme also sets :root, so the whole page defaults to it.
+    A section applies a scheme with: class="color-{{ section.settings.color_scheme.id }}"
+  {% endcomment %}
+  {%- for scheme in settings.color_schemes -%}
+    {%- if forloop.first -%}
+      {%- comment -%} The brand primary colour (Scheme 1 accent), available everywhere as --color-primary {%- endcomment -%}
+      :root { --color-primary: {{ scheme.settings.accent }}; }
+    {%- endif %}
+    {% if forloop.first %}:root,{% endif %}
+    .color-{{ scheme.id }} {
+      --color-background: {{ scheme.settings.background }};
+      --color-text: {{ scheme.settings.text }};
+      --color-accent: {{ scheme.settings.accent }};
+      --color-border: {{ scheme.settings.border }};
+      --color-button: {{ scheme.settings.button }};
+      --color-button-text: {{ scheme.settings.button_label }};
+      --color-button-border: {{ scheme.settings.button_border }};
+      --color-secondary-button: {{ scheme.settings.secondary_button }};
+      --color-secondary-button-text: {{ scheme.settings.secondary_button_label }};
+      --color-secondary-button-border: {{ scheme.settings.secondary_button_border }};
+
+      /* Accent tints: computed here, inside each scheme, so they follow the scheme's accent */
+      --color-tint-subtle: color-mix(in srgb, var(--color-accent) 5%, transparent); /* info box fill */
+      --color-tint: color-mix(in srgb, var(--color-accent) 10%, transparent); /* big faded letters */
+      --color-tint-border: color-mix(in srgb, var(--color-accent) 25%, transparent); /* info box border */
+
+      background-color: var(--color-background);
+      color: var(--color-text);
+    }
+  {%- endfor %}
 {% endstyle %}

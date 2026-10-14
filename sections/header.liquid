@@ -1,76 +1,516 @@
-<header>
-  <h2 class="header__title">
-    {{ shop.name | link_to: routes.root_url }}
-  </h2>
+{%- liquid
+  # Logo: request the image at 2× the display width so it stays sharp on high-density screens
+  if settings.logo != blank
+    assign logo_width_2x = settings.logo_width | times: 2
+    assign logo_widths = settings.logo_width | append: ', ' | append: logo_width_2x
+    assign logo_sizes = settings.logo_width | append: 'px'
+  endif
+-%}
 
-  <div class="header__menu">
-    {% for link in section.settings.menu.links %}
-      {{ link.title | link_to: link.url }}
-    {% endfor %}
-  </div>
+{%- liquid
+  # Transparent header: floats over the first section and shows only the action buttons until the visitor
+  # scrolls (or tabs into it). Setting: off / homepage only / every page.
+  assign transparent = false
+  case section.settings.transparent_mode
+    when 'all'
+      assign transparent = true
+    when 'home'
+      if template.name == 'index'
+        assign transparent = true
+      endif
+  endcase
+-%}
 
-  <div class="header__icons">
-    {% if shop.customer_accounts_enabled %}
-      <shopify-account menu="{{ section.settings.customer_account_menu }}">
-        {{ 'icon-account.svg' | inline_asset_content }}
-      </shopify-account>
-    {% endif %}
-
-    <a href="{{ routes.cart_url }}">
-      {% if cart.item_count > 0 %}
-        <sup>{{ cart.item_count }}</sup>
-      {% endif %}
-
-      {{ 'icon-cart.svg' | inline_asset_content }}
+<sticky-header>
+<header
+  class="header{% if transparent %} header--transparent{% endif %}"
+  style="--logo-width: {{ settings.logo_width }}px; --logo-text-size: {{ settings.logo_text_size }}px; --nav-underline: url('{{ 'nav-underline.svg' | asset_url }}'); --mega-columns: {{ section.settings.mega_menu_columns }};"
+>
+  <div class="header__bar color-{{ section.settings.color_scheme.id }}">
+    <a class="header__logo" href="{{ routes.root_url }}">
+      {%- liquid
+        # Logo = optional image (e.g. the flame mark) + optional text ("Oro" + italic accent "Skin").
+        # With neither, the shop name is shown. The image's alt is empty when text is shown, so the
+        # link isn't announced twice.
+        assign has_logo_text = false
+        if settings.logo_text != blank or settings.logo_text_accent != blank
+          assign has_logo_text = true
+        endif
+        assign logo_alt = shop.name
+        if has_logo_text
+          assign logo_alt = ''
+        endif
+      -%}
+      {%- if settings.logo != blank -%}
+        {{
+          settings.logo
+          | image_url: width: logo_width_2x
+          | image_tag:
+            class: 'header__logo-image',
+            widths: logo_widths,
+            sizes: logo_sizes,
+            loading: 'eager',
+            alt: logo_alt
+        }}
+      {%- endif -%}
+      {%- if has_logo_text -%}
+        <span class="header__logo-text">
+          {{- settings.logo_text | escape -}}
+          {%- if settings.logo_text_accent != blank -%}<em>{{ settings.logo_text_accent | escape }}</em>{%- endif -%}
+        </span>
+      {%- elsif settings.logo == blank -%}
+        <span class="header__logo-text">{{ shop.name | escape }}</span>
+      {%- endif -%}
     </a>
+
+    <nav class="header__menu" aria-label="{{ 'accessibility.main_menu' | t }}">
+      {% render 'header-menu',
+        links: section.settings.menu.links,
+        panel_width: section.settings.mega_menu_width,
+        panel_scheme: section.settings.mega_menu_color_scheme,
+        image_fit: section.settings.mega_menu_image_fit,
+        image_ratio: section.settings.mega_menu_image_ratio,
+        cards: section.blocks,
+        shop_all_show: section.settings.mega_menu_shop_all_show,
+        shop_all_label: section.settings.mega_menu_shop_all_label,
+        shop_all_link: section.settings.mega_menu_shop_all_link
+      %}
+    </nav>
+
+    <div class="header__actions">
+      <a class="header__icon-button" href="{{ routes.search_url }}">
+        {{ 'icon-search.svg' | inline_asset_content }}
+        <span class="visually-hidden">{{ 'header.search' | t }}</span>
+      </a>
+
+      <a class="header__icon-button" href="{{ routes.cart_url }}">
+        {{ 'icon-cart.svg' | inline_asset_content }}
+        <span class="visually-hidden">{{ 'header.cart_count' | t: count: cart.item_count }}</span>
+        {%- if cart.item_count > 0 -%}
+          <span class="header__count" aria-hidden="true">
+            {%- if cart.item_count < 100 -%}{{ cart.item_count }}{%- else -%}99+{%- endif -%}
+          </span>
+        {%- endif -%}
+      </a>
+
+      {%- comment -%}
+        Customer accounts are Shopify's own pages (decision 6). <shopify-account> is Shopify's web component:
+        signed in, it shows the customer's avatar and an account menu; signed out, it shows whatever we put
+        in its "signed-out-avatar" slot, here the Figma's red LOGIN pill.
+      {%- endcomment -%}
+      {%- if shop.customer_accounts_enabled -%}
+        <shopify-account class="header__account" menu="{{ section.settings.customer_account_menu }}">
+          <span slot="signed-out-avatar" class="button header__login">
+            {{ 'icon-account.svg' | inline_asset_content | remove: 'slot="signed-out-avatar"' }}
+            {{- 'header.login' | t -}}
+          </span>
+        </shopify-account>
+      {%- endif -%}
+    </div>
   </div>
 </header>
+</sticky-header>
 
 {% stylesheet %}
-  header {
-    height: 5rem;
+  /*
+    Sticky header. Shopify wraps the header in a section element (class shopify-section-group-header-group);
+    that wrapper is what has to stick. A sticky element only sticks inside its parent, and the <header> fills
+    its wrapper exactly, so making <header> itself sticky would do nothing.
+  */
+  .shopify-section-group-header-group {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 20;
+    /*
+      The wrapper is a see-through box across the top of the page (20px gap + 77px pill). Without this it
+      would still catch the mouse, so content scrolling underneath (e.g. the footer's country list on a
+      short page) couldn't be hovered or clicked. Only the pill takes clicks again (below).
+    */
+    pointer-events: none;
+  }
+
+  .header__bar {
+    pointer-events: auto;
+  }
+
+  /* The space around the pill stays see-through: only the pill has a surface */
+  .header {
+    padding-block-start: 1.25rem; /* 20px from the top, Figma */
+  }
+
+  /*
+    The floating pill (Figma: 1363 x 77 at 1920 wide, radius 50px, 25% white "glass", soft shadow).
+    The colour scheme class gives it its text colours; its background is replaced by the glass,
+    and backdrop-filter blurs whatever scrolls underneath so the menu stays readable.
+  */
+  .header__bar {
+    position: relative; /* the mega menu panel is positioned against the pill */
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: var(--space-xl);
+    max-inline-size: 85.25rem; /* 1364px */
+    block-size: 4.8125rem; /* 77px, Figma */
+    margin-inline: auto;
+    padding-block: 0;
+    padding-inline: var(--space-2xl) var(--space-sm);
+    border-radius: var(--radius-pill);
+    box-shadow: var(--shadow-header);
   }
-  header a {
-    position: relative;
-    text-decoration: none;
-    color: var(--color-foreground);
+
+  .header .header__bar {
+    background-color: var(--color-glass);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    backdrop-filter: blur(20px) saturate(1.4);
+    transition:
+      background-color var(--duration-base) var(--ease-out),
+      box-shadow var(--duration-base) var(--ease-out),
+      max-inline-size var(--duration-base) var(--ease-out);
+  }
+
+  sticky-header {
+    display: block;
+  }
+
+  /*
+    Transparent header (Figma home hero). The header's wrapper pulls the next section up underneath it
+    (negative margin = 20px gap + 77px pill), so the hero starts at the very top of the page.
+  */
+  .shopify-section-group-header-group:has(.header--transparent) {
+    margin-block-end: -6.0625rem;
+  }
+
+  /*
+    "At rest" = transparent header, page at the top, nobody using the header with the keyboard and no menu open.
+    Then: no pill surface, the bar spans the page, and the logo and menu fade out (still focusable,
+    so a keyboard user who tabs into the header brings the full pill back; :focus-visible means keyboard
+    focus only, so a mouse click on a button doesn't flash the pill).
+  */
+  .header--transparent:not(.is-scrolled):not(:has(:focus-visible)):not(:has(.menu__dropdown[open])) .header__bar {
+    max-inline-size: 100%;
+    background-color: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    pointer-events: none; /* the bar is invisible and page-wide here, so let clicks through to the hero */
+  }
+
+  /* ...except the buttons, which stay visible and clickable */
+  .header--transparent .header__actions {
+    pointer-events: auto;
+  }
+
+  .header--transparent:not(.is-scrolled):not(:has(:focus-visible)):not(:has(.menu__dropdown[open]))
+    :is(.header__logo, .header__menu) {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .header--transparent :is(.header__logo, .header__menu) {
+    transition: opacity var(--duration-base) var(--ease-out);
+  }
+
+  /* The actions stay at the right edge in both states */
+  .header__actions {
+    margin-inline-start: auto;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .header .header__bar,
+    .header--transparent :is(.header__logo, .header__menu) {
+      transition: none;
+    }
+  }
+
+  .header__logo {
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 0.625rem;
+    flex: none;
+    min-block-size: 1.5rem;
+    color: var(--color-text);
+    text-decoration: none;
   }
-  header a sup {
-    position: absolute;
-    left: 100%;
-    overflow: hidden;
-    max-width: var(--page-margin);
+
+  /* Wide, square and tall logos: fixed width, height follows, but never taller than 4rem */
+  .header__logo-image {
+    inline-size: var(--logo-width);
+    block-size: auto;
+    max-block-size: 3.25rem; /* fits inside the 77px pill */
+    object-fit: contain;
   }
-  header svg {
-    width: 2rem;
+
+  /* Text logo (Figma: Cormorant Garamond SemiBold 46.78px, line-height 100%; accent word italic, primary).
+     The size follows the "Logo text size" setting and scales down on small screens. */
+  .header__logo-text {
+    color: var(--color-text);
+    font-family: var(--font-logo--family);
+    font-size: clamp(1.75rem, 1.4rem + 1.4vw, var(--logo-text-size));
+    font-weight: var(--font-logo--weight);
+    line-height: 1;
+    letter-spacing: 0;
+    white-space: nowrap;
   }
-  header .header__menu,
-  header .header__icons {
+
+  .header__logo-text em {
+    color: var(--color-primary);
+    font-style: italic;
+  }
+
+  .header__menu,
+  .header__actions {
     display: flex;
-    gap: 1rem;
+    align-items: center;
+    gap: var(--space-md);
+  }
+
+  /* Header actions (Figma): round glass icon buttons, then the red LOGIN pill */
+  .header {
+    --icon-size: 1.25rem;
+  }
+
+  .header__icon-button {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    inline-size: 3.125rem; /* 50px, Figma "Liquid Glass Button" */
+    block-size: 3.125rem;
+    padding: var(--space-xs);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-glass);
+    box-shadow: var(--shadow-header);
+    color: var(--color-text);
+    text-decoration: none;
+    transition:
+      color var(--duration-fast) var(--ease-out),
+      background-color var(--duration-fast) var(--ease-out);
+  }
+
+  .header__icon-button:hover {
+    background-color: var(--color-glass-strong);
+    color: var(--color-accent);
+  }
+
+  .header__icon-button svg {
+    inline-size: var(--icon-size);
+    block-size: var(--icon-size);
+  }
+
+  /* Item count bubble on the cart (Figma: small red circle, top right) */
+  .header__count {
+    position: absolute;
+    inset-block-start: -0.125rem;
+    inset-inline-end: -0.125rem;
+    display: inline-grid;
+    place-items: center;
+    min-inline-size: 1.25rem;
+    block-size: 1.25rem;
+    padding-inline: 0.3rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-primary);
+    color: #ffffff;
+    font-size: 0.6875rem;
+    font-weight: var(--font-weight-medium);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .header__account {
+    display: inline-flex;
+  }
+
+  .header__login {
+    gap: var(--space-xs);
+    padding-inline: var(--space-xl);
+  }
+
+  .header__login svg {
+    inline-size: var(--icon-size);
+    block-size: var(--icon-size);
   }
 {% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <sticky-header>: adds "is-scrolled" to the header once the page has scrolled a little, so a transparent
+   * header turns into the full pill. A web component, so the theme editor's re-render restarts it on its own.
+   */
+  class StickyHeader extends HTMLElement {
+    connectedCallback() {
+      this.header = this.querySelector('.header');
+      if (!this.header?.classList.contains('header--transparent')) return;
+      this.onScroll = () => {
+        if (this.ticking) return;
+        this.ticking = true;
+        requestAnimationFrame(() => {
+          this.header.classList.toggle('is-scrolled', window.scrollY > 10);
+          this.ticking = false;
+        });
+      };
+      window.addEventListener('scroll', this.onScroll, { passive: true });
+      this.onScroll();
+    }
+
+    disconnectedCallback() {
+      if (this.onScroll) window.removeEventListener('scroll', this.onScroll);
+    }
+  }
+
+  if (!customElements.get('sticky-header')) customElements.define('sticky-header', StickyHeader);
+{% endjavascript %}
 
 {% schema %}
 {
   "name": "t:general.header",
+  "blocks": [
+    {
+      "type": "mega_menu_card",
+      "name": "t:general.menu_card",
+      "settings": [
+        {
+          "type": "paragraph",
+          "content": "t:labels.menu_card_help"
+        },
+        {
+          "type": "collection",
+          "id": "collection",
+          "label": "t:labels.collection"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "t:labels.card_link",
+          "info": "t:labels.card_link_info"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "t:labels.card_title",
+          "info": "t:labels.card_title_info"
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "t:labels.image",
+          "info": "t:labels.card_image_info"
+        },
+        {
+          "type": "textarea",
+          "id": "text",
+          "label": "t:labels.description",
+          "info": "t:labels.card_text_info"
+        }
+      ]
+    }
+  ],
   "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "select",
+      "id": "transparent_mode",
+      "label": "t:labels.transparent_header",
+      "info": "t:labels.transparent_header_info",
+      "options": [
+        { "value": "none", "label": "t:options.transparent_header.none" },
+        { "value": "home", "label": "t:options.transparent_header.home" },
+        { "value": "all", "label": "t:options.transparent_header.all" }
+      ],
+      "default": "home"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.navigation"
+    },
     {
       "type": "link_list",
       "id": "menu",
-      "label": "t:labels.menu"
+      "label": "t:labels.menu",
+      "default": "main-menu"
     },
     {
       "type": "link_list",
       "id": "customer_account_menu",
       "label": "t:labels.customer_account_menu",
       "default": "customer-account-main-menu"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.mega_menu"
+    },
+    {
+      "type": "select",
+      "id": "mega_menu_width",
+      "label": "t:labels.mega_menu_width",
+      "options": [
+        { "value": "bar", "label": "t:options.mega_menu_width.bar" },
+        { "value": "screen", "label": "t:options.mega_menu_width.screen" }
+      ],
+      "default": "bar"
+    },
+    {
+      "type": "range",
+      "id": "mega_menu_columns",
+      "label": "t:labels.mega_menu_columns",
+      "min": 2,
+      "max": 4,
+      "step": 1,
+      "default": 3
+    },
+    {
+      "type": "select",
+      "id": "mega_menu_image_ratio",
+      "label": "t:labels.mega_menu_image_ratio",
+      "options": [
+        { "value": "landscape", "label": "t:options.image_ratio.landscape" },
+        { "value": "square", "label": "t:options.image_ratio.square" },
+        { "value": "portrait", "label": "t:options.image_ratio.portrait" }
+      ],
+      "default": "landscape"
+    },
+    {
+      "type": "select",
+      "id": "mega_menu_image_fit",
+      "label": "t:labels.mega_menu_image_fit",
+      "options": [
+        { "value": "cover", "label": "t:options.image_fit.cover" },
+        { "value": "contain", "label": "t:options.image_fit.contain" }
+      ],
+      "default": "cover"
+    },
+    {
+      "type": "color_scheme",
+      "id": "mega_menu_color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.shop_all_group"
+    },
+    {
+      "type": "checkbox",
+      "id": "mega_menu_shop_all_show",
+      "label": "t:labels.shop_all_show",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "mega_menu_shop_all_label",
+      "label": "t:labels.shop_all_label",
+      "info": "t:labels.shop_all_label_info",
+      "visible_if": "{{ section.settings.mega_menu_shop_all_show }}"
+    },
+    {
+      "type": "url",
+      "id": "mega_menu_shop_all_link",
+      "label": "t:labels.shop_all_link",
+      "info": "t:labels.shop_all_link_info",
+      "visible_if": "{{ section.settings.mega_menu_shop_all_show }}"
     }
   ]
 }

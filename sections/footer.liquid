@@ -1,39 +1,546 @@
-<footer>
-  <div class="footer__copyright">
-    &copy;
-    {{ 'now' | date: '%Y' }}
-    {{ shop.name | link_to: routes.root_url }}, {{ powered_by_link }}
-  </div>
+{%- liquid
+  # Logo: same global settings as the header (Theme settings -> Logo). The footer is far below the fold,
+  # so the image is lazy-loaded here (the header's copy is eager).
+  if settings.logo != blank
+    assign logo_width_2x = settings.logo_width | times: 2
+    assign logo_widths = settings.logo_width | append: ', ' | append: logo_width_2x
+    assign logo_sizes = settings.logo_width | append: 'px'
+  endif
 
-  <div class="footer__links">
-    {% for link in section.settings.menu.links %}
-      {{ link.title | link_to: link.url }}
-    {% endfor %}
-  </div>
+  assign has_logo_text = false
+  if settings.logo_text != blank or settings.logo_text_accent != blank
+    assign has_logo_text = true
+  endif
+  assign logo_alt = shop.name
+  if has_logo_text
+    assign logo_alt = ''
+  endif
 
-  <div class="footer__payment">
-    {% if section.settings.show_payment_icons %}
-      {% for type in shop.enabled_payment_types %}
-        {{ type | payment_type_svg_tag }}
-      {% endfor %}
-    {% endif %}
+  # Copyright: the sentence lives in the locale file, the year and shop name are passed in.
+  # No | escape on the name: t already escapes its output (keys without _html), escaping twice
+  # would turn "Bob & Co" into "Bob &amp;amp; Co".
+  assign current_year = 'now' | date: '%Y'
+
+  # One column per top-level item of the footer menu (Shop, Company, Support...).
+  # At least 1 so the CSS never gets repeat(0, ...).
+  assign column_count = section.settings.menu.links.size | at_least: 1
+
+  # Link grey = the scheme's text mixed into its background. The white glass panel lightens dark
+  # backgrounds (red, dark schemes), so those need more text in the mix to stay at 4.5:1 contrast.
+  # color_brightness: 0 (black) to 255 (white).
+  assign link_mix = 70
+  assign scheme_brightness = section.settings.color_scheme.settings.background | color_brightness
+  if scheme_brightness < 128
+    assign link_mix = 85
+  endif
+-%}
+
+<footer
+  class="footer full-width color-{{ section.settings.color_scheme.id }}"
+  style="--logo-width: {{ settings.logo_width }}px; --logo-text-size: {{ settings.logo_text_size }}px; --footer-columns: {{ column_count }}; --footer-link-mix: {{ link_mix }}%; --nav-underline: url('{{ 'nav-underline.svg' | asset_url }}');"
+>
+  <div class="footer__panel">
+    <div class="footer__top{% unless section.settings.show_newsletter %} footer__top--no-newsletter{% endunless %}">
+      <div class="footer__brand">
+        <a class="footer__logo" href="{{ routes.root_url }}">
+          {%- if settings.logo != blank -%}
+            {{
+              settings.logo
+              | image_url: width: logo_width_2x
+              | image_tag:
+                class: 'footer__logo-image',
+                widths: logo_widths,
+                sizes: logo_sizes,
+                loading: 'lazy',
+                alt: logo_alt
+            }}
+          {%- endif -%}
+          {%- if has_logo_text -%}
+            <span class="footer__logo-text">
+              {{- settings.logo_text | escape -}}
+              {%- if settings.logo_text_accent != blank -%}<em>{{ settings.logo_text_accent | escape }}</em>{%- endif -%}
+            </span>
+          {%- elsif settings.logo == blank -%}
+            <span class="footer__logo-text">{{ shop.name | escape }}</span>
+          {%- endif -%}
+        </a>
+
+        {%- if section.settings.tagline != blank -%}
+          <div class="footer__tagline">{{ section.settings.tagline }}</div>
+        {%- endif -%}
+
+        {% render 'social-icons' %}
+      </div>
+
+      {%- comment -%}
+        One nested menu builds all the columns: each top-level item ("Shop") is a column heading and
+        its sub-items ("All Products", "Skincare"...) are the links underneath. A top-level item with no
+        sub-items becomes a column with just that one link, so nothing the merchant adds disappears.
+      {%- endcomment -%}
+      {%- for column in section.settings.menu.links -%}
+        <div class="footer__column">
+          {%- if column.links.size > 0 -%}
+            <h2 class="footer__heading">{{ column.title | escape }}</h2>
+            <ul class="footer__links" role="list">
+              {%- for link in column.links -%}
+                <li>
+                  <a
+                    class="footer__link"
+                    href="{{ link.url }}"
+                    {% if link.current %}
+                      aria-current="page"
+                    {% endif %}
+                  >
+                    {{- link.title | escape -}}
+                  </a>
+                </li>
+              {%- endfor -%}
+            </ul>
+          {%- else -%}
+            <ul class="footer__links" role="list">
+              <li>
+                <a
+                  class="footer__link"
+                  href="{{ column.url }}"
+                  {% if column.current %}
+                    aria-current="page"
+                  {% endif %}
+                >
+                  {{- column.title | escape -}}
+                </a>
+              </li>
+            </ul>
+          {%- endif -%}
+        </div>
+      {%- endfor -%}
+
+      {%- if section.settings.show_newsletter -%}
+        <div class="footer__column footer__newsletter">
+          {%- if section.settings.newsletter_heading != blank -%}
+            <h2 class="footer__heading">{{ section.settings.newsletter_heading | escape }}</h2>
+          {%- endif -%}
+          {%- if section.settings.newsletter_text != blank -%}
+            <div class="footer__newsletter-text">{{ section.settings.newsletter_text }}</div>
+          {%- endif -%}
+          {% render 'newsletter-form', id_prefix: 'footer' %}
+        </div>
+      {%- endif -%}
+    </div>
+
+    <div class="footer__bottom">
+      {%- comment -%}
+        powered_by_link is Shopify's own "Powered by Shopify" link. The Theme Store wants it left as it is;
+        it already carries rel="nofollow" (search engines shouldn't treat it as a vote for shopify.com).
+      {%- endcomment -%}
+      <p class="footer__copyright">
+        {{- 'footer.copyright' | t: year: current_year, shop: shop.name }}
+        {{ powered_by_link -}}
+      </p>
+
+      <div class="footer__utilities">
+        {% render 'localization-form', id_prefix: 'footer' %}
+
+        {%- comment -%}
+          Follow on Shop: Shopify's branded button that lets a customer follow the store in the Shop app.
+          Only when the store supports it (Shop Pay on, store in a supported region) and the setting is on.
+          The Theme Store forbids changing its colours, so it gets no styling here except its position.
+        {%- endcomment -%}
+        {%- if shop.features.follow_on_shop? and section.settings.enable_follow_on_shop -%}
+          <div class="footer__follow-on-shop">
+            {{ shop | login_button: action: 'follow' }}
+          </div>
+        {%- endif -%}
+
+        {%- if section.settings.show_payment_icons and shop.enabled_payment_types.size > 0 -%}
+          {%- comment -%}
+            Each payment icon is an <svg role="img"> with a <title> ("Visa"), so it already has a name.
+            The list gets a hidden heading so screen readers hear what the icons are about.
+          {%- endcomment -%}
+          <div class="footer__payment">
+            <span class="visually-hidden" id="FooterPaymentLabel">{{ 'footer.payment_methods' | t }}</span>
+            <ul class="footer__payment-list" role="list" aria-labelledby="FooterPaymentLabel">
+              {%- for type in shop.enabled_payment_types -%}
+                <li>{{ type | payment_type_svg_tag: class: 'footer__payment-icon' }}</li>
+              {%- endfor -%}
+            </ul>
+          </div>
+        {%- endif -%}
+      </div>
+
+      {%- if section.settings.legal_menu != blank -%}
+        <nav class="footer__legal" aria-label="{{ 'footer.legal_menu' | t }}">
+          <ul class="footer__legal-list" role="list">
+            {%- for link in section.settings.legal_menu.links -%}
+              <li>
+                <a
+                  class="footer__link"
+                  href="{{ link.url }}"
+                  {% if link.current %}
+                    aria-current="page"
+                  {% endif %}
+                >
+                  {{- link.title | escape -}}
+                </a>
+              </li>
+            {%- endfor -%}
+          </ul>
+        </nav>
+      {%- endif -%}
+    </div>
+
+    {%- if section.settings.show_wordmark -%}
+      {%- comment -%}
+        Decorative giant wordmark, cut off by the bottom of the panel. aria-hidden: a screen reader has
+        already heard the shop name in the logo, it shouldn't hear it again as a huge word.
+      {%- endcomment -%}
+      <p class="footer__wordmark" aria-hidden="true">
+        {%- if has_logo_text -%}
+          {{- settings.logo_text | escape -}}
+          {%- if settings.logo_text_accent != blank -%}<em>{{ settings.logo_text_accent | escape }}</em>{%- endif -%}
+        {%- else -%}
+          {{- shop.name | escape -}}
+        {%- endif -%}
+      </p>
+    {%- endif -%}
   </div>
 </footer>
 
 {% stylesheet %}
-  footer {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 2rem;
+  /*
+    Only .footer__* classes here, no element selectors like "footer a": those beat BEM classes on
+    specificity (the header had that bug in M2.2).
+
+    Sizes measured from the design screenshot at 1920 wide (design/figma/components/footer/screenshot.png):
+    panel 1822 x 806, 50px from each side, radius 50px, 50px inner padding, ~45px below it.
+    The section's colour scheme class paints the strip around the panel; the panel is a glass card.
+  */
+  .footer {
+    /*
+      Link grey: the Figma's #787878 is only 4.2:1 on cream (body text needs 4.5:1). Mixing the scheme's
+      text into its background gives the same soft grey look at 6:1 on cream, and it follows every colour
+      scheme. --footer-link-mix (70% or 85%) is set in the Liquid above from the background's brightness.
+    */
+    --footer-link-color: color-mix(in srgb, var(--color-text) var(--footer-link-mix, 70%), var(--color-background));
+
+    padding-block: var(--space-section) var(--space-2xl);
   }
-  footer a {
+
+  /*
+    Full width: the "full-width" class on <footer> (critical.css) lets it span the whole viewport instead
+    of Skeleton's page-width column. The panel is then centred with margin-inline: auto and is as wide as
+    the viewport minus the Figma's edge gap (16px on phones -> 50px at 1920, so 1822px wide at 1920).
+
+    No overflow: hidden on the panel: it would also cut off the country/language list, which opens
+    upwards from the bottom row. The wordmark clips itself instead (below).
+  */
+  .footer__panel {
+    --footer-edge: clamp(var(--space-md), 2.6vw, 3.125rem);
+
+    position: relative;
+    inline-size: calc(100% - var(--footer-edge) * 2);
+    margin-inline: auto;
+    padding-block-start: clamp(var(--space-2xl), 3.4vw, var(--space-3xl)); /* -> 64px */
+    padding-inline: clamp(var(--space-lg), 2.6vw, 3.125rem); /* -> 50px */
+    border-radius: var(--radius-lg);
+    background-color: var(--color-glass);
+    box-shadow: var(--shadow-collection), var(--shadow-glass-edge);
+  }
+
+  /*
+    Top row, measured at 1920: brand ~490px, each menu ~245px, newsletter ~370px, 32px gaps.
+    That is 2fr | 1fr per menu | 1.5fr.
+  */
+  .footer__top {
+    display: grid;
+    grid-template-columns:
+      minmax(0, 2fr)
+      repeat(var(--footer-columns), minmax(0, 1fr))
+      minmax(0, 1.5fr);
+    gap: var(--space-2xl) var(--space-xl);
+  }
+
+  /* Newsletter turned off: drop its 1.5fr track so no empty column is left on the right */
+  .footer__top--no-newsletter {
+    grid-template-columns: minmax(0, 2fr) repeat(var(--footer-columns), minmax(0, 1fr));
+  }
+
+  .footer__brand {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2xl); /* logo -> tagline -> social icons, ~48px apart */
+  }
+
+  .footer__logo {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    color: var(--color-text);
     text-decoration: none;
-    color: var(--color-foreground);
   }
-  footer .footer__links,
-  footer .footer__payment {
+
+  .footer__logo-image {
+    inline-size: var(--logo-width);
+    max-block-size: 4rem;
+    block-size: auto;
+    object-fit: contain;
+  }
+
+  .footer__logo-text {
+    font-family: var(--font-logo--family);
+    font-weight: var(--font-logo--weight);
+    font-size: var(--logo-text-size);
+    line-height: 1;
+  }
+
+  .footer__logo-text em,
+  .footer__wordmark em {
+    font-style: italic;
+  }
+
+  .footer__logo-text em {
+    color: var(--color-accent);
+  }
+
+  /* Tagline: body font, full text colour, 22px (Figma), about 450px wide */
+  .footer__tagline {
+    max-inline-size: 28rem;
+    color: var(--color-text);
+    font-size: var(--font-size-body-lg);
+    line-height: 1.45;
+  }
+
+  .footer__tagline > :first-child,
+  .footer__newsletter-text > :first-child {
+    margin-block-start: 0;
+  }
+
+  .footer__tagline > :last-child,
+  .footer__newsletter-text > :last-child {
+    margin-block-end: 0;
+  }
+
+  /* Column heading: the Figma's red uppercase label, ~40px above the first link */
+  .footer__heading {
+    margin-block: 0 2.5rem;
+    color: var(--color-accent);
+    font-family: var(--font-body--family);
+    font-size: var(--font-size-label);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-heading);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  .footer__links,
+  .footer__legal-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .footer__links {
+    display: grid;
+    gap: 1.25rem; /* 20px between links (53px from line to line in the Figma) */
+  }
+
+  /* Links: heading (serif) font in the softer grey, accent colour on hover and for the current page */
+  .footer__link {
+    color: var(--footer-link-color);
+    font-family: var(--font-heading--family);
+    font-size: var(--font-size-body);
+    text-decoration: none;
+    transition: color var(--duration-fast) var(--ease-out);
+  }
+
+  .footer__link:hover,
+  .footer__link[aria-current='page'] {
+    color: var(--color-accent);
+  }
+
+  /*
+    Column links: the header's hand-drawn underline (assets/nav-underline.svg) appears on hover, keyboard
+    focus and the current page. Same technique as the header: an empty ::after box painted in currentColor
+    (so it's red with the text) and cut to the SVG's shape with a CSS mask. --nav-underline is set on
+    <footer> in the Liquid above, because asset_url can't run inside this stylesheet.
+    It draws in from the left (scaleX 0 -> 1); with reduced motion it simply appears.
+  */
+  .footer__links .footer__link {
+    position: relative;
+    display: inline-block;
+  }
+
+  .footer__links .footer__link::after {
+    content: '';
+    position: absolute;
+    inset-inline-start: -0.1em;
+    inset-block-start: calc(100% + 0.25rem);
+    inline-size: 65%; /* Figma: shorter than the word, starting at its left edge */
+    block-size: 0.5rem;
+    background-color: currentcolor;
+    mask: var(--nav-underline) center / 100% 100% no-repeat;
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform var(--duration-base) var(--ease-out);
+  }
+
+  .footer__links .footer__link:hover::after,
+  .footer__links .footer__link:focus-visible::after,
+  .footer__links .footer__link[aria-current='page']::after {
+    transform: scaleX(1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .footer__links .footer__link::after {
+      transition: none;
+    }
+  }
+
+  /* Figma: ~58px from the newsletter text down to the email field */
+  .footer__newsletter .newsletter-form {
+    margin-block-start: 3.5rem;
+  }
+
+  .footer__newsletter-text {
+    max-inline-size: 24rem;
+    color: var(--footer-link-color);
+    font-family: var(--font-heading--family);
+    font-size: var(--font-size-body);
+    line-height: 1.35;
+  }
+
+  /* Bottom row: 1px divider, then copyright | pickers + payment icons | legal links */
+  .footer__bottom {
     display: flex;
-    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md) var(--space-xl);
+    margin-block-start: 3.5rem; /* ~55px under the last link */
+    padding-block: var(--space-lg);
+    border-block-start: 1px solid var(--color-border);
+    font-size: var(--font-size-caption);
+  }
+
+  .footer__copyright {
+    margin: 0;
+    color: var(--color-text);
+  }
+
+  .footer__utilities {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-md) var(--space-lg);
+  }
+
+  .footer__payment-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .footer__payment-icon {
+    display: block;
+  }
+
+  /* Only placed in the row: the button's own colours and look are Shopify's and must not change */
+  .footer__follow-on-shop {
+    display: flex;
+    align-items: center;
+  }
+
+  /* "Powered by Shopify" sits after the copyright in the same colour */
+  .footer__copyright a {
+    color: inherit;
+  }
+
+  .footer__legal-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .footer__legal-list .footer__link {
+    color: var(--color-text);
+    font-family: var(--font-body--family);
+    font-size: var(--font-size-caption);
+  }
+
+  .footer__legal-list .footer__link:hover,
+  .footer__legal-list .footer__link[aria-current='page'] {
+    color: var(--color-accent);
+  }
+
+  /*
+    The Figma's small light dot between legal links. Drawn by CSS (an empty box with a round
+    background), so screen readers don't read anything out.
+  */
+  .footer__legal-list li + li::before {
+    content: '';
+    display: inline-block;
+    inline-size: 5px;
+    block-size: 5px;
+    margin-inline: 1.25rem;
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--color-text) 25%, transparent);
+    vertical-align: middle;
+  }
+
+  /*
+    Giant wordmark (Figma: ~500px at 1920 wide, spanning most of the panel). Its box is only 0.72em
+    tall and clips what overflows, so the bottom of the letters is cut off flush with the panel's
+    bottom edge (the panel has no bottom padding). The negative top margin tucks the empty space above
+    the letters under the bottom row, like the Figma. The clip also stops a sideways scroll on phones.
+    Faded (Figma, measured): ~20% grey for the first word, ~20% of the accent for the italic word.
+    Decorative only (aria-hidden), so it has no contrast requirement.
+  */
+  .footer__wordmark {
+    block-size: 0.72em;
+    overflow: hidden;
+    margin-block: -0.08em 0;
+    color: color-mix(in srgb, var(--color-text) 20%, transparent);
+    font-family: var(--font-logo--family);
+    font-weight: var(--font-logo--weight);
+    font-size: clamp(4rem, 26vw, 31.25rem); /* 64px -> 500px */
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .footer__wordmark em {
+    color: color-mix(in srgb, var(--color-accent) 20%, transparent);
+  }
+
+  /*
+    Smaller screens. No mobile design yet (decision 7): this is just a sensible reflow.
+    Tablet: brand column across the top, the other columns fill rows of at least 10rem each.
+    Phone: one column.
+  */
+  @media (max-width: 989px) {
+    .footer__top {
+      grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    }
+
+    .footer__brand {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (max-width: 599px) {
+    .footer__top {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .footer__bottom {
+      flex-direction: column;
+      align-items: flex-start;
+    }
   }
 {% endstylesheet %}
 
@@ -42,14 +549,83 @@
   "name": "t:general.footer",
   "settings": [
     {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
       "type": "link_list",
       "id": "menu",
-      "label": "t:labels.menu"
+      "label": "t:labels.menu",
+      "info": "t:labels.footer_menu_info",
+      "default": "footer"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.footer_brand"
+    },
+    {
+      "type": "paragraph",
+      "content": "t:labels.footer_logo_info"
+    },
+    {
+      "type": "richtext",
+      "id": "tagline",
+      "label": "t:labels.tagline",
+      "default": "<p>Elevating your daily ritual with high-performance makeup, advanced skincare, and signature fragrances.</p>"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.footer_newsletter"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_newsletter",
+      "label": "t:labels.show_newsletter",
+      "info": "t:labels.show_newsletter_info",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "newsletter_heading",
+      "label": "t:labels.heading",
+      "default": "Newsletter"
+    },
+    {
+      "type": "richtext",
+      "id": "newsletter_text",
+      "label": "t:labels.text",
+      "default": "<p>Receive curated beauty tips, exclusive offers, and new arrivals directly to your inbox.</p>"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.footer_bottom"
+    },
+    {
+      "type": "link_list",
+      "id": "legal_menu",
+      "label": "t:labels.legal_menu",
+      "info": "t:labels.legal_menu_info"
     },
     {
       "type": "checkbox",
       "id": "show_payment_icons",
       "label": "t:labels.show_payment_icons",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_follow_on_shop",
+      "label": "t:labels.enable_follow_on_shop",
+      "info": "t:labels.enable_follow_on_shop_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_wordmark",
+      "label": "t:labels.show_wordmark",
+      "info": "t:labels.show_wordmark_info",
       "default": true
     }
   ]

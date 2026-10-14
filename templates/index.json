@@ -10,11 +10,33 @@
 {
   "sections": {
     "main": {
-      "type": "hello-world",
-      "settings": {}
+      "type": "custom-section",
+      "name": "Hero section",
+      "settings": {
+        "background_image": "shopify://shop_images/theme_cover_image.jpg"
+      },
+      "blocks": {
+        "title": {
+          "type": "text",
+          "name": "t:general.text",
+          "settings": {
+            "text": "Welcome",
+            "text_style": "text--title",
+            "alignment": "center"
+          }
+        },
+        "sub_title": {
+          "type": "text",
+          "name": "t:general.text",
+          "settings": {
+            "text": "Welcome to OroSkin",
+            "text_style": "text--subtitle",
+            "alignment": "center"
+          }
+        }
+      },
+      "block_order": ["title", "sub_title"]
     }
   },
-  "order": [
-    "main"
-  ]
+  "order": ["main"]
 }

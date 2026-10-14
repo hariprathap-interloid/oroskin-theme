@@ -1,0 +1,95 @@
+{% doc %}
+  The mega menu panel for one top-level menu link with children, as in the Figma:
+  "<title> by category" and "Shop all" on top, then one row of image cards (one per 2nd-level link).
+  3rd-level links show as small links on their card.
+
+  Cards follow the menu order. A "Menu card" block (theme editor -> Header) can change one card's title, image
+  and description; it matches a menu link by, in order: its Collection (the link points to that collection),
+  its Link (pages, blogs, products), or its Title (same name as the menu item, for "#" links).
+  Without a matching block, a card uses its collection's own title, image and description. When there are more cards than fit in a row
+  ("Cards per row" in the header settings), the row scrolls sideways and the arrow buttons appear.
+
+  @param {link} link - The top-level menu link whose children are shown
+  @param {object} [scheme] - Colour scheme for the panel (the header's mega menu setting)
+  @param {block[]} [cards] - The header's "Menu card" blocks (section.blocks)
+  @param {boolean} [shop_all_show] - Show the "Shop all" link (default true)
+  @param {string} [shop_all_label] - Its text; empty = "Shop all"
+  @param {string} [shop_all_link] - Its URL; empty = this menu item's own link
+
+  @example
+  {% render 'mega-menu-panel', link: link, scheme: section.settings.mega_menu_color_scheme, cards: section.blocks %}
+{% enddoc %}
+
+<div class="menu__panel{% if scheme %} color-{{ scheme.id }}{% endif %}">
+  <div class="menu__panel-header">
+    <p class="menu__panel-title">{{ 'header.menu_by_category' | t: title: link.title }}</p>
+
+    <div class="menu__panel-actions">
+      {%- liquid
+        # "Shop all": always shown while "Show link" is on. Link: the setting, else the menu item's own link,
+        # else "#" (so the merchant sees it in the preview and can set a link)
+        assign all_url = shop_all_link | default: link.url | default: '#'
+        assign all_label = shop_all_label
+        if all_label == blank
+          assign all_label = 'header.shop_all' | t
+        endif
+        assign all_visible = true
+        if shop_all_show == false
+          assign all_visible = false
+        endif
+      -%}
+      {%- if all_visible -%}
+        <a class="menu__panel-all" href="{{ all_url }}">
+          {{- all_label | escape -}}
+          <span class="menu__icon">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+        </a>
+      {%- endif -%}
+    </div>
+  </div>
+
+  <ul class="menu__cards" role="list">
+    {%- liquid
+      # Cards always follow the MENU order (Online Store -> Navigation).
+      # A matching "Menu card" block only changes a card's content, never its position.
+      for child in link.links
+        assign card_block = nil
+        for block in cards
+          assign block_title_handle = block.settings.title | handleize
+          if block.settings.collection != blank and child.type == 'collection_link'
+            if child.object.id == block.settings.collection.id
+              assign card_block = block
+            endif
+          elsif block.settings.link != blank and block.settings.link == child.url
+            assign card_block = block
+          elsif block.settings.collection == blank and block.settings.link == blank and block_title_handle != blank
+            if block_title_handle == child.handle
+              assign card_block = block
+            endif
+          endif
+          if card_block
+            break
+          endif
+        endfor
+
+        if card_block
+          render 'mega-menu-card', link: child, title: card_block.settings.title, image: card_block.settings.image, text: card_block.settings.text, attributes: card_block.shopify_attributes
+        else
+          render 'mega-menu-card', link: child
+        endif
+      endfor
+    -%}
+  </ul>
+
+  {%- comment -%}
+    Slider arrows, bottom-right under the cards. Hidden until the cards overflow the row (the script in
+    header-menu.liquid shows them); it finds them anywhere inside .menu__panel.
+  {%- endcomment -%}
+  <div class="menu__slider-buttons" hidden>
+    <button type="button" class="menu__slider-button" data-direction="-1" aria-label="{{ 'accessibility.previous' | t }}">
+      <span class="menu__icon menu__icon--back">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+    </button>
+    <button type="button" class="menu__slider-button" data-direction="1" aria-label="{{ 'accessibility.next' | t }}">
+      <span class="menu__icon">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+    </button>
+  </div>
+</div>

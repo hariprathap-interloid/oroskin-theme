@@ -15,54 +15,56 @@ This checklist lists everything Shopify requires, in the order we build it. Tick
 Why first: every later section reads these settings, CSS variables and base styles. If they change later, you have to rework everything.
 
 ### Global settings (`config/settings_schema.json`)
-- [ ] ❌ Rename `theme_info` to Oroskin, with a version and documentation/support URLs. *Why: required (§14), and it's what merchants see.*
-- [ ] 🟡 **At least 4 colour settings**, each background paired with a foreground (text) colour. Skeleton has 2. *§16*
-- [ ] 🟡 All fonts use `font_picker`, with a default from Shopify's font library. **No custom fonts.** *§15. Pick the closest library font to the Figma font now.*
-- [ ] ❌ Favicon setting. *§14*
-- [ ] ❌ Logo setting that works with wide, square and tall logos. *§14*
-- [ ] ❌ Social media link settings. Leave the placeholders empty. *§13*
-- [ ] ❌ "Enable animations" setting. *Our own decision.*
+- [x] ❌ Rename `theme_info` to Oroskin, with a version and documentation/support URLs. *Why: required (§14), and it's what merchants see.* *Done 2026-10-08 (`8cada3a`); the documentation URL is a placeholder until the docs exist (after 22 Oct).*
+- [x] 🟡 **At least 4 colour settings**, each background paired with a foreground (text) colour. Skeleton has 2. *§16* *Done: `color_scheme_group` with 10 slots and 5 schemes (`50e7f8d`, `e99f4b9`).*
+- [x] 🟡 All fonts use `font_picker`, with a default from Shopify's font library. **No custom fonts.** *§15. Decided: two font pickers, heading font (default `newsreader_n4`, replacing Canela) and body font (default `plus_jakarta_sans_n4`, replacing Satoshi).*
+- [x] ❌ Favicon setting. *§14*
+- [x] ❌ Logo setting that works with wide, square and tall logos. *§14* *Setting done (`13dc0aa`); rendering in the header is M2.*
+- [x] ❌ Social media link settings. Leave the placeholders empty. *§13* *Done: 6 empty `url` settings; icons rendered in M2.*
+- [x] ❌ "Enable animations" setting. *Our own decision.*
 
 ### CSS variables and base styles
-- [ ] 🟡 Figma tokens (colours, type scale, spacing, radius) output once as `:root` variables in `snippets/css-variables.liquid`
-- [ ] ✅ Bold, italic and bold-italic font variants loaded through `font_modify`. *§15*
-- [ ] ❌ Rich-text styles for h1–h6, blockquote, ul and ol. **Each heading level must look different.** *§8, §12*
-- [ ] ❌ Visible focus style on every link, button and input. *§12, for keyboard users.*
-- [ ] ❌ Touch targets of at least 24×24px. *§12*
-- [ ] ❌ Consistent button, link and form styles. *§3*
+- [x] 🟡 Figma tokens (colours, type scale, spacing, radius) output once as `:root` variables in `snippets/css-variables.liquid`
+- [x] ✅ Bold, italic and bold-italic font variants loaded through `font_modify`. *§15*
+- [x] ❌ Rich-text styles for h1–h6, blockquote, ul and ol. **Each heading level must look different.** *§8, §12*
+- [x] ❌ Visible focus style on every link, button and input. *§12, for keyboard users.*
+- [x] ❌ Touch targets of at least 24×24px. *§12* *Buttons 50px and text buttons 24px; check header/footer icons in M2.*
+- [x] ❌ Consistent button, link and form styles. *§3*
 
 ### Images
-- [ ] 🟡 `snippets/image.liquid`: add `widths`, `sizes`, the `alt` text, and **eager loading + `fetchpriority="high"` for the hero, lazy loading below the fold**. Support focal points. *§4, §17. Lazy-loading the hero slows the page's main paint (LCP).*
+- [x] 🟡 `snippets/image.liquid`: add `widths`, `sizes`, the `alt` text, and **eager loading + `fetchpriority="high"` for the hero, lazy loading below the fold**. Support focal points. *§4, §17. Lazy-loading the hero slows the page's main paint (LCP).*
 
 ### Animation system
-- [ ] ❌ A `<animate-on-scroll>` web component: IntersectionObserver with `opacity` and `transform` only
-- [ ] ❌ Content is hidden only when both the `.js` class and `prefers-reduced-motion: no-preference` apply. It stays visible without JavaScript.
-- [ ] ❌ Never animate the hero or first-section content
-- [ ] ❌ Animations are off inside the theme editor (`request.design_mode`). *§14: editor changes must show in the preview.*
+- [x] ❌ A `<animate-on-scroll>` web component: IntersectionObserver with `opacity` and `transform` only
+- [x] ❌ Content is hidden only when both the `.js` class and `prefers-reduced-motion: no-preference` apply. It stays visible without JavaScript.
+- [x] ❌ Never animate the hero or first-section content
+- [x] ❌ Animations are off inside the theme editor (`request.design_mode`). *§14: editor changes must show in the preview.*
 
 ### Clean-up and layout rules
-- [ ] ❌ Delete `sections/hello-world.liquid` and use a real section in `templates/index.json`. *It contains hard-coded text.*
-- [ ] ✅ `<html lang="{{ request.locale.iso_code }}">`; `content_for_header` left untouched. *§7*
-- [ ] ✅ `routes` used for URLs. Keep doing this; never hard-code `/`. *§7*
+- [x] ❌ Delete `sections/hello-world.liquid` and use a real section in `templates/index.json`. *It contains hard-coded text.*
+- [x] ✅ `<html lang="{{ request.locale.iso_code }}">`; `content_for_header` left untouched. *§7*
+- [x] ✅ `routes` used for URLs. Keep doing this; never hard-code `/`. *§7*
 
 ---
 
 ## M2 Header & footer
 
-- [ ] ✅ Header and footer are rendered through section groups. *§5*
-- [ ] ❌ Logo, falling back to `shop.name`
-- [ ] ❌ **Multi-level dropdown menu**, fully keyboard accessible. *§4, §12*
-- [ ] ❌ Mobile menu
-- [ ] ❌ Search link and **predictive search**. *§4*
-- [ ] 🟡 `<shopify-account>` in the **desktop and mobile** header. Skeleton has desktop only. *§4*
-- [ ] ❌ **Country/currency selector** and **language selector**. *§4*
-- [ ] ❌ Menu defaults: `main-menu` for the header, `footer` for the footer. *§14*
-- [ ] ❌ **Newsletter signup form** in the footer. *§4*
-- [ ] ❌ Social media icons. *§13*
-- [ ] ❌ **Follow on Shop** button (`login_button` filter, brand colours unchanged). *§4*
-- [ ] ✅ Payment icons via `shop.enabled_payment_types`. *§7*
-- [ ] ✅ `powered_by_link` present
-- [ ] ❌ `rel="nofollow"` on links to Shopify domains. *§8*
+- [x] ✅ Header and footer are rendered through section groups. *§5*
+- [x] ❌ Logo, falling back to `shop.name` *Done M2.1: image / text logo / shop name.*
+- [x] ❌ **Multi-level dropdown menu**, fully keyboard accessible. *§4, §12* *Done M2.2: `<details>` mega menu, Escape/outside click; keyboard-tested M2.11.*
+- [ ] ❌ Mobile menu *Parked: M2.6, waiting on the mobile design (decision 7).*
+- [ ] 🟡 Search link and **predictive search**. *§4* *Search link done (M2.3); predictive search moved to M8.*
+- [ ] 🟡 `<shopify-account>` in the **desktop and mobile** header. Skeleton has desktop only. *§4* *Desktop done (M2.3, LOGIN pill); mobile comes with the mobile header (decision 7).*
+- [x] ❌ **Country/currency selector** and **language selector**. *§4* *Done M2.7 (`localization-form` snippet, footer).*
+- [x] ❌ Menu defaults: `main-menu` for the header, `footer` for the footer. *§14*
+- [x] ❌ **Newsletter signup form** in the footer. *§4* *Done M2.9 (`newsletter-form` snippet).*
+- [x] ❌ Social media icons. *§13* *Done M2.10 (`social-icons` snippet, 7 networks incl. WhatsApp).*
+- [ ] 🟡 **Follow on Shop** button (`login_button` filter, brand colours unchanged). *§4* *Built M2.10 (shows when `shop.features.follow_on_shop?`); not available on the dev store, so verify on a store with Shop Pay before submission.*
+- [x] ✅ Payment icons via `shop.enabled_payment_types`. *§7* *Labelled list (M2.10).*
+- [x] ✅ `powered_by_link` present *Restored after the copyright (M2.10).*
+- [x] ❌ `rel="nofollow"` on links to Shopify domains. *§8* *`powered_by_link` carries it; no other Shopify-domain links.*
+- [x] ❌ **Skip link** (visible on focus) + `<main id="MainContent" tabindex="-1">` landmark. *Shopify accessibility best practices, "Global"* (added in M2.11)
+- [x] ❌ No `autofocus` attributes, no positive `tabindex`. *same source* (added in M2.11)
 
 ---
 
@@ -153,6 +155,20 @@ Why first: every later section reads these settings, CSS variables and base styl
 - [ ] No Sass and no minified files of our own. *§10*
 - [ ] Setting labels: sentence case, American English, and Shopify's terminology list ("home page", "main menu", "button label"…). *§14*
 - [ ] No fake urgency, countdowns, stock counts or "people viewing" features. *§8*
+
+---
+
+## Parked: awaiting design and client confirmation
+
+These are in the Figma but aren't native Shopify features. Don't build them until they're confirmed. Each one gets a **show/hide toggle** setting.
+
+- [ ] Wishlist (heart icons plus the account wishlist). *Needs an app. Not allowed in the Theme Store version (§8), so it must be possible to switch it off.*
+- [ ] Custom account pages: overview, details, orders, track order, refills, rewards, preferences. *Shopify hosts customer accounts itself; for now the theme only uses `<shopify-account>`.*
+- [ ] Rewards and refills. *Need apps.*
+- [ ] Notification bell with a badge. *Needs an app.*
+- [ ] Compare products bar (collection page)
+- [ ] Countdown timer ("Glow-Up Event"). *Only for real sales; §8 bans fake urgency.*
+- [ ] Mobile layouts. *No mobile designs yet; to be decided later.*
 
 ---
 

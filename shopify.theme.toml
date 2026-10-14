@@ -12,7 +12,7 @@
 #   needs one out of git.
 
 [environments.dev]
-store = "oroskin-dev" # TODO: your dev store handle (the part before .myshopify.com)
+store = "oroskin-dev"
 
 # Performance benchmark store, loaded with Shopify's test product CSV (enable later)
 # [environments.bench]

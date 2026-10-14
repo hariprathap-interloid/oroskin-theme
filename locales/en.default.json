@@ -19,14 +19,6 @@
     "update": "Update",
     "remove": "Remove"
   },
-  "customers": {
-    "login": {
-      "email": "Email",
-      "password": "Password",
-      "submit": "Sign in",
-      "title": "Login"
-    }
-  },
   "collections": {
     "title": "Collections"
   },
@@ -48,5 +40,46 @@
     "submit": "Search",
     "no_results_html": "No results found for {{ terms }}",
     "results_for_html": "{{ count }} results found for {{ terms }}"
+  },
+  "accessibility": {
+    "main_menu": "Main menu",
+    "previous": "Previous",
+    "next": "Next",
+    "skip_to_content": "Skip to content"
+  },
+  "header": {
+    "menu_by_category": "{{ title }} by category",
+    "shop_all": "Shop all",
+    "search": "Search",
+    "login": "Login",
+    "cart_count": {
+      "zero": "Cart",
+      "one": "Cart, {{ count }} item",
+      "other": "Cart, {{ count }} items"
+    }
+  },
+  "localization": {
+    "country": "Country/region",
+    "language": "Language"
+  },
+  "footer": {
+    "copyright": "© {{ year }} {{ shop }}. All rights reserved.",
+    "legal_menu": "Legal",
+    "payment_methods": "Payment methods"
+  },
+  "newsletter": {
+    "email_label": "Email",
+    "placeholder": "Enter your email",
+    "subscribe": "Subscribe",
+    "success": "Thanks for subscribing. Look out for our next email."
+  },
+  "social": {
+    "facebook": "Facebook",
+    "whatsapp": "WhatsApp",
+    "instagram": "Instagram",
+    "youtube": "YouTube",
+    "tiktok": "TikTok",
+    "pinterest": "Pinterest",
+    "x": "X (Twitter)"
   }
 }

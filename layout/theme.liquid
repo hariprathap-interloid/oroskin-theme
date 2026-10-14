@@ -1,6 +1,32 @@
 <!doctype html>
-<html lang="{{ request.locale.iso_code }}">
+{%- liquid
+  # Scroll animations run only when the merchant turned them on, and never inside the theme editor
+  # (merchants must see and edit all content there).
+  assign animations_on = false
+  if settings.animations_enabled and request.design_mode == false
+    assign animations_on = true
+  endif
+-%}
+<html class="no-js{% if animations_on %} animations-on{% endif %}" lang="{{ request.locale.iso_code }}">
   <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+
+    <script>
+      // JS is running: allow the reveal CSS to hide elements. If the animation script fails to
+      // load within 3 seconds, switch animations off so no content stays hidden.
+      document.documentElement.classList.replace('no-js', 'js');
+      setTimeout(function () {
+        if (!window.customElements || !customElements.get('animate-on-scroll')) {
+          document.documentElement.classList.remove('animations-on');
+        }
+      }, 3000);
+    </script>
+
+    {%- if settings.favicon != blank -%}
+      <link rel="icon" type="image/png" href="{{ settings.favicon | image_url: width: 32, height: 32 }}">
+    {%- endif -%}
+
     {% # Inlined CSS Variables %}
     {% render 'css-variables' %}
 
@@ -10,12 +36,16 @@
       2. Preload only the critical font variant (base weight)
       3. Additional variants load on-demand via @font-face
     {% endcomment %}
-    {% unless settings.type_primary_font.system? %}
+    {% unless settings.type_heading_font.system? and settings.type_body_font.system? %}
       <link rel="preconnect" href="https://fonts.shopifycdn.com" crossorigin>
-
-      {% comment %} Preload the base font variant for initial page render {% endcomment %}
-      {{ settings.type_primary_font | font_url | preload_tag: as: 'font', crossorigin: 'anonymous' }}
     {% endunless %}
+
+    {%- unless settings.type_heading_font.system? -%}
+      {{ settings.type_heading_font | font_url | preload_tag: as: 'font', crossorigin: 'anonymous' }}
+    {%- endunless -%}
+    {%- unless settings.type_body_font.system? -%}
+      {{ settings.type_body_font | font_url | preload_tag: as: 'font', crossorigin: 'anonymous' }}
+    {%- endunless -%}
 
     {% # Load and preload the critical CSS %}
     {{ 'critical.css' | asset_url | stylesheet_tag: preload: true }}
@@ -23,13 +53,30 @@
     {% # Social, title, etc. %}
     {% render 'meta-tags' %}
 
+    {%- if animations_on -%}
+      <script src="{{ 'animate-on-scroll.js' | asset_url }}" defer></script>
+    {%- endif -%}
+
     {{ content_for_header }}
   </head>
 
   <body>
+    {%- comment -%}
+      Skip link: the first thing a keyboard user reaches. It stays hidden until it gets focus, then
+      jumps past the header (and its mega menus) straight to the page content. Theme Store requirement.
+    {%- endcomment -%}
+    <a class="skip-link" href="#MainContent">{{ 'accessibility.skip_to_content' | t }}</a>
+
     {% sections 'header-group' %}
 
-    {{ content_for_layout }}
+    {%- comment -%}
+      <main> marks the page's own content for screen readers (a "landmark" they can jump to).
+      tabindex="-1" lets the skip link move focus here (a <main> can't take focus otherwise),
+      without adding it to the Tab order.
+    {%- endcomment -%}
+    <main id="MainContent" class="main-content" tabindex="-1">
+      {{ content_for_layout }}
+    </main>
 
     {% sections 'footer-group' %}
   </body>

@@ -1,6 +1,4 @@
-<meta charset="utf-8">
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+{% comment %} charset and viewport are output first in each layout's <head> (charset must be in the first 1024 bytes). {% endcomment %}
 
 {%- liquid
   assign og_title = page_title | default: shop.name
