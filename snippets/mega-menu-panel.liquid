@@ -25,15 +25,6 @@
     <p class="menu__panel-title">{{ 'header.menu_by_category' | t: title: link.title }}</p>
 
     <div class="menu__panel-actions">
-      <div class="menu__slider-buttons" hidden>
-        <button type="button" class="menu__slider-button" data-direction="-1" aria-label="{{ 'accessibility.previous' | t }}">
-          <span class="menu__icon menu__icon--back">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
-        </button>
-        <button type="button" class="menu__slider-button" data-direction="1" aria-label="{{ 'accessibility.next' | t }}">
-          <span class="menu__icon">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
-        </button>
-      </div>
-
       {%- liquid
         # "Shop all": always shown while "Show link" is on. Link: the setting, else the menu item's own link,
         # else "#" (so the merchant sees it in the preview and can set a link)
@@ -88,4 +79,17 @@
       endfor
     -%}
   </ul>
+
+  {%- comment -%}
+    Slider arrows, bottom-right under the cards. Hidden until the cards overflow the row (the script in
+    header-menu.liquid shows them); it finds them anywhere inside .menu__panel.
+  {%- endcomment -%}
+  <div class="menu__slider-buttons" hidden>
+    <button type="button" class="menu__slider-button" data-direction="-1" aria-label="{{ 'accessibility.previous' | t }}">
+      <span class="menu__icon menu__icon--back">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+    </button>
+    <button type="button" class="menu__slider-button" data-direction="1" aria-label="{{ 'accessibility.next' | t }}">
+      <span class="menu__icon">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+    </button>
+  </div>
 </div>

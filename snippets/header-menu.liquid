@@ -31,7 +31,10 @@
   %}
 {% enddoc %}
 
-<ul class="menu menu--panel-{{ panel_width | default: 'bar' }} menu--images-{{ image_fit | default: 'cover' }} menu--ratio-{{ image_ratio | default: 'landscape' }}" role="list">
+<ul
+  class="menu menu--panel-{{ panel_width | default: 'bar' }} menu--images-{{ image_fit | default: 'cover' }} menu--ratio-{{ image_ratio | default: 'landscape' }}"
+  role="list"
+>
   {%- for link in links -%}
     <li class="menu__item">
       {%- if link.links != blank -%}
@@ -202,19 +205,27 @@
     transform: scaleX(-1);
   }
 
-  /* Hover: the arrow nudges in the direction it points */
-  .menu__panel-all:hover .menu__icon,
-  .menu__slider-button[data-direction='1']:hover:not(:disabled) .menu__icon {
-    translate: 0.25rem 0;
-  }
-
-  .menu__slider-button[data-direction='-1']:hover:not(:disabled) .menu__icon {
-    translate: -0.25rem 0;
-  }
-
+  /*
+    Bottom-right corner of the panel, on the same line as the bottom of the cards (the tag row). Absolute,
+    so the arrows don't add a row or a gap to the panel. The offsets match the panel's padding
+    (--space-2xl), so they line up with the right edge of the last card and the bottom of the content.
+  */
   .menu__slider-buttons {
+    position: absolute;
+    inset-inline-end: var(--space-2xl);
+    inset-block-end: var(--space-2xl);
     display: flex;
+    align-items: center;
     gap: var(--space-xs);
+  }
+
+  /*
+    critical.css gives a button that follows another button a 12px top margin (meant for stacked form
+    buttons), which dropped the "next" arrow below the "previous" one. That rule uses :where() (zero
+    specificity), so this one class is enough to cancel it.
+  */
+  .menu__slider-buttons .menu__slider-button {
+    margin: 0;
   }
 
   .menu__slider-buttons[hidden] {
@@ -232,9 +243,7 @@
     background: none;
     color: var(--color-text);
     cursor: pointer;
-    transition:
-      color var(--duration-fast) var(--ease-out),
-      border-color var(--duration-fast) var(--ease-out);
+    transition: color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
   }
 
   .menu__slider-button:hover:not(:disabled) {
@@ -320,8 +329,9 @@
   }
 
   .menu__card:hover .menu__card-image img {
-    transform: scale(1.03);
-  }
+    transform: scale(1.04);
+    transition-duration: 1500ms;
+    }
 
   /* Category title (Figma: Satoshi Medium 16.54px, line-height 100%, letter-spacing 12%, uppercase, primary) */
   .menu__card-title {
@@ -417,9 +427,7 @@
     color: var(--color-text);
     font-size: var(--font-size-small);
     text-decoration: none;
-    transition:
-      color var(--duration-fast) var(--ease-out),
-      border-color var(--duration-fast) var(--ease-out);
+    transition: color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
   }
 
   .menu__card-sub:hover,
@@ -427,7 +435,6 @@
     border-color: var(--color-accent);
     color: var(--color-accent);
   }
-
 {% endstylesheet %}
 
 {% javascript %}
