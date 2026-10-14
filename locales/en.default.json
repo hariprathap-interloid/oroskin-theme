@@ -60,5 +60,9 @@
   "localization": {
     "country": "Country/region",
     "language": "Language"
+  },
+  "footer": {
+    "copyright": "© {{ year }} {{ shop }}. All rights reserved.",
+    "legal_menu": "Legal"
   }
 }

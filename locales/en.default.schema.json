@@ -92,7 +92,18 @@
     "logo_font": "Font",
     "logo_text_size": "Size",
     "transparent_header": "Transparent header",
-    "transparent_header_info": "Floats over the first section, showing only the buttons, and becomes the full header when visitors scroll."
+    "transparent_header_info": "Floats over the first section, showing only the buttons, and becomes the full header when visitors scroll.",
+    "footer_menu_info": "Each top-level menu item becomes a column heading, and its sub-items become the links underneath.",
+    "footer_brand": "Brand column",
+    "footer_logo_info": "The logo comes from Theme settings > Logo.",
+    "tagline": "Tagline",
+    "footer_bottom": "Bottom row",
+    "legal_menu": "Legal menu",
+    "legal_menu_info": "Shown on the right of the bottom row, e.g. Privacy policy, Terms of service, Cookies.",
+    "show_wordmark": "Show large wordmark",
+    "show_wordmark_info": "Decorative logo text across the bottom of the footer. Uses the logo text from Theme settings > Logo.",
+    "heading": "Heading",
+    "footer_newsletter": "Newsletter column"
   },
   "options": {
     "alignment": {
