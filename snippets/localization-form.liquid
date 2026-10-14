@@ -1,0 +1,263 @@
+{% doc %}
+  Country/region (which sets the currency) and language pickers, for the footer and later the mobile drawer.
+
+  Shows nothing unless the store sells to more than one country or has more than one published language
+  (Settings -> Markets, Settings -> Languages). Each picker only appears when it has a choice to make.
+
+  Each picker is a glass pill (<summary>) that opens a list above it. Every item in the list is a submit
+  button carrying its own value (name="country_code" value="GB"), so picking one submits the form straight
+  away. That's an explicit click, not a change "on input", so it stays WCAG 3.2.2-friendly, and without
+  JavaScript <details> still opens and the buttons still submit. The script only adds Escape, closing on
+  an outside click or when focus leaves, and one-open-at-a-time.
+
+  @param {string} id_prefix - Unique prefix for the form's id, e.g. 'footer' (needed when it appears twice)
+
+  @example
+  {% render 'localization-form', id_prefix: 'footer' %}
+{% enddoc %}
+
+{%- liquid
+  assign show_countries = false
+  if localization.available_countries.size > 1
+    assign show_countries = true
+  endif
+
+  assign show_languages = false
+  if localization.available_languages.size > 1
+    assign show_languages = true
+  endif
+
+  assign form_id = id_prefix | append: '-localization'
+-%}
+
+{%- if show_countries or show_languages -%}
+  {%- form 'localization', id: form_id, class: 'localization' -%}
+    {%- if show_countries -%}
+      <localization-picker class="localization__picker">
+        <details class="localization__details">
+          <summary class="localization__toggle">
+            <span class="visually-hidden">{{ 'localization.country' | t }}:</span>
+            {%- liquid
+              assign current_currency = localization.country.currency
+            -%}
+            <span>
+              {{- localization.country.name }} ({{ current_currency.iso_code }} {{ current_currency.symbol }})
+            </span>
+            {{- 'icon-chevron.svg' | inline_asset_content -}}
+          </summary>
+          <ul class="localization__list" role="list">
+            {%- for country in localization.available_countries -%}
+              <li>
+                <button
+                  type="submit"
+                  class="localization__option"
+                  name="country_code"
+                  value="{{ country.iso_code }}"
+                  {% if country.iso_code == localization.country.iso_code %}
+                    aria-current="true"
+                  {% endif %}
+                >
+                  {{- country.name }}
+                  <span class="localization__currency">
+                    {{- country.currency.iso_code }}
+                    {{ country.currency.symbol -}}
+                  </span>
+                </button>
+              </li>
+            {%- endfor -%}
+          </ul>
+        </details>
+      </localization-picker>
+    {%- endif -%}
+
+    {%- if show_languages -%}
+      <localization-picker class="localization__picker">
+        <details class="localization__details">
+          <summary class="localization__toggle">
+            <span class="visually-hidden">{{ 'localization.language' | t }}:</span>
+            <span>{{ localization.language.endonym_name | capitalize }}</span>
+            {{- 'icon-chevron.svg' | inline_asset_content -}}
+          </summary>
+          <ul class="localization__list" role="list">
+            {%- for language in localization.available_languages -%}
+              <li>
+                <button
+                  type="submit"
+                  class="localization__option"
+                  name="language_code"
+                  value="{{ language.iso_code }}"
+                  lang="{{ language.iso_code }}"
+                  {% if language.iso_code == localization.language.iso_code %}
+                    aria-current="true"
+                  {% endif %}
+                >
+                  {{- language.endonym_name | capitalize -}}
+                </button>
+              </li>
+            {%- endfor -%}
+          </ul>
+        </details>
+      </localization-picker>
+    {%- endif -%}
+  {%- endform -%}
+{%- endif -%}
+
+{% stylesheet %}
+  .localization {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+  }
+
+  .localization__picker {
+    display: block;
+  }
+
+  .localization__details {
+    position: relative;
+  }
+
+  /* The pill: same glass as the header's round buttons */
+  .localization__toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    min-block-size: 2.75rem; /* 44px touch target */
+    padding-inline: var(--space-md);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-glass);
+    box-shadow: var(--shadow-header);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-nav);
+    text-transform: uppercase;
+    list-style: none;
+    cursor: pointer;
+    transition:
+      color var(--duration-fast) var(--ease-out),
+      background-color var(--duration-fast) var(--ease-out);
+  }
+
+  /* Remove the browser's default triangle on <summary> */
+  .localization__toggle::-webkit-details-marker {
+    display: none;
+  }
+
+  .localization__toggle:hover,
+  .localization__details[open] > .localization__toggle {
+    background-color: var(--color-glass-strong);
+    color: var(--color-accent);
+  }
+
+  .localization__toggle svg {
+    flex-shrink: 0;
+    transition: transform var(--duration-fast) var(--ease-out);
+  }
+
+  .localization__details[open] > .localization__toggle svg {
+    transform: rotate(180deg);
+  }
+
+  /* The list opens upwards: the picker sits at the bottom of the page */
+  .localization__list {
+    position: absolute;
+    z-index: 2;
+    inset-block-end: calc(100% + var(--space-xs));
+    inset-inline-start: 0;
+    display: grid;
+    gap: 2px;
+    min-inline-size: max(100%, 15rem);
+    max-block-size: min(20rem, 60vh);
+    overflow-y: auto;
+    margin: 0;
+    padding: var(--space-xs);
+    border-radius: var(--radius-md);
+    background-color: var(--color-background);
+    color: var(--color-text);
+    box-shadow: var(--shadow-panel);
+    list-style: none;
+  }
+
+  /*
+    Two classes on purpose: critical.css styles every button[type='submit'] as the red pill, and its
+    selector (one attribute + one element) beats a single class.
+  */
+  .localization .localization__option {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-md);
+    inline-size: 100%;
+    min-block-size: 2.75rem;
+    padding: var(--space-xs) var(--space-md);
+    border: 0;
+    border-radius: var(--radius-pill);
+    background-color: transparent;
+    color: inherit;
+    box-shadow: none;
+    font-size: var(--font-size-small);
+    font-weight: 400;
+    letter-spacing: normal;
+    text-align: start;
+    text-transform: none;
+  }
+
+  .localization .localization__option:hover {
+    background-color: color-mix(in srgb, var(--color-accent) 8%, transparent);
+    box-shadow: none;
+  }
+
+  .localization .localization__option[aria-current='true'] {
+    color: var(--color-accent);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .localization__currency {
+    color: color-mix(in srgb, currentColor 70%, transparent);
+    white-space: nowrap;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .localization__toggle,
+    .localization__toggle svg {
+      transition: none;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <localization-picker>: closes its <details> on Escape (focus goes back to the pill), on a click
+   * outside it, and when keyboard focus leaves it. Clicking another picker counts as "outside", so only
+   * one list is open at a time. Picking an item needs no script: it's a submit button.
+   */
+  class LocalizationPicker extends HTMLElement {
+    connectedCallback() {
+      this.details = this.querySelector('details');
+      if (!this.details) return;
+
+      this.onKeydown = (event) => {
+        if (event.key !== 'Escape' || !this.details.open) return;
+        this.details.open = false;
+        this.details.querySelector('summary').focus();
+      };
+      // relatedTarget is the element receiving focus; it's null when clicking empty space (the click handler covers that)
+      this.onFocusout = (event) => {
+        if (event.relatedTarget && !this.contains(event.relatedTarget)) this.details.open = false;
+      };
+      this.onDocumentClick = (event) => {
+        if (!this.contains(event.target)) this.details.open = false;
+      };
+
+      this.addEventListener('keydown', this.onKeydown);
+      this.addEventListener('focusout', this.onFocusout);
+      document.addEventListener('click', this.onDocumentClick);
+    }
+
+    disconnectedCallback() {
+      if (this.onDocumentClick) document.removeEventListener('click', this.onDocumentClick);
+    }
+  }
+
+  if (!customElements.get('localization-picker')) customElements.define('localization-picker', LocalizationPicker);
+{% endjavascript %}

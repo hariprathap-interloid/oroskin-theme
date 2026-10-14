@@ -121,6 +121,16 @@
     position: sticky;
     inset-block-start: 0;
     z-index: 20;
+    /*
+      The wrapper is a see-through box across the top of the page (20px gap + 77px pill). Without this it
+      would still catch the mouse, so content scrolling underneath (e.g. the footer's country list on a
+      short page) couldn't be hovered or clicked. Only the pill takes clicks again (below).
+    */
+    pointer-events: none;
+  }
+
+  .header__bar {
+    pointer-events: auto;
   }
 
   /* The space around the pill stays see-through: only the pill has a surface */
@@ -182,6 +192,12 @@
     box-shadow: none;
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
+    pointer-events: none; /* the bar is invisible and page-wide here, so let clicks through to the hero */
+  }
+
+  /* ...except the buttons, which stay visible and clickable */
+  .header--transparent .header__actions {
+    pointer-events: auto;
   }
 
   .header--transparent:not(.is-scrolled):not(:has(:focus-visible)):not(:has(.menu__dropdown[open]))

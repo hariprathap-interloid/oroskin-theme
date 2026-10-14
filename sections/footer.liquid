@@ -11,6 +11,9 @@
     {% endfor %}
   </div>
 
+  {%- comment -%} Temporary spot until the footer is rebuilt in M2.8 {%- endcomment -%}
+  {% render 'localization-form', id_prefix: 'footer' %}
+
   <div class="footer__payment">
     {% if section.settings.show_payment_icons %}
       {% for type in shop.enabled_payment_types %}

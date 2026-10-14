@@ -56,5 +56,9 @@
       "one": "Cart, {{ count }} item",
       "other": "Cart, {{ count }} items"
     }
+  },
+  "localization": {
+    "country": "Country/region",
+    "language": "Language"
   }
 }
