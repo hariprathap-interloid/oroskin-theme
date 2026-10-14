@@ -63,6 +63,22 @@
   },
   "footer": {
     "copyright": "© {{ year }} {{ shop }}. All rights reserved.",
-    "legal_menu": "Legal"
+    "legal_menu": "Legal",
+    "payment_methods": "Payment methods"
+  },
+  "newsletter": {
+    "email_label": "Email",
+    "placeholder": "Enter your email",
+    "subscribe": "Subscribe",
+    "success": "Thanks for subscribing. Look out for our next email."
+  },
+  "social": {
+    "facebook": "Facebook",
+    "whatsapp": "WhatsApp",
+    "instagram": "Instagram",
+    "youtube": "YouTube",
+    "tiktok": "TikTok",
+    "pinterest": "Pinterest",
+    "x": "X (Twitter)"
   }
 }

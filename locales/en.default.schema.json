@@ -54,6 +54,8 @@
     "social_accounts": "Social accounts",
     "social_instagram": "Instagram",
     "social_facebook": "Facebook",
+    "social_whatsapp": "WhatsApp",
+    "social_whatsapp_info": "A wa.me link with your number in international format, e.g. https://wa.me/441234567890",
     "social_tiktok": "TikTok",
     "social_pinterest": "Pinterest",
     "social_youtube": "YouTube",
@@ -103,7 +105,11 @@
     "show_wordmark": "Show large wordmark",
     "show_wordmark_info": "Decorative logo text across the bottom of the footer. Uses the logo text from Theme settings > Logo.",
     "heading": "Heading",
-    "footer_newsletter": "Newsletter column"
+    "footer_newsletter": "Newsletter column",
+    "show_newsletter": "Show email sign-up",
+    "show_newsletter_info": "Sign-ups appear in Customers, tagged \"newsletter\" and subscribed to email marketing.",
+    "enable_follow_on_shop": "Show Follow on Shop",
+    "enable_follow_on_shop_info": "Lets customers follow your store in the Shop app. Appears only when Shop Pay is active."
   },
   "options": {
     "alignment": {

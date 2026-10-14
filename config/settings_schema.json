@@ -243,6 +243,12 @@
       },
       {
         "type": "url",
+        "id": "social_whatsapp_link",
+        "label": "t:labels.social_whatsapp",
+        "info": "t:labels.social_whatsapp_info"
+      },
+      {
+        "type": "url",
         "id": "social_tiktok_link",
         "label": "t:labels.social_tiktok"
       },

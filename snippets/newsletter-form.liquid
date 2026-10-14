@@ -1,0 +1,206 @@
+{% doc %}
+  Email sign-up form (footer now, a homepage newsletter section later).
+
+  Uses Shopify's 'customer' form: submitting it creates a customer with that email (or updates the
+  existing one), marks them as accepting email marketing and adds the tag "newsletter", so the merchant
+  sees sign-ups in Admin -> Customers. No app and no JavaScript needed.
+
+  After submitting, Shopify reloads the page and jumps back to the form (the form's id is the #anchor).
+  Then form.posted_successfully? is true, or form.errors says what went wrong. For screen readers, focus
+  goes to the success message, or back to the email field (which points at the error with
+  aria-describedby), because a message that is already on the page when it loads isn't announced.
+
+  Note for a second copy (e.g. a homepage section in M4): form.posted_successfully? isn't tied to one
+  form's id, so after one sign-up every newsletter form on that page shows the success message.
+
+  @param {string} id_prefix - Unique prefix for the ids, e.g. 'footer' (needed when the form appears twice)
+
+  @example
+  {% render 'newsletter-form', id_prefix: 'footer' %}
+{% enddoc %}
+
+{%- liquid
+  assign form_id = 'NewsletterForm-' | append: id_prefix
+  assign input_id = form_id | append: '-email'
+  assign error_id = form_id | append: '-error'
+  assign success_id = form_id | append: '-success'
+-%}
+
+{%- form 'customer', id: form_id, class: 'newsletter-form' -%}
+  <input type="hidden" name="contact[tags]" value="newsletter">
+
+  <label class="visually-hidden" for="{{ input_id }}">{{ 'newsletter.email_label' | t }}</label>
+  <input
+    class="newsletter-form__input"
+    id="{{ input_id }}"
+    type="email"
+    name="contact[email]"
+    value="{{ form.email | escape }}"
+    placeholder="{{ 'newsletter.placeholder' | t }}"
+    autocomplete="email"
+    autocapitalize="off"
+    spellcheck="false"
+    required
+    {% if form.errors %}
+      aria-invalid="true"
+      aria-describedby="{{ error_id }}"
+      autofocus
+    {% elsif form.posted_successfully? %}
+      aria-describedby="{{ success_id }}"
+    {% endif %}
+  >
+
+  <button type="submit" class="button newsletter-form__button">
+    {{- 'newsletter.subscribe' | t -}}
+  </button>
+
+  {%- if form.errors -%}
+    <p class="form-message form-message--error newsletter-form__message" id="{{ error_id }}">
+      {%- for error in form.errors -%}
+        {%- comment -%} 'form' = a general error; others are per field, e.g. "Email is invalid" {%- endcomment -%}
+        {%- if error == 'form' -%}
+          {{ form.errors.messages[error] }}
+        {%- else -%}
+          {{ form.errors.translated_fields[error] | capitalize }} {{ form.errors.messages[error] }}
+        {%- endif -%}
+      {%- endfor -%}
+    </p>
+  {%- elsif form.posted_successfully? -%}
+    {%- comment -%}
+      <auto-dismiss> fades the message out after data-delay milliseconds (script below). Without
+      JavaScript the message simply stays. 6 seconds leaves time to read it, also with a screen reader.
+    {%- endcomment -%}
+    <auto-dismiss data-delay="6000" data-focus-target="{{ input_id }}">
+      <p
+        class="form-message form-message--success newsletter-form__message"
+        id="{{ success_id }}"
+        tabindex="-1"
+        autofocus
+      >
+        {{- 'newsletter.success' | t -}}
+      </p>
+    </auto-dismiss>
+  {%- endif -%}
+{%- endform -%}
+
+{% stylesheet %}
+  /*
+    Figma (footer): a glass pill input (~330 x 50px, 50% white, 1.5px white border) with the red
+    SUBSCRIBE pill underneath, 30px apart. The button is the theme's .button (critical.css).
+  */
+  /*
+    Spacing uses margins on our own elements, not flex gap: when the field gets focus, Shopify's bot
+    protection injects an empty, invisible <div class="h-captcha"> into the form. Gap is added between
+    every flex item, even an empty one, so it pushed the button 30px down. Margins only apply where we
+    put them, so the injected div (0px tall) changes nothing.
+  */
+  .newsletter-form {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    max-inline-size: 20.625rem; /* 330px, Figma input width */
+  }
+
+  /*
+    Two classes on purpose: critical.css styles input[type='email'] (specificity 0,1,1), which beats a
+    single class (0,1,0). Two classes (0,2,0) win, so the hover/focus/error borders are set again below.
+  */
+  .newsletter-form .newsletter-form__input {
+    padding-inline: 1.875rem; /* text starts 30px in, Figma */
+    border: 1.5px solid #ffffff;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-glass-strong);
+    box-shadow: var(--shadow-card);
+    font-size: var(--font-size-caption);
+  }
+
+  .newsletter-form .newsletter-form__input:hover {
+    border-color: color-mix(in srgb, var(--color-text) 40%, #ffffff);
+  }
+
+  .newsletter-form .newsletter-form__input:focus-visible {
+    border-color: var(--color-accent);
+  }
+
+  .newsletter-form .newsletter-form__input[aria-invalid='true'] {
+    border-color: var(--color-error);
+  }
+
+  /*
+    Our own spacing. Two classes so it beats critical.css's margins between neighbouring fields and
+    buttons (the hidden label still counts as the input's neighbour).
+  */
+  .newsletter-form .newsletter-form__input {
+    margin-block-start: 0;
+  }
+
+  .newsletter-form .newsletter-form__button {
+    margin-block-start: 1.875rem; /* 30px under the field, Figma */
+  }
+
+  /* Error text, or the success message's <auto-dismiss> wrapper, under the button */
+  .newsletter-form__message {
+    margin: 0;
+  }
+
+  .newsletter-form > .newsletter-form__message,
+  .newsletter-form > auto-dismiss {
+    margin-block-start: var(--space-md);
+  }
+
+  /* The success message takes focus after the reload; it's text, so no focus ring box around it */
+  .newsletter-form__message:focus {
+    outline: none;
+  }
+
+  auto-dismiss {
+    display: block;
+    transition: opacity var(--duration-base) var(--ease-out);
+  }
+
+  auto-dismiss.is-hiding {
+    opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    auto-dismiss {
+      transition: none;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <auto-dismiss>: removes itself after data-delay ms (default 6000), fading out first.
+   * If the message had keyboard/screen-reader focus, focus moves to data-focus-target (the email field)
+   * instead of being lost to the top of the page when the message disappears.
+   */
+  class AutoDismiss extends HTMLElement {
+    connectedCallback() {
+      const delay = Number(this.dataset.delay) || 6000;
+      this.timer = setTimeout(() => this.dismiss(), delay);
+    }
+
+    disconnectedCallback() {
+      clearTimeout(this.timer);
+    }
+
+    dismiss() {
+      const hadFocus = this.contains(document.activeElement);
+      let removed = false;
+      const remove = () => {
+        if (removed) return;
+        removed = true;
+        this.remove();
+        if (hadFocus) document.getElementById(this.dataset.focusTarget)?.focus({ preventScroll: true });
+      };
+
+      this.classList.add('is-hiding');
+      this.addEventListener('transitionend', remove, { once: true });
+      // Fallback: no transitionend fires with reduced motion (transition: none)
+      setTimeout(remove, 400);
+    }
+  }
+
+  if (!customElements.get('auto-dismiss')) customElements.define('auto-dismiss', AutoDismiss);
+{% endjavascript %}

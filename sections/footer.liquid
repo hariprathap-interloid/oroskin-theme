@@ -40,7 +40,7 @@
   style="--logo-width: {{ settings.logo_width }}px; --logo-text-size: {{ settings.logo_text_size }}px; --footer-columns: {{ column_count }}; --footer-link-mix: {{ link_mix }}%; --nav-underline: url('{{ 'nav-underline.svg' | asset_url }}');"
 >
   <div class="footer__panel">
-    <div class="footer__top">
+    <div class="footer__top{% unless section.settings.show_newsletter %} footer__top--no-newsletter{% endunless %}">
       <div class="footer__brand">
         <a class="footer__logo" href="{{ routes.root_url }}">
           {%- if settings.logo != blank -%}
@@ -69,7 +69,7 @@
           <div class="footer__tagline">{{ section.settings.tagline }}</div>
         {%- endif -%}
 
-        {%- comment -%} M2.10: social icon buttons go here {%- endcomment -%}
+        {% render 'social-icons' %}
       </div>
 
       {%- comment -%}
@@ -114,30 +114,55 @@
         </div>
       {%- endfor -%}
 
-      <div class="footer__column footer__newsletter">
-        {%- if section.settings.newsletter_heading != blank -%}
-          <h2 class="footer__heading">{{ section.settings.newsletter_heading | escape }}</h2>
-        {%- endif -%}
-        {%- if section.settings.newsletter_text != blank -%}
-          <div class="footer__newsletter-text">{{ section.settings.newsletter_text }}</div>
-        {%- endif -%}
-        {%- comment -%} M2.9: the email form (input + Subscribe button) goes here {%- endcomment -%}
-      </div>
+      {%- if section.settings.show_newsletter -%}
+        <div class="footer__column footer__newsletter">
+          {%- if section.settings.newsletter_heading != blank -%}
+            <h2 class="footer__heading">{{ section.settings.newsletter_heading | escape }}</h2>
+          {%- endif -%}
+          {%- if section.settings.newsletter_text != blank -%}
+            <div class="footer__newsletter-text">{{ section.settings.newsletter_text }}</div>
+          {%- endif -%}
+          {% render 'newsletter-form', id_prefix: 'footer' %}
+        </div>
+      {%- endif -%}
     </div>
 
     <div class="footer__bottom">
+      {%- comment -%}
+        powered_by_link is Shopify's own "Powered by Shopify" link. The Theme Store wants it left as it is;
+        it already carries rel="nofollow" (search engines shouldn't treat it as a vote for shopify.com).
+      {%- endcomment -%}
       <p class="footer__copyright">
-        {{- 'footer.copyright' | t: year: current_year, shop: shop.name -}}
+        {{- 'footer.copyright' | t: year: current_year, shop: shop.name }}
+        {{ powered_by_link -}}
       </p>
 
       <div class="footer__utilities">
         {% render 'localization-form', id_prefix: 'footer' %}
 
-        {%- if section.settings.show_payment_icons -%}
+        {%- comment -%}
+          Follow on Shop: Shopify's branded button that lets a customer follow the store in the Shop app.
+          Only when the store supports it (Shop Pay on, store in a supported region) and the setting is on.
+          The Theme Store forbids changing its colours, so it gets no styling here except its position.
+        {%- endcomment -%}
+        {%- if shop.features.follow_on_shop? and section.settings.enable_follow_on_shop -%}
+          <div class="footer__follow-on-shop">
+            {{ shop | login_button: action: 'follow' }}
+          </div>
+        {%- endif -%}
+
+        {%- if section.settings.show_payment_icons and shop.enabled_payment_types.size > 0 -%}
+          {%- comment -%}
+            Each payment icon is an <svg role="img"> with a <title> ("Visa"), so it already has a name.
+            The list gets a hidden heading so screen readers hear what the icons are about.
+          {%- endcomment -%}
           <div class="footer__payment">
-            {%- for type in shop.enabled_payment_types -%}
-              {{ type | payment_type_svg_tag }}
-            {%- endfor -%}
+            <span class="visually-hidden" id="FooterPaymentLabel">{{ 'footer.payment_methods' | t }}</span>
+            <ul class="footer__payment-list" role="list" aria-labelledby="FooterPaymentLabel">
+              {%- for type in shop.enabled_payment_types -%}
+                <li>{{ type | payment_type_svg_tag: class: 'footer__payment-icon' }}</li>
+              {%- endfor -%}
+            </ul>
           </div>
         {%- endif -%}
       </div>
@@ -232,6 +257,11 @@
       repeat(var(--footer-columns), minmax(0, 1fr))
       minmax(0, 1.5fr);
     gap: var(--space-2xl) var(--space-xl);
+  }
+
+  /* Newsletter turned off: drop its 1.5fr track so no empty column is left on the right */
+  .footer__top--no-newsletter {
+    grid-template-columns: minmax(0, 2fr) repeat(var(--footer-columns), minmax(0, 1fr));
   }
 
   .footer__brand {
@@ -366,6 +396,11 @@
     }
   }
 
+  /* Figma: ~58px from the newsletter text down to the email field */
+  .footer__newsletter .newsletter-form {
+    margin-block-start: 3.5rem;
+  }
+
   .footer__newsletter-text {
     max-inline-size: 24rem;
     color: var(--footer-link-color);
@@ -399,10 +434,28 @@
     gap: var(--space-md) var(--space-lg);
   }
 
-  .footer__payment {
+  .footer__payment-list {
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-xs);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .footer__payment-icon {
+    display: block;
+  }
+
+  /* Only placed in the row: the button's own colours and look are Shopify's and must not change */
+  .footer__follow-on-shop {
+    display: flex;
+    align-items: center;
+  }
+
+  /* "Powered by Shopify" sits after the copyright in the same colour */
+  .footer__copyright a {
+    color: inherit;
   }
 
   .footer__legal-list {
@@ -527,6 +580,13 @@
       "content": "t:labels.footer_newsletter"
     },
     {
+      "type": "checkbox",
+      "id": "show_newsletter",
+      "label": "t:labels.show_newsletter",
+      "info": "t:labels.show_newsletter_info",
+      "default": true
+    },
+    {
       "type": "text",
       "id": "newsletter_heading",
       "label": "t:labels.heading",
@@ -552,6 +612,13 @@
       "type": "checkbox",
       "id": "show_payment_icons",
       "label": "t:labels.show_payment_icons",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_follow_on_shop",
+      "label": "t:labels.enable_follow_on_shop",
+      "info": "t:labels.enable_follow_on_shop_info",
       "default": true
     },
     {

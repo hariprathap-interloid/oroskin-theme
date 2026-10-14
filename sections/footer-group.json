@@ -17,10 +17,12 @@
         "color_scheme": "scheme-1",
         "menu": "footer",
         "tagline": "<p>Elevating your daily ritual with high-performance makeup, advanced skincare, and signature fragrances.</p>",
+        "show_newsletter": true,
         "newsletter_heading": "Newsletter",
         "newsletter_text": "<p>Receive curated beauty tips, exclusive offers, and new arrivals directly to your inbox.</p>",
         "legal_menu": "",
         "show_payment_icons": true,
+        "enable_follow_on_shop": true,
         "show_wordmark": true
       }
     }
