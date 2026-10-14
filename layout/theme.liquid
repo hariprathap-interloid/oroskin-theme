@@ -61,9 +61,22 @@
   </head>
 
   <body>
+    {%- comment -%}
+      Skip link: the first thing a keyboard user reaches. It stays hidden until it gets focus, then
+      jumps past the header (and its mega menus) straight to the page content. Theme Store requirement.
+    {%- endcomment -%}
+    <a class="skip-link" href="#MainContent">{{ 'accessibility.skip_to_content' | t }}</a>
+
     {% sections 'header-group' %}
 
-    {{ content_for_layout }}
+    {%- comment -%}
+      <main> marks the page's own content for screen readers (a "landmark" they can jump to).
+      tabindex="-1" lets the skip link move focus here (a <main> can't take focus otherwise),
+      without adding it to the Tab order.
+    {%- endcomment -%}
+    <main id="MainContent" class="main-content" tabindex="-1">
+      {{ content_for_layout }}
+    </main>
 
     {% sections 'footer-group' %}
   </body>

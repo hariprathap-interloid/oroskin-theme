@@ -44,7 +44,8 @@
   "accessibility": {
     "main_menu": "Main menu",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "skip_to_content": "Skip to content"
   },
   "header": {
     "menu_by_category": "{{ title }} by category",

@@ -49,20 +49,22 @@ Why first: every later section reads these settings, CSS variables and base styl
 
 ## M2 Header & footer
 
-- [ ] ✅ Header and footer are rendered through section groups. *§5*
-- [ ] ❌ Logo, falling back to `shop.name`
-- [ ] ❌ **Multi-level dropdown menu**, fully keyboard accessible. *§4, §12*
-- [ ] ❌ Mobile menu
-- [ ] ❌ Search link and **predictive search**. *§4*
-- [ ] 🟡 `<shopify-account>` in the **desktop and mobile** header. Skeleton has desktop only. *§4*
-- [ ] ❌ **Country/currency selector** and **language selector**. *§4*
-- [ ] ❌ Menu defaults: `main-menu` for the header, `footer` for the footer. *§14*
-- [ ] ❌ **Newsletter signup form** in the footer. *§4*
-- [ ] ❌ Social media icons. *§13*
-- [ ] ❌ **Follow on Shop** button (`login_button` filter, brand colours unchanged). *§4*
-- [ ] ✅ Payment icons via `shop.enabled_payment_types`. *§7*
-- [ ] ✅ `powered_by_link` present
-- [ ] ❌ `rel="nofollow"` on links to Shopify domains. *§8*
+- [x] ✅ Header and footer are rendered through section groups. *§5*
+- [x] ❌ Logo, falling back to `shop.name` *Done M2.1: image / text logo / shop name.*
+- [x] ❌ **Multi-level dropdown menu**, fully keyboard accessible. *§4, §12* *Done M2.2: `<details>` mega menu, Escape/outside click; keyboard-tested M2.11.*
+- [ ] ❌ Mobile menu *Parked: M2.6, waiting on the mobile design (decision 7).*
+- [ ] 🟡 Search link and **predictive search**. *§4* *Search link done (M2.3); predictive search moved to M8.*
+- [ ] 🟡 `<shopify-account>` in the **desktop and mobile** header. Skeleton has desktop only. *§4* *Desktop done (M2.3, LOGIN pill); mobile comes with the mobile header (decision 7).*
+- [x] ❌ **Country/currency selector** and **language selector**. *§4* *Done M2.7 (`localization-form` snippet, footer).*
+- [x] ❌ Menu defaults: `main-menu` for the header, `footer` for the footer. *§14*
+- [x] ❌ **Newsletter signup form** in the footer. *§4* *Done M2.9 (`newsletter-form` snippet).*
+- [x] ❌ Social media icons. *§13* *Done M2.10 (`social-icons` snippet, 7 networks incl. WhatsApp).*
+- [ ] 🟡 **Follow on Shop** button (`login_button` filter, brand colours unchanged). *§4* *Built M2.10 (shows when `shop.features.follow_on_shop?`); not available on the dev store, so verify on a store with Shop Pay before submission.*
+- [x] ✅ Payment icons via `shop.enabled_payment_types`. *§7* *Labelled list (M2.10).*
+- [x] ✅ `powered_by_link` present *Restored after the copyright (M2.10).*
+- [x] ❌ `rel="nofollow"` on links to Shopify domains. *§8* *`powered_by_link` carries it; no other Shopify-domain links.*
+- [x] ❌ **Skip link** (visible on focus) + `<main id="MainContent" tabindex="-1">` landmark. *Shopify accessibility best practices, "Global"* (added in M2.11)
+- [x] ❌ No `autofocus` attributes, no positive `tabindex`. *same source* (added in M2.11)
 
 ---
 

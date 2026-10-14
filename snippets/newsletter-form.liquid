@@ -9,6 +9,8 @@
   Then form.posted_successfully? is true, or form.errors says what went wrong. For screen readers, focus
   goes to the success message, or back to the email field (which points at the error with
   aria-describedby), because a message that is already on the page when it loads isn't announced.
+  That focus move is done by the script below (data-focus-after-submit), not the autofocus attribute:
+  Shopify's accessibility rules for themes say "no autofocus".
 
   Note for a second copy (e.g. a homepage section in M4): form.posted_successfully? isn't tied to one
   form's id, so after one sign-up every newsletter form on that page shows the success message.
@@ -44,7 +46,7 @@
     {% if form.errors %}
       aria-invalid="true"
       aria-describedby="{{ error_id }}"
-      autofocus
+      data-focus-after-submit
     {% elsif form.posted_successfully? %}
       aria-describedby="{{ success_id }}"
     {% endif %}
@@ -75,7 +77,7 @@
         class="form-message form-message--success newsletter-form__message"
         id="{{ success_id }}"
         tabindex="-1"
-        autofocus
+        data-focus-after-submit
       >
         {{- 'newsletter.success' | t -}}
       </p>
@@ -203,4 +205,20 @@
   }
 
   if (!customElements.get('auto-dismiss')) customElements.define('auto-dismiss', AutoDismiss);
+
+  /**
+   * After a sign-up, Shopify reloads the page with an error or success message. The element marked
+   * data-focus-after-submit (the email field with its error, or the success message) only exists in
+   * that case, so focus moves only right after the visitor's own submit, never on a normal page load.
+   * preventScroll: the page already jumps to the form through its #anchor.
+   */
+  function focusNewsletterResult() {
+    document.querySelector('[data-focus-after-submit]')?.focus({ preventScroll: true });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', focusNewsletterResult);
+  } else {
+    focusNewsletterResult();
+  }
 {% endjavascript %}

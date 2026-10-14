@@ -471,6 +471,43 @@ animate-on-scroll {
   }
 }
 
+/**
+ * Main content (<main id="MainContent"> in the layouts). It grows to fill the screen, so on a short
+ * page the footer still sits at the bottom. It only takes focus from the skip link (tabindex="-1"),
+ * so it gets no focus ring: the visitor is just moved there, there's nothing to operate.
+ */
+.main-content {
+  flex-grow: 1;
+}
+
+.main-content:focus {
+  outline: none;
+}
+
+/**
+ * Skip link: off-screen until a keyboard user tabs to it (it's the first focusable element), then it
+ * appears top-left as a pill above the sticky header (z-index 20).
+ */
+.skip-link {
+  position: absolute;
+  inset-block-start: var(--space-md);
+  inset-inline-start: var(--space-md);
+  z-index: 100;
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-pill);
+  background-color: var(--color-background);
+  box-shadow: var(--shadow-header);
+  color: var(--color-text);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+  translate: 0 calc(-100% - var(--space-xl)); /* moved up out of view */
+}
+
+.skip-link:focus {
+  translate: 0 0;
+}
+
 /* Text read by screen readers but not shown (e.g. the names of icon-only buttons) */
 .visually-hidden {
   position: absolute !important;
