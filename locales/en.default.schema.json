@@ -26,7 +26,9 @@
     "social_media": "Social media",
     "animations": "Animations",
     "menu_card": "Menu card",
-    "heading": "Heading"
+    "heading": "Heading",
+    "button": "Button",
+    "buttons": "Buttons"
   },
   "labels": {
     "alignment": "Alignment",
@@ -123,13 +125,22 @@
     "heading_tag": "HTML tag",
     "heading_tag_info": "For page structure, not looks: use H1 once per page for its main title. Use \"Paragraph\" for decorative text.",
     "accent_italic": "Italic words in accent colour",
-    "accent_italic_info": "Like the logo's \"Skin\"."
+    "accent_italic_info": "Like the logo's \"Skin\".",
+    "button_label": "Label",
+    "button_link": "Link",
+    "new_tab": "Open link in a new tab",
+    "button_style": "Style",
+    "show_arrow": "Show arrow",
+    "vertical_alignment": "Vertical alignment",
+    "gap": "Gap",
+    "button_alignment_info": "Inside a Row group, the group's alignment places the buttons instead."
   },
   "options": {
     "alignment": {
       "left": "Left",
       "center": "Center",
-      "right": "Right"
+      "right": "Right",
+      "spread": "Spread out"
     },
     "direction": {
       "horizontal": "Horizontal",
@@ -203,6 +214,16 @@
       "h3": "H3",
       "h4": "H4",
       "p": "Paragraph"
+    },
+    "button_style": {
+      "primary": "Primary (red pill)",
+      "secondary": "Secondary (outline pill)",
+      "text": "Text link"
+    },
+    "vertical_alignment": {
+      "top": "Top",
+      "middle": "Middle",
+      "bottom": "Bottom"
     }
   },
   "color_scheme": {

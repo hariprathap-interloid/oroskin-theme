@@ -45,7 +45,8 @@
     "main_menu": "Main menu",
     "previous": "Previous",
     "next": "Next",
-    "skip_to_content": "Skip to content"
+    "skip_to_content": "Skip to content",
+    "new_window": "opens in a new window"
   },
   "header": {
     "menu_by_category": "{{ title }} by category",

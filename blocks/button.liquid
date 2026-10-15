@@ -1,0 +1,138 @@
+{% doc %}
+  Renders a button: a link styled as the Figma's red pill (primary), outline pill (secondary) or
+  underlined text link (text, like "NEW ARRIVALS →"). The looks are the theme's .button classes
+  (critical.css), so every button in the store matches.
+
+  Nothing is output without a label. Without a link it shows (so the merchant sees it in the editor)
+  but is marked disabled and isn't focusable.
+
+  @example
+  {% content_for 'block', type: 'button', id: 'button' %}
+{% enddoc %}
+
+{%- if block.settings.label != blank -%}
+  {%- liquid
+    assign style_class = ''
+    case block.settings.style
+      when 'secondary'
+        assign style_class = ' button--secondary'
+      when 'text'
+        assign style_class = ' button--text'
+    endcase
+  -%}
+  <a
+    class="button{{ style_class }} button-block button-block--{{ block.settings.alignment }}"
+    {% if block.settings.link != blank %}
+      href="{{ block.settings.link }}"
+      {% if block.settings.new_tab %}
+        target="_blank" rel="noopener"
+      {% endif %}
+    {% else %}
+      role="link"
+      aria-disabled="true"
+    {% endif %}
+    {{ block.shopify_attributes }}
+  >
+    {{- block.settings.label | escape -}}
+    {%- if block.settings.new_tab and block.settings.link != blank -%}
+      <span class="visually-hidden"> ({{ 'accessibility.new_window' | t }})</span>
+    {%- endif -%}
+    {%- if block.settings.show_arrow -%}
+      <span class="button-block__icon">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+    {%- endif -%}
+  </a>
+{%- endif -%}
+
+{% stylesheet %}
+  /*
+    The pill / outline / text looks come from .button, .button--secondary and .button--text in
+    critical.css. This block only adds its own bits: its width, its alignment and the optional arrow.
+
+    fit-content: the button keeps its natural width instead of stretching across a section's column.
+    Alignment uses auto margins, which work the same in a section (grid) and in a Group column (flex):
+    an auto margin takes up all the free space on that side. In a Group row, the Group's own
+    alignment places the buttons, so leave the button on "left" there.
+  */
+  /*
+    margin-block: 0 cancels critical.css's "button after a button gets 12px on top" (meant for stacked
+    form buttons): in a Group row it would drop the second button 12px lower. Spacing between blocks
+    comes from the Group's Gap setting instead.
+  */
+  .button-block {
+    inline-size: fit-content;
+    margin-block: 0;
+  }
+
+  .button-block--center {
+    margin-inline: auto;
+  }
+
+  .button-block--right {
+    margin-inline-start: auto;
+  }
+
+  .button-block__icon {
+    display: inline-flex;
+  }
+
+  .button-block__icon svg {
+    inline-size: 1em;
+    block-size: auto;
+  }
+
+  /* No link yet: still shown in the editor, but clearly not clickable */
+  .button-block[aria-disabled='true'] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.button",
+  "settings": [
+    {
+      "type": "text",
+      "id": "label",
+      "label": "t:labels.button_label",
+      "default": "Explore collection"
+    },
+    {
+      "type": "url",
+      "id": "link",
+      "label": "t:labels.button_link"
+    },
+    {
+      "type": "checkbox",
+      "id": "new_tab",
+      "label": "t:labels.new_tab",
+      "default": false
+    },
+    {
+      "type": "select",
+      "id": "style",
+      "label": "t:labels.button_style",
+      "options": [
+        { "value": "primary", "label": "t:options.button_style.primary" },
+        { "value": "secondary", "label": "t:options.button_style.secondary" },
+        { "value": "text", "label": "t:options.button_style.text" }
+      ],
+      "default": "primary"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_arrow",
+      "label": "t:labels.show_arrow",
+      "default": false
+    },
+    {
+      "type": "text_alignment",
+      "id": "alignment",
+      "label": "t:labels.alignment",
+      "info": "t:labels.button_alignment_info",
+      "default": "left"
+    }
+  ],
+  "presets": [{ "name": "t:general.button" }]
+}
+{% endschema %}
