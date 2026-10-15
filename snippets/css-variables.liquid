@@ -40,6 +40,7 @@
       Each size grows smoothly from a phone (390px wide) to the 1920px Figma frame:
       clamp(smallest, fluid value, Figma size). The rem part keeps browser zoom working.
     */
+    --font-size-display-xl: clamp(3.5rem, 2.672rem + 3.399vw, 6.75rem); /* 56px → 108px, homepage display headline */
     --font-size-display: clamp(3rem, 2.235rem + 3.14vw, 6rem); /* 48px → 96px, big faded letters */
     --font-size-h1: clamp(2.25rem, 1.868rem + 1.57vw, 3.75rem); /* 36px → 60px */
     --font-size-h2: clamp(1.75rem, 1.559rem + 0.784vw, 2.5rem); /* 28px → 40px */

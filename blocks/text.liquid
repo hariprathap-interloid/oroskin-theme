@@ -15,20 +15,18 @@
   # down to a phone size of half the value + 7px (20px -> 17px, 60px -> 37px, 108px -> 61px).
   # The setting is a range (8-108px), so the editor itself refuses bigger or smaller values.
   # (Shopify allows at most 101 steps in a range: 8 to 108 in 1px steps is exactly 100.)
+  # The size maths lives in snippets/fluid-font-size.liquid (shared with the Heading block).
   assign size_style = ''
   if block.settings.use_custom_size
-    assign size_max = block.settings.custom_size | default: 20
-    assign size_min = size_max | times: 0.5 | plus: 7 | at_most: size_max
-    assign size_diff = size_max | minus: size_min
     capture size_style
-      echo ' --fs-max: ' | append: size_max | append: 'px; --fs-min: ' | append: size_min | append: 'px; --fs-diff: ' | append: size_diff | append: ';'
+      render 'fluid-font-size', size: block.settings.custom_size
     endcapture
   endif
 -%}
 
 <div
   class="text rte text--{{ block.settings.style }} text--{{ block.settings.font }} text--{{ block.settings.color }} text--align-{{ block.settings.alignment }}{% if block.settings.use_custom_size %} text--custom-size{% endif %}"
-  style="--text-max-width: {{ block.settings.max_width }};{{ size_style }}"
+  style="--text-max-width: {{ block.settings.max_width }}; {{ size_style | strip }}"
   {{ block.shopify_attributes }}
 >
   {{ block.settings.text }}

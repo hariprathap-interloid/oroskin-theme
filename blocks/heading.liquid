@@ -1,0 +1,200 @@
+{% doc %}
+  Renders a heading: one line of rich text (bold, italic, links) in one of the theme's heading sizes.
+
+  The HTML tag (h1-h4 or p) and the look (size) are separate settings: the tag is for page structure
+  (screen readers, search engines), the size is visual. So a small-looking title can still be the
+  page's h1, and a huge decorative word can be a plain <p>.
+
+  Italic words can take the accent colour, like the Figma's "Oro*Skin*" and "Clinical *Beauty*".
+  Nothing is output while the heading is empty.
+
+  @example
+  {% content_for 'block', type: 'heading', id: 'heading' %}
+{% enddoc %}
+
+{%- if block.settings.heading != blank -%}
+  {%- liquid
+    assign tag = block.settings.tag
+    assign size_style = ''
+    if block.settings.use_custom_size
+      capture size_style
+        render 'fluid-font-size', size: block.settings.custom_size
+      endcapture
+    endif
+  -%}
+  <{{ tag }}
+    class="heading heading--{{ block.settings.size }} heading--{{ block.settings.color }} heading--align-{{ block.settings.alignment }}{% if block.settings.accent_italic %} heading--accent-italic{% endif %}{% if block.settings.use_custom_size %} heading--custom-size{% endif %}"
+    {% if size_style != blank %}
+      style="{{ size_style | strip }}"
+    {% endif %}
+    {{ block.shopify_attributes }}
+  >
+    {{- block.settings.heading -}}
+  </{{ tag }}>
+{%- endif -%}
+
+{% stylesheet %}
+  /*
+    The heading look comes from these classes, not from the tag: critical.css sizes h1-h4 by tag, and a
+    class (0,1,0) beats a tag (0,0,1), so <h2 class="heading--display"> is display-sized.
+    A <p> tag gets the heading font from .heading as well.
+  */
+  .heading {
+    margin: 0;
+    font-family: var(--font-heading--family);
+    font-weight: var(--font-heading--weight);
+    font-style: var(--font-heading--style);
+    line-height: var(--line-height-heading);
+    text-align: var(--heading-align, start);
+    text-wrap: balance; /* even line lengths for multi-line headings */
+  }
+
+  .heading--align-left {
+    --heading-align: start;
+  }
+
+  .heading--align-center {
+    --heading-align: center;
+  }
+
+  .heading--align-right {
+    --heading-align: end;
+  }
+
+  /* Sizes = the theme's type tokens (exact Figma size at 1920, fluid down to phones) */
+  .heading--display-xl {
+    font-size: var(--font-size-display-xl);
+    line-height: 1.05;
+  }
+
+  .heading--display {
+    font-size: var(--font-size-display);
+    line-height: 1.05;
+  }
+
+  .heading--h1 {
+    font-size: var(--font-size-h1);
+  }
+
+  .heading--h2 {
+    font-size: var(--font-size-h2);
+  }
+
+  .heading--h3 {
+    font-size: var(--font-size-h3);
+  }
+
+  .heading--h4 {
+    font-size: var(--font-size-body-lg);
+  }
+
+  /* Custom px size (snippets/fluid-font-size.liquid): after the size rules, so it wins */
+  .heading--custom-size {
+    font-size: clamp(
+      var(--fs-min),
+      calc(var(--fs-min) + (100vw - 390px) * var(--fs-diff) / 1530),
+      var(--fs-max)
+    );
+  }
+
+  /* Colour */
+  .heading--accent {
+    color: var(--color-accent);
+  }
+
+  /* Faded: the Figma's big background letters (e.g. "PAR"). Decorative only: too faint to read as text */
+  .heading--faded {
+    color: var(--color-tint);
+  }
+
+  /* Italic words in the accent colour */
+  .heading--accent-italic em {
+    color: var(--color-accent);
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.heading",
+  "settings": [
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.heading_info",
+      "default": "Clinical beauty <em>formulations</em>"
+    },
+    {
+      "type": "select",
+      "id": "size",
+      "label": "t:labels.heading_size",
+      "options": [
+        { "value": "display-xl", "label": "t:options.heading_size.display_xl" },
+        { "value": "display", "label": "t:options.heading_size.display" },
+        { "value": "h1", "label": "t:options.heading_size.h1" },
+        { "value": "h2", "label": "t:options.heading_size.h2" },
+        { "value": "h3", "label": "t:options.heading_size.h3" },
+        { "value": "h4", "label": "t:options.heading_size.h4" }
+      ],
+      "default": "h2"
+    },
+    {
+      "type": "checkbox",
+      "id": "use_custom_size",
+      "label": "t:labels.use_custom_size",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "custom_size",
+      "label": "t:labels.custom_size",
+      "info": "t:labels.custom_size_info",
+      "min": 20,
+      "max": 120,
+      "step": 1,
+      "unit": "px",
+      "default": 60,
+      "visible_if": "{{ block.settings.use_custom_size }}"
+    },
+    {
+      "type": "select",
+      "id": "tag",
+      "label": "t:labels.heading_tag",
+      "info": "t:labels.heading_tag_info",
+      "options": [
+        { "value": "h1", "label": "t:options.heading_tag.h1" },
+        { "value": "h2", "label": "t:options.heading_tag.h2" },
+        { "value": "h3", "label": "t:options.heading_tag.h3" },
+        { "value": "h4", "label": "t:options.heading_tag.h4" },
+        { "value": "p", "label": "t:options.heading_tag.p" }
+      ],
+      "default": "h2"
+    },
+    {
+      "type": "select",
+      "id": "color",
+      "label": "t:labels.text_color",
+      "options": [
+        { "value": "default", "label": "t:options.text_color.default" },
+        { "value": "accent", "label": "t:options.text_color.accent" },
+        { "value": "faded", "label": "t:options.text_color.faded" }
+      ],
+      "default": "default"
+    },
+    {
+      "type": "checkbox",
+      "id": "accent_italic",
+      "label": "t:labels.accent_italic",
+      "info": "t:labels.accent_italic_info",
+      "default": true
+    },
+    {
+      "type": "text_alignment",
+      "id": "alignment",
+      "label": "t:labels.alignment",
+      "default": "left"
+    }
+  ],
+  "presets": [{ "name": "t:general.heading" }]
+}
+{% endschema %}

@@ -25,7 +25,8 @@
     "logo": "Logo and favicon",
     "social_media": "Social media",
     "animations": "Animations",
-    "menu_card": "Menu card"
+    "menu_card": "Menu card",
+    "heading": "Heading"
   },
   "labels": {
     "alignment": "Alignment",
@@ -116,7 +117,13 @@
     "max_width_info": "Long lines are hard to read: Normal keeps lines to about 60 characters.",
     "use_custom_size": "Custom size",
     "custom_size": "Font size",
-    "custom_size_info": "The size on a 1920px-wide screen, e.g. the Figma value. It scales down smoothly on smaller screens."
+    "custom_size_info": "The size on a 1920px-wide screen, e.g. the Figma value. It scales down smoothly on smaller screens.",
+    "heading_info": "Make a word italic to give it the accent style.",
+    "heading_size": "Size",
+    "heading_tag": "HTML tag",
+    "heading_tag_info": "For page structure, not looks: use H1 once per page for its main title. Use \"Paragraph\" for decorative text.",
+    "accent_italic": "Italic words in accent colour",
+    "accent_italic_info": "Like the logo's \"Skin\"."
   },
   "options": {
     "alignment": {
@@ -174,12 +181,28 @@
     "text_color": {
       "default": "Default",
       "muted": "Muted",
-      "accent": "Accent"
+      "accent": "Accent",
+      "faded": "Faded (decorative)"
     },
     "max_width": {
       "none": "None",
       "normal": "Normal",
       "narrow": "Narrow"
+    },
+    "heading_size": {
+      "display_xl": "Display XL (108px)",
+      "display": "Display (96px)",
+      "h1": "Heading 1 (60px)",
+      "h2": "Heading 2 (40px)",
+      "h3": "Heading 3 (26px)",
+      "h4": "Heading 4 (22px)"
+    },
+    "heading_tag": {
+      "h1": "H1",
+      "h2": "H2",
+      "h3": "H3",
+      "h4": "H4",
+      "p": "Paragraph"
     }
   },
   "color_scheme": {
