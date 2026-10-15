@@ -87,5 +87,21 @@
     "custom_liquid": {
       "empty": "Add your code in the \"Liquid code\" setting."
     }
+  },
+  "products": {
+    "price": {
+      "regular": "Regular price",
+      "sale": "Sale price",
+      "from_html": "From {{ price }}",
+      "unit": "Unit price"
+    },
+    "add_to_cart": "Add to cart",
+    "sold_out": "Sold out",
+    "badge": {
+      "sale": "Sale"
+    },
+    "card": {
+      "placeholder_title": "Product title"
+    }
   }
 }

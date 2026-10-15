@@ -30,7 +30,8 @@
     "button": "Button",
     "buttons": "Buttons",
     "image": "Image",
-    "custom_liquid": "Custom Liquid"
+    "custom_liquid": "Custom Liquid",
+    "product_cards": "Product cards"
   },
   "labels": {
     "alignment": "Alignment",
@@ -150,7 +151,12 @@
     "full_width": "Full page width",
     "spacing": "Spacing",
     "padding_top": "Top padding",
-    "padding_bottom": "Bottom padding"
+    "padding_bottom": "Bottom padding",
+    "badges": "Badges",
+    "badges_info": "Badges show on product images: Sale and Sold out automatically, plus the badges chosen in each product's \"Badges\" field. Each badge's own colours are set in Content > Metaobjects > Badges; the default scheme is used for badges without colours. A scheme gives the background, its accent colour the text.",
+    "badge_color_scheme": "Default badge colour scheme",
+    "sale_badge_color_scheme": "Sale badge colour scheme",
+    "sold_out_badge_color_scheme": "Sold out badge colour scheme"
   },
   "options": {
     "alignment": {

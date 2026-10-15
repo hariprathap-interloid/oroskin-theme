@@ -225,6 +225,37 @@
     ]
   },
   {
+    "name": "t:general.product_cards",
+    "settings": [
+      {
+        "type": "header",
+        "content": "t:labels.badges"
+      },
+      {
+        "type": "paragraph",
+        "content": "t:labels.badges_info"
+      },
+      {
+        "type": "color_scheme",
+        "id": "badge_color_scheme",
+        "label": "t:labels.badge_color_scheme",
+        "default": "scheme-1"
+      },
+      {
+        "type": "color_scheme",
+        "id": "sale_badge_color_scheme",
+        "label": "t:labels.sale_badge_color_scheme",
+        "default": "scheme-3"
+      },
+      {
+        "type": "color_scheme",
+        "id": "sold_out_badge_color_scheme",
+        "label": "t:labels.sold_out_badge_color_scheme",
+        "default": "scheme-5"
+      }
+    ]
+  },
+  {
     "name": "t:general.social_media",
     "settings": [
       {

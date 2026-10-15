@@ -87,6 +87,9 @@
           "secondary_button_border": "#fffaf0"
         }
       }
-    }
+    },
+    "badge_color_scheme": "scheme-1",
+    "sale_badge_color_scheme": "scheme-3",
+    "sold_out_badge_color_scheme": "scheme-5"
   }
 }

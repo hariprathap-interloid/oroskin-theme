@@ -1,0 +1,109 @@
+{% doc %}
+  Renders a product's price: the current price, the struck-through compare-at price when on sale,
+  "From $X" when the variants cost different amounts, and the unit price where the law needs one
+  (e.g. "$4.50/100ml" in the EU). Hidden labels tell screen readers which price is which.
+
+  Two ways to use it:
+  - Product card (no variant): shows the product as a whole, "From" the cheapest price when prices vary.
+  - Product page (with variant): shows that exact variant's price.
+
+  Prices in Liquid are whole cents (2500 = $25.00); the money filter formats them in the store's own
+  currency format (Settings > General), so never divide by 100 by hand.
+
+  @param {product} product - The product
+  @param {variant} [variant] - A specific variant (product page). Leave out for a product card
+
+  @example
+  {% render 'price', product: product %}
+  {% render 'price', product: product, variant: product.selected_or_first_available_variant %}
+{% enddoc %}
+
+{%- liquid
+  if variant
+    assign target = variant
+    assign price = variant.price
+    assign compare_at = variant.compare_at_price
+    assign available = variant.available
+    assign show_from = false
+  else
+    assign target = product.selected_or_first_available_variant
+    assign price = product.price
+    assign compare_at = product.compare_at_price
+    assign available = product.available
+    assign show_from = product.price_varies
+  endif
+
+  # On sale only when the old price is really higher (compare-at can be empty, or equal by mistake)
+  assign on_sale = false
+  if compare_at > price
+    assign on_sale = true
+  endif
+
+  # Filters inside a t: argument must be assigned first
+  assign price_money = price | money
+  assign compare_money = compare_at | money
+-%}
+
+<div class="price{% if on_sale %} price--on-sale{% endif %}{% unless available %} price--sold-out{% endunless %}">
+  <span class="price__current">
+    <span class="visually-hidden">
+      {%- if on_sale -%}
+        {{ 'products.price.sale' | t }}
+      {%- else -%}
+        {{ 'products.price.regular' | t }}
+      {%- endif -%}
+    </span>
+    {%- if show_from -%}
+      {{ 'products.price.from_html' | t: price: price_money }}
+    {%- else -%}
+      {{ price_money }}
+    {%- endif -%}
+  </span>
+
+  {%- if on_sale -%}
+    <span class="price__compare">
+      <span class="visually-hidden">{{ 'products.price.regular' | t }}</span>
+      <s>{{ compare_money }}</s>
+    </span>
+  {%- endif -%}
+
+  {%- if target.unit_price_measurement -%}
+    <span class="price__unit">
+      <span class="visually-hidden">{{ 'products.price.unit' | t }}</span>
+      {{- target.unit_price | unit_price_with_measurement: target.unit_price_measurement -}}
+    </span>
+  {%- endif -%}
+</div>
+
+{% stylesheet %}
+  /* Figma card: the price in the accent red, medium weight */
+  .price {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 var(--space-xs);
+  }
+
+  .price__current {
+    color: var(--color-accent);
+    font-weight: var(--font-weight-medium);
+  }
+
+  /* The old price: smaller, softer, struck through */
+  .price__compare {
+    color: color-mix(in srgb, var(--color-text) 70%, var(--color-background));
+    font-size: 0.85em;
+  }
+
+  /* Unit price on its own line, small */
+  .price__unit {
+    flex-basis: 100%;
+    color: color-mix(in srgb, var(--color-text) 70%, var(--color-background));
+    font-size: var(--font-size-caption);
+  }
+
+  /* Sold out: the price stays readable but steps back (the card shows a "Sold out" badge) */
+  .price--sold-out .price__current {
+    color: color-mix(in srgb, var(--color-text) 70%, var(--color-background));
+  }
+{% endstylesheet %}
