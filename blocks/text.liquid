@@ -1,13 +1,34 @@
 {% doc %}
-  Renders a text block.
+  Renders a text block: rich text (paragraphs, bold, italic, links, lists) in one of the theme's type
+  styles. Sizes come from the M1 type tokens (css-variables.liquid), so they grow smoothly from phones
+  to the 1920px Figma frame and stay consistent with every other part of the theme.
+
+  For headings use the Heading block: this one is for body copy, intros and small labels.
 
   @example
   {% content_for 'block', type: 'text', id: 'text' %}
 {% enddoc %}
 
+{%- liquid
+  # Custom size (optional): the merchant sets the Figma size in px (as read in Dev Mode, e.g. 63).
+  # It's the size at the 1920px design width; below that it shrinks smoothly, like the theme tokens,
+  # down to a phone size of half the value + 7px (20px -> 17px, 60px -> 37px, 108px -> 61px).
+  # The setting is a range (8-108px), so the editor itself refuses bigger or smaller values.
+  # (Shopify allows at most 101 steps in a range: 8 to 108 in 1px steps is exactly 100.)
+  assign size_style = ''
+  if block.settings.use_custom_size
+    assign size_max = block.settings.custom_size | default: 20
+    assign size_min = size_max | times: 0.5 | plus: 7 | at_most: size_max
+    assign size_diff = size_max | minus: size_min
+    capture size_style
+      echo ' --fs-max: ' | append: size_max | append: 'px; --fs-min: ' | append: size_min | append: 'px; --fs-diff: ' | append: size_diff | append: ';'
+    endcapture
+  endif
+-%}
+
 <div
-  class="text {{ block.settings.text_style }}"
-  style="--text-align: {{ block.settings.alignment }}"
+  class="text rte text--{{ block.settings.style }} text--{{ block.settings.font }} text--{{ block.settings.color }} text--align-{{ block.settings.alignment }}{% if block.settings.use_custom_size %} text--custom-size{% endif %}"
+  style="--text-max-width: {{ block.settings.max_width }};{{ size_style }}"
   {{ block.shopify_attributes }}
 >
   {{ block.settings.text }}
@@ -15,14 +36,94 @@
 
 {% stylesheet %}
   .text {
-    text-align: var(--text-align);
+    max-inline-size: var(--text-max-width, none);
+    text-align: var(--text-align, start);
   }
-  .text--title {
-    font-size: 2rem;
-    font-weight: 700;
+
+  /*
+    Alignment also moves the box itself: a narrow centred paragraph should sit in the middle of its
+    container, not only have its lines centred inside a box stuck on the left.
+  */
+  .text--align-left {
+    --text-align: start;
   }
-  .text--subtitle {
-    font-size: 1.5rem;
+
+  .text--align-center {
+    --text-align: center;
+    margin-inline: auto;
+  }
+
+  .text--align-right {
+    --text-align: end;
+    margin-inline-start: auto;
+  }
+
+  /* Rich text wraps its content in <p>: no extra space above the first or below the last paragraph */
+  .text > :first-child {
+    margin-block-start: 0;
+  }
+
+  .text > :last-child {
+    margin-block-end: 0;
+  }
+
+  /* Type styles = the M1 tokens (Figma sizes at 1920, fluid down to phones) */
+  .text--body-lg {
+    font-size: var(--font-size-body-lg);
+  }
+
+  .text--body {
+    font-size: var(--font-size-body);
+  }
+
+  .text--small {
+    font-size: var(--font-size-body-sm);
+  }
+
+  .text--caption {
+    font-size: var(--font-size-caption);
+  }
+
+  /* Eyebrow: the Figma's small uppercase label in the accent colour (same look as .eyebrow in critical.css) */
+  .text--eyebrow {
+    color: var(--color-accent);
+    font-size: var(--font-size-label);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-heading);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  /*
+    Custom size: replaces the style's size (this rule comes after the style rules, so it wins).
+    The same fluid formula as the tokens: the phone size at 390px wide, growing in a straight line
+    to the typed size at 1920px wide (1530px further), never below or above those two.
+    --fs-diff is the difference without "px", because CSS can multiply a length by a plain number
+    but not a length by a length.
+  */
+  .text--custom-size {
+    font-size: clamp(
+      var(--fs-min),
+      calc(var(--fs-min) + (100vw - 390px) * var(--fs-diff) / 1530),
+      var(--fs-max)
+    );
+  }
+
+  /* Font: the Figma sets some paragraphs in the serif heading font (e.g. card and newsletter text) */
+  .text--heading-font {
+    font-family: var(--font-heading--family);
+  }
+
+  /*
+    Colour. "Muted" mixes the scheme's text into its background (the softer grey of the Figma's footer
+    and card text) and stays at about 6:1 contrast on the light schemes.
+  */
+  .text--muted {
+    color: color-mix(in srgb, var(--color-text) 70%, var(--color-background));
+  }
+
+  .text--accent {
+    color: var(--color-accent);
   }
 {% endstylesheet %}
 
@@ -31,27 +132,80 @@
   "name": "t:general.text",
   "settings": [
     {
-      "type": "text",
+      "type": "richtext",
       "id": "text",
       "label": "t:labels.text",
-      "default": "Text"
+      "default": "<p>Share details about your brand, a product or a promotion.</p>"
     },
     {
       "type": "select",
-      "id": "text_style",
+      "id": "style",
       "label": "t:labels.text_style",
       "options": [
-        { "value": "text--title", "label": "t:options.text_style.title" },
-        { "value": "text--subtitle", "label": "t:options.text_style.subtitle" },
-        { "value": "text--normal", "label": "t:options.text_style.normal" }
+        { "value": "body-lg", "label": "t:options.text_style.body_large" },
+        { "value": "body", "label": "t:options.text_style.body" },
+        { "value": "small", "label": "t:options.text_style.small" },
+        { "value": "caption", "label": "t:options.text_style.caption" },
+        { "value": "eyebrow", "label": "t:options.text_style.eyebrow" }
       ],
-      "default": "text--title"
+      "default": "body"
+    },
+    {
+      "type": "checkbox",
+      "id": "use_custom_size",
+      "label": "t:labels.use_custom_size",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "custom_size",
+      "label": "t:labels.custom_size",
+      "info": "t:labels.custom_size_info",
+      "min": 8,
+      "max": 108,
+      "step": 1,
+      "unit": "px",
+      "default": 20,
+      "visible_if": "{{ block.settings.use_custom_size }}"
+    },
+    {
+      "type": "select",
+      "id": "font",
+      "label": "t:labels.font",
+      "options": [
+        { "value": "body-font", "label": "t:options.font.body" },
+        { "value": "heading-font", "label": "t:options.font.heading" }
+      ],
+      "default": "body-font"
+    },
+    {
+      "type": "select",
+      "id": "color",
+      "label": "t:labels.text_color",
+      "options": [
+        { "value": "default", "label": "t:options.text_color.default" },
+        { "value": "muted", "label": "t:options.text_color.muted" },
+        { "value": "accent", "label": "t:options.text_color.accent" }
+      ],
+      "default": "default"
     },
     {
       "type": "text_alignment",
       "id": "alignment",
       "label": "t:labels.alignment",
       "default": "left"
+    },
+    {
+      "type": "select",
+      "id": "max_width",
+      "label": "t:labels.max_width",
+      "info": "t:labels.max_width_info",
+      "options": [
+        { "value": "none", "label": "t:options.max_width.none" },
+        { "value": "60ch", "label": "t:options.max_width.normal" },
+        { "value": "40ch", "label": "t:options.max_width.narrow" }
+      ],
+      "default": "60ch"
     }
   ],
   "presets": [{ "name": "t:general.text" }]

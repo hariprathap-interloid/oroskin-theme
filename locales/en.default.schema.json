@@ -109,7 +109,14 @@
     "show_newsletter": "Show email sign-up",
     "show_newsletter_info": "Sign-ups appear in Customers, tagged \"newsletter\" and subscribed to email marketing.",
     "enable_follow_on_shop": "Show Follow on Shop",
-    "enable_follow_on_shop_info": "Lets customers follow your store in the Shop app. Appears only when Shop Pay is active."
+    "enable_follow_on_shop_info": "Lets customers follow your store in the Shop app. Appears only when Shop Pay is active.",
+    "font": "Font",
+    "text_color": "Colour",
+    "max_width": "Maximum width",
+    "max_width_info": "Long lines are hard to read: Normal keeps lines to about 60 characters.",
+    "use_custom_size": "Custom size",
+    "custom_size": "Font size",
+    "custom_size_info": "The size on a 1920px-wide screen, e.g. the Figma value. It scales down smoothly on smaller screens."
   },
   "options": {
     "alignment": {
@@ -131,9 +138,11 @@
       "small": "Small"
     },
     "text_style": {
-      "title": "Title",
-      "subtitle": "Subtitle",
-      "normal": "Normal text"
+      "body_large": "Large body",
+      "body": "Body",
+      "small": "Small",
+      "caption": "Caption",
+      "eyebrow": "Eyebrow (small uppercase label)"
     },
     "animation": {
       "none": "None",
@@ -157,6 +166,20 @@
       "none": "Off",
       "home": "Home page only",
       "all": "All pages"
+    },
+    "font": {
+      "body": "Body font",
+      "heading": "Heading font"
+    },
+    "text_color": {
+      "default": "Default",
+      "muted": "Muted",
+      "accent": "Accent"
+    },
+    "max_width": {
+      "none": "None",
+      "normal": "Normal",
+      "narrow": "Narrow"
     }
   },
   "color_scheme": {

@@ -10,7 +10,7 @@ body {
   display: flex;
   flex-direction: column;
   margin: 0;
-  min-height: 100svh;
+  min-height: 100dvh;
 }
 
 html:has(dialog[scroll-lock][open], details[scroll-lock][open]) {
@@ -142,7 +142,7 @@ h6,
 }
 
 .eyebrow::before {
-  content: '';
+  content: "";
   flex: none;
   width: 66px;
   height: 2px;
@@ -236,8 +236,8 @@ button:focus-visible,
  * Native submit inputs share the primary style so Shopify forms look right without extra classes.
  */
 .button,
-button[type='submit'],
-input[type='submit'] {
+button[type="submit"],
+input[type="submit"] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -264,8 +264,8 @@ input[type='submit'] {
 }
 
 .button:hover,
-button[type='submit']:hover,
-input[type='submit']:hover {
+button[type="submit"]:hover,
+input[type="submit"]:hover {
   background-color: var(--color-button);
   box-shadow: none;
 }
@@ -278,7 +278,11 @@ input[type='submit']:hover {
 }
 
 .button--secondary:hover {
-  background-color: color-mix(in srgb, var(--color-secondary-button-text) 8%, var(--color-secondary-button));
+  background-color: color-mix(
+    in srgb,
+    var(--color-secondary-button-text) 8%,
+    var(--color-secondary-button)
+  );
 }
 
 /* Text button: the Figma "NEW ARRIVALS →" link. Still at least 24px tall for touch. */
@@ -301,9 +305,9 @@ input[type='submit']:hover {
 }
 
 .button:disabled,
-.button[aria-disabled='true'],
-button[type='submit']:disabled,
-input[type='submit']:disabled {
+.button[aria-disabled="true"],
+button[type="submit"]:disabled,
+input[type="submit"]:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   box-shadow: none;
@@ -325,21 +329,22 @@ label {
 
 /* Not wrapped in :where(): these must beat the reset's `font: inherit` above */
 input:not([type]),
-input[type='text'],
-input[type='email'],
-input[type='password'],
-input[type='search'],
-input[type='tel'],
-input[type='url'],
-input[type='number'],
-input[type='date'],
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+input[type="number"],
+input[type="date"],
 select,
 textarea {
   inline-size: 100%;
   min-block-size: 3.125rem; /* 50px, same height as buttons */
   padding-block: var(--space-sm);
   padding-inline: var(--space-md);
-  border: 1px solid color-mix(in srgb, var(--color-text) 65%, var(--color-background));
+  border: 1px solid
+    color-mix(in srgb, var(--color-text) 65%, var(--color-background));
   background-color: var(--color-background);
   color: var(--color-text);
   font-size: var(--font-size-body-sm);
@@ -368,8 +373,8 @@ textarea {
   opacity: 1;
 }
 
-input[type='checkbox'],
-input[type='radio'] {
+input[type="checkbox"],
+input[type="radio"] {
   inline-size: 1.25rem;
   block-size: 1.25rem;
   accent-color: var(--color-accent);
@@ -396,9 +401,9 @@ textarea:disabled {
   cursor: not-allowed;
 }
 
-input[aria-invalid='true'],
-select[aria-invalid='true'],
-textarea[aria-invalid='true'] {
+input[aria-invalid="true"],
+select[aria-invalid="true"],
+textarea[aria-invalid="true"] {
   border-color: var(--color-error);
 }
 
@@ -411,7 +416,15 @@ textarea[aria-invalid='true'] {
 }
 
 :where(input, select, textarea, button, .button, .shopify-payment-button)
-  + :where(input, select, textarea, button, .button, .shopify-payment-button, label) {
+  + :where(
+    input,
+    select,
+    textarea,
+    button,
+    .button,
+    .shopify-payment-button,
+    label
+  ) {
   margin-block-start: var(--space-sm);
 }
 
@@ -462,11 +475,11 @@ animate-on-scroll {
     opacity: 0;
   }
 
-  .js.animations-on [data-animate='fade-up']:not(.is-visible) {
+  .js.animations-on [data-animate="fade-up"]:not(.is-visible) {
     transform: translateY(2rem);
   }
 
-  .js.animations-on [data-animate='zoom-in']:not(.is-visible) {
+  .js.animations-on [data-animate="zoom-in"]:not(.is-visible) {
     transform: scale(0.96);
   }
 }
@@ -540,7 +553,8 @@ animate-on-scroll {
     calc(100% - var(--page-margin) * 2)
   );
   --content-margin: minmax(var(--page-margin), 1fr);
-  --content-grid: var(--content-margin) var(--content-width) var(--content-margin);
+  --content-grid: var(--content-margin) var(--content-width)
+    var(--content-margin);
 
   /* This is required to make <img> elements work as background images */
   position: relative;
