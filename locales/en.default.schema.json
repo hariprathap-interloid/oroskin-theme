@@ -28,7 +28,8 @@
     "menu_card": "Menu card",
     "heading": "Heading",
     "button": "Button",
-    "buttons": "Buttons"
+    "buttons": "Buttons",
+    "image": "Image"
   },
   "labels": {
     "alignment": "Alignment",
@@ -133,7 +134,16 @@
     "show_arrow": "Show arrow",
     "vertical_alignment": "Vertical alignment",
     "gap": "Gap",
-    "button_alignment_info": "Inside a Row group, the group's alignment places the buttons instead."
+    "button_alignment_info": "Inside a Row group, the group's alignment places the buttons instead.",
+    "image_block_info": "To choose what stays in view when the image is cropped, and to add alt text, edit the image in Content > Files.",
+    "image_ratio": "Shape",
+    "corner_radius": "Rounded corners",
+    "image_link": "Link (optional)",
+    "image_link_info": "Makes the whole image clickable. Screen readers read the image's alt text as the link, so describe where it goes.",
+    "size_and_position": "Size and position",
+    "image_width": "Width",
+    "image_width_info": "How much of the available space the image takes.",
+    "link": "Link"
   },
   "options": {
     "alignment": {
@@ -224,6 +234,19 @@
       "top": "Top",
       "middle": "Middle",
       "bottom": "Bottom"
+    },
+    "corner_radius": {
+      "none": "None",
+      "sm": "Small (19px)",
+      "md": "Medium (25px)",
+      "lg": "Large (50px)"
+    },
+    "image_shape": {
+      "original": "Original (no cropping)",
+      "square": "Square (1:1)",
+      "portrait": "Portrait (4:5)",
+      "landscape": "Landscape (4:3)",
+      "wide": "Wide (16:9)"
     }
   },
   "color_scheme": {
