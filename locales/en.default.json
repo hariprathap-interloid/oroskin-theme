@@ -82,5 +82,10 @@
     "tiktok": "TikTok",
     "pinterest": "Pinterest",
     "x": "X (Twitter)"
+  },
+  "sections": {
+    "custom_liquid": {
+      "empty": "Add your code in the \"Liquid code\" setting."
+    }
   }
 }

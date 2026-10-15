@@ -29,7 +29,8 @@
     "heading": "Heading",
     "button": "Button",
     "buttons": "Buttons",
-    "image": "Image"
+    "image": "Image",
+    "custom_liquid": "Custom Liquid"
   },
   "labels": {
     "alignment": "Alignment",
@@ -143,7 +144,13 @@
     "size_and_position": "Size and position",
     "image_width": "Width",
     "image_width_info": "How much of the available space the image takes.",
-    "link": "Link"
+    "link": "Link",
+    "custom_liquid": "Liquid code",
+    "custom_liquid_info": "Paste app snippets or other code (HTML and Liquid). Bad code can break the page, so check the preview after saving.",
+    "full_width": "Full page width",
+    "spacing": "Spacing",
+    "padding_top": "Top padding",
+    "padding_bottom": "Bottom padding"
   },
   "options": {
     "alignment": {

@@ -70,9 +70,9 @@ Why first: every later section reads these settings, CSS variables and base styl
 
 ## M3 Shared snippets + theme blocks
 
-- [ ] ✅ Text block
-- [ ] ❌ Heading, button and image blocks (the image block supports focal points)
-- [ ] ❌ **Custom Liquid block** and **Custom Liquid section**, each with a `liquid` setting. *§5. Lets merchants paste app or embed code.*
+- [x] ✅ Text block *Rebuilt M3.1 on the type tokens (+ px custom size).*
+- [x] ❌ Heading, button and image blocks (the image block supports focal points) *Done M3.2–M3.4 (+ Group upgraded for rows/columns).*
+- [x] ❌ **Custom Liquid block** and **Custom Liquid section**, each with a `liquid` setting. *§5. Lets merchants paste app or embed code.* *Done M3.5.*
 - [ ] ❌ Product card snippet: full title, price, image, unit price and sale badge
 - [ ] ❌ Price snippet: sale price, compare-at price, "from" price (`price_varies`, `price_min`) and unit price
 - [ ] ❌ Localization form snippet, shared by the header and footer selectors
