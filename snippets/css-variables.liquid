@@ -1,3 +1,12 @@
+{% doc %}
+  Outputs the theme's CSS variables in a <style> tag in the <head>: the chosen fonts (font_face), the
+  type, spacing, radius, shadow and motion tokens, and one .color-<scheme> class per colour scheme.
+  Every other stylesheet uses these variables instead of fixed values.
+
+  @example
+  {% render 'css-variables' %}
+{% enddoc %}
+
 {% style %}
   {% # Loads all font variantions with display: swap %}
   {{ settings.type_heading_font | font_face: font_display: 'swap' }}

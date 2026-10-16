@@ -1,3 +1,11 @@
+{% doc %}
+  Outputs the page's SEO and social sharing tags in the <head>: title, description, canonical URL,
+  and Open Graph / Twitter card data (with the product price on product pages).
+
+  @example
+  {% render 'meta-tags' %}
+{% enddoc %}
+
 {% comment %} charset and viewport are output first in each layout's <head> (charset must be in the first 1024 bytes). {% endcomment %}
 
 {%- liquid

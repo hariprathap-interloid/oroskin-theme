@@ -1,0 +1,247 @@
+{%- comment -%}
+  Product list: a heading area (any theme blocks: Heading, Text, Buttons...) above a grid of product
+  cards from one collection. The homepage "Featured products" / "New arrivals" rows are built from this
+  section (M4); with an automatic collection such as "Badges contains New" it fills itself.
+
+  Without a collection (e.g. just added in the editor) it shows placeholder cards, so the layout can be
+  judged before choosing products.
+{%- endcomment -%}
+
+{%- liquid
+  assign product_collection = section.settings.collection
+  assign limit = section.settings.products_to_show
+  assign columns_desktop = section.settings.columns_desktop
+  assign columns_mobile = section.settings.columns_mobile | plus: 0
+
+  # sizes: each card is about (content width / columns) wide, content width at most 1650px.
+  # Lets the browser download a small enough image per card (see the image snippet).
+  # (Each number is worked out on its own line first: in one long filter chain, divided_by would
+  # apply to the whole text built so far, not to the 100.)
+  assign desktop_card = 1650 | divided_by: columns_desktop
+  assign desktop_vw = 100 | divided_by: columns_desktop
+  assign mobile_vw = 100 | divided_by: columns_mobile
+  capture card_sizes
+    echo '(min-width: 1650px) ' | append: desktop_card | append: 'px, (min-width: 750px) ' | append: desktop_vw | append: 'vw, ' | append: mobile_vw | append: 'vw'
+  endcapture
+
+  # Never animate the first section on the page (hero / LCP must paint immediately)
+  assign animation = section.settings.animation
+  if section.index == 1
+    assign animation = 'none'
+  endif
+-%}
+
+<div
+  class="product-list full-width color-{{ section.settings.color_scheme.id }}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --columns-desktop: {{ columns_desktop }}; --columns-mobile: {{ columns_mobile }};"
+>
+  <div class="product-list__inner">
+    {%- if section.blocks.size > 0 -%}
+      <div class="product-list__header">
+        {% content_for 'blocks' %}
+      </div>
+    {%- endif -%}
+
+    <animate-on-scroll>
+      <ul class="product-list__grid" role="list">
+        {%- if product_collection != blank and product_collection.products_count > 0 -%}
+          {%- for product in product_collection.products limit: limit -%}
+            {%- liquid
+              # Cards appear one after another: 80ms apart, capped so the last ones don't wait too long
+              assign delay = forloop.index0 | times: 80 | at_most: 480
+            -%}
+            <li
+              class="product-list__item"
+              {% if animation != 'none' %}
+                data-animate="{{ animation }}"
+                style="--animate-delay: {{ delay }}ms;"
+              {% endif %}
+            >
+              {% render 'product-card',
+                product: product,
+                image_ratio: section.settings.image_ratio,
+                show_secondary_image: section.settings.show_secondary_image,
+                sizes: card_sizes
+              %}
+            </li>
+          {%- endfor -%}
+        {%- else -%}
+          {%- comment -%} No collection yet: placeholder cards (at most 4) {%- endcomment -%}
+          {%- assign placeholder_count = limit | at_most: 4 -%}
+          {%- for i in (1..placeholder_count) -%}
+            <li class="product-list__item">
+              {% render 'product-card', image_ratio: section.settings.image_ratio %}
+            </li>
+          {%- endfor -%}
+        {%- endif -%}
+      </ul>
+    </animate-on-scroll>
+  </div>
+</div>
+
+{% stylesheet %}
+  .product-list {
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  /* Same width rule as Skeleton's section grid: page width minus the page margins */
+  .product-list__inner {
+    inline-size: min(
+      calc(var(--page-width) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  /* Heading area: blocks stack with space between, then the grid */
+  .product-list__header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    margin-block-end: var(--space-2xl);
+  }
+
+  .product-list__grid {
+    display: grid;
+    grid-template-columns: repeat(var(--columns-mobile), minmax(0, 1fr));
+    gap: var(--space-lg) var(--space-md);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  @media (min-width: 750px) {
+    .product-list__grid {
+      grid-template-columns: repeat(var(--columns-desktop), minmax(0, 1fr));
+      gap: var(--space-xl);
+    }
+  }
+
+  /* Each card fills its grid cell, so cards in a row are equal height */
+  .product-list__item,
+  .product-list__item > .product-card {
+    block-size: 100%;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.product_list",
+  "blocks": [{ "type": "@theme" }],
+  "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.products"
+    },
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "t:labels.collection",
+      "info": "t:labels.product_list_collection_info"
+    },
+    {
+      "type": "range",
+      "id": "products_to_show",
+      "label": "t:labels.products_to_show",
+      "min": 2,
+      "max": 24,
+      "step": 1,
+      "default": 8
+    },
+    {
+      "type": "header",
+      "content": "t:labels.layout"
+    },
+    {
+      "type": "range",
+      "id": "columns_desktop",
+      "label": "t:labels.columns_desktop",
+      "min": 2,
+      "max": 5,
+      "step": 1,
+      "default": 4
+    },
+    {
+      "type": "select",
+      "id": "columns_mobile",
+      "label": "t:labels.columns_mobile",
+      "options": [
+        { "value": "1", "label": "t:options.columns.one" },
+        { "value": "2", "label": "t:options.columns.two" }
+      ],
+      "default": "2"
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "t:labels.image_ratio",
+      "options": [
+        { "value": "portrait", "label": "t:options.image_shape.portrait" },
+        { "value": "square", "label": "t:options.image_shape.square" },
+        { "value": "landscape", "label": "t:options.image_shape.landscape" },
+        { "value": "original", "label": "t:options.image_shape.original" }
+      ],
+      "default": "portrait"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_secondary_image",
+      "label": "t:labels.show_secondary_image",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "select",
+      "id": "animation",
+      "label": "t:labels.animation",
+      "info": "t:labels.animation_info",
+      "options": [
+        { "value": "none", "label": "t:options.animation.none" },
+        { "value": "fade-up", "label": "t:options.animation.fade_up" },
+        { "value": "zoom-in", "label": "t:options.animation.zoom_in" }
+      ],
+      "default": "fade-up"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.product_list",
+      "blocks": [
+        {
+          "type": "heading",
+          "settings": { "heading": "Featured <em>products</em>", "size": "h2", "tag": "h2" }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

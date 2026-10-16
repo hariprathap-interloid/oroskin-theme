@@ -31,7 +31,8 @@
     "buttons": "Buttons",
     "image": "Image",
     "custom_liquid": "Custom Liquid",
-    "product_cards": "Product cards"
+    "product_cards": "Product cards",
+    "product_list": "Product list"
   },
   "labels": {
     "alignment": "Alignment",
@@ -156,7 +157,15 @@
     "badges_info": "Badges show on product images: Sale and Sold out automatically, plus the badges chosen in each product's \"Badges\" field. Each badge's own colours are set in Content > Metaobjects > Badges; the default scheme is used for badges without colours. A scheme gives the background, its accent colour the text.",
     "badge_color_scheme": "Default badge colour scheme",
     "sale_badge_color_scheme": "Sale badge colour scheme",
-    "sold_out_badge_color_scheme": "Sold out badge colour scheme"
+    "sold_out_badge_color_scheme": "Sold out badge colour scheme",
+    "products": "Products",
+    "product_list_collection_info": "Tip: an automatic collection such as \"Badges contains New\" keeps this list up to date by itself.",
+    "products_to_show": "Number of products",
+    "layout": "Layout",
+    "columns_desktop": "Columns on desktop",
+    "columns_mobile": "Columns on mobile",
+    "show_secondary_image": "Show second image on hover",
+    "style": "Style"
   },
   "options": {
     "alignment": {
@@ -260,6 +269,10 @@
       "portrait": "Portrait (4:5)",
       "landscape": "Landscape (4:3)",
       "wide": "Wide (16:9)"
+    },
+    "columns": {
+      "one": "1",
+      "two": "2"
     }
   },
   "color_scheme": {

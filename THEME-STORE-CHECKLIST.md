@@ -75,8 +75,8 @@ Why first: every later section reads these settings, CSS variables and base styl
 - [x] ❌ **Custom Liquid block** and **Custom Liquid section**, each with a `liquid` setting. *§5. Lets merchants paste app or embed code.* *Done M3.5.*
 - [x] ❌ Product card snippet: full title, price, image, unit price and sale badge *Done M3.7 (`product-card`, badges from the Badge metaobject, `product-badge`).*
 - [x] ❌ Price snippet: sale price, compare-at price, "from" price (`price_varies`, `price_min`) and unit price *Done M3.6.*
-- [ ] ❌ Localization form snippet, shared by the header and footer selectors
-- [ ] ❌ Every snippet starts with LiquidDoc (`{% doc %}`); every piece of text uses locales
+- [ ] ❌ Localization form snippet, shared by the header and footer selectors *Snippet built (M2.7, footer); the header use comes with the mobile drawer (M2.6, decision 7).*
+- [x] ❌ Every snippet starts with LiquidDoc (`{% doc %}`); every piece of text uses locales *Done M3.8: all 15 snippets have `{% doc %}`; new M2/M3 text is in locales.*
 
 ---
 
