@@ -84,6 +84,13 @@
         "id": "type_body_font",
         "default": "plus_jakarta_sans_n4",
         "label": "t:labels.body_font"
+      },
+      {
+        "type": "font_picker",
+        "id": "type_accent_font",
+        "default": "cormorant_i4",
+        "label": "t:labels.accent_font",
+        "info": "t:labels.accent_font_info"
       }
     ]
   },

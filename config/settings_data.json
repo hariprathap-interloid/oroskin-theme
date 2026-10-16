@@ -90,6 +90,7 @@
     },
     "badge_color_scheme": "scheme-1",
     "sale_badge_color_scheme": "scheme-3",
-    "sold_out_badge_color_scheme": "scheme-5"
+    "sold_out_badge_color_scheme": "scheme-5",
+    "type_accent_font": "cormorant_i4"
   }
 }

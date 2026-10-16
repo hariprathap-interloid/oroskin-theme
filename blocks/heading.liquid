@@ -5,7 +5,9 @@
   (screen readers, search engines), the size is visual. So a small-looking title can still be the
   page's h1, and a huge decorative word can be a plain <p>.
 
-  Italic words can take the accent colour, like the Figma's "Oro*Skin*" and "Clinical *Beauty*".
+  Italic words (made italic in the editor) are styled by "Italic words": the accent colour (like the
+  Figma's "Oro*Skin*"), the red brush with the accent font (the hero's "glow"), or plain italic.
+  "Font" switches the whole heading to the accent font (the hero's script lines).
   Nothing is output while the heading is empty.
 
   @example
@@ -23,7 +25,7 @@
     endif
   -%}
   <{{ tag }}
-    class="heading heading--{{ block.settings.size }} heading--{{ block.settings.color }} heading--align-{{ block.settings.alignment }}{% if block.settings.accent_italic %} heading--accent-italic{% endif %}{% if block.settings.use_custom_size %} heading--custom-size{% endif %}"
+    class="heading heading--{{ block.settings.size }} heading--{{ block.settings.font }} heading--{{ block.settings.color }} heading--align-{{ block.settings.alignment }} heading--italic-{{ block.settings.italic_style }}{% if block.settings.use_custom_size %} heading--custom-size{% endif %}"
     {% if size_style != blank %}
       style="{{ size_style | strip }}"
     {% endif %}
@@ -107,9 +109,42 @@
     color: var(--color-tint);
   }
 
-  /* Italic words in the accent colour */
-  .heading--accent-italic em {
+  /* Font: the accent font for decorative lines (Figma hero: "It is time to", "Unveil Your") */
+  .heading--accent-font {
+    font-family: var(--font-accent--family);
+    font-style: var(--font-accent--style);
+    font-weight: var(--font-accent--weight);
+  }
+
+  /* Italic words (made italic in the editor): accent colour, the red brush, or just italic */
+  .heading--italic-accent em {
     color: var(--color-accent);
+  }
+
+  /*
+    Brush (Figma: "glow" in white script on a red brush stroke). The word gets the accent font in the
+    button text colour; ::before is the brush, a box painted in the accent colour and cut to the
+    shape of brush-glow.svg with a CSS mask, behind the text (z-index -1 inside the word's own
+    stacking context, made by isolation: isolate).
+  */
+  .heading--italic-brush em {
+    position: relative;
+    isolation: isolate;
+    display: inline-block;
+    padding: 0.05em 0.4em 0.15em;
+    color: var(--color-button-text);
+    font-family: var(--font-accent--family);
+    font-style: var(--font-accent--style);
+    font-weight: var(--font-accent--weight);
+  }
+
+  .heading--italic-brush em::before {
+    content: '';
+    position: absolute;
+    inset: -0.1em -0.15em;
+    z-index: -1;
+    background-color: var(--color-accent);
+    mask: var(--brush-glow) center / 100% 100% no-repeat;
   }
 {% endstylesheet %}
 
@@ -183,11 +218,26 @@
       "default": "default"
     },
     {
-      "type": "checkbox",
-      "id": "accent_italic",
-      "label": "t:labels.accent_italic",
-      "info": "t:labels.accent_italic_info",
-      "default": true
+      "type": "select",
+      "id": "font",
+      "label": "t:labels.font",
+      "options": [
+        { "value": "heading-font", "label": "t:options.font.heading" },
+        { "value": "accent-font", "label": "t:options.font.accent" }
+      ],
+      "default": "heading-font"
+    },
+    {
+      "type": "select",
+      "id": "italic_style",
+      "label": "t:labels.italic_style",
+      "info": "t:labels.italic_style_info",
+      "options": [
+        { "value": "accent", "label": "t:options.italic_style.accent" },
+        { "value": "brush", "label": "t:options.italic_style.brush" },
+        { "value": "plain", "label": "t:options.italic_style.plain" }
+      ],
+      "default": "accent"
     },
     {
       "type": "text_alignment",

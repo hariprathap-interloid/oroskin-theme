@@ -128,8 +128,6 @@
     "heading_size": "Size",
     "heading_tag": "HTML tag",
     "heading_tag_info": "For page structure, not looks: use H1 once per page for its main title. Use \"Paragraph\" for decorative text.",
-    "accent_italic": "Italic words in accent colour",
-    "accent_italic_info": "Like the logo's \"Skin\".",
     "button_label": "Label",
     "button_link": "Link",
     "new_tab": "Open link in a new tab",
@@ -165,7 +163,11 @@
     "columns_desktop": "Columns on desktop",
     "columns_mobile": "Columns on mobile",
     "show_secondary_image": "Show second image on hover",
-    "style": "Style"
+    "style": "Style",
+    "accent_font": "Accent font",
+    "accent_font_info": "For decorative lines and brush words, e.g. the hero's script. Try a script font such as Kaushan Script, or an elegant italic such as Cormorant.",
+    "italic_style": "Italic words",
+    "italic_style_info": "Make words italic in the heading text to style them."
   },
   "options": {
     "alignment": {
@@ -219,7 +221,8 @@
     },
     "font": {
       "body": "Body font",
-      "heading": "Heading font"
+      "heading": "Heading font",
+      "accent": "Accent font"
     },
     "text_color": {
       "default": "Default",
@@ -273,6 +276,11 @@
     "columns": {
       "one": "1",
       "two": "2"
+    },
+    "italic_style": {
+      "accent": "Accent colour",
+      "brush": "Brush (accent font on a red brush)",
+      "plain": "Plain italic"
     }
   },
   "color_scheme": {

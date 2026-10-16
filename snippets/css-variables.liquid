@@ -25,6 +25,9 @@
   {% endcomment %}
   {{ settings.type_body_font | font_modify: 'weight', '500' | font_face: font_display: 'swap' }}
 
+  {% # Accent font: decorative lines (hero script, brush word). Only the chosen style is loaded. %}
+  {{ settings.type_accent_font | font_face: font_display: 'swap' }}
+
   {% # Logo font: only the chosen weight and its italic (for the accent word) %}
   {{ settings.type_logo_font | font_face: font_display: 'swap' }}
   {{ settings.type_logo_font | font_modify: 'style', 'italic' | font_face: font_display: 'swap' }}
@@ -34,6 +37,14 @@
     --font-heading--family: {{ settings.type_heading_font.family }}, {{ settings.type_heading_font.fallback_families }};
     --font-heading--style: {{ settings.type_heading_font.style }};
     --font-heading--weight: {{ settings.type_heading_font.weight }};
+
+    /* accent font (Heading block: Font = Accent, and the brush word) */
+    --font-accent--family: {{ settings.type_accent_font.family }}, {{ settings.type_accent_font.fallback_families }};
+    --font-accent--style: {{ settings.type_accent_font.style }};
+    --font-accent--weight: {{ settings.type_accent_font.weight }};
+
+    /* The Figma's red brush behind a word (Heading block italic style "Brush"), used as a CSS mask */
+    --brush-glow: url('{{ 'brush-glow.svg' | asset_url }}');
 
     /* logo font (text logo in the header) */
     --font-logo--family: {{ settings.type_logo_font.family }}, {{ settings.type_logo_font.fallback_families }};
