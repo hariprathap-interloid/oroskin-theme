@@ -1,0 +1,191 @@
+{% doc %}
+  Renders an image, optionally linked, in a chosen shape (original, square, portrait, landscape, wide)
+  with the Figma's rounded corners.
+
+  Built on snippets/image.liquid, so it gets for free: a responsive srcset, the merchant's focal point
+  (what stays visible when the shape crops the image), lazy loading lower down the page and eager
+  loading near the top, and a placeholder when no image is chosen yet.
+
+  @example
+  {% content_for 'block', type: 'image', id: 'image' %}
+{% enddoc %}
+
+{%- liquid
+  # A fixed shape crops the image: the snippet's image--cover fills the box, the focal point decides
+  # what stays in view. "Original" keeps the image's own proportions, so nothing is cropped.
+  assign image_class = ''
+  if block.settings.ratio != 'original'
+    assign image_class = 'image--cover'
+  endif
+
+  # "sizes" tells the browser how wide the image shows, so it downloads the smallest sharp file.
+  # Worked out from the Width setting, assuming the block spans the page's content area
+  # (1650px at most): Width 50% -> up to 825px. In a narrower column the browser picks a slightly
+  # bigger file than needed, which is safe (never blurry).
+  assign width_percent = block.settings.width
+  assign max_display = 1650 | times: width_percent | divided_by: 100
+  capture image_sizes
+    echo '(min-width: 1650px) ' | append: max_display | append: 'px, ' | append: width_percent | append: 'vw'
+  endcapture
+
+  assign image_url = nil
+  if block.settings.link != blank
+    assign image_url = block.settings.link
+  endif
+-%}
+
+<div
+  class="image-block image-block--{{ block.settings.ratio }} image-block--radius-{{ block.settings.radius }} image-block--align-{{ block.settings.alignment }}"
+  style="--image-block-width: {{ block.settings.width }}%;"
+  {{ block.shopify_attributes }}
+>
+  {% render 'image',
+    image: block.settings.image,
+    url: image_url,
+    class: image_class,
+    sizes: image_sizes
+  %}
+</div>
+
+{% stylesheet %}
+  /* Width: a share of the space the block sits in; Alignment places a narrower image */
+  .image-block {
+    inline-size: var(--image-block-width, 100%);
+    overflow: hidden; /* rounds the image's corners along with the box */
+    border-radius: var(--image-block-radius, 0);
+  }
+
+  .image-block--align-center {
+    margin-inline: auto;
+  }
+
+  .image-block--align-right {
+    margin-inline-start: auto;
+  }
+
+  /* Shapes: the box gets the ratio, the image fills it (image--cover) */
+  .image-block--square {
+    aspect-ratio: 1;
+  }
+
+  .image-block--portrait {
+    aspect-ratio: 4 / 5;
+  }
+
+  .image-block--landscape {
+    aspect-ratio: 4 / 3;
+  }
+
+  .image-block--wide {
+    aspect-ratio: 16 / 9;
+  }
+
+  /* Corner radius = the Figma's radius tokens */
+  .image-block--radius-sm {
+    --image-block-radius: var(--radius-sm);
+  }
+
+  .image-block--radius-md {
+    --image-block-radius: var(--radius-md);
+  }
+
+  .image-block--radius-lg {
+    --image-block-radius: var(--radius-lg);
+  }
+
+  /* A linked image: a gentle zoom on hover, and the focus ring drawn inside the rounded box */
+  .image-block a.image {
+    outline-offset: -3px;
+  }
+
+  .image-block a.image img {
+    transition: transform var(--duration-slow) var(--ease-out);
+  }
+
+  .image-block a.image:hover img {
+    transform: scale(1.03);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .image-block a.image img {
+      transition: none;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.image",
+  "tag": null,
+  "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.image"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.image",
+      "info": "t:labels.image_block_info"
+    },
+    {
+      "type": "select",
+      "id": "ratio",
+      "label": "t:labels.image_ratio",
+      "options": [
+        { "value": "original", "label": "t:options.image_shape.original" },
+        { "value": "square", "label": "t:options.image_shape.square" },
+        { "value": "portrait", "label": "t:options.image_shape.portrait" },
+        { "value": "landscape", "label": "t:options.image_shape.landscape" },
+        { "value": "wide", "label": "t:options.image_shape.wide" }
+      ],
+      "default": "original"
+    },
+    {
+      "type": "select",
+      "id": "radius",
+      "label": "t:labels.corner_radius",
+      "options": [
+        { "value": "none", "label": "t:options.corner_radius.none" },
+        { "value": "sm", "label": "t:options.corner_radius.sm" },
+        { "value": "md", "label": "t:options.corner_radius.md" },
+        { "value": "lg", "label": "t:options.corner_radius.lg" }
+      ],
+      "default": "sm"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.size_and_position"
+    },
+    {
+      "type": "range",
+      "id": "width",
+      "label": "t:labels.image_width",
+      "info": "t:labels.image_width_info",
+      "min": 20,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 100
+    },
+    {
+      "type": "text_alignment",
+      "id": "alignment",
+      "label": "t:labels.alignment",
+      "default": "left",
+      "visible_if": "{{ block.settings.width < 100 }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.link"
+    },
+    {
+      "type": "url",
+      "id": "link",
+      "label": "t:labels.image_link",
+      "info": "t:labels.image_link_info"
+    }
+  ],
+  "presets": [{ "name": "t:general.image" }]
+}
+{% endschema %}

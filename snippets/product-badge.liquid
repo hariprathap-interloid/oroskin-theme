@@ -1,0 +1,44 @@
+{% doc %}
+  Renders one merchant badge on a product card.
+
+  Accepts either form of a value from the product's "Badges" field (custom.badges):
+  - a Badge metaobject entry (Content > Metaobjects > Badges): its Label, with its own Background and
+    Text colours when both are set;
+  - plain text (a text or choice field), e.g. "New".
+  Anything without its own colours uses the "Default badge colour scheme" (Theme settings > Product
+  cards). Empty values output nothing.
+
+  @param {object} badge - One value from product.metafields.custom.badges.value
+
+  @example
+  {% render 'product-badge', badge: badge %}
+{% enddoc %}
+
+{%- liquid
+  # A metaobject entry has a "system" property (type, handle...); plain text doesn't.
+  # Field keys of the Badge metaobject: label, background_color, text_color (American spelling).
+  assign badge_bg = blank
+  assign badge_fg = blank
+  if badge.system
+    assign badge_label = badge.label.value
+    assign badge_bg = badge.background_color.value
+    assign badge_fg = badge.text_color.value
+  else
+    assign badge_label = badge
+  endif
+-%}
+
+{%- if badge_label != blank -%}
+  {%- if badge_bg != blank and badge_fg != blank -%}
+    <span
+      class="product-card__badge product-card__badge--own-colors"
+      style="--badge-bg: {{ badge_bg }}; --badge-fg: {{ badge_fg }};"
+    >
+      {{- badge_label | escape -}}
+    </span>
+  {%- else -%}
+    <span class="product-card__badge color-{{ settings.badge_color_scheme.id }}">
+      {{- badge_label | escape -}}
+    </span>
+  {%- endif -%}
+{%- endif -%}

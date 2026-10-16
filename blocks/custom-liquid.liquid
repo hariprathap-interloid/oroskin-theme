@@ -1,0 +1,44 @@
+{% doc %}
+  Renders whatever Liquid / HTML the merchant pastes, e.g. an app's embed snippet, a small widget or a
+  one-off piece of text with special markup. The code runs as real Liquid, so it can use objects like
+  {{ product.title }} on a product page.
+
+  Nothing is output while the box is empty.
+
+  @example
+  {% content_for 'block', type: 'custom-liquid', id: 'custom-liquid' %}
+{% enddoc %}
+
+{%- if block.settings.custom_liquid != blank -%}
+  <div class="custom-liquid" {{ block.shopify_attributes }}>
+    {{ block.settings.custom_liquid }}
+  </div>
+{%- endif -%}
+
+{% stylesheet %}
+  /* Pasted embeds (iframes, videos) never push past the column */
+  .custom-liquid {
+    inline-size: 100%;
+    max-inline-size: 100%;
+  }
+
+  .custom-liquid :is(iframe, video, img) {
+    max-inline-size: 100%;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.custom_liquid",
+  "tag": null,
+  "settings": [
+    {
+      "type": "liquid",
+      "id": "custom_liquid",
+      "label": "t:labels.custom_liquid",
+      "info": "t:labels.custom_liquid_info"
+    }
+  ],
+  "presets": [{ "name": "t:general.custom_liquid" }]
+}
+{% endschema %}

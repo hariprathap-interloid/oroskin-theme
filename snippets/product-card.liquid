@@ -1,0 +1,290 @@
+{% doc %}
+  Renders a product card (Figma collection grid): a rounded tile with the product image on top, badges
+  on the image, then the full title, an optional subtitle and the price.
+
+  Badges (top-left of the image):
+  - "Sold out" when no variant can be bought, otherwise "Sale" when the compare-at price is higher.
+  - Merchant badges from the product metafield custom.badges ("Badges"): a list of references to
+    "Badge" metaobject entries (Content > Metaobjects > Badges). Each entry has a Label and its own
+    Background colour and Text colour, so "New" can be cream and "Bestseller" red. One field, so the
+    merchant always sets badges the same way, and it can become a clean "Badges" filter (M5).
+  Badge colours: an entry's own colours; without them, the default badge colour scheme. Sale and
+  Sold out use their own colour schemes (Theme settings > Product cards).
+  Subtitle: the product metafield custom.subtitle ("Subtitle", single line text), shown only when
+  filled, e.g. "Eau de Parfum · 50ml".
+  Both fields are defined once in the admin (Settings > Custom data > Products); see the M3.7 notes.
+
+  The whole card is one link (the title's link stretches over the card), so keyboard users meet one
+  stop per product and screen readers hear the product name once.
+
+  Without a product (e.g. a section in the theme editor with no collection chosen yet) it renders a
+  placeholder card, so the layout still looks right.
+
+  @param {product} [product] - The product. Leave empty for a placeholder card
+  @param {string} [image_ratio] - 'portrait' (4:5, default), 'square', 'landscape' (4:3) or 'original'
+  @param {string} [sizes] - The image's sizes attribute. Default: 4 per row on desktop, 2 on phones
+  @param {boolean} [show_secondary_image] - Show the second product image on hover (default false)
+  @param {string} [heading_tag] - Tag for the title, default 'h3'
+
+  @example
+  {% render 'product-card', product: product %}
+  {% render 'product-card', product: product, image_ratio: 'square', show_secondary_image: true %}
+{% enddoc %}
+
+{%- liquid
+  assign ratio = image_ratio | default: 'portrait'
+  assign image_sizes = sizes | default: '(min-width: 990px) 25vw, 50vw'
+  assign title_tag = heading_tag | default: 'h3'
+
+  assign image_class = ''
+  if ratio != 'original'
+    assign image_class = 'image--cover'
+  endif
+-%}
+
+{%- if product != blank -%}
+  {%- liquid
+    # Second image for the hover swap: only when asked for and the product has one
+    assign secondary_image = nil
+    if show_secondary_image and product.media.size > 1
+      assign secondary_image = product.media[1].preview_image
+    endif
+
+    assign on_sale = false
+    if product.compare_at_price > product.price
+      assign on_sale = true
+    endif
+  -%}
+  <div class="product-card{% if secondary_image %} product-card--has-secondary{% endif %}">
+    <div class="product-card__media product-card__media--{{ ratio }}">
+      {%- liquid
+        # The image is decorative here (alt=""): the title link right below names the product, so a
+        # screen reader would otherwise hear the name twice.
+        render 'image', image: product.featured_media.preview_image, class: image_class, sizes: image_sizes, alt: ''
+        if secondary_image
+          render 'image', image: secondary_image, class: 'image--cover product-card__secondary', sizes: image_sizes, alt: '', loading: 'lazy'
+        endif
+      -%}
+
+      <div class="product-card__badges">
+        {%- if product.available == false -%}
+          <span class="product-card__badge color-{{ settings.sold_out_badge_color_scheme.id }}">{{ 'products.sold_out' | t }}</span>
+        {%- elsif on_sale -%}
+          <span class="product-card__badge color-{{ settings.sale_badge_color_scheme.id }}">{{ 'products.badge.sale' | t }}</span>
+        {%- endif -%}
+        {%- comment -%}
+          The product's "Badges" field (custom.badges). Usually a list (.value is an array), but a single
+          value (one metaobject or one text) is handled too, so a badge never silently disappears.
+          snippets/product-badge.liquid draws one badge: own colours for a Badge metaobject entry,
+          otherwise the default badge colour scheme.
+        {%- endcomment -%}
+        {%- assign badges_field = product.metafields.custom.badges -%}
+        {%- if badges_field != blank -%}
+          {%- assign badges_value = badges_field.value -%}
+          {%- if badges_field.type contains 'list.' -%}
+            {%- for badge in badges_value -%}
+              {% render 'product-badge', badge: badge %}
+            {%- endfor -%}
+          {%- else -%}
+            {% render 'product-badge', badge: badges_value %}
+          {%- endif -%}
+        {%- endif -%}
+      </div>
+    </div>
+
+    <div class="product-card__info">
+      <div class="product-card__text">
+        <{{ title_tag }} class="product-card__title">
+          <a class="product-card__link" href="{{ product.url }}">{{ product.title | escape }}</a>
+        </{{ title_tag }}>
+        {%- assign subtitle = product.metafields.custom.subtitle.value -%}
+        {%- if subtitle != blank -%}
+          <p class="product-card__subtitle">{{ subtitle | escape }}</p>
+        {%- endif -%}
+      </div>
+      {% render 'price', product: product %}
+    </div>
+  </div>
+{%- else -%}
+  {%- comment -%} Placeholder card: same layout, sample content, no link {%- endcomment -%}
+  <div class="product-card product-card--placeholder">
+    <div class="product-card__media product-card__media--{{ ratio }}">
+      {{ 'product-1' | placeholder_svg_tag: 'product-card__placeholder' }}
+    </div>
+    <div class="product-card__info">
+      <div class="product-card__text">
+        <{{ title_tag }} class="product-card__title">{{ 'products.card.placeholder_title' | t }}</{{ title_tag }}>
+      </div>
+      <div class="price"><span class="price__current">{{ 2100 | money }}</span></div>
+    </div>
+  </div>
+{%- endif -%}
+
+{% stylesheet %}
+  /*
+    Figma card: a white glass tile, small rounded corners (19px), soft shadow; image on top, then the
+    title + subtitle on the left and the red price on the right.
+  */
+  .product-card {
+    position: relative; /* the title link's ::after stretches over the whole card */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-sm);
+    background-color: var(--color-glass-strong);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Keyboard focus: the ring goes around the whole card, not just the title text */
+  .product-card:has(.product-card__link:focus-visible) {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+  }
+
+  .product-card__link:focus-visible {
+    outline: none;
+  }
+
+  .product-card__media {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .product-card__media--portrait {
+    aspect-ratio: 4 / 5;
+  }
+
+  .product-card__media--square {
+    aspect-ratio: 1;
+  }
+
+  .product-card__media--landscape {
+    aspect-ratio: 4 / 3;
+  }
+
+  .product-card__media .image > img {
+    transition:
+      transform var(--duration-slow) var(--ease-out),
+      opacity var(--duration-base) var(--ease-out);
+  }
+
+  /* Hover: a slow, gentle zoom; with a second image, that one fades in on top */
+  .product-card:hover .product-card__media .image > img {
+    transform: scale(1.04);
+  }
+
+  .product-card__secondary {
+    position: absolute;
+    inset: 0;
+  }
+
+  .product-card__secondary > img {
+    opacity: 0;
+  }
+
+  .product-card--has-secondary:hover .product-card__secondary > img {
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .product-card__media .image > img {
+      transition: none;
+    }
+
+    .product-card:hover .product-card__media .image > img {
+      transform: none;
+    }
+  }
+
+  .product-card__placeholder {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    background-color: var(--color-tint-subtle);
+    fill: var(--color-tint-border);
+  }
+
+  /*
+    Badges top-left of the image. Figma: a cream rounded rectangle with red text ("New").
+    Colours come from the colour scheme chosen in Theme settings > Product cards: the scheme class
+    (color-scheme-N) paints the scheme's background; the text uses the scheme's accent.
+  */
+  .product-card__badges {
+    position: absolute;
+    inset-block-start: var(--space-sm);
+    inset-inline-start: var(--space-sm);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2xs);
+    pointer-events: none;
+  }
+
+  .product-card__badge {
+    padding: 0.3em 0.75em;
+    border-radius: 0.75em;
+    font-size: var(--font-size-caption);
+    line-height: 1.3;
+  }
+
+  /*
+    Two classes on purpose: the scheme class sets color: var(--color-text) with one class, and which
+    stylesheet loads last isn't guaranteed. Two classes always win, so the text is the scheme's accent.
+  */
+  .product-card .product-card__badge {
+    color: var(--color-accent);
+  }
+
+  /* A badge entry with its own colours (Content > Metaobjects > Badges); three classes beat the rule above */
+  .product-card .product-card__badge.product-card__badge--own-colors {
+    background-color: var(--badge-bg);
+    color: var(--badge-fg);
+  }
+
+  /* Title + subtitle left, price right; the price drops below on a narrow card */
+  .product-card__info {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-xs) var(--space-md);
+    padding: var(--space-md);
+  }
+
+  .product-card__text {
+    flex: 1 1 10rem;
+    min-inline-size: 0;
+  }
+
+  .product-card__title {
+    margin: 0;
+    font-family: var(--font-body--family);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.35;
+    text-wrap: pretty;
+  }
+
+  .product-card__link {
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  /* The stretched link: an invisible box over the whole card, so a click anywhere opens the product */
+  .product-card__link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+
+  .product-card__subtitle {
+    margin: var(--space-2xs) 0 0;
+    color: color-mix(in srgb, var(--color-text) 70%, var(--color-background));
+    font-size: var(--font-size-caption);
+  }
+
+  .product-card .price {
+    font-size: var(--font-size-body-sm);
+  }
+{% endstylesheet %}

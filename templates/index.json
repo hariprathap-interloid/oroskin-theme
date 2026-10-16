@@ -20,23 +20,34 @@
           "type": "text",
           "name": "t:general.text",
           "settings": {
-            "text": "Welcome",
-            "text_style": "text--title",
-            "alignment": "center"
+            "text": "<p>Welcome</p>",
+            "alignment": "center",
+            "style": "body-lg",
+            "font": "heading-font",
+            "color": "default",
+            "max_width": "none"
           }
         },
         "sub_title": {
           "type": "text",
           "name": "t:general.text",
           "settings": {
-            "text": "Welcome to OroSkin",
-            "text_style": "text--subtitle",
-            "alignment": "center"
+            "text": "<p>Welcome to OroSkin</p>",
+            "alignment": "center",
+            "style": "body",
+            "font": "body-font",
+            "color": "default",
+            "max_width": "none"
           }
         }
       },
-      "block_order": ["title", "sub_title"]
+      "block_order": [
+        "title",
+        "sub_title"
+      ]
     }
   },
-  "order": ["main"]
+  "order": [
+    "main"
+  ]
 }

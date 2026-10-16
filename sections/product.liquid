@@ -13,7 +13,7 @@
 
 <div class="product-info">
   <h1>{{ product.title }}</h1>
-  <p>{{ product.price | money }}</p>
+  {% render 'price', product: product, variant: product.selected_or_first_available_variant %}
   <p>{{ product.description }}</p>
 </div>
 
@@ -21,6 +21,12 @@
   {% form 'product', product %}
     {% assign current_variant = product.selected_or_first_available_variant %}
 
+    {%- comment -%}
+      Temporary stock fix until the M6 product page: sold-out variants are marked and can't be picked
+      (a disabled <option>), so they can't reach the cart and fail at checkout. When nothing is
+      available, the buttons say "Sold out" and are disabled. selected_or_first_available_variant
+      already starts on an available variant.
+    {%- endcomment -%}
     <select name="id">
       {% for variant in product.variants %}
         <option
@@ -28,16 +34,24 @@
           {% if variant == current_variant %}
             selected="selected"
           {% endif %}
+          {% unless variant.available %}
+            disabled
+          {% endunless %}
         >
           {{ variant.title }} - {{ variant.price | money }}
+          {%- unless variant.available %} ({{ 'products.sold_out' | t }}){% endunless %}
         </option>
       {% endfor %}
     </select>
 
     <input type="text" name="quantity" min="1" value="1">
 
-    <input type="submit" value="Add to cart">
-    {{ form | payment_button }}
+    {%- if current_variant.available -%}
+      <button type="submit">{{ 'products.add_to_cart' | t }}</button>
+      {{ form | payment_button }}
+    {%- else -%}
+      <button type="submit" disabled>{{ 'products.sold_out' | t }}</button>
+    {%- endif -%}
   {% endform %}
 </div>
 

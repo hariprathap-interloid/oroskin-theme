@@ -1,0 +1,102 @@
+{%- comment -%}
+  Custom Liquid section: a full section the merchant can add to any page and fill with their own
+  Liquid / HTML (an app embed, a map, a booking widget...). Colour scheme and top/bottom spacing make
+  it sit in the design like any other section.
+{%- endcomment -%}
+
+{%- comment -%}
+  The outer box always spans the whole page (full-width), so the colour scheme's background runs edge to
+  edge like every other section. The inner box keeps the code to the page width unless "Full page
+  width" is ticked (e.g. a full-bleed map).
+{%- endcomment -%}
+<div
+  class="custom-liquid-section full-width color-{{ section.settings.color_scheme.id }}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
+>
+  <div class="custom-liquid-section__content{% unless section.settings.full_width %} custom-liquid-section__content--page-width{% endunless %}">
+    {%- if section.settings.custom_liquid != blank -%}
+      {{ section.settings.custom_liquid }}
+    {%- elsif request.design_mode -%}
+      {%- comment -%} Empty: a hint in the theme editor only, never on the live store {%- endcomment -%}
+      <p class="custom-liquid-section__empty">{{ 'sections.custom_liquid.empty' | t }}</p>
+    {%- endif -%}
+  </div>
+</div>
+
+{% stylesheet %}
+  .custom-liquid-section {
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  /* Same width rule as Skeleton's section grid (critical.css): page width minus the page margins */
+  .custom-liquid-section__content--page-width {
+    inline-size: min(
+      calc(var(--page-width) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  .custom-liquid-section :is(iframe, video, img) {
+    max-inline-size: 100%;
+  }
+
+  .custom-liquid-section__empty {
+    margin: 0;
+    padding: var(--space-xl);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    text-align: center;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.custom_liquid",
+  "settings": [
+    {
+      "type": "liquid",
+      "id": "custom_liquid",
+      "label": "t:labels.custom_liquid",
+      "info": "t:labels.custom_liquid_info"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "checkbox",
+      "id": "full_width",
+      "label": "t:labels.full_width",
+      "default": false
+    },
+    {
+      "type": "header",
+      "content": "t:labels.spacing"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 48
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 48
+    }
+  ],
+  "presets": [{ "name": "t:general.custom_liquid" }]
+}
+{% endschema %}

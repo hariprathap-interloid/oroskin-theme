@@ -1,52 +1,64 @@
 {% doc %}
-  Renders a group of blocks with configurable layout direction, gap and
-  alignment.
+  Renders a group of blocks as a column (one under the other) or a row (side by side), e.g. the hero's
+  "EXPLORE COLLECTION" pill next to the "NEW ARRIVALS →" link, or a heading + text + buttons stack.
 
-  All settings apply to only one dimension to reduce configuration complexity.
-
-  This component is a wrapper concerned only with rendering its children in
-  the specified layout direction with appropriate padding and alignment.
+  - Column: items stack; Alignment places them left / centre / right.
+  - Row: items sit side by side and wrap onto a new line when there isn't room (so two buttons stack
+    on a phone); Alignment places the row left / centre / right or spreads it across the width, and
+    Vertical alignment lines items up top / middle / bottom.
+  - Gap is the space between items; Padding the space around the whole group.
 
   @example
   {% content_for 'block', type: 'group', id: 'group' %}
 {% enddoc %}
 
+{%- liquid
+  if block.settings.layout_direction == 'group--horizontal'
+    assign align = block.settings.row_alignment
+  else
+    assign align = block.settings.alignment
+  endif
+-%}
+
 <div
   class="group {{ block.settings.layout_direction }}"
-  style="
-    --padding: {{ block.settings.padding }}px;
-    --alignment: {{ block.settings.alignment }};
-  "
+  style="--group-gap: {{ block.settings.gap }}px; --group-padding: {{ block.settings.padding }}px; --group-align: {{ align }}; --group-valign: {{ block.settings.vertical_alignment }};"
   {{ block.shopify_attributes }}
 >
   {% content_for 'blocks' %}
 </div>
 
 {% stylesheet %}
+  /*
+    No overflow: hidden here (Skeleton had it): it would cut off the focus ring of buttons and links
+    inside the group, which keyboard users rely on.
+  */
   .group {
     display: flex;
-    flex-wrap: nowrap;
-    overflow: hidden;
-    width: 100%;
+    gap: var(--group-gap);
+    inline-size: 100%;
+    padding: var(--group-padding);
   }
 
-  .group--horizontal {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 var(--padding);
-  }
-
+  /* Column: Alignment moves items across (left / centre / right) */
   .group--vertical {
     flex-direction: column;
-    align-items: var(--alignment);
-    padding: var(--padding) 0;
+    align-items: var(--group-align);
+  }
+
+  /* Row: Alignment moves the row along (or spreads it), Vertical alignment lines items up */
+  .group--horizontal {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: var(--group-align);
+    align-items: var(--group-valign);
   }
 {% endstylesheet %}
 
 {% schema %}
 {
   "name": "t:general.group",
+  "tag": null,
   "blocks": [{ "type": "@theme" }],
   "settings": [
     {
@@ -55,8 +67,8 @@
       "label": "t:labels.layout_direction",
       "default": "group--vertical",
       "options": [
-        { "value": "group--horizontal", "label": "t:options.direction.horizontal" },
-        { "value": "group--vertical", "label": "t:options.direction.vertical" }
+        { "value": "group--vertical", "label": "t:options.direction.vertical" },
+        { "value": "group--horizontal", "label": "t:options.direction.horizontal" }
       ]
     },
     {
@@ -70,6 +82,41 @@
         { "value": "center", "label": "t:options.alignment.center" },
         { "value": "flex-end", "label": "t:options.alignment.right" }
       ]
+    },
+    {
+      "visible_if": "{{ block.settings.layout_direction == 'group--horizontal' }}",
+      "type": "select",
+      "id": "row_alignment",
+      "label": "t:labels.alignment",
+      "default": "flex-start",
+      "options": [
+        { "value": "flex-start", "label": "t:options.alignment.left" },
+        { "value": "center", "label": "t:options.alignment.center" },
+        { "value": "flex-end", "label": "t:options.alignment.right" },
+        { "value": "space-between", "label": "t:options.alignment.spread" }
+      ]
+    },
+    {
+      "visible_if": "{{ block.settings.layout_direction == 'group--horizontal' }}",
+      "type": "select",
+      "id": "vertical_alignment",
+      "label": "t:labels.vertical_alignment",
+      "default": "center",
+      "options": [
+        { "value": "flex-start", "label": "t:options.vertical_alignment.top" },
+        { "value": "center", "label": "t:options.vertical_alignment.middle" },
+        { "value": "flex-end", "label": "t:options.vertical_alignment.bottom" }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "gap",
+      "label": "t:labels.gap",
+      "default": 24,
+      "min": 0,
+      "max": 96,
+      "step": 4,
+      "unit": "px"
     },
     {
       "type": "range",
@@ -89,7 +136,7 @@
       "settings": {
         "layout_direction": "group--vertical",
         "alignment": "flex-start",
-        "padding": 0
+        "gap": 24
       }
     },
     {
@@ -97,8 +144,30 @@
       "category": "t:general.layout",
       "settings": {
         "layout_direction": "group--horizontal",
-        "padding": 0
+        "row_alignment": "flex-start",
+        "vertical_alignment": "center",
+        "gap": 32
       }
+    },
+    {
+      "name": "t:general.buttons",
+      "category": "t:general.layout",
+      "settings": {
+        "layout_direction": "group--horizontal",
+        "row_alignment": "flex-start",
+        "vertical_alignment": "center",
+        "gap": 32
+      },
+      "blocks": [
+        {
+          "type": "button",
+          "settings": { "label": "Explore collection", "style": "primary" }
+        },
+        {
+          "type": "button",
+          "settings": { "label": "New arrivals", "style": "text", "show_arrow": true }
+        }
+      ]
     }
   ]
 }

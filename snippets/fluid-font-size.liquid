@@ -1,0 +1,22 @@
+{% doc %}
+  Outputs the CSS variables for a merchant-set font size that stays fluid, for use inside a style="".
+  The size is the one at the 1920px design width (the Figma value). Below that it shrinks in a straight
+  line, like the theme's type tokens, down to a phone size (390px wide) of half the value + 7px:
+  20px -> 17px, 63px -> 38.5px, 108px -> 61px. Never smaller than that, never larger than the value.
+
+  The element's CSS turns the variables into the size:
+  font-size: clamp(var(--fs-min), calc(var(--fs-min) + (100vw - 390px) * var(--fs-diff) / 1530), var(--fs-max));
+  --fs-diff has no unit on purpose: CSS can multiply a length by a number, not a length by a length.
+
+  @param {number} size - Font size in px at 1920px wide
+
+  @example
+  <p class="text--custom-size" style="{% render 'fluid-font-size', size: block.settings.custom_size %}">
+{% enddoc %}
+
+{%- liquid
+  assign size_max = size | default: 20
+  assign size_min = size_max | times: 0.5 | plus: 7 | at_most: size_max
+  assign size_diff = size_max | minus: size_min
+-%}
+--fs-max: {{ size_max }}px; --fs-min: {{ size_min }}px; --fs-diff: {{ size_diff }};

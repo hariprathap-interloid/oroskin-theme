@@ -25,7 +25,14 @@
     "logo": "Logo and favicon",
     "social_media": "Social media",
     "animations": "Animations",
-    "menu_card": "Menu card"
+    "menu_card": "Menu card",
+    "heading": "Heading",
+    "button": "Button",
+    "buttons": "Buttons",
+    "image": "Image",
+    "custom_liquid": "Custom Liquid",
+    "product_cards": "Product cards",
+    "product_list": "Product list"
   },
   "labels": {
     "alignment": "Alignment",
@@ -109,13 +116,63 @@
     "show_newsletter": "Show email sign-up",
     "show_newsletter_info": "Sign-ups appear in Customers, tagged \"newsletter\" and subscribed to email marketing.",
     "enable_follow_on_shop": "Show Follow on Shop",
-    "enable_follow_on_shop_info": "Lets customers follow your store in the Shop app. Appears only when Shop Pay is active."
+    "enable_follow_on_shop_info": "Lets customers follow your store in the Shop app. Appears only when Shop Pay is active.",
+    "font": "Font",
+    "text_color": "Colour",
+    "max_width": "Maximum width",
+    "max_width_info": "Long lines are hard to read: Normal keeps lines to about 60 characters.",
+    "use_custom_size": "Custom size",
+    "custom_size": "Font size",
+    "custom_size_info": "The size on a 1920px-wide screen, e.g. the Figma value. It scales down smoothly on smaller screens.",
+    "heading_info": "Make a word italic to give it the accent style.",
+    "heading_size": "Size",
+    "heading_tag": "HTML tag",
+    "heading_tag_info": "For page structure, not looks: use H1 once per page for its main title. Use \"Paragraph\" for decorative text.",
+    "accent_italic": "Italic words in accent colour",
+    "accent_italic_info": "Like the logo's \"Skin\".",
+    "button_label": "Label",
+    "button_link": "Link",
+    "new_tab": "Open link in a new tab",
+    "button_style": "Style",
+    "show_arrow": "Show arrow",
+    "vertical_alignment": "Vertical alignment",
+    "gap": "Gap",
+    "button_alignment_info": "Inside a Row group, the group's alignment places the buttons instead.",
+    "image_block_info": "To choose what stays in view when the image is cropped, and to add alt text, edit the image in Content > Files.",
+    "image_ratio": "Shape",
+    "corner_radius": "Rounded corners",
+    "image_link": "Link (optional)",
+    "image_link_info": "Makes the whole image clickable. Screen readers read the image's alt text as the link, so describe where it goes.",
+    "size_and_position": "Size and position",
+    "image_width": "Width",
+    "image_width_info": "How much of the available space the image takes.",
+    "link": "Link",
+    "custom_liquid": "Liquid code",
+    "custom_liquid_info": "Paste app snippets or other code (HTML and Liquid). Bad code can break the page, so check the preview after saving.",
+    "full_width": "Full page width",
+    "spacing": "Spacing",
+    "padding_top": "Top padding",
+    "padding_bottom": "Bottom padding",
+    "badges": "Badges",
+    "badges_info": "Badges show on product images: Sale and Sold out automatically, plus the badges chosen in each product's \"Badges\" field. Each badge's own colours are set in Content > Metaobjects > Badges; the default scheme is used for badges without colours. A scheme gives the background, its accent colour the text.",
+    "badge_color_scheme": "Default badge colour scheme",
+    "sale_badge_color_scheme": "Sale badge colour scheme",
+    "sold_out_badge_color_scheme": "Sold out badge colour scheme",
+    "products": "Products",
+    "product_list_collection_info": "Tip: an automatic collection such as \"Badges contains New\" keeps this list up to date by itself.",
+    "products_to_show": "Number of products",
+    "layout": "Layout",
+    "columns_desktop": "Columns on desktop",
+    "columns_mobile": "Columns on mobile",
+    "show_secondary_image": "Show second image on hover",
+    "style": "Style"
   },
   "options": {
     "alignment": {
       "left": "Left",
       "center": "Center",
-      "right": "Right"
+      "right": "Right",
+      "spread": "Spread out"
     },
     "direction": {
       "horizontal": "Horizontal",
@@ -131,9 +188,11 @@
       "small": "Small"
     },
     "text_style": {
-      "title": "Title",
-      "subtitle": "Subtitle",
-      "normal": "Normal text"
+      "body_large": "Large body",
+      "body": "Body",
+      "small": "Small",
+      "caption": "Caption",
+      "eyebrow": "Eyebrow (small uppercase label)"
     },
     "animation": {
       "none": "None",
@@ -157,6 +216,63 @@
       "none": "Off",
       "home": "Home page only",
       "all": "All pages"
+    },
+    "font": {
+      "body": "Body font",
+      "heading": "Heading font"
+    },
+    "text_color": {
+      "default": "Default",
+      "muted": "Muted",
+      "accent": "Accent",
+      "faded": "Faded (decorative)"
+    },
+    "max_width": {
+      "none": "None",
+      "normal": "Normal",
+      "narrow": "Narrow"
+    },
+    "heading_size": {
+      "display_xl": "Display XL (108px)",
+      "display": "Display (96px)",
+      "h1": "Heading 1 (60px)",
+      "h2": "Heading 2 (40px)",
+      "h3": "Heading 3 (26px)",
+      "h4": "Heading 4 (22px)"
+    },
+    "heading_tag": {
+      "h1": "H1",
+      "h2": "H2",
+      "h3": "H3",
+      "h4": "H4",
+      "p": "Paragraph"
+    },
+    "button_style": {
+      "primary": "Primary (red pill)",
+      "secondary": "Secondary (outline pill)",
+      "text": "Text link"
+    },
+    "vertical_alignment": {
+      "top": "Top",
+      "middle": "Middle",
+      "bottom": "Bottom"
+    },
+    "corner_radius": {
+      "none": "None",
+      "sm": "Small (19px)",
+      "md": "Medium (25px)",
+      "lg": "Large (50px)"
+    },
+    "image_shape": {
+      "original": "Original (no cropping)",
+      "square": "Square (1:1)",
+      "portrait": "Portrait (4:5)",
+      "landscape": "Landscape (4:3)",
+      "wide": "Wide (16:9)"
+    },
+    "columns": {
+      "one": "1",
+      "two": "2"
     }
   },
   "color_scheme": {
