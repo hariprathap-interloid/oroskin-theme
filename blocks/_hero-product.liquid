@@ -1,0 +1,139 @@
+{% doc %}
+  One cut-out product photo in the hero's product area, placed by percentages so it stays on the same
+  spot of the background photo at any screen width: Horizontal / Vertical position = where its centre
+  sits in the area, Width = its size relative to the area, plus an optional tilt and link.
+
+  Without an image: a dashed outline in the theme editor (to place it), nothing on the live store.
+
+  @example
+  {% content_for 'block', type: '_hero-product', id: 'hero-product' %}
+{% enddoc %}
+
+{%- if block.settings.image != blank or request.design_mode -%}
+  <div
+    class="hero-product"
+    style="--hero-product-x: {{ block.settings.x }}%; --hero-product-y: {{ block.settings.y }}%; --hero-product-width: {{ block.settings.width }}%; --hero-product-rotate: {{ block.settings.rotate }}deg;"
+    {{ block.shopify_attributes }}
+  >
+    {%- if block.settings.image != blank -%}
+      {%- liquid
+        # Real product photos with alt text (from the image); linked when a link is set
+        assign product_link = nil
+        if block.settings.link != blank
+          assign product_link = block.settings.link
+        endif
+      -%}
+      {% render 'image',
+        image: block.settings.image,
+        url: product_link,
+        sizes: '(min-width: 990px) 25vw, 40vw',
+        class: 'hero-product__image'
+      %}
+    {%- else -%}
+      <div class="hero-product__empty">{{ 'sections.hero.product_placeholder' | t }}</div>
+    {%- endif -%}
+  </div>
+{%- endif -%}
+
+{% stylesheet %}
+  /*
+    Positioned by its centre: left/top put the centre point, translate(-50%, -50%) pulls the image back
+    by half its own size. Percentages are of the product area, so the layout scales with the screen.
+  */
+  .hero-product {
+    position: absolute;
+    inset-inline-start: var(--hero-product-x);
+    inset-block-start: var(--hero-product-y);
+    inline-size: var(--hero-product-width);
+    translate: -50% -50%;
+    rotate: var(--hero-product-rotate);
+  }
+
+  /* Cut-out photos (transparent PNG / WebP): no box, a soft shadow under the product itself */
+  .hero-product .image {
+    overflow: visible;
+    background: none;
+  }
+
+  .hero-product .image > img {
+    filter: drop-shadow(0 12px 18px #00000033);
+  }
+
+  .hero-product__empty {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 1;
+    padding: var(--space-xs);
+    border: 2px dashed var(--color-accent);
+    border-radius: var(--radius-sm);
+    background-color: #ffffffb3;
+    color: var(--color-accent);
+    font-size: var(--font-size-small);
+    text-align: center;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.hero_product",
+  "tag": null,
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.image",
+      "info": "t:labels.hero_product_image_info"
+    },
+    {
+      "type": "url",
+      "id": "link",
+      "label": "t:labels.image_link"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.size_and_position"
+    },
+    {
+      "type": "range",
+      "id": "x",
+      "label": "t:labels.position_horizontal",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "%",
+      "default": 50
+    },
+    {
+      "type": "range",
+      "id": "y",
+      "label": "t:labels.position_vertical",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "%",
+      "default": 50
+    },
+    {
+      "type": "range",
+      "id": "width",
+      "label": "t:labels.image_width",
+      "min": 5,
+      "max": 60,
+      "step": 1,
+      "unit": "%",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "rotate",
+      "label": "t:labels.rotation",
+      "min": -45,
+      "max": 45,
+      "step": 1,
+      "unit": "°",
+      "default": 0
+    }
+  ],
+  "presets": [{ "name": "t:general.hero_product" }]
+}
+{% endschema %}

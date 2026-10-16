@@ -1,0 +1,885 @@
+{%- comment -%}
+  Hero (Figma home): one full-width photo, the content on the left (any theme blocks: logo image,
+  headings, text, buttons), cut-out product photos placed freely on the right (e.g. on the lattice
+  shelves) and an optional vertical brand band on the right edge.
+
+  Two static blocks make the two areas: _hero-content (left, holds theme blocks) and _hero-products
+  (right, holds "Product image" blocks). Static = always there, in a fixed place; their children can
+  be added, removed and reordered as usual.
+
+  The photo is the page's main image (LCP): the image snippet loads it eagerly with high priority
+  when this is the first section, and nothing here animates it, so it paints as early as possible.
+{%- endcomment -%}
+
+{%- liquid
+  # Colour schemes with a fallback: a saved value can be empty ("") even when the editor shows the
+  # default as selected (the editor highlights the default when nothing is stored). Without a scheme
+  # the band would lose its red background, so empty falls back to the defaults (Cream / Red).
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-1'
+  assign band_scheme_id = section.settings.band_color_scheme.id | default: 'scheme-3'
+
+  assign is_first = false
+  if section.index == 1
+    assign is_first = true
+  endif
+-%}
+
+<div
+  class="hero full-width color-{{ scheme_id }} hero--height-{{ section.settings.height }} hero--x-{{ section.settings.content_x }} hero--y-{{ section.settings.content_y }} hero--scale-{{ section.settings.text_scaling }} hero--spacing-{{ section.settings.content_spacing }}"
+  style="--hero-overlay: {{ section.settings.overlay_opacity }}%; --hero-content-width: {{ section.settings.content_width }}; --hero-products-start: {{ section.settings.products_start }}%; --hero-pad-top: {{ section.settings.padding_top }}; --hero-pad-bottom: {{ section.settings.padding_bottom }}; --hero-pad-side: {{ section.settings.padding_side }};"
+>
+  <div class="hero__media">
+    {%- if section.settings.image != blank -%}
+      {% render 'image',
+        image: section.settings.image,
+        class: 'image--cover',
+        sizes: '100vw',
+        priority: is_first,
+        alt: ''
+      %}
+    {%- else -%}
+      {{ 'hero-apparel-1' | placeholder_svg_tag: 'hero__placeholder' }}
+    {%- endif -%}
+  </div>
+
+  <div class="hero__products">
+    {% content_for 'block', type: '_hero-products', id: 'hero-products' %}
+  </div>
+
+  <div class="hero__inner">
+    <div class="hero__content">
+      {% content_for 'block', type: '_hero-decorations', id: 'hero-decorations' %}
+      {% content_for 'block', type: '_hero-content', id: 'hero-content' %}
+    </div>
+  </div>
+
+  {%- if section.settings.show_band and section.settings.band_text != blank -%}
+    {%- comment -%} Decorative brand line; the same words are not needed twice by screen readers {%- endcomment -%}
+    <div class="hero__band color-{{ band_scheme_id }}" aria-hidden="true">
+      <span class="hero__band-text">{{ section.settings.band_text | escape }}</span>
+    </div>
+  {%- endif -%}
+</div>
+
+{% stylesheet %}
+  /*
+    Layers: the photo fills the section (z 0), an optional overlay tints it for readability, the content
+    sits on top on the left. The section's colour scheme sets the text colours (Figma: dark text on the
+    light plaster side).
+  */
+  .hero {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    background-color: var(--color-background);
+  }
+
+  .hero--height-full {
+    min-block-size: 100svh;
+  }
+
+  .hero--height-large {
+    min-block-size: 80svh;
+  }
+
+  .hero--height-medium {
+    min-block-size: 60svh;
+  }
+
+  .hero__media {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+  }
+
+  .hero__media .image {
+    block-size: 100%;
+  }
+
+  .hero__placeholder {
+    inline-size: 100%;
+    block-size: 100%;
+    background-color: var(--color-tint-subtle);
+    fill: var(--color-tint-border);
+  }
+
+  /* Optional tint over the photo, in the scheme's background colour (0 = none, the Figma default) */
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-color: color-mix(in srgb, var(--color-background) var(--hero-overlay), transparent);
+    pointer-events: none;
+  }
+
+  /*
+    Content column, measured from the SCREEN edge, not the page width: the Figma hero is a full-screen
+    composition (content ~90px from the left at 1920 = 4.7vw), so on a wide monitor the text stays on
+    the plaster side of the photo instead of drifting towards the middle.
+  */
+  /*
+    Sizes in the settings are the sizes at the 1920px Figma frame (plain numbers, so CSS can do maths
+    with them). --hero-px turns one of those design pixels into a real length:
+    - Fixed: 1px.
+    - Scale with screen: the Figma frame fitted to the window (see below), so the whole composition grows
+      on a 2560 monitor and shrinks on a laptop, keeping the Figma's proportions. max() keeps a minimum on
+      small screens.
+  */
+  .hero {
+    --hero-px: 1px;
+  }
+
+  /*
+    The Figma frame is 1920 x 1031. Scaling by the smaller of the two ratios (width or height) fits the
+    whole composition on screen: a wide-but-short laptop window scales by its height, so the content
+    never makes the hero taller than the screen; a tall window scales by its width.
+  */
+  .hero--scale-screen {
+    --hero-px: min(calc(100vw / 1920), calc(100svh / 1031));
+
+    /* The theme's type sizes, redefined for this section as their Figma size x screen ratio */
+    --font-size-display-xl: max(3.5rem, calc(108 * var(--hero-px)));
+    --font-size-display: max(3rem, calc(96 * var(--hero-px)));
+    --font-size-h1: max(2.25rem, calc(60 * var(--hero-px)));
+    --font-size-h2: max(1.75rem, calc(40 * var(--hero-px)));
+    --font-size-h3: max(1.375rem, calc(26 * var(--hero-px)));
+    --font-size-body-lg: max(1.125rem, calc(22 * var(--hero-px)));
+    --font-size-body: max(1rem, calc(20 * var(--hero-px)));
+    --font-size-body-sm: max(0.9375rem, calc(18 * var(--hero-px)));
+    --font-size-caption: max(0.875rem, calc(16 * var(--hero-px)));
+    --font-size-label: max(0.875rem, calc(18 * var(--hero-px)));
+    --font-size-small: max(0.8125rem, calc(14 * var(--hero-px)));
+  }
+
+  .hero__inner {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    inline-size: 100%;
+    padding-block: max(var(--space-2xl), calc(var(--hero-pad-top) * var(--hero-px)))
+      max(var(--space-xl), calc(var(--hero-pad-bottom) * var(--hero-px)));
+    padding-inline: max(var(--page-margin), calc(var(--hero-pad-side) * var(--hero-px)));
+  }
+
+  /* Content position: horizontal (start / center / end) */
+  .hero--x-start .hero__inner { justify-content: flex-start; }
+  .hero--x-center .hero__inner { justify-content: center; }
+  .hero--x-end .hero__inner { justify-content: flex-end; }
+
+  .hero--x-center .hero-content { align-items: center; }
+  .hero--x-end .hero-content { align-items: flex-end; }
+
+  /*
+    Content spacing. "Gap" = the Content block's fixed gap. The other three spread the blocks over the
+    full height of the hero (minus its padding), so the space adapts to each screen's height:
+    - between: first block at the top, last at the bottom, equal space in between
+    - around: equal space around each block (half-size space at the very top and bottom)
+    - evenly: exactly equal space everywhere, top and bottom included
+    For that, the content column stretches to the hero's height (vertical position no longer applies).
+  */
+  .hero:not(.hero--spacing-gap) {
+    align-items: stretch;
+  }
+
+  .hero:not(.hero--spacing-gap) .hero__content {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .hero:not(.hero--spacing-gap) .hero-content {
+    flex: 1;
+  }
+
+  .hero--spacing-between .hero-content { justify-content: space-between; }
+  .hero--spacing-around .hero-content { justify-content: space-around; }
+  .hero--spacing-evenly .hero-content { justify-content: space-evenly; }
+
+  /* Content position: vertical (start / center / end), inside the section's height */
+  .hero--y-start { align-items: flex-start; }
+  .hero--y-center { align-items: center; }
+  .hero--y-end { align-items: flex-end; }
+
+  /*
+    The content box: position for the decoration layer (inset 0 = exactly this box), isolation so
+    decorations and text stack only against each other (Layer 1-9 behind, text 10, 11-20 in front).
+  */
+  .hero__content {
+    position: relative;
+    isolation: isolate;
+    max-inline-size: calc(var(--hero-content-width) * var(--hero-px));
+  }
+
+  /* Product area: from "Products area start" to the band, full height; products are % inside it */
+  .hero__products {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: var(--hero-products-start);
+    inset-inline-end: 2.25rem;
+  }
+
+  /*
+    Vertical brand band (Figma: a red strip on the right edge, white uppercase text reading top to
+    bottom). writing-mode turns the line of text sideways; the band's own colour scheme paints it.
+  */
+  .hero__band {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 2.25rem;
+  }
+
+  .hero__band-text {
+    writing-mode: vertical-rl;
+    color: var(--color-text);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /*
+    Smaller screens (no mobile design yet, decision 7): the content spans the width and a light tint
+    keeps the text readable over the photo; the band is hidden (too narrow to read).
+  */
+  @media (max-width: 989px) {
+    .hero::before {
+      background-color: color-mix(in srgb, var(--color-background) 55%, transparent);
+    }
+
+    .hero__content {
+      max-inline-size: none;
+    }
+
+    /* Products need the photo's shelves to sit on, so they are hidden where the layout stacks */
+    .hero__products,
+    .hero__band {
+      display: none;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.hero",
+  "blocks": [
+    {
+      "type": "_hero-content"
+    },
+    {
+      "type": "_hero-decorations"
+    },
+    {
+      "type": "_hero-products"
+    }
+  ],
+  "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.image"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.image",
+      "info": "t:labels.hero_image_info"
+    },
+    {
+      "type": "range",
+      "id": "overlay_opacity",
+      "label": "t:labels.overlay_opacity",
+      "info": "t:labels.overlay_opacity_info",
+      "min": 0,
+      "max": 80,
+      "step": 5,
+      "unit": "%",
+      "default": 0
+    },
+    {
+      "type": "header",
+      "content": "t:labels.layout"
+    },
+    {
+      "type": "select",
+      "id": "height",
+      "label": "t:labels.section_height",
+      "options": [
+        {
+          "value": "full",
+          "label": "t:options.section_height.full"
+        },
+        {
+          "value": "large",
+          "label": "t:options.section_height.large"
+        },
+        {
+          "value": "medium",
+          "label": "t:options.section_height.medium"
+        }
+      ],
+      "default": "full"
+    },
+    {
+      "type": "range",
+      "id": "content_width",
+      "label": "t:labels.content_width",
+      "min": 400,
+      "max": 900,
+      "step": 10,
+      "unit": "px",
+      "default": 680,
+      "info": "t:labels.hero_size_info"
+    },
+    {
+      "type": "select",
+      "id": "content_x",
+      "label": "t:labels.content_position_x",
+      "options": [
+        {
+          "value": "start",
+          "label": "t:options.position.start"
+        },
+        {
+          "value": "center",
+          "label": "t:options.position.center"
+        },
+        {
+          "value": "end",
+          "label": "t:options.position.end"
+        }
+      ],
+      "default": "start"
+    },
+    {
+      "type": "select",
+      "id": "content_y",
+      "label": "t:labels.content_position_y",
+      "options": [
+        {
+          "value": "start",
+          "label": "t:options.position.top"
+        },
+        {
+          "value": "center",
+          "label": "t:options.position.middle"
+        },
+        {
+          "value": "end",
+          "label": "t:options.position.bottom"
+        }
+      ],
+      "default": "center",
+      "visible_if": "{{ section.settings.content_spacing == 'gap' }}"
+    },
+    {
+      "type": "select",
+      "id": "content_spacing",
+      "label": "t:labels.content_spacing",
+      "info": "t:labels.content_spacing_info",
+      "options": [
+        {
+          "value": "gap",
+          "label": "t:options.content_spacing.gap"
+        },
+        {
+          "value": "between",
+          "label": "t:options.content_spacing.between"
+        },
+        {
+          "value": "around",
+          "label": "t:options.content_spacing.around"
+        },
+        {
+          "value": "evenly",
+          "label": "t:options.content_spacing.evenly"
+        }
+      ],
+      "default": "gap"
+    },
+    {
+      "type": "select",
+      "id": "text_scaling",
+      "label": "t:labels.text_scaling",
+      "info": "t:labels.text_scaling_info",
+      "options": [
+        {
+          "value": "screen",
+          "label": "t:options.text_scaling.screen"
+        },
+        {
+          "value": "fixed",
+          "label": "t:options.text_scaling.fixed"
+        }
+      ],
+      "default": "screen"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.spacing"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 300,
+      "step": 5,
+      "unit": "px",
+      "default": 140
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 300,
+      "step": 5,
+      "unit": "px",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "padding_side",
+      "label": "t:labels.padding_side",
+      "info": "t:labels.hero_size_info",
+      "min": 0,
+      "max": 300,
+      "step": 5,
+      "unit": "px",
+      "default": 90
+    },
+    {
+      "type": "range",
+      "id": "products_start",
+      "label": "t:labels.products_start",
+      "info": "t:labels.products_start_info",
+      "min": 30,
+      "max": 70,
+      "step": 1,
+      "unit": "%",
+      "default": 45
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.brand_band"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_band",
+      "label": "t:labels.show_band",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "band_text",
+      "label": "t:labels.band_text",
+      "default": "OroSkin • Signature collection • Estd. 2026",
+      "visible_if": "{{ section.settings.show_band }}"
+    },
+    {
+      "type": "color_scheme",
+      "id": "band_color_scheme",
+      "label": "t:labels.band_color_scheme",
+      "default": "scheme-3",
+      "visible_if": "{{ section.settings.show_band }}"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.hero",
+      "blocks": [
+        {
+          "type": "_hero-decorations",
+          "id": "hero-decorations",
+          "static": true,
+          "blocks": [
+            {
+              "type": "_hero-decoration",
+              "settings": {
+                "kind": "compact",
+                "x": 34,
+                "y": 2,
+                "size": 52,
+                "color": "muted",
+                "opacity": 70,
+                "rotate": 0,
+                "animation": "float",
+                "speed": 7,
+                "delay": 0,
+                "layer": 5
+              }
+            },
+            {
+              "type": "_hero-decoration",
+              "settings": {
+                "kind": "brush",
+                "x": 100,
+                "y": 0,
+                "size": 64,
+                "color": "muted",
+                "opacity": 70,
+                "rotate": 20,
+                "animation": "sway",
+                "speed": 8,
+                "delay": 1,
+                "layer": 5
+              }
+            },
+            {
+              "type": "_hero-decoration",
+              "settings": {
+                "kind": "bottle",
+                "x": 74,
+                "y": 12,
+                "size": 56,
+                "color": "muted",
+                "opacity": 70,
+                "rotate": -20,
+                "animation": "float",
+                "speed": 6,
+                "delay": 2,
+                "layer": 5
+              }
+            },
+            {
+              "type": "_hero-decoration",
+              "settings": {
+                "kind": "perfume",
+                "x": 72,
+                "y": 30,
+                "size": 84,
+                "color": "muted",
+                "opacity": 70,
+                "rotate": 10,
+                "animation": "float",
+                "speed": 8,
+                "delay": 0.5,
+                "layer": 5
+              }
+            },
+            {
+              "type": "_hero-decoration",
+              "settings": {
+                "kind": "magnolia",
+                "x": 50,
+                "y": 38,
+                "size": 96,
+                "color": "muted",
+                "opacity": 100,
+                "rotate": 0,
+                "animation": "breathe",
+                "speed": 6,
+                "delay": 0,
+                "layer": 12
+              }
+            },
+            {
+              "type": "_hero-decoration",
+              "settings": {
+                "kind": "lipstick",
+                "x": -6,
+                "y": 58,
+                "size": 56,
+                "color": "muted",
+                "opacity": 70,
+                "rotate": -10,
+                "animation": "sway",
+                "speed": 7,
+                "delay": 1.5,
+                "layer": 5
+              }
+            },
+            {
+              "type": "_hero-decoration",
+              "settings": {
+                "kind": "perfume-round",
+                "x": 78,
+                "y": 82,
+                "size": 84,
+                "color": "muted",
+                "opacity": 70,
+                "rotate": -10,
+                "animation": "float",
+                "speed": 9,
+                "delay": 1,
+                "layer": 5
+              }
+            },
+            {
+              "type": "_hero-decoration",
+              "settings": {
+                "kind": "sparkle",
+                "x": 56,
+                "y": 0,
+                "size": 14,
+                "color": "white",
+                "opacity": 100,
+                "rotate": 0,
+                "animation": "twinkle",
+                "speed": 3,
+                "delay": 0,
+                "layer": 5
+              }
+            },
+            {
+              "type": "_hero-decoration",
+              "settings": {
+                "kind": "sparkle",
+                "x": 32,
+                "y": 12,
+                "size": 18,
+                "color": "white",
+                "opacity": 100,
+                "rotate": 0,
+                "animation": "twinkle",
+                "speed": 4,
+                "delay": 1,
+                "layer": 5
+              }
+            },
+            {
+              "type": "_hero-decoration",
+              "settings": {
+                "kind": "sparkle",
+                "x": 20,
+                "y": 0,
+                "size": 12,
+                "color": "accent",
+                "opacity": 30,
+                "rotate": 0,
+                "animation": "twinkle",
+                "speed": 3,
+                "delay": 2,
+                "layer": 5
+              }
+            },
+            {
+              "type": "_hero-decoration",
+              "settings": {
+                "kind": "sparkle",
+                "x": 78,
+                "y": 16,
+                "size": 16,
+                "color": "accent",
+                "opacity": 30,
+                "rotate": 0,
+                "animation": "twinkle",
+                "speed": 4,
+                "delay": 0.5,
+                "layer": 5
+              }
+            },
+            {
+              "type": "_hero-decoration",
+              "settings": {
+                "kind": "sparkle",
+                "x": 66,
+                "y": 38,
+                "size": 14,
+                "color": "white",
+                "opacity": 100,
+                "rotate": 0,
+                "animation": "twinkle",
+                "speed": 3,
+                "delay": 1.5,
+                "layer": 5
+              }
+            },
+            {
+              "type": "_hero-decoration",
+              "settings": {
+                "kind": "sparkle",
+                "x": -6,
+                "y": 50,
+                "size": 16,
+                "color": "white",
+                "opacity": 100,
+                "rotate": 0,
+                "animation": "twinkle",
+                "speed": 4,
+                "delay": 2.5,
+                "layer": 5
+              }
+            },
+            {
+              "type": "_hero-decoration",
+              "settings": {
+                "kind": "sparkle",
+                "x": 88,
+                "y": 62,
+                "size": 14,
+                "color": "accent",
+                "opacity": 30,
+                "rotate": 0,
+                "animation": "twinkle",
+                "speed": 3,
+                "delay": 1,
+                "layer": 5
+              }
+            }
+          ]
+        },
+        {
+          "type": "_hero-content",
+          "id": "hero-content",
+          "static": true,
+          "settings": {
+            "gap": 24
+          },
+          "blocks": [
+            {
+              "type": "image",
+              "settings": {
+                "width": 30,
+                "radius": "none"
+              }
+            },
+            {
+              "type": "group",
+              "settings": {
+                "layout_direction": "group--vertical",
+                "alignment": "flex-start",
+                "gap": 0
+              },
+              "blocks": [
+                {
+                  "type": "heading",
+                  "settings": {
+                    "heading": "It is time to",
+                    "font": "accent-font",
+                    "size": "h1",
+                    "tag": "p",
+                    "italic_style": "accent",
+                    "indent": 1.4
+                  }
+                },
+                {
+                  "type": "heading",
+                  "settings": {
+                    "heading": "Unveil your",
+                    "font": "accent-font",
+                    "size": "display",
+                    "tag": "h1",
+                    "color": "accent",
+                    "italic_style": "accent"
+                  }
+                },
+                {
+                  "type": "heading",
+                  "settings": {
+                    "heading": "Ultimate <em>glow</em>",
+                    "font": "heading-font",
+                    "size": "h1",
+                    "tag": "p",
+                    "italic_style": "brush",
+                    "indent": 1.6
+                  }
+                }
+              ]
+            },
+            {
+              "type": "heading",
+              "settings": {
+                "heading": "Premium skincare, fragrance & makeup",
+                "font": "body-font",
+                "size": "h3",
+                "tag": "p",
+                "italic_style": "accent"
+              }
+            },
+            {
+              "type": "text",
+              "settings": {
+                "text": "<p>Discover our meticulously curated collection, blending the finest natural ingredients with advanced anti-aging technology for a radiant transformation.</p>",
+                "style": "body-lg",
+                "max_width": "40ch"
+              }
+            },
+            {
+              "type": "group",
+              "settings": {
+                "layout_direction": "group--horizontal",
+                "row_alignment": "flex-start",
+                "vertical_alignment": "center",
+                "gap": 48
+              },
+              "blocks": [
+                {
+                  "type": "button",
+                  "settings": {
+                    "label": "Explore collection",
+                    "style": "primary"
+                  }
+                },
+                {
+                  "type": "button",
+                  "settings": {
+                    "label": "New arrivals",
+                    "style": "text",
+                    "show_arrow": true
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "_hero-products",
+          "id": "hero-products",
+          "static": true,
+          "blocks": [
+            {
+              "type": "_hero-product",
+              "settings": {
+                "x": 79,
+                "y": 23,
+                "width": 34,
+                "rotate": 0
+              }
+            },
+            {
+              "type": "_hero-product",
+              "settings": {
+                "x": 47,
+                "y": 50,
+                "width": 23,
+                "rotate": 0
+              }
+            },
+            {
+              "type": "_hero-product",
+              "settings": {
+                "x": 13,
+                "y": 74,
+                "width": 17,
+                "rotate": 0
+              }
+            },
+            {
+              "type": "_hero-product",
+              "settings": {
+                "x": 83,
+                "y": 83,
+                "width": 21,
+                "rotate": 0
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

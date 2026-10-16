@@ -8,7 +8,7 @@
     "collections": "Collections",
     "collections_grid": "Collections grid",
     "colors": "Colors",
-    "column": "Column",
+    "column": "Group (column)",
     "custom_section": "Custom section",
     "fonts": "Fonts",
     "footer": "Footer",
@@ -18,7 +18,7 @@
     "page": "Page",
     "password": "Password",
     "product": "Product",
-    "row": "Row",
+    "row": "Group (row)",
     "search": "Search",
     "text": "Text",
     "typography": "Typography",
@@ -28,11 +28,17 @@
     "menu_card": "Menu card",
     "heading": "Heading",
     "button": "Button",
-    "buttons": "Buttons",
+    "buttons": "Group (buttons row)",
     "image": "Image",
     "custom_liquid": "Custom Liquid",
     "product_cards": "Product cards",
-    "product_list": "Product list"
+    "product_list": "Product list",
+    "hero": "Hero",
+    "content": "Content",
+    "hero_products": "Products",
+    "hero_product": "Product image",
+    "hero_decoration": "Decoration",
+    "hero_decorations": "Decorations"
   },
   "labels": {
     "alignment": "Alignment",
@@ -167,7 +173,44 @@
     "accent_font": "Accent font",
     "accent_font_info": "For decorative lines and brush words, e.g. the hero's script. Try a script font such as Kaushan Script, or an elegant italic such as Cormorant.",
     "italic_style": "Italic words",
-    "italic_style_info": "Make words italic in the heading text to style them."
+    "italic_style_info": "Make words italic in the heading text to style them.",
+    "hero_image_info": "Full-width photo behind the content. Keep the left side calm (e.g. the cream plaster) so the text stays readable. At least 1920 x 1080 px.",
+    "overlay_opacity": "Overlay",
+    "overlay_opacity_info": "A tint over the photo in the colour scheme's background, if the text needs more contrast.",
+    "section_height": "Height",
+    "content_width": "Content width",
+    "brand_band": "Brand band",
+    "show_band": "Show vertical brand band",
+    "band_text": "Band text",
+    "band_color_scheme": "Band colour scheme",
+    "products_start": "Products area start",
+    "products_start_info": "Where the product area begins, as a share of the width. The content stays to its left.",
+    "hero_products_info": "Add product images and place them on the photo, e.g. on the shelves. They are hidden on small screens.",
+    "hero_product_image_info": "A cut-out product photo with a transparent background (PNG or WebP). Add alt text in Content > Files.",
+    "position_horizontal": "Horizontal position",
+    "position_vertical": "Vertical position",
+    "rotation": "Rotation",
+    "decoration": "Decoration",
+    "opacity": "Opacity",
+    "decoration_size": "Size",
+    "indent": "Indent",
+    "indent_info": "Moves the heading to the right, in units of its own text size (1 = one letter height).",
+    "hero_decorations_info": "Sketches, sparkles and flowers placed around the text. Hidden on small screens.",
+    "decoration_color_info": "Sketches and sparkles take this colour; photos and the magnolia keep their own.",
+    "layer": "Layer",
+    "layer_info": "1-9 = behind the text, 11-20 = in front of it. Higher numbers sit on top of lower ones.",
+    "decoration_animation_info": "Plays only when Theme settings > Animations is on, and never for visitors who prefer reduced motion.",
+    "animation_speed": "Speed",
+    "animation_speed_info": "Seconds for one full cycle: smaller is faster.",
+    "animation_delay": "Delay",
+    "content_position_x": "Content position (horizontal)",
+    "content_position_y": "Content position (vertical)",
+    "text_scaling": "Text and spacing size",
+    "text_scaling_info": "\"Scale with screen\" keeps the design's proportions: everything grows on big monitors and shrinks on laptops, with a minimum on phones.",
+    "hero_size_info": "Size on a 1920px-wide screen. With \"Scale with screen\" it grows and shrinks with the screen.",
+    "padding_side": "Side padding",
+    "content_spacing": "Content spacing",
+    "content_spacing_info": "Gap = the Content block's fixed gap. The other options spread the blocks over the hero's full height, so the space adapts to each screen."
   },
   "options": {
     "alignment": {
@@ -281,6 +324,51 @@
       "accent": "Accent colour",
       "brush": "Brush (accent font on a red brush)",
       "plain": "Plain italic"
+    },
+    "section_height": {
+      "full": "Full screen",
+      "large": "Large",
+      "medium": "Medium"
+    },
+    "decoration": {
+      "sparkle": "Sparkle",
+      "compact": "Powder compact",
+      "perfume": "Perfume bottle (bow)",
+      "perfume_round": "Round perfume bottle",
+      "lipstick": "Lipstick",
+      "brush": "Makeup brush",
+      "palette": "Eyeshadow palette",
+      "bottle": "Serum bottle",
+      "magnolia": "Gold magnolia",
+      "custom": "Custom image"
+    },
+    "decoration_color": {
+      "white": "White"
+    },
+    "decoration_animation": {
+      "breathe": "Breathe (grow and shrink)",
+      "float": "Float (up and down)",
+      "sway": "Sway (tilt)",
+      "twinkle": "Twinkle",
+      "spin": "Slow spin"
+    },
+    "position": {
+      "start": "Start",
+      "center": "Center",
+      "end": "End",
+      "top": "Top",
+      "middle": "Middle",
+      "bottom": "Bottom"
+    },
+    "text_scaling": {
+      "screen": "Scale with screen",
+      "fixed": "Fixed (theme sizes)"
+    },
+    "content_spacing": {
+      "gap": "Fixed gap",
+      "between": "Space between (top to bottom)",
+      "around": "Space around each block",
+      "evenly": "Space evenly"
     }
   },
   "color_scheme": {

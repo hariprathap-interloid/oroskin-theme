@@ -1,0 +1,330 @@
+{% doc %}
+  One decoration in the hero (Figma: sketched makeup, sparkles and the gold magnolia around the
+  headline). Placed by percentages of the content area, so it keeps its spot next to the text.
+
+  - Sketches (assets/deco-*.png) are the Figma's own drawings, cut out of its line pattern and used as a
+    CSS mask, so they take the chosen colour. Sparkle = assets/icon-sparkle.svg; Magnolia =
+    assets/hero-magnolia.webp; Custom image = an uploaded picture.
+  - Layer = z-index: 1-9 behind the text, 11-20 in front of it (the text is at 10).
+  - Animation: breathe (scale), float (up and down), sway (tilt), twinkle (sparkle), slow spin. Only runs
+    when the theme's "Enable animations" is on and the visitor hasn't asked for reduced motion.
+
+  Decorative only: hidden from screen readers.
+
+  @example
+  {% content_for 'block', type: '_hero-decoration', id: 'hero-decoration' %}
+{% enddoc %}
+
+{%- liquid
+  assign kind = block.settings.kind
+  assign show = true
+  if kind == 'custom' and block.settings.image == blank
+    assign show = false
+  endif
+
+  # Sketch masks: file + its proportions (so the box has the drawing's shape before the mask paints it)
+  assign mask_file = blank
+  case kind
+    when 'compact'
+      assign mask_file = 'deco-compact.png'
+      assign mask_ratio = '200 / 240'
+    when 'perfume'
+      assign mask_file = 'deco-perfume.png'
+      assign mask_ratio = '240 / 231'
+    when 'perfume-round'
+      assign mask_file = 'deco-perfume-round.png'
+      assign mask_ratio = '218 / 240'
+    when 'lipstick'
+      assign mask_file = 'deco-lipstick.png'
+      assign mask_ratio = '240 / 228'
+    when 'brush'
+      assign mask_file = 'deco-brush.png'
+      assign mask_ratio = '240 / 238'
+    when 'palette'
+      assign mask_file = 'deco-palette.png'
+      assign mask_ratio = '240 / 232'
+    when 'bottle'
+      assign mask_file = 'deco-bottle.png'
+      assign mask_ratio = '240 / 174'
+  endcase
+-%}
+
+{%- if show -%}
+  <div
+    class="hero-decoration hero-decoration--{{ block.settings.color }} hero-decoration--anim-{{ block.settings.animation }}"
+    style="--deco-x: {{ block.settings.x }}%; --deco-y: {{ block.settings.y }}%; --deco-size: {{ block.settings.size }}; --deco-rotate: {{ block.settings.rotate }}deg; --deco-opacity: {{ block.settings.opacity | divided_by: 100.0 }}; --deco-layer: {{ block.settings.layer }}; --deco-speed: {{ block.settings.speed }}s; --deco-delay: {{ block.settings.delay }}s;"
+    aria-hidden="true"
+    {{ block.shopify_attributes }}
+  >
+    {%- if mask_file != blank -%}
+      <span
+        class="hero-decoration__art hero-decoration__mask"
+        style="--deco-mask: url('{{ mask_file | asset_url }}'); aspect-ratio: {{ mask_ratio }};"
+      ></span>
+    {%- elsif kind == 'magnolia' -%}
+      <img
+        class="hero-decoration__art"
+        src="{{ 'hero-magnolia.webp' | asset_url }}"
+        alt=""
+        width="249"
+        height="247"
+        loading="lazy"
+      >
+    {%- elsif kind == 'custom' -%}
+      {{
+        block.settings.image
+        | image_url: width: 400
+        | image_tag: class: 'hero-decoration__art', alt: '', loading: 'lazy', widths: '200, 400'
+      }}
+    {%- else -%}
+      <span class="hero-decoration__art">{{ 'icon-sparkle.svg' | inline_asset_content }}</span>
+    {%- endif -%}
+  </div>
+{%- endif -%}
+
+{% stylesheet %}
+  /*
+    Placed by its centre (translate -50%) and tilted with rotate; the animations use transform, which
+    the browser adds on top of translate/rotate, so an animated decoration keeps its place and tilt.
+    Opacity sits on the inner art, so "twinkle" can fade it without losing the chosen opacity.
+  */
+  .hero-decoration {
+    position: absolute;
+    inset-inline-start: var(--deco-x);
+    inset-block-start: var(--deco-y);
+    z-index: var(--deco-layer, 5);
+    inline-size: calc(var(--deco-size) * var(--hero-px, 1px)); /* design px x the hero's scale */
+    translate: -50% -50%;
+    rotate: var(--deco-rotate);
+    pointer-events: none;
+  }
+
+  .hero-decoration__art {
+    display: block;
+    inline-size: 100%;
+    block-size: auto;
+    opacity: var(--deco-opacity, 1);
+  }
+
+  .hero-decoration__art :is(svg) {
+    display: block;
+    inline-size: 100%;
+    block-size: auto;
+  }
+
+  /* Sketch = a box in the chosen colour, cut to the drawing's lines */
+  .hero-decoration__mask {
+    background-color: currentcolor;
+    mask: var(--deco-mask) center / contain no-repeat;
+  }
+
+  .hero-decoration--muted {
+    color: color-mix(in srgb, var(--color-text) 55%, var(--color-background));
+  }
+
+  .hero-decoration--accent {
+    color: var(--color-accent);
+  }
+
+  .hero-decoration--white {
+    color: #ffffff;
+  }
+
+  /* Animations (only with "Enable animations" on: the .animations-on class on <html>) */
+  @keyframes deco-breathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+  }
+
+  @keyframes deco-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  @keyframes deco-sway {
+    0%, 100% { transform: rotate(-5deg); }
+    50% { transform: rotate(5deg); }
+  }
+
+  @keyframes deco-twinkle {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(0.6); opacity: 0.35; }
+  }
+
+  @keyframes deco-spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .animations-on .hero-decoration:not(.hero-decoration--anim-none) {
+    animation-duration: var(--deco-speed, 6s);
+    animation-delay: var(--deco-delay, 0s);
+    animation-iteration-count: infinite;
+    animation-timing-function: ease-in-out;
+  }
+
+  .animations-on .hero-decoration--anim-breathe { animation-name: deco-breathe; }
+  .animations-on .hero-decoration--anim-float { animation-name: deco-float; }
+  .animations-on .hero-decoration--anim-sway { animation-name: deco-sway; }
+  .animations-on .hero-decoration--anim-twinkle { animation-name: deco-twinkle; }
+
+  .animations-on .hero-decoration--anim-spin {
+    animation-name: deco-spin;
+    animation-timing-function: linear;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-decoration {
+      animation: none !important;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.hero_decoration",
+  "tag": null,
+  "settings": [
+    {
+      "type": "select",
+      "id": "kind",
+      "label": "t:labels.decoration",
+      "options": [
+        { "value": "sparkle", "label": "t:options.decoration.sparkle" },
+        { "value": "compact", "label": "t:options.decoration.compact" },
+        { "value": "perfume", "label": "t:options.decoration.perfume" },
+        { "value": "perfume-round", "label": "t:options.decoration.perfume_round" },
+        { "value": "lipstick", "label": "t:options.decoration.lipstick" },
+        { "value": "brush", "label": "t:options.decoration.brush" },
+        { "value": "palette", "label": "t:options.decoration.palette" },
+        { "value": "bottle", "label": "t:options.decoration.bottle" },
+        { "value": "magnolia", "label": "t:options.decoration.magnolia" },
+        { "value": "custom", "label": "t:options.decoration.custom" }
+      ],
+      "default": "sparkle"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.image",
+      "visible_if": "{{ block.settings.kind == 'custom' }}"
+    },
+    {
+      "type": "select",
+      "id": "color",
+      "label": "t:labels.text_color",
+      "info": "t:labels.decoration_color_info",
+      "options": [
+        { "value": "muted", "label": "t:options.text_color.muted" },
+        { "value": "accent", "label": "t:options.text_color.accent" },
+        { "value": "white", "label": "t:options.decoration_color.white" }
+      ],
+      "default": "muted"
+    },
+    {
+      "type": "range",
+      "id": "opacity",
+      "label": "t:labels.opacity",
+      "min": 10,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 70
+    },
+    {
+      "type": "header",
+      "content": "t:labels.size_and_position"
+    },
+    {
+      "type": "range",
+      "id": "x",
+      "label": "t:labels.position_horizontal",
+      "min": -10,
+      "max": 110,
+      "step": 2,
+      "unit": "%",
+      "default": 50
+    },
+    {
+      "type": "range",
+      "id": "y",
+      "label": "t:labels.position_vertical",
+      "min": -10,
+      "max": 110,
+      "step": 2,
+      "unit": "%",
+      "default": 50
+    },
+    {
+      "type": "range",
+      "id": "size",
+      "label": "t:labels.decoration_size",
+      "min": 8,
+      "max": 200,
+      "step": 2,
+      "unit": "px",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "rotate",
+      "label": "t:labels.rotation",
+      "min": -180,
+      "max": 180,
+      "step": 5,
+      "unit": "°",
+      "default": 0
+    },
+    {
+      "type": "range",
+      "id": "layer",
+      "label": "t:labels.layer",
+      "info": "t:labels.layer_info",
+      "min": 1,
+      "max": 20,
+      "step": 1,
+      "default": 5
+    },
+    {
+      "type": "header",
+      "content": "t:labels.animation"
+    },
+    {
+      "type": "select",
+      "id": "animation",
+      "label": "t:labels.animation",
+      "info": "t:labels.decoration_animation_info",
+      "options": [
+        { "value": "none", "label": "t:options.animation.none" },
+        { "value": "breathe", "label": "t:options.decoration_animation.breathe" },
+        { "value": "float", "label": "t:options.decoration_animation.float" },
+        { "value": "sway", "label": "t:options.decoration_animation.sway" },
+        { "value": "twinkle", "label": "t:options.decoration_animation.twinkle" },
+        { "value": "spin", "label": "t:options.decoration_animation.spin" }
+      ],
+      "default": "float"
+    },
+    {
+      "type": "range",
+      "id": "speed",
+      "label": "t:labels.animation_speed",
+      "info": "t:labels.animation_speed_info",
+      "min": 2,
+      "max": 20,
+      "step": 1,
+      "unit": "s",
+      "default": 6
+    },
+    {
+      "type": "range",
+      "id": "delay",
+      "label": "t:labels.animation_delay",
+      "min": 0,
+      "max": 5,
+      "step": 0.5,
+      "unit": "s",
+      "default": 0
+    }
+  ],
+  "presets": [{ "name": "t:general.hero_decoration" }]
+}
+{% endschema %}

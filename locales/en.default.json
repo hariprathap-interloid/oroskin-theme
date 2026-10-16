@@ -86,6 +86,9 @@
   "sections": {
     "custom_liquid": {
       "empty": "Add your code in the \"Liquid code\" setting."
+    },
+    "hero": {
+      "product_placeholder": "Product image: choose one in the block settings"
     }
   },
   "products": {

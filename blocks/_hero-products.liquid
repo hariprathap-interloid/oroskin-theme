@@ -1,0 +1,35 @@
+{% doc %}
+  The hero's product layer (static block, right side): a box over the right part of the photo where
+  "Product image" blocks (cut-out product photos) are placed freely, e.g. on the Figma's lattice
+  shelves. Only the Hero section uses it.
+
+  @example
+  {% content_for 'block', type: '_hero-products', id: 'hero-products' %}
+{% enddoc %}
+
+<div class="hero-products" {{ block.shopify_attributes }}>
+  {% content_for 'blocks' %}
+</div>
+
+{% stylesheet %}
+  /* Fills the hero's product area (sized by .hero__products in the section); children are positioned in % */
+  .hero-products {
+    position: relative;
+    inline-size: 100%;
+    block-size: 100%;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.hero_products",
+  "tag": null,
+  "blocks": [{ "type": "_hero-product" }],
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "t:labels.hero_products_info"
+    }
+  ]
+}
+{% endschema %}

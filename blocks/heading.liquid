@@ -26,9 +26,7 @@
   -%}
   <{{ tag }}
     class="heading heading--{{ block.settings.size }} heading--{{ block.settings.font }} heading--{{ block.settings.color }} heading--align-{{ block.settings.alignment }} heading--italic-{{ block.settings.italic_style }}{% if block.settings.use_custom_size %} heading--custom-size{% endif %}"
-    {% if size_style != blank %}
-      style="{{ size_style | strip }}"
-    {% endif %}
+    style="--heading-indent: {{ block.settings.indent }};{% if size_style != blank %} {{ size_style | strip }}{% endif %}"
     {{ block.shopify_attributes }}
   >
     {{- block.settings.heading -}}
@@ -49,6 +47,11 @@
     line-height: var(--line-height-heading);
     text-align: var(--heading-align, start);
     text-wrap: balance; /* even line lengths for multi-line headings */
+  }
+
+  /* Indent in em (scales with the heading's own size), e.g. the hero's "It is time to" starting further in */
+  .heading {
+    margin-inline-start: calc(var(--heading-indent, 0) * 1em);
   }
 
   .heading--align-left {
@@ -114,6 +117,13 @@
     font-family: var(--font-accent--family);
     font-style: var(--font-accent--style);
     font-weight: var(--font-accent--weight);
+  }
+
+  /* Body font: a sans-serif heading in medium weight (Figma hero: "Premium Skincare, Fragrance & Makeup") */
+  .heading--body-font {
+    font-family: var(--font-body--family);
+    font-style: normal;
+    font-weight: var(--font-weight-medium);
   }
 
   /* Italic words (made italic in the editor): accent colour, the red brush, or just italic */
@@ -223,7 +233,8 @@
       "label": "t:labels.font",
       "options": [
         { "value": "heading-font", "label": "t:options.font.heading" },
-        { "value": "accent-font", "label": "t:options.font.accent" }
+        { "value": "accent-font", "label": "t:options.font.accent" },
+        { "value": "body-font", "label": "t:options.font.body" }
       ],
       "default": "heading-font"
     },
@@ -244,6 +255,17 @@
       "id": "alignment",
       "label": "t:labels.alignment",
       "default": "left"
+    },
+    {
+      "type": "range",
+      "id": "indent",
+      "label": "t:labels.indent",
+      "info": "t:labels.indent_info",
+      "min": 0,
+      "max": 5,
+      "step": 0.1,
+      "unit": "em",
+      "default": 0
     }
   ],
   "presets": [{ "name": "t:general.heading" }]

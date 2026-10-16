@@ -1,0 +1,44 @@
+{% doc %}
+  The hero's content column (static block, left side): holds any theme blocks (logo image, headings,
+  text, buttons...) stacked from the top. Only the Hero section uses it (private block: the name
+  starts with an underscore).
+
+  @example
+  {% content_for 'block', type: '_hero-content', id: 'hero-content' %}
+{% enddoc %}
+
+<div class="hero-content" style="--hero-content-gap: {{ block.settings.gap }}px;" {{ block.shopify_attributes }}>
+  {% content_for 'blocks' %}
+</div>
+
+{% stylesheet %}
+  /* Layer 10: decorations with Layer 1-9 sit behind the text, 11-20 in front of it */
+  .hero-content {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--hero-content-gap, 24px);
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.content",
+  "tag": null,
+  "blocks": [{ "type": "@theme" }],
+  "settings": [
+    {
+      "type": "range",
+      "id": "gap",
+      "label": "t:labels.gap",
+      "min": 0,
+      "max": 96,
+      "step": 4,
+      "unit": "px",
+      "default": 24
+    }
+  ]
+}
+{% endschema %}

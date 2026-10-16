@@ -1,0 +1,44 @@
+{% doc %}
+  The hero's decoration layer (static block): holds the "Decoration" blocks (sketched makeup, sparkles,
+  the gold magnolia) as their own group in the editor, separate from the text. It covers the content
+  area exactly, so decorations are placed relative to the text.
+
+  It doesn't create its own stacking layer (no z-index here), so each decoration's Layer setting is
+  compared directly with the text (which sits at layer 10).
+
+  @example
+  {% content_for 'block', type: '_hero-decorations', id: 'hero-decorations' %}
+{% enddoc %}
+
+<div class="hero-decorations" {{ block.shopify_attributes }}>
+  {% content_for 'blocks' %}
+</div>
+
+{% stylesheet %}
+  .hero-decorations {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  /* Smaller screens: the text fills the width, so scattered decorations would sit on it */
+  @media (max-width: 989px) {
+    .hero-decorations {
+      display: none;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.hero_decorations",
+  "tag": null,
+  "blocks": [{ "type": "_hero-decoration" }],
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "t:labels.hero_decorations_info"
+    }
+  ]
+}
+{% endschema %}
