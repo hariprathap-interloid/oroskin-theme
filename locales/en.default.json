@@ -88,7 +88,9 @@
       "empty": "Add your code in the \"Liquid code\" setting."
     },
     "hero": {
-      "product_placeholder": "Product image: choose one in the block settings"
+      "product_placeholder": "Product image: choose one in the block settings",
+      "pause": "Pause animation",
+      "play": "Play animation"
     }
   },
   "products": {

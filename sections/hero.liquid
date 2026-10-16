@@ -24,8 +24,11 @@
   endif
 -%}
 
-<div
+<hero-showcase
   class="hero full-width color-{{ scheme_id }} hero--height-{{ section.settings.height }} hero--x-{{ section.settings.content_x }} hero--y-{{ section.settings.content_y }} hero--scale-{{ section.settings.text_scaling }} hero--spacing-{{ section.settings.content_spacing }}"
+  data-rotate="{{ section.settings.rotate_products }}"
+  data-interval="{{ section.settings.rotate_interval | times: 1000 }}"
+  data-resume="{{ section.settings.resume_delay | times: 1000 }}"
   style="--hero-overlay: {{ section.settings.overlay_opacity }}%; --hero-content-width: {{ section.settings.content_width }}; --hero-products-start: {{ section.settings.products_start }}%; --hero-pad-top: {{ section.settings.padding_top }}; --hero-pad-bottom: {{ section.settings.padding_bottom }}; --hero-pad-side: {{ section.settings.padding_side }};"
 >
   <div class="hero__media">
@@ -53,13 +56,31 @@
     </div>
   </div>
 
+  {%- comment -%}
+    Pause / play (WCAG 2.2.2: content that moves on its own for more than 5 seconds needs a way to stop
+    it). Stops the product rotation and the decoration animations. Hidden until the script finds something
+    that actually moves, so it never shows as a button that does nothing.
+  {%- endcomment -%}
+  <button
+    type="button"
+    class="hero__pause"
+    aria-pressed="false"
+    data-label-pause="{{ 'sections.hero.pause' | t | escape }}"
+    data-label-play="{{ 'sections.hero.play' | t | escape }}"
+    hidden
+  >
+    <span class="visually-hidden">{{ 'sections.hero.pause' | t }}</span>
+    <svg class="hero__pause-icon hero__pause-icon--pause" aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="16" height="16"><rect x="3.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/><rect x="9.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/></svg>
+    <svg class="hero__pause-icon hero__pause-icon--play" aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="16" height="16"><path d="M4.5 2.8v10.4a.8.8 0 0 0 1.2.7l8.4-5.2a.8.8 0 0 0 0-1.4L5.7 2.1a.8.8 0 0 0-1.2.7z" fill="currentColor"/></svg>
+  </button>
+
   {%- if section.settings.show_band and section.settings.band_text != blank -%}
     {%- comment -%} Decorative brand line; the same words are not needed twice by screen readers {%- endcomment -%}
     <div class="hero__band color-{{ band_scheme_id }}" aria-hidden="true">
       <span class="hero__band-text">{{ section.settings.band_text | escape }}</span>
     </div>
   {%- endif -%}
-</div>
+</hero-showcase>
 
 {% stylesheet %}
   /*
@@ -67,6 +88,10 @@
     sits on top on the left. The section's colour scheme sets the text colours (Figma: dark text on the
     light plaster side).
   */
+  hero-showcase {
+    display: flex;
+  }
+
   .hero {
     position: relative;
     isolation: isolate;
@@ -154,11 +179,17 @@
     --font-size-small: max(0.8125rem, calc(14 * var(--hero-px)));
   }
 
+  /*
+    The content layer spans the full width over the product area, so it lets the pointer through
+    (pointer-events: none) and only the content column takes clicks again: otherwise hovering or
+    clicking a product would never reach it.
+  */
   .hero__inner {
     position: relative;
     z-index: 1;
     display: flex;
     inline-size: 100%;
+    pointer-events: none;
     padding-block: max(var(--space-2xl), calc(var(--hero-pad-top) * var(--hero-px)))
       max(var(--space-xl), calc(var(--hero-pad-bottom) * var(--hero-px)));
     padding-inline: max(var(--page-margin), calc(var(--hero-pad-side) * var(--hero-px)));
@@ -209,6 +240,7 @@
   .hero__content {
     position: relative;
     isolation: isolate;
+    pointer-events: auto;
     max-inline-size: calc(var(--hero-content-width) * var(--hero-px));
   }
 
@@ -245,6 +277,66 @@
   }
 
   /*
+    When the active product changes, only the brush WORD fades out and back in: the script wraps the
+    word in .hero-brush-text, so the red brush (drawn by the em's ::before) stays still.
+  */
+  .hero-brush-text {
+    display: inline-block;
+    min-inline-size: var(--brush-word-width, auto); /* the widest brush word: the brush keeps one size */
+    text-align: center;
+    transition: opacity var(--duration-base) var(--ease-out), scale var(--duration-base) var(--ease-out);
+  }
+
+  .hero-brush-text.is-swapping {
+    opacity: 0;
+    scale: 0.9;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-brush-text {
+      transition: none;
+    }
+  }
+
+  /* Pause / play: a small round glass button, bottom right (left of the brand band) */
+  .hero__pause {
+    position: absolute;
+    inset-block-end: var(--space-lg);
+    inset-inline-end: calc(2.25rem + var(--space-lg));
+    z-index: 3;
+    display: grid;
+    place-items: center;
+    inline-size: 2.75rem;
+    block-size: 2.75rem;
+    margin: 0;
+    padding: 0;
+    border: 1px solid #ffffff;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-glass-strong);
+    box-shadow: var(--shadow-header);
+    color: var(--color-text);
+    cursor: pointer;
+  }
+
+  .hero__pause[hidden] {
+    display: none;
+  }
+
+  .hero__pause-icon--play,
+  .hero__pause[aria-pressed='true'] .hero__pause-icon--pause {
+    display: none;
+  }
+
+  .hero__pause[aria-pressed='true'] .hero__pause-icon--play {
+    display: block;
+  }
+
+  /* Paused: decorations freeze where they are (and the rotation stops, in the script) */
+  .hero--paused .hero-decoration {
+    animation-play-state: paused !important;
+  }
+
+  /*
     Smaller screens (no mobile design yet, decision 7): the content spans the width and a light tint
     keeps the text readable over the photo; the band is hidden (too narrow to read).
   */
@@ -264,6 +356,190 @@
     }
   }
 {% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <hero-showcase>: the Figma hero states. Products with a label or brush word take turns being "active":
+   * the active one shows its name tag, and the headline's brush word changes to its word ("glow" -> "scent").
+   * Start: the product whose brush word matches the headline's own word (e.g. "glow") is active from the
+   * first paint, and only products rotate. If no product matches, the first state is the headline's word
+   * with no product active.
+   *
+   * - Rotates every data-interval ms when data-rotate is true, only while the hero is on screen, and never
+   *   for visitors who prefer reduced motion.
+   * - Hovering or focusing a product shows it straight away and pauses the rotation; when the pointer or
+   *   focus leaves, the rotation resumes after data-resume ms (2-3 s by default).
+   * - In the theme editor, selecting a product block shows its state.
+   * Without JavaScript nothing changes: the default headline shows and the labels stay hidden.
+   */
+  class HeroShowcase extends HTMLElement {
+    connectedCallback() {
+      this.setUpPauseButton();
+      this.products = [...this.querySelectorAll('[data-hero-product]')];
+      const brushEm = this.querySelector('.heading--italic-brush em');
+      if (!this.products.length) return;
+
+      // Wrap the brush word in its own span, so the swap fades only the text and the brush stays still
+      if (brushEm) {
+        this.brush = brushEm.querySelector('.hero-brush-text');
+        if (!this.brush) {
+          this.brush = document.createElement('span');
+          this.brush.className = 'hero-brush-text';
+          this.brush.textContent = brushEm.textContent;
+          brushEm.replaceChildren(this.brush);
+        }
+      }
+
+      this.defaultWord = this.brush ? this.brush.textContent : '';
+      this.fixBrushWidth();
+
+      // The product that owns the headline's word ("glow") is the starting state
+      const ownWord = this.defaultWord.trim().toLowerCase();
+      this.home = this.products.findIndex(
+        (product) => (product.dataset.brushWord || '').trim().toLowerCase() === ownWord && ownWord !== ''
+      );
+      this.state = -2; // nothing shown yet
+      this.show(this.home); // -1 = default (no product active) when no product owns the word
+      this.interval = Number(this.dataset.interval) || 4000;
+      this.resumeDelay = Number(this.dataset.resume) || 2500;
+      this.canRotate =
+        this.dataset.rotate === 'true' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      this.products.forEach((product, index) => {
+        product.addEventListener('mouseenter', () => this.hold(index));
+        product.addEventListener('mouseleave', () => this.release());
+        product.addEventListener('focusin', () => this.hold(index));
+        product.addEventListener('focusout', () => this.release());
+      });
+
+      // Theme editor: selecting a product block previews its state
+      this.onBlockSelect = (event) => {
+        const index = this.products.findIndex((product) => product.contains(event.target));
+        if (index > -1) this.hold(index);
+      };
+      this.onBlockDeselect = () => this.release();
+      document.addEventListener('shopify:block:select', this.onBlockSelect);
+      document.addEventListener('shopify:block:deselect', this.onBlockDeselect);
+
+      // Rotate only while the hero is visible
+      this.observer = new IntersectionObserver(([entry]) => {
+        this.visible = entry.isIntersecting;
+        if (this.visible && !this.held) this.start();
+        else this.stop();
+      });
+      this.observer.observe(this);
+    }
+
+    disconnectedCallback() {
+      this.stop();
+      clearTimeout(this.resumeTimer);
+      this.observer?.disconnect();
+      document.removeEventListener('shopify:block:select', this.onBlockSelect);
+      document.removeEventListener('shopify:block:deselect', this.onBlockDeselect);
+    }
+
+    /**
+     * Pause / play (WCAG 2.2.2). Shown only if something moves: the rotation, or decorations that animate
+     * (animations on, no reduced motion). Pausing stops both; playing restarts them.
+     */
+    setUpPauseButton() {
+      this.pauseButton = this.querySelector('.hero__pause');
+      if (!this.pauseButton) return;
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const rotates = this.dataset.rotate === 'true' && this.querySelector('[data-hero-product]');
+      const decorationsMove =
+        document.documentElement.classList.contains('animations-on') &&
+        this.querySelector('.hero-decoration:not(.hero-decoration--anim-none)');
+      if (reduced || (!rotates && !decorationsMove)) return;
+
+      this.pauseButton.hidden = false;
+      this.pauseButton.addEventListener('click', () => {
+        this.paused = !this.paused;
+        this.pauseButton.setAttribute('aria-pressed', String(this.paused));
+        this.pauseButton.querySelector('.visually-hidden').textContent = this.paused
+          ? this.pauseButton.dataset.labelPlay
+          : this.pauseButton.dataset.labelPause;
+        this.classList.toggle('hero--paused', this.paused);
+        if (this.paused) this.stop();
+        else if (this.visible && !this.held) this.start();
+      });
+    }
+
+    start() {
+      if (!this.canRotate || this.timer || this.paused) return;
+      this.timer = setInterval(() => this.show(this.next()), this.interval);
+    }
+
+    /**
+     * Keeps the brush one size: measures every brush word (the headline's and each product's) in the real
+     * font, and gives the word box the widest width, in em so it still scales with the text. Waits for the
+     * fonts, because a word measured in the fallback font would have the wrong width.
+     */
+    async fixBrushWidth() {
+      if (!this.brush) return;
+      await document.fonts?.ready;
+      const words = [this.defaultWord, ...this.products.map((product) => product.dataset.brushWord || '')].filter(Boolean);
+      const shown = this.brush.textContent;
+      this.brush.style.minInlineSize = '0px';
+      let widest = 0;
+      for (const word of words) {
+        this.brush.textContent = word;
+        // offsetWidth ignores the swap animation's scale (getBoundingClientRect would include it)
+        widest = Math.max(widest, this.brush.offsetWidth);
+      }
+      this.brush.textContent = shown;
+      this.brush.style.minInlineSize = '';
+      const fontSize = parseFloat(getComputedStyle(this.brush).fontSize) || 16;
+      this.brush.style.setProperty('--brush-word-width', `${(widest / fontSize).toFixed(3)}em`);
+    }
+
+    /* Next state: with a "home" product only products rotate; without one, the default state is part of the loop */
+    next() {
+      if (this.state + 1 < this.products.length) return this.state + 1;
+      return this.home > -1 ? 0 : -1;
+    }
+
+    stop() {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+
+    hold(index) {
+      this.held = true;
+      clearTimeout(this.resumeTimer);
+      this.stop();
+      this.show(index);
+    }
+
+    release() {
+      this.held = false;
+      clearTimeout(this.resumeTimer);
+      this.resumeTimer = setTimeout(() => {
+        if (this.held) return;
+        if (!this.canRotate || this.paused) this.show(this.home);
+        else if (this.visible) this.start();
+      }, this.resumeDelay);
+    }
+
+    show(index) {
+      if (index === this.state) return;
+      this.state = index;
+      this.products.forEach((product, i) => product.classList.toggle('is-active', i === index));
+
+      if (!this.brush) return;
+      const word = (index > -1 && this.products[index].dataset.brushWord) || this.defaultWord;
+      if (this.brush.textContent === word) return;
+      this.brush.classList.add('is-swapping');
+      clearTimeout(this.swapTimer);
+      this.swapTimer = setTimeout(() => {
+        this.brush.textContent = word;
+        this.brush.classList.remove('is-swapping');
+      }, 200);
+    }
+  }
+
+  if (!customElements.get('hero-showcase')) customElements.define('hero-showcase', HeroShowcase);
+{% endjavascript %}
 
 {% schema %}
 {
@@ -464,6 +740,36 @@
       "step": 1,
       "unit": "%",
       "default": 45
+    },
+    {
+      "type": "checkbox",
+      "id": "rotate_products",
+      "label": "t:labels.rotate_products",
+      "info": "t:labels.rotate_products_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "rotate_interval",
+      "label": "t:labels.rotate_interval",
+      "min": 2,
+      "max": 10,
+      "step": 0.5,
+      "unit": "s",
+      "default": 4,
+      "visible_if": "{{ section.settings.rotate_products }}"
+    },
+    {
+      "type": "range",
+      "id": "resume_delay",
+      "label": "t:labels.resume_delay",
+      "info": "t:labels.resume_delay_info",
+      "min": 1,
+      "max": 6,
+      "step": 0.5,
+      "unit": "s",
+      "default": 2.5,
+      "visible_if": "{{ section.settings.rotate_products }}"
     },
     {
       "type": "color_scheme",
@@ -846,7 +1152,11 @@
                 "x": 79,
                 "y": 23,
                 "width": 34,
-                "rotate": 0
+                "rotate": 0,
+                "label": "Makeup",
+                "brush_word": "glamour",
+                "label_x": -4,
+                "label_y": 50
               }
             },
             {
@@ -855,7 +1165,11 @@
                 "x": 47,
                 "y": 50,
                 "width": 23,
-                "rotate": 0
+                "rotate": 0,
+                "label": "Skincare",
+                "brush_word": "radiance",
+                "label_x": -4,
+                "label_y": 50
               }
             },
             {
@@ -864,7 +1178,11 @@
                 "x": 13,
                 "y": 74,
                 "width": 17,
-                "rotate": 0
+                "rotate": 0,
+                "label": "Serums",
+                "brush_word": "renewal",
+                "label_x": -4,
+                "label_y": 50
               }
             },
             {
@@ -873,7 +1191,11 @@
                 "x": 83,
                 "y": 83,
                 "width": 21,
-                "rotate": 0
+                "rotate": 0,
+                "label": "Fragrance",
+                "brush_word": "scent",
+                "label_x": -4,
+                "label_y": 50
               }
             }
           ]

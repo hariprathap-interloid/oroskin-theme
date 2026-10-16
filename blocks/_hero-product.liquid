@@ -5,26 +5,73 @@
 
   Without an image: a dashed outline in the theme editor (to place it), nothing on the live store.
 
+  Shop link: pick a Collection or a Product. Its title becomes the name tag and its page the link, so
+  the merchant only types when they want different wording (Label) or a different link (Custom link).
+  Order: Label > product title > collection title; Custom link > product > collection. Without an
+  uploaded cut-out, the product's own photo is used.
+
+  Showcase (Figma hero states): the name tag shows next to the product in script ("Makeup ↗"); Brush word
+  replaces the headline's brush word ("glow" -> "scent") while this product is active. The hero cycles
+  through products that have a name or brush word (see sections/hero.liquid).
+
   @example
   {% content_for 'block', type: '_hero-product', id: 'hero-product' %}
 {% enddoc %}
 
-{%- if block.settings.image != blank or request.design_mode -%}
+{%- liquid
+  # Label and brush word without stray spaces: pasted text often ends in a non-breaking space
+  # (the character between the quotes below), which strip alone doesn't remove and which would push
+  # the arrow away from the word.
+  assign product_label = block.settings.label | replace: ' ', ' ' | strip
+  assign product_word = block.settings.brush_word | replace: ' ', ' ' | strip
+
+  # Shop link: the product or collection gives the name, link and (fallback) image
+  assign linked_product = block.settings.product
+  assign linked_collection = block.settings.collection
+
+  if product_label == blank
+    if linked_product != blank
+      assign product_label = linked_product.title
+    elsif linked_collection != blank
+      assign product_label = linked_collection.title
+    endif
+  endif
+
+  assign product_link = nil
+  if block.settings.link != blank
+    assign product_link = block.settings.link
+  elsif linked_product != blank
+    assign product_link = linked_product.url
+  elsif linked_collection != blank
+    assign product_link = linked_collection.url
+  endif
+
+  assign product_image = block.settings.image
+  if product_image == blank and linked_product != blank
+    assign product_image = linked_product.featured_image
+  endif
+-%}
+
+{%- if product_image != blank or request.design_mode -%}
   <div
     class="hero-product"
-    style="--hero-product-x: {{ block.settings.x }}%; --hero-product-y: {{ block.settings.y }}%; --hero-product-width: {{ block.settings.width }}%; --hero-product-rotate: {{ block.settings.rotate }}deg;"
+    style="--hero-product-x: {{ block.settings.x }}%; --hero-product-y: {{ block.settings.y }}%; --hero-product-width: {{ block.settings.width }}%; --hero-product-rotate: {{ block.settings.rotate }}deg; --hero-label-x: {{ block.settings.label_x }}%; --hero-label-y: {{ block.settings.label_y }}%;"
+    {% if product_label != blank or product_word != blank %}
+      data-hero-product
+      data-brush-word="{{ product_word | escape }}"
+    {% endif %}
     {{ block.shopify_attributes }}
   >
-    {%- if block.settings.image != blank -%}
-      {%- liquid
-        # Real product photos with alt text (from the image); linked when a link is set
-        assign product_link = nil
-        if block.settings.link != blank
-          assign product_link = block.settings.link
-        endif
-      -%}
+    {%- if product_label != blank -%}
+      {%- comment -%} Decorative name tag: the product image (and its link) carries the real name {%- endcomment -%}
+      <span class="hero-product__label" aria-hidden="true">
+        <span class="hero-product__label-text">{{ product_label | escape }}</span>
+        <span class="hero-product__label-arrow">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+      </span>
+    {%- endif -%}
+    {%- if product_image != blank -%}
       {% render 'image',
-        image: block.settings.image,
+        image: product_image,
         url: product_link,
         sizes: '(min-width: 990px) 25vw, 40vw',
         class: 'hero-product__image'
@@ -59,6 +106,101 @@
     filter: drop-shadow(0 12px 18px #00000033);
   }
 
+  /*
+    Name tag (Figma: "Fragrance" / "Makeup": white script letters with a thick dark-red outline, like a
+    sticker, and a thin white arrow pointing up-right, sitting to the LEFT of the product at its middle).
+    Position: the label's right edge sits on the Label position point and it is centred on it vertically,
+    so the defaults (-4% / 50%) place it just left of the product, halfway down.
+    Hidden until the product is the active one (class is-active, set by <hero-showcase>).
+  */
+  .hero-product__label {
+    position: absolute;
+    inset-inline-start: var(--hero-label-x);
+    inset-block-start: var(--hero-label-y);
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 0.2em;
+    translate: -100% -50%;
+    rotate: calc(var(--hero-product-rotate) * -1);
+    font-family: var(--font-accent--family);
+    font-style: var(--font-accent--style);
+    font-weight: var(--font-accent--weight);
+    font-size: max(1.75rem, calc(64 * var(--hero-px, 1px)));
+    line-height: 1;
+    white-space: nowrap;
+    opacity: 0;
+    scale: 0.85;
+    transform-origin: right center;
+    pointer-events: none;
+    transition:
+      opacity var(--duration-base) var(--ease-out),
+      scale var(--duration-base) var(--ease-out);
+  }
+
+  /*
+    The sticker outline: a thick stroke in the accent colour, painted BEHIND the white letters
+    (paint-order: stroke fill), so the letters stay full width and only the outside is red.
+    The text-shadow ring is a fallback for browsers without stroke paint-order.
+  */
+  .hero-product__label-text {
+    color: #ffffff;
+    -webkit-text-stroke: 0.16em var(--color-accent);
+    paint-order: stroke fill;
+    text-shadow: 0 0.08em 0.25em #00000040;
+  }
+
+  @supports not (paint-order: stroke fill) {
+    .hero-product__label-text {
+      -webkit-text-stroke: 0;
+      text-shadow:
+        0.05em 0 0 var(--color-accent),
+        -0.05em 0 0 var(--color-accent),
+        0 0.05em 0 var(--color-accent),
+        0 -0.05em 0 var(--color-accent),
+        0.04em 0.04em 0 var(--color-accent),
+        -0.04em 0.04em 0 var(--color-accent),
+        0.04em -0.04em 0 var(--color-accent),
+        -0.04em -0.04em 0 var(--color-accent);
+    }
+  }
+
+  /* Thin white arrow (the theme's arrow icon turned to point up-right), slightly above the middle */
+  .hero-product__label-arrow {
+    display: inline-flex;
+    align-self: flex-start;
+    margin-block-start: 0.1em;
+    color: #ffffff;
+    filter: drop-shadow(0 1px 2px #00000059);
+  }
+
+  .hero-product__label-arrow svg {
+    inline-size: 0.42em;
+    block-size: auto;
+    rotate: -45deg;
+  }
+
+  .hero-product.is-active .hero-product__label {
+    opacity: 1;
+    scale: 1;
+  }
+
+  /* The active product lifts slightly */
+  .hero-product .image > img {
+    transition: transform var(--duration-base) var(--ease-out);
+  }
+
+  .hero-product.is-active .image > img {
+    transform: scale(1.04);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-product__label,
+    .hero-product .image > img {
+      transition: none;
+    }
+  }
+
   .hero-product__empty {
     display: grid;
     place-items: center;
@@ -79,15 +221,75 @@
   "tag": null,
   "settings": [
     {
+      "type": "header",
+      "content": "t:labels.image"
+    },
+    {
       "type": "image_picker",
       "id": "image",
       "label": "t:labels.image",
       "info": "t:labels.hero_product_image_info"
     },
     {
+      "type": "header",
+      "content": "t:labels.shop_link"
+    },
+    {
+      "type": "paragraph",
+      "content": "t:labels.shop_link_info"
+    },
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "t:labels.collection"
+    },
+    {
+      "type": "product",
+      "id": "product",
+      "label": "t:labels.product"
+    },
+    {
       "type": "url",
       "id": "link",
-      "label": "t:labels.image_link"
+      "label": "t:labels.custom_link",
+      "info": "t:labels.custom_link_info"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.name_tag"
+    },
+    {
+      "type": "text",
+      "id": "label",
+      "label": "t:labels.label_override",
+      "info": "t:labels.label_override_info"
+    },
+    {
+      "type": "text",
+      "id": "brush_word",
+      "label": "t:labels.brush_word",
+      "info": "t:labels.brush_word_info"
+    },
+    {
+      "type": "range",
+      "id": "label_x",
+      "label": "t:labels.label_position_x",
+      "info": "t:labels.label_position_info",
+      "min": -50,
+      "max": 150,
+      "step": 2,
+      "unit": "%",
+      "default": -4
+    },
+    {
+      "type": "range",
+      "id": "label_y",
+      "label": "t:labels.label_position_y",
+      "min": -50,
+      "max": 150,
+      "step": 2,
+      "unit": "%",
+      "default": 50
     },
     {
       "type": "header",
@@ -134,6 +336,10 @@
       "default": 0
     }
   ],
-  "presets": [{ "name": "t:general.hero_product" }]
+  "presets": [
+    {
+      "name": "t:general.hero_product"
+    }
+  ]
 }
 {% endschema %}
