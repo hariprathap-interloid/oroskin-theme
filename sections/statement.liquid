@@ -1,0 +1,284 @@
+{%- comment -%}
+  Statement: a centred eyebrow and one very large sentence (Figma "Find your glow here" / "All the
+  [3 photos] products you need →>, right at our shop!!!").
+
+  The sentence is ONE text setting, so it stays one real heading that reads as a normal sentence.
+  The merchant places the extras with short codes typed into the text:
+  - [images] -> the overlapping stack of up to 3 small photos (Image 1-3)
+  - [arrow]  -> the double arrow
+  - [break]  -> a line break on desktop (ignored on phones and tablets, where the text wraps on its own)
+  Italic text (Ctrl+I in the editor) shows in the highlight colour instead of italic: "shop<em>!!!</em>".
+
+  The highlight colour (gold in the Figma) is a setting, not the scheme's accent: Scheme 1's accent is
+  the brand red. The eyebrow, the italic text and the arrow each get their own CSS variable, so the
+  scroll scene (M4.4) can recolour them separately (on gold, the "!!!" turns white and the arrow dark).
+{%- endcomment -%}
+
+{%- liquid
+  # Never animate the first section on the page (hero / LCP must paint immediately)
+  assign animation = section.settings.animation
+  if section.index == 1
+    assign animation = 'none'
+  endif
+
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-1'
+
+  # The photo stack. Each photo: a small, lazy image (shown about 90px wide, so 100/200/300px files cover
+  # every screen density). alt="" because the photos are decoration: the sentence already says it all.
+  # In the theme editor, empty slots show a placeholder so the stack can be judged before choosing photos.
+  capture statement_images
+    for i in (1..3)
+      assign image_key = 'image_' | append: i
+      assign statement_image = section.settings[image_key]
+      if statement_image != blank
+        echo '<span class="statement__image">'
+        echo statement_image | image_url: width: 300 | image_tag: widths: '100, 200, 300', sizes: '92px', alt: '', loading: 'lazy'
+        echo '</span>'
+      elsif request.design_mode
+        assign placeholder_name = 'product-' | append: i
+        echo '<span class="statement__image statement__image--placeholder">'
+        echo placeholder_name | placeholder_svg_tag
+        echo '</span>'
+      endif
+    endfor
+  endcapture
+
+  if statement_images != blank
+    assign statement_images = statement_images | prepend: '<span class="statement__images">' | append: '</span>'
+  endif
+
+  assign arrow_icon = 'icon-arrow-double.svg' | inline_asset_content
+  assign statement_arrow = arrow_icon | prepend: '<span class="statement__arrow">' | append: '</span>'
+  assign statement_break = '<br class="statement__break">'
+
+  # Swap the short codes for the markup above (each one worked out first: filters can't go inside
+  # another filter's arguments)
+  assign statement_text = section.settings.text | replace: '[images]', statement_images | replace: '[arrow]', statement_arrow | replace: '[break]', statement_break
+-%}
+
+{%- if section.settings.text != blank or section.settings.eyebrow != blank -%}
+  <div
+    class="statement full-width color-{{ scheme_id }}"
+    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --statement-highlight: {{ section.settings.highlight_color }};"
+  >
+    <animate-on-scroll class="statement__inner">
+      {%- if section.settings.eyebrow != blank -%}
+        <p
+          class="eyebrow eyebrow--center statement__eyebrow"
+          {% if animation != 'none' %}
+            data-animate="{{ animation }}"
+          {% endif %}
+        >
+          {{ section.settings.eyebrow | escape }}
+        </p>
+      {%- endif -%}
+
+      {%- if section.settings.text != blank -%}
+        <h2
+          class="statement__title"
+          {% if animation != 'none' %}
+            data-animate="{{ animation }}"
+            style="--animate-delay: 120ms;"
+          {% endif %}
+        >
+          {{ statement_text }}
+        </h2>
+      {%- endif -%}
+    </animate-on-scroll>
+  </div>
+{%- endif -%}
+
+{% stylesheet %}
+  .statement {
+    /* Separate colours for each highlighted part (the M4.4 scroll scene changes them one by one) */
+    --statement-eyebrow-color: var(--statement-highlight);
+    --statement-em-color: var(--statement-highlight);
+    --statement-arrow-color: var(--statement-highlight);
+
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  .statement__inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(2.5rem, 1.5rem + 4vw, 7.5rem); /* 40px on phones -> 120px at 1920px (Figma) */
+    inline-size: min(
+      calc(var(--page-width) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+    text-align: center;
+  }
+
+  .statement__eyebrow {
+    margin: 0;
+    color: var(--statement-eyebrow-color);
+  }
+
+  /*
+    The sentence: 56px on phones -> 108px at 1920px (the display-xl token). The tall line height leaves
+    room for the photo stack, which is taller than the letters. Everything inside is sized in em, so the
+    photos and the arrow grow and shrink with the text.
+  */
+  .statement__title {
+    max-inline-size: 15em;
+    margin: 0;
+    font-size: var(--font-size-display-xl);
+    line-height: 1.6;
+  }
+
+  .statement__title em {
+    font-style: normal;
+    color: var(--statement-em-color);
+  }
+
+  /* [break]: only on wide screens, where the Figma's three lines fit; smaller screens wrap freely */
+  .statement__break {
+    display: none;
+  }
+
+  @media (min-width: 990px) {
+    .statement__break {
+      display: inline;
+    }
+  }
+
+  /* [images]: up to three rounded photos overlapping like a fanned hand of cards */
+  .statement__images {
+    display: inline-flex;
+    margin-inline: 0.1em;
+    vertical-align: middle;
+  }
+
+  .statement__image {
+    display: block;
+    flex: none;
+    inline-size: 0.85em;
+    block-size: 1.27em;
+    overflow: hidden;
+    border: 0.03em solid #ffffff;
+    border-radius: 0.16em;
+    background-color: var(--color-tint);
+    box-shadow: 0 0.04em 0.12em #00000026;
+  }
+
+  .statement__image + .statement__image {
+    margin-inline-start: -0.13em;
+  }
+
+  .statement__image > :is(img, svg) {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  /* [arrow]: the Figma's double arrow (→>), drawn with currentColor so one variable colours it */
+  .statement__arrow {
+    display: inline-block;
+    margin-inline: 0.12em;
+    color: var(--statement-arrow-color);
+    vertical-align: middle;
+  }
+
+  .statement__arrow svg {
+    display: block;
+    inline-size: 1.5em;
+    block-size: auto;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.statement",
+  "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "Find your glow here"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "text",
+      "label": "t:labels.statement_text",
+      "info": "t:labels.statement_text_info",
+      "default": "All the [images] products you [break]need [arrow], right at [break]our shop<em>!!!</em>"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_1",
+      "label": "t:labels.image_1"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_2",
+      "label": "t:labels.image_2"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_3",
+      "label": "t:labels.image_3"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "color",
+      "id": "highlight_color",
+      "label": "t:labels.highlight_color",
+      "info": "t:labels.highlight_color_info",
+      "default": "#c8a34c"
+    },
+    {
+      "type": "select",
+      "id": "animation",
+      "label": "t:labels.animation",
+      "info": "t:labels.animation_info",
+      "options": [
+        { "value": "none", "label": "t:options.animation.none" },
+        { "value": "fade-up", "label": "t:options.animation.fade_up" },
+        { "value": "zoom-in", "label": "t:options.animation.zoom_in" }
+      ],
+      "default": "fade-up"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 96
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 160
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.statement"
+    }
+  ]
+}
+{% endschema %}

@@ -38,7 +38,8 @@
     "hero_products": "Products",
     "hero_product": "Product image",
     "hero_decoration": "Decoration",
-    "hero_decorations": "Decorations"
+    "hero_decorations": "Decorations",
+    "statement": "Statement"
   },
   "labels": {
     "alignment": "Alignment",
@@ -231,7 +232,16 @@
     "custom_link_info": "Only if the image should open a different page than the collection or product.",
     "name_tag": "Name tag",
     "label_override": "Label",
-    "label_override_info": "Leave empty to use the collection or product title. Type here only to change the wording."
+    "label_override_info": "Leave empty to use the collection or product title. Type here only to change the wording.",
+    "content": "Content",
+    "eyebrow": "Eyebrow",
+    "statement_text": "Statement",
+    "statement_text_info": "Type [images] for the photo stack, [arrow] for the double arrow and [break] for a line break on desktop. Italic text shows in the highlight colour.",
+    "image_1": "Image 1",
+    "image_2": "Image 2",
+    "image_3": "Image 3",
+    "highlight_color": "Highlight colour",
+    "highlight_color_info": "The eyebrow, the arrow and italic text. Gold on a light background is hard to read for small text: check the contrast."
   },
   "options": {
     "alignment": {
