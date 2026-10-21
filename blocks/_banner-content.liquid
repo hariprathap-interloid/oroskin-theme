@@ -1,0 +1,59 @@
+{% doc %}
+  The Image banner's content column (static block, left side): any theme blocks (eyebrow text,
+  headings, text, buttons...) stacked from the top. Only the Image banner uses it (private block).
+
+  @example
+  {% content_for 'block', type: '_banner-content', id: 'banner-content' %}
+{% enddoc %}
+
+<div
+  class="banner-content"
+  style="--banner-content-gap: {{ block.settings.gap }}px; --banner-content-width: {{ block.settings.max_width }}px;"
+  {{ block.shopify_attributes }}
+>
+  {% content_for 'blocks' %}
+</div>
+
+{% stylesheet %}
+  .banner-content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--banner-content-gap, 24px);
+    max-inline-size: var(--banner-content-width, 760px);
+  }
+
+  .banner-content:not(:has(*)) {
+    display: none;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.content",
+  "tag": null,
+  "blocks": [{ "type": "@theme" }],
+  "settings": [
+    {
+      "type": "range",
+      "id": "gap",
+      "label": "t:labels.gap",
+      "min": 0,
+      "max": 96,
+      "step": 4,
+      "unit": "px",
+      "default": 32
+    },
+    {
+      "type": "range",
+      "id": "max_width",
+      "label": "t:labels.content_width",
+      "min": 400,
+      "max": 1000,
+      "step": 20,
+      "unit": "px",
+      "default": 780
+    }
+  ]
+}
+{% endschema %}

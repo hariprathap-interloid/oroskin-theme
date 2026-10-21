@@ -1,0 +1,368 @@
+{%- comment -%}
+  Image banner: a full-width photo with a dark overlay, content on the left (any theme blocks:
+  eyebrow, headings, text, buttons) and optional glass highlight cards on the right.
+  Two presets build the Figma homepage sections from this one file:
+  - "Image banner with stats" = The New Glow Manifesto (full screen, gradient, 3 highlight cards)
+  - "Promo banner" = The Ultimate Glow-Up Event (shorter, even tint, no cards; the Figma countdown is
+    a parked feature, decision 6)
+
+  Two static blocks make the two areas (as in the Hero): _banner-content and _highlight-cards.
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-5'
+  assign overlay_opacity = section.settings.overlay_opacity | divided_by: 100.0
+
+  # First section on the page: the photo is the main image (eager + high priority) and nothing animates
+  assign is_first = false
+  assign animation = section.settings.animation
+  if section.index == 1
+    assign is_first = true
+    assign animation = 'none'
+  endif
+-%}
+
+<div
+  class="image-banner full-width color-{{ scheme_id }} image-banner--{{ section.settings.height }} image-banner--overlay-{{ section.settings.overlay_style }}"
+  style="--banner-overlay: {{ overlay_opacity }}; --section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
+>
+  <div class="image-banner__media">
+    {%- if section.settings.image != blank -%}
+      {% render 'image',
+        image: section.settings.image,
+        class: 'image--cover',
+        sizes: '100vw',
+        priority: is_first
+      %}
+    {%- else -%}
+      {{ 'lifestyle-1' | placeholder_svg_tag: 'image-banner__placeholder' }}
+    {%- endif -%}
+  </div>
+  <div class="image-banner__overlay" aria-hidden="true"></div>
+
+  <animate-on-scroll class="image-banner__inner">
+    <div
+      class="image-banner__content"
+      {% if animation != 'none' %}
+        data-animate="{{ animation }}"
+      {% endif %}
+    >
+      {% content_for 'block', type: '_banner-content', id: 'banner-content' %}
+    </div>
+    <div class="image-banner__cards">
+      {% content_for 'block', type: '_highlight-cards', id: 'highlight-cards' %}
+    </div>
+  </animate-on-scroll>
+</div>
+
+{% stylesheet %}
+  /*
+    The photo and the overlay fill the section (absolute, behind); the content sits on top in the
+    page-width column, centred vertically.
+  */
+  .image-banner {
+    position: relative;
+    display: grid;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .image-banner--full {
+    min-block-size: 100svh;
+  }
+
+  .image-banner--large {
+    min-block-size: 80svh;
+  }
+
+  .image-banner--medium {
+    min-block-size: 64svh;
+  }
+
+  .image-banner--small {
+    min-block-size: 48svh;
+  }
+
+  .image-banner__media,
+  .image-banner__overlay {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+  }
+
+  .image-banner__media .image,
+  .image-banner__placeholder {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  .image-banner__placeholder {
+    background-color: var(--color-tint);
+  }
+
+  /*
+    Overlay: black, faded by the Overlay strength setting (opacity), so white text stays readable.
+    Gradient (Manifesto): dark on the left behind the text, clear on the right where the face is.
+    Even (promo): the same tint everywhere.
+  */
+  .image-banner__overlay {
+    opacity: var(--banner-overlay);
+  }
+
+  .image-banner--overlay-gradient .image-banner__overlay {
+    background: linear-gradient(90deg, #000000 0%, #000000b3 30%, #00000000 65%);
+  }
+
+  .image-banner--overlay-gradient-right .image-banner__overlay {
+    background: linear-gradient(270deg, #000000 0%, #000000b3 30%, #00000000 65%);
+  }
+
+  .image-banner--overlay-even .image-banner__overlay {
+    background-color: #000000;
+  }
+
+  .image-banner__inner {
+    display: grid;
+    align-items: center;
+    gap: var(--space-xl);
+    inline-size: min(
+      calc(var(--page-width) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  /* From tablet landscape up: content left, cards right (the cards column only when it has cards) */
+  @media (min-width: 990px) {
+    .image-banner__inner {
+      grid-template-columns: 1fr auto;
+    }
+  }
+
+  .image-banner__cards:not(:has(.highlight-card)) {
+    display: none;
+  }
+
+  /* Phones: the text needs the full width, so the tint covers the whole photo */
+  @media (max-width: 749px) {
+    .image-banner--overlay-gradient .image-banner__overlay,
+    .image-banner--overlay-gradient-right .image-banner__overlay {
+      background: linear-gradient(0deg, #000000 0%, #000000b3 60%, #00000066 100%);
+    }
+
+    .image-banner .highlight-cards {
+      flex-flow: row wrap;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.image_banner",
+  "blocks": [{ "type": "_banner-content" }, { "type": "_highlight-cards" }],
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.image",
+      "info": "t:labels.image_banner_image_info"
+    },
+    {
+      "type": "select",
+      "id": "height",
+      "label": "t:labels.section_height",
+      "options": [
+        { "value": "full", "label": "t:options.banner_height.full" },
+        { "value": "large", "label": "t:options.banner_height.large" },
+        { "value": "medium", "label": "t:options.banner_height.medium" },
+        { "value": "small", "label": "t:options.banner_height.small" },
+        { "value": "auto", "label": "t:options.banner_height.auto" }
+      ],
+      "default": "full"
+    },
+    {
+      "type": "select",
+      "id": "overlay_style",
+      "label": "t:labels.overlay_style",
+      "options": [
+        { "value": "gradient", "label": "t:options.overlay_style.gradient" },
+        { "value": "gradient-right", "label": "t:options.overlay_style.gradient_right" },
+        { "value": "even", "label": "t:options.overlay_style.even" }
+      ],
+      "default": "gradient"
+    },
+    {
+      "type": "range",
+      "id": "overlay_opacity",
+      "label": "t:labels.overlay_opacity",
+      "min": 0,
+      "max": 90,
+      "step": 5,
+      "unit": "%",
+      "default": 75
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "info": "t:labels.image_banner_scheme_info",
+      "default": "scheme-5"
+    },
+    {
+      "type": "select",
+      "id": "animation",
+      "label": "t:labels.animation",
+      "info": "t:labels.animation_info",
+      "options": [
+        { "value": "none", "label": "t:options.animation.none" },
+        { "value": "fade-up", "label": "t:options.animation.fade_up" },
+        { "value": "zoom-in", "label": "t:options.animation.zoom_in" }
+      ],
+      "default": "fade-up"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 120
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 120
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.image_banner_stats",
+      "settings": {
+        "height": "full",
+        "overlay_style": "gradient",
+        "overlay_opacity": 80,
+        "color_scheme": "scheme-5"
+      },
+      "blocks": [
+        {
+          "type": "_banner-content",
+          "id": "banner-content",
+          "static": true,
+          "settings": { "gap": 40, "max_width": 780 },
+          "blocks": [
+            {
+              "type": "text",
+              "settings": {
+                "text": "<p>The Oroskin edit</p>",
+                "style": "eyebrow",
+                "color": "accent",
+                "max_width": "none"
+              }
+            },
+            {
+              "type": "heading",
+              "settings": {
+                "heading": "The New <em>Glow</em> Manifesto",
+                "size": "h1",
+                "use_custom_size": true,
+                "custom_size": 72,
+                "tag": "h2",
+                "italic_style": "accent"
+              }
+            },
+            {
+              "type": "text",
+              "settings": {
+                "text": "<p>This season, beauty transcends skin — it becomes a language. How our editors reimagined the ritual of light across six cities.</p>",
+                "style": "body-lg",
+                "max_width": "60ch"
+              }
+            },
+            {
+              "type": "button",
+              "settings": {
+                "label": "Read the editorial",
+                "style": "primary",
+                "show_arrow": true
+              }
+            }
+          ]
+        },
+        {
+          "type": "_highlight-cards",
+          "id": "highlight-cards",
+          "static": true,
+          "blocks": [
+            { "type": "_highlight-card", "settings": { "icon": "book", "label": "Stories", "value": "48 Articles" } },
+            { "type": "_highlight-card", "settings": { "icon": "video", "label": "Films", "value": "Ritual Series" } },
+            { "type": "_highlight-card", "settings": { "icon": "users", "label": "Community", "value": "42k Members" } }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "t:general.promo_banner",
+      "settings": {
+        "height": "medium",
+        "overlay_style": "even",
+        "overlay_opacity": 45,
+        "color_scheme": "scheme-5"
+      },
+      "blocks": [
+        {
+          "type": "_banner-content",
+          "id": "banner-content",
+          "static": true,
+          "settings": { "gap": 32, "max_width": 880 },
+          "blocks": [
+            {
+              "type": "heading",
+              "settings": {
+                "heading": "The Ultimate Glow-Up Event: <em>Up to 40% Off</em>",
+                "size": "h1",
+                "use_custom_size": true,
+                "custom_size": 72,
+                "tag": "h2",
+                "italic_style": "accent"
+              }
+            },
+            {
+              "type": "text",
+              "settings": {
+                "text": "<p>Your skincare ritual, upgraded. Lock in exclusive savings on our award-winning makeup, targeted serums, and luxury fragrances before time runs out.</p>",
+                "style": "body-lg",
+                "max_width": "60ch"
+              }
+            },
+            {
+              "type": "button",
+              "settings": {
+                "label": "Shop the event",
+                "style": "primary",
+                "show_arrow": true
+              }
+            }
+          ]
+        },
+        {
+          "type": "_highlight-cards",
+          "id": "highlight-cards",
+          "static": true
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

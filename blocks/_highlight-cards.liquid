@@ -1,0 +1,155 @@
+{% doc %}
+  The Image banner's card column (static block, right side): a stack of glass highlight cards
+  (Figma Manifesto: "Stories / 48 Articles", "Films / Ritual Series", "Community / 42k Members").
+  Empty = nothing shown, and the content column gets the full width.
+
+  Corner radius applies to every card. Entrance: the cards slide in one after another from the chosen
+  side (top / bottom / left / right) when they scroll into view, over "Duration", each starting "Delay
+  between cards" after the one before. Uses the theme's <animate-on-scroll> (the section wraps this
+  block in it): no animation with reduced motion, when the theme's animations are off, or in the editor.
+
+  @example
+  {% content_for 'block', type: '_highlight-cards', id: 'highlight-cards' %}
+{% enddoc %}
+
+<div
+  class="highlight-cards"
+  style="--highlight-card-radius: {{ block.settings.radius }}px; --slide-duration: {{ block.settings.duration }}ms; --slide-stagger: {{ block.settings.stagger }}ms;"
+  {% if block.settings.animation != 'none' %}
+    data-animate="{{ block.settings.animation }}"
+  {% endif %}
+  {{ block.shopify_attributes }}
+>
+  {% content_for 'blocks' %}
+</div>
+
+{% stylesheet %}
+  .highlight-cards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+  }
+
+  .highlight-cards:not(:has(.highlight-card)) {
+    display: none;
+  }
+
+  /*
+    Slide-in: the column itself only triggers (it stays visible); its cards start moved and
+    transparent, then glide to their place when the column gets is-visible. Each card waits
+    (its position - 1) x the stagger, so they arrive one after another.
+    The selectors repeat [data-animate] with :not(.is-visible) to outrank the theme's generic
+    "hide until visible" rule in critical.css, which would otherwise hide the whole column.
+  */
+  .highlight-cards[data-animate='slide-top'] { --slide-from: 0, -3rem; }
+  .highlight-cards[data-animate='slide-bottom'] { --slide-from: 0, 3rem; }
+  .highlight-cards[data-animate='slide-left'] { --slide-from: -4rem, 0; }
+  .highlight-cards[data-animate='slide-right'] { --slide-from: 4rem, 0; }
+
+  .highlight-cards > :nth-child(2) { --card-index: 1; }
+  .highlight-cards > :nth-child(3) { --card-index: 2; }
+  .highlight-cards > :nth-child(4) { --card-index: 3; }
+  .highlight-cards > :nth-child(5) { --card-index: 4; }
+  .highlight-cards > :nth-child(n + 6) { --card-index: 5; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .js.animations-on .highlight-cards[data-animate],
+    .js.animations-on .highlight-cards[data-animate]:not(.is-visible) {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+
+    .js.animations-on .highlight-cards[data-animate] .highlight-card {
+      transition:
+        opacity var(--slide-duration) var(--ease-out),
+        transform var(--slide-duration) var(--ease-out),
+        background-color var(--duration-fast) var(--ease-out),
+        translate var(--duration-fast) var(--ease-out);
+      transition-delay: calc(var(--card-index, 0) * var(--slide-stagger)), calc(var(--card-index, 0) * var(--slide-stagger)), 0s, 0s;
+    }
+
+    .js.animations-on .highlight-cards[data-animate]:not(.is-visible) .highlight-card {
+      opacity: 0;
+      transform: translate(var(--slide-from));
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.highlight_cards",
+  "tag": null,
+  "blocks": [
+    {
+      "type": "_highlight-card"
+    }
+  ],
+  "settings": [
+    {
+      "type": "range",
+      "id": "radius",
+      "label": "t:labels.corner_radius",
+      "min": 0,
+      "max": 40,
+      "step": 2,
+      "unit": "px",
+      "default": 24
+    },
+    {
+      "type": "header",
+      "content": "t:labels.card_animation"
+    },
+    {
+      "type": "select",
+      "id": "animation",
+      "label": "t:labels.slide_in_from",
+      "options": [
+        {
+          "value": "none",
+          "label": "t:options.slide_in.none"
+        },
+        {
+          "value": "slide-top",
+          "label": "t:options.slide_in.top"
+        },
+        {
+          "value": "slide-bottom",
+          "label": "t:options.slide_in.bottom"
+        },
+        {
+          "value": "slide-left",
+          "label": "t:options.slide_in.left"
+        },
+        {
+          "value": "slide-right",
+          "label": "t:options.slide_in.right"
+        }
+      ],
+      "default": "slide-right"
+    },
+    {
+      "type": "range",
+      "id": "duration",
+      "label": "t:labels.animation_duration",
+      "min": 300,
+      "max": 2000,
+      "step": 100,
+      "unit": "ms",
+      "default": 900,
+      "visible_if": "{{ block.settings.animation != 'none' }}"
+    },
+    {
+      "type": "range",
+      "id": "stagger",
+      "label": "t:labels.animation_stagger",
+      "min": 0,
+      "max": 600,
+      "step": 50,
+      "unit": "ms",
+      "default": 150,
+      "visible_if": "{{ block.settings.animation != 'none' }}"
+    }
+  ]
+}
+{% endschema %}

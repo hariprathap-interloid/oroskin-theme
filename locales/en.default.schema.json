@@ -44,7 +44,12 @@
     "product_title": "Product title",
     "product_price": "Product price",
     "product_description": "Product description",
-    "buy_buttons": "Buy buttons"
+    "buy_buttons": "Buy buttons",
+    "image_banner": "Image banner",
+    "image_banner_stats": "Image banner with stats",
+    "promo_banner": "Promo banner",
+    "highlight_cards": "Highlight cards",
+    "highlight_card": "Highlight card"
   },
   "labels": {
     "alignment": "Alignment",
@@ -269,7 +274,19 @@
     "word_limit_info": "0 shows the full description.",
     "show_dynamic_checkout": "Show accelerated checkout buttons",
     "show_dynamic_checkout_info": "Shop Pay, Apple Pay, Google Pay and more, depending on your payment settings.",
-    "media_position": "Media position"
+    "media_position": "Media position",
+    "image_banner_image_info": "A wide photo, at least 2400px. The focal point you set on the image keeps the subject in view on every screen.",
+    "overlay_style": "Overlay",
+    "image_banner_scheme_info": "Pick a dark scheme (e.g. Dark) so the text is light on the photo.",
+    "icon": "Icon",
+    "custom_icon": "Custom icon",
+    "custom_icon_info": "Replaces the icon above. A simple square image or SVG.",
+    "stat_label": "Label",
+    "stat_value": "Value",
+    "card_animation": "Card animation",
+    "slide_in_from": "Slide in from",
+    "animation_duration": "Duration",
+    "animation_stagger": "Delay between cards"
   },
   "options": {
     "alignment": {
@@ -439,6 +456,32 @@
       "regular": "Regular"
     },
     "media_position": {
+      "left": "Left",
+      "right": "Right"
+    },
+    "banner_height": {
+      "full": "Full screen",
+      "large": "Large",
+      "medium": "Medium",
+      "small": "Small",
+      "auto": "Fit content"
+    },
+    "overlay_style": {
+      "gradient": "Gradient from the left",
+      "even": "Even",
+      "gradient_right": "Gradient from the right"
+    },
+    "stat_icon": {
+      "book": "Book",
+      "video": "Film",
+      "users": "People",
+      "sparkle": "Sparkle",
+      "none": "None"
+    },
+    "slide_in": {
+      "none": "No animation",
+      "top": "Top",
+      "bottom": "Bottom",
       "left": "Left",
       "right": "Right"
     }

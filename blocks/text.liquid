@@ -92,6 +92,34 @@
     text-transform: uppercase;
   }
 
+  /* The Figma eyebrow has a short gold rule in front of the label (like .eyebrow in critical.css) */
+  .text--eyebrow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+  }
+
+  .text--eyebrow::before {
+    content: "";
+    flex: none;
+    inline-size: 66px;
+    block-size: 2px;
+    background-color: currentcolor;
+  }
+
+  .text--eyebrow > * {
+    margin: 0;
+  }
+
+  /* A flex row ignores text-align, so the alignment setting moves the rule + label as a whole */
+  .text--eyebrow.text--align-center {
+    justify-content: center;
+  }
+
+  .text--eyebrow.text--align-right {
+    justify-content: flex-end;
+  }
+
   /*
     Custom size: replaces the style's size (this rule comes after the style rules, so it wins).
     The same fluid formula as the tokens: the phone size at 390px wide, growing in a straight line
