@@ -978,6 +978,27 @@
         "padding_top": 96,
         "padding_bottom": 96
       }
+    },
+    "product_panels_iTjtDf": {
+      "type": "product-panels",
+      "name": "t:general.editors_picks",
+      "settings": {
+        "eyebrow": "This season",
+        "heading": "Editor's <em>Picks</em>",
+        "link_label": "View all",
+        "link": "",
+        "collection": "automated-collection",
+        "products_to_show": 7,
+        "panel_height": 29,
+        "cart_size": "60",
+        "cart_icon_color": "#DE3838",
+        "section_width": "wide",
+        "color_scheme": "",
+        "highlight_color": "#c8a24b",
+        "animation": "fade-up",
+        "padding_top": 96,
+        "padding_bottom": 96
+      }
     }
   },
   "order": [
@@ -986,6 +1007,7 @@
     "image_banner_8GrUnC",
     "icon_features_fEU3xe",
     "image_banner_JWCLdE",
-    "blog_stories_JzWXeh"
+    "blog_stories_JzWXeh",
+    "product_panels_iTjtDf"
   ]
 }
