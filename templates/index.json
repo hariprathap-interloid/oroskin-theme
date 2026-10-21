@@ -669,6 +669,24 @@
             "stagger": 150
           },
           "blocks": {}
+        },
+        "trending-sheet": {
+          "type": "_trending-sheet",
+          "static": true,
+          "settings": {
+            "show": false,
+            "heading": "Trending <em>Now</em>",
+            "link_label": "View all",
+            "link": "",
+            "collection": "",
+            "products_to_show": 5,
+            "width": 50,
+            "scene_length": 250,
+            "heading_size": 72,
+            "title_size": 24,
+            "background_opacity": 30
+          },
+          "blocks": {}
         }
       },
       "name": "t:general.promo_banner",
@@ -865,6 +883,25 @@
             "highlight_card_LhBj3R",
             "highlight_card_A3mTc7"
           ]
+        },
+        "trending-sheet": {
+          "type": "_trending-sheet",
+          "static": true,
+          "settings": {
+            "show": true,
+            "heading": "Trending <em>Now</em>",
+            "link_label": "View all",
+            "link": "shopify://collections",
+            "collection": "",
+            "products_to_show": 7,
+            "width": 40,
+            "scene_length": 250,
+            "heading_size": 54,
+            "title_size": 24,
+            "background_image": "shopify://shop_images/31038e5e4d8264fe6801fb289237a5b14d361dfb.png",
+            "background_opacity": 10
+          },
+          "blocks": {}
         }
       },
       "name": "t:general.image_banner_stats",
@@ -878,6 +915,29 @@
         "padding_top": 120,
         "padding_bottom": 120
       }
+    },
+    "trending_products_n4iqft": {
+      "type": "trending-products",
+      "name": "t:general.trending_products",
+      "settings": {
+        "heading": "Trending <em>Now</em>",
+        "link_label": "View all",
+        "link": "",
+        "heading_size": 64,
+        "title_size": 24,
+        "collection": "",
+        "products_to_show": 7,
+        "image": "shopify://shop_images/6a9da17c3473051a785c2d23aa0bb872cbfeedf7.png",
+        "image_position": "right",
+        "image_overlay": 20,
+        "image_animation": "fade-up",
+        "background_image": "shopify://shop_images/f3d7c3aaceecd21ad298d3526e6f2e831f93a409.png",
+        "background_opacity": 10,
+        "color_scheme": "",
+        "animation": "slide-left",
+        "padding_top": 120,
+        "padding_bottom": 96
+      }
     }
   },
   "order": [
@@ -885,6 +945,7 @@
     "scrolling_showcase_kj7qC7",
     "image_banner_8GrUnC",
     "icon_features_fEU3xe",
-    "image_banner_JWCLdE"
+    "image_banner_JWCLdE",
+    "trending_products_n4iqft"
   ]
 }
