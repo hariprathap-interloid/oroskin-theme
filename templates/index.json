@@ -21,6 +21,8 @@
               "type": "_hero-product",
               "settings": {
                 "image": "shopify://shop_images/Group_1000003837.png",
+                "collection": "",
+                "product": "",
                 "link": "",
                 "label": "Makeup",
                 "brush_word": "glamour",
@@ -37,6 +39,8 @@
               "type": "_hero-product",
               "settings": {
                 "image": "shopify://shop_images/Group_1000003838.png",
+                "collection": "",
+                "product": "",
                 "link": "",
                 "label": "Skincare",
                 "brush_word": "radiance",
@@ -53,6 +57,8 @@
               "type": "_hero-product",
               "settings": {
                 "image": "shopify://shop_images/Group_1000003840.png",
+                "collection": "",
+                "product": "",
                 "link": "",
                 "label": "Serums",
                 "brush_word": "renewal",
@@ -69,6 +75,8 @@
               "type": "_hero-product",
               "settings": {
                 "image": "shopify://shop_images/Group_1000003839.png",
+                "collection": "",
+                "product": "",
                 "link": "",
                 "label": "Fragrance",
                 "brush_word": "scent",
@@ -554,9 +562,33 @@
         "band_text": "OroSkin • Signature collection • Estd. 2026",
         "band_color_scheme": ""
       }
+    },
+    "scrolling_showcase_kj7qC7": {
+      "type": "scrolling-showcase",
+      "name": "t:general.scrolling_showcase",
+      "settings": {
+        "eyebrow": "Find your glow here",
+        "text": "All the [images] products you [break]need [arrow], right at [break]our shop<em>!!!</em>",
+        "image_1": "shopify://shop_images/31038e5e4d8264fe6801fb289237a5b14d361dfb.png",
+        "image_2": "shopify://shop_images/8ca1650e0bc1395f1a1db019baf881e298994caf.png",
+        "image_3": "shopify://shop_images/362cb2bed5f5c376c1542cc46c8f94a272735447.png",
+        "color_scheme": "scheme-1",
+        "highlight_color": "#c8a24b",
+        "animation": "fade-up",
+        "padding_top": 96,
+        "padding_bottom": 160,
+        "enable_scene": true,
+        "scene_length": 300,
+        "scene_text_color": "#ffffff",
+        "scene_arrow_color": "#1f1f1f",
+        "scene_image_1": "shopify://shop_images/10f104c2974349b90d1225248144b2b154c9a84d.png",
+        "scene_image_2": "shopify://shop_images/61dbb478132af9412fe741847503763330b5424a.png",
+        "scene_image_3": "shopify://shop_images/7decbd8df28cc278bf6aa141e3a89881b453e7e8.png"
+      }
     }
   },
   "order": [
-    "hero_ceiA99"
+    "hero_ceiA99",
+    "scrolling_showcase_kj7qC7"
   ]
 }
