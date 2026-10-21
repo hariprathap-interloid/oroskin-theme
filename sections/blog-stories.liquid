@@ -218,10 +218,18 @@
 
   @media (min-width: 990px) {
     .blog-stories__grid {
-      grid-template-rows: repeat(2, minmax(15rem, 16vw));
+      /*
+        Each row is at least 15-24rem (growing with the screen) and grows further if a card's text needs
+        it (auto), so a card can never be taller than its row and run into the one below.
+      */
+      grid-template-rows: repeat(2, minmax(clamp(15rem, 17vw, 24rem), auto));
     }
 
     /* Featured left (Figma): wide featured | 2 stacked | tall */
+    .blog-stories__card {
+      min-block-size: 0;
+    }
+
     .blog-stories__grid--featured-left {
       grid-template-columns: 10fr 5fr 4fr;
     }

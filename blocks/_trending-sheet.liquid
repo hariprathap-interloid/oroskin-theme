@@ -44,14 +44,41 @@
     isolation: isolate;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    padding: clamp(2rem, 1rem + 4vw, 7.5rem) clamp(var(--page-margin), 3vw, 4rem);
+    /*
+      Figma: the heading sits just under the sticky header and the rows run down to the bottom.
+      So the content starts at the top (no centring: that left an empty band above it on tall screens)
+      and the list stretches to fill the rest of the sheet (see below).
+    */
+    justify-content: flex-start;
+    padding: clamp(7rem, 3rem + 7vw, 11rem) clamp(var(--page-margin), 3vw, 4rem) clamp(2rem, 1rem + 2vw, 4rem);
     background-color: var(--color-background);
     color: var(--color-text);
 
     /* Scrollbar (when the list is taller than the screen): thin, gold thumb on a faint track */
     scrollbar-width: thin;
     scrollbar-color: var(--color-accent) color-mix(in srgb, var(--color-text) 10%, transparent);
+  }
+
+  /*
+    The list fills the sheet's height: heading at the top, then the rows spread evenly down to the
+    bottom (space-between). Gaps follow the screen height (svh); when the rows don't fit, the gaps
+    shrink to their minimum and the sheet scrolls from the top, so row 01 is always reachable.
+  */
+  .banner-sheet .trending-list {
+    flex: 1;
+    gap: clamp(1.5rem, 5svh, 4.5rem);
+  }
+
+  .banner-sheet .trending-list > animate-on-scroll {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+  }
+
+  .banner-sheet .trending-list__rows {
+    flex: 1;
+    justify-content: space-between;
+    gap: clamp(0.75rem, 2svh, 2rem);
   }
 
   .banner-sheet::-webkit-scrollbar {
