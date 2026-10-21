@@ -662,7 +662,12 @@
         "highlight-cards": {
           "type": "_highlight-cards",
           "static": true,
-          "settings": {},
+          "settings": {
+            "radius": 24,
+            "animation": "slide-right",
+            "duration": 900,
+            "stagger": 150
+          },
           "blocks": {}
         }
       },
@@ -678,7 +683,68 @@
         "padding_bottom": 120
       }
     },
-    "image_banner_UNKnKm": {
+    "icon_features_fEU3xe": {
+      "type": "icon-features",
+      "blocks": {
+        "icon_feature_YQqAFG": {
+          "type": "_icon-feature",
+          "settings": {
+            "icon": "truck",
+            "title": "Free shipping",
+            "text": "<p>Orders over $200 qualify for fast, free delivery</p>",
+            "link": ""
+          },
+          "blocks": {}
+        },
+        "icon_feature_yGV9Nt": {
+          "type": "_icon-feature",
+          "settings": {
+            "icon": "shield",
+            "title": "Secure payment",
+            "text": "<p>Trusted payment processing with advanced security</p>",
+            "link": ""
+          },
+          "blocks": {}
+        },
+        "icon_feature_P9atQH": {
+          "type": "_icon-feature",
+          "settings": {
+            "icon": "return",
+            "title": "Easy 30-day return",
+            "text": "<p>Try it for 30 days first, decide when you're ready.</p>",
+            "link": ""
+          },
+          "blocks": {}
+        },
+        "icon_feature_ACV7xp": {
+          "type": "_icon-feature",
+          "settings": {
+            "icon": "headset",
+            "title": "Trusted service",
+            "text": "<p>Our dedicated support staff is always on duty</p>",
+            "link": ""
+          },
+          "blocks": {}
+        }
+      },
+      "block_order": [
+        "icon_feature_YQqAFG",
+        "icon_feature_yGV9Nt",
+        "icon_feature_P9atQH",
+        "icon_feature_ACV7xp"
+      ],
+      "name": "t:general.icon_features",
+      "settings": {
+        "columns_desktop": 4,
+        "columns_mobile": "1",
+        "color_scheme": "",
+        "icon_color": "#c8a24b",
+        "animation": "slide-bottom",
+        "padding_top": 80,
+        "padding_bottom": 80
+      }
+    },
+    "image_banner_JWCLdE": {
       "type": "image-banner",
       "blocks": {
         "banner-content": {
@@ -689,7 +755,7 @@
             "max_width": 780
           },
           "blocks": {
-            "text_QUVkWQ": {
+            "text_9FQDtR": {
               "type": "text",
               "settings": {
                 "text": "<p>The Oroskin edit</p>",
@@ -703,7 +769,7 @@
               },
               "blocks": {}
             },
-            "heading_jqYjAr": {
+            "heading_wVJJQT": {
               "type": "heading",
               "settings": {
                 "heading": "The New <em>Glow</em> Manifesto",
@@ -719,7 +785,7 @@
               },
               "blocks": {}
             },
-            "text_r4qzeb": {
+            "text_p7yjJD": {
               "type": "text",
               "settings": {
                 "text": "<p>This season, beauty transcends skin — it becomes a language. How our editors reimagined the ritual of light across six cities.</p>",
@@ -733,7 +799,7 @@
               },
               "blocks": {}
             },
-            "button_nfXG9R": {
+            "button_kFUpUt": {
               "type": "button",
               "settings": {
                 "label": "Read the editorial",
@@ -747,18 +813,23 @@
             }
           },
           "block_order": [
-            "text_QUVkWQ",
-            "heading_jqYjAr",
-            "text_r4qzeb",
-            "button_nfXG9R"
+            "text_9FQDtR",
+            "heading_wVJJQT",
+            "text_p7yjJD",
+            "button_kFUpUt"
           ]
         },
         "highlight-cards": {
           "type": "_highlight-cards",
           "static": true,
-          "settings": {},
+          "settings": {
+            "radius": 24,
+            "animation": "slide-right",
+            "duration": 900,
+            "stagger": 150
+          },
           "blocks": {
-            "stat_card_PqBzM4": {
+            "highlight_card_PyaWh9": {
               "type": "_highlight-card",
               "settings": {
                 "icon": "book",
@@ -768,7 +839,7 @@
               },
               "blocks": {}
             },
-            "stat_card_XNJNdr": {
+            "highlight_card_LhBj3R": {
               "type": "_highlight-card",
               "settings": {
                 "icon": "video",
@@ -778,7 +849,7 @@
               },
               "blocks": {}
             },
-            "stat_card_4XcG8H": {
+            "highlight_card_A3mTc7": {
               "type": "_highlight-card",
               "settings": {
                 "icon": "users",
@@ -790,9 +861,9 @@
             }
           },
           "block_order": [
-            "stat_card_PqBzM4",
-            "stat_card_XNJNdr",
-            "stat_card_4XcG8H"
+            "highlight_card_PyaWh9",
+            "highlight_card_LhBj3R",
+            "highlight_card_A3mTc7"
           ]
         }
       },
@@ -813,6 +884,7 @@
     "hero_ceiA99",
     "scrolling_showcase_kj7qC7",
     "image_banner_8GrUnC",
-    "image_banner_UNKnKm"
+    "icon_features_fEU3xe",
+    "image_banner_JWCLdE"
   ]
 }
