@@ -104,9 +104,23 @@
     --shadow-card-rose: 0 4px 25px 0 #e6bcbc42;
     --shadow-collection: 0 5px 25px 0 #0000000d;
     --shadow-button: 0 4px 20px 0 #00000033;
-    --shadow-header: 0 4px 15px 0 #b9b9b940; /* also the round glass buttons (Figma "Liquid Glass Button") */
+    /*
+      Glass (Figma "Glass" effect: Fill 25%, Frost 100, Light 80% at -7deg, drop shadow). Used by every
+      glass element: header bar and icon buttons, pause button, footer panel and its controls,
+      highlight cards, product panels card, quick add, story pill.
+      - frost: Figma Frost 100 = a 35px background blur
+      - rim: Figma Light: a 1px highlight on the edge facing the light (top, light at -7deg, 80%) and a
+        weaker one on the opposite edge (68%). The angle is worked out already (sin/cos of -7deg), so
+        no CSS trigonometry is needed.
+      The Figma Refraction / Dispersion (an SVG filter, Chrome only, needs a script per element) is
+      left out on purpose: costly for a small, Chrome-only gain.
+    */
+    --glass-frost: 35px;
+    --glass-rim: inset 0.12px 1px 0 #ffffffcc, inset -0.12px -1px 0 #ffffffad;
+    --glass-shadow: 0 4px 15px 0 #b9b9b940;
+    --shadow-header: var(--glass-shadow), var(--glass-rim); /* also the round glass buttons (Figma "Liquid Glass Button") */
     --shadow-panel: 0 2px 30px 0 #00000026; /* mega menu */
-    --shadow-glass-edge: inset -1px 0 5px 0 #ffffff80;
+    --shadow-glass-edge: var(--glass-rim);
 
     /* Form messages (fixed, 6:1 contrast on cream and white) */
     --color-error: #b42318;

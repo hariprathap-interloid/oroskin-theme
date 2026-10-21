@@ -160,8 +160,8 @@
 
   .header .header__bar {
     background-color: var(--color-glass);
-    -webkit-backdrop-filter: blur(20px) saturate(1.4);
-    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(var(--glass-frost)) saturate(1.4);
+    backdrop-filter: blur(var(--glass-frost)) saturate(1.4);
     transition:
       background-color var(--duration-base) var(--ease-out),
       box-shadow var(--duration-base) var(--ease-out),
@@ -284,6 +284,8 @@
     transition:
       color var(--duration-fast) var(--ease-out),
       background-color var(--duration-fast) var(--ease-out);
+    -webkit-backdrop-filter: blur(var(--glass-frost));
+    backdrop-filter: blur(var(--glass-frost));
   }
 
   .header__icon-button:hover {

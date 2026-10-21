@@ -305,7 +305,9 @@
     border-radius: var(--radius-pill);
     background-color: #ffffff1f;
     font-size: var(--font-size-body-sm);
-    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(var(--glass-frost));
+    backdrop-filter: blur(var(--glass-frost));
+    box-shadow: var(--glass-rim);
   }
 
   .blog-stories__title {
