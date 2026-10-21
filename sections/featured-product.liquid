@@ -1,0 +1,368 @@
+{%- comment -%}
+  Featured product (Theme Store requirement): one chosen product with its media and a buy area, so it
+  can be sold from any page (e.g. the homepage) without opening the product page.
+
+  - Media column: every product medium (photos, videos, YouTube/Vimeo, 3D models) in a row that
+    swipes / scrolls sideways, one at a time. Choosing a variant scrolls to that variant's photo.
+  - Info column (Figma PDP: a large light card): theme blocks. The product blocks (Product title,
+    Product price, Product description, Buy buttons) read the product from this section through
+    closest.product, so they need no product picker of their own; Heading, Text, Button... and app
+    blocks (@app, e.g. reviews) can be added too.
+  - No product chosen: placeholders in the theme editor, nothing on the live store.
+{%- endcomment -%}
+
+{%- liquid
+  assign featured = section.settings.product
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-1'
+  assign has_3d = false
+  if featured != blank
+    assign models = featured.media | where: 'media_type', 'model'
+    if models.size > 0
+      assign has_3d = true
+    endif
+  endif
+-%}
+
+{%- if featured != blank or request.design_mode -%}
+  <featured-product
+    class="featured-product full-width color-{{ scheme_id }} featured-product--media-{{ section.settings.media_position }}"
+    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
+    {% if has_3d %}
+      data-has-3d
+    {% endif %}
+  >
+    <div class="featured-product__inner">
+      <div class="featured-product__media">
+        {%- if featured != blank and featured.media.size > 0 -%}
+          <div
+            class="featured-product__gallery"
+            role="region"
+            aria-label="{{ 'products.media.gallery' | t: title: featured.title | escape }}"
+            tabindex="0"
+            data-gallery
+          >
+            {%- for media in featured.media -%}
+              <div class="featured-product__slide" data-media-id="{{ media.id }}">
+                {%- liquid
+                  # Only the first medium loads straight away; the rest wait until scrolled to
+                  assign media_loading = 'lazy'
+                  if forloop.first
+                    assign media_loading = nil
+                  endif
+                -%}
+                {% render 'product-media', media: media, sizes: '(min-width: 990px) 45vw, 90vw', loading: media_loading %}
+              </div>
+            {%- endfor -%}
+          </div>
+
+          {%- if featured.media.size > 1 -%}
+            {%- comment -%} Thumbnails: every medium visible at a glance; click one to show it above {%- endcomment -%}
+            <div class="featured-product__thumbs">
+              {%- for media in featured.media -%}
+                {%- assign thumb_label = 'products.media.show' | t: index: forloop.index, count: forloop.length -%}
+                <button
+                  type="button"
+                  class="featured-product__thumb"
+                  data-thumb="{{ media.id }}"
+                  aria-label="{{ thumb_label | escape }}"
+                  {% if forloop.first %}
+                    aria-current="true"
+                  {% endif %}
+                >
+                  {{ media.preview_image | image_url: width: 200 | image_tag: widths: '100, 200', sizes: '72px', alt: '', loading: 'lazy' }}
+                  {%- if media.media_type == 'video' or media.media_type == 'external_video' or media.media_type == 'model' -%}
+                    <span class="featured-product__thumb-badge" aria-hidden="true">
+                      {%- if media.media_type == 'model' -%}3D{%- else -%}&#9654;{%- endif -%}
+                    </span>
+                  {%- endif -%}
+                </button>
+              {%- endfor -%}
+            </div>
+          {%- endif -%}
+        {%- else -%}
+          <div class="featured-product__slide featured-product__slide--placeholder">
+            {{ 'product-1' | placeholder_svg_tag: 'featured-product__placeholder' }}
+          </div>
+        {%- endif -%}
+      </div>
+
+      <div class="featured-product__info">
+        {% content_for 'blocks' %}
+      </div>
+    </div>
+  </featured-product>
+{%- endif -%}
+
+{% stylesheet %}
+  featured-product {
+    display: block;
+  }
+
+  .featured-product {
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  .featured-product__inner {
+    display: grid;
+    gap: var(--space-xl);
+    inline-size: min(
+      calc(var(--page-width) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  /* Two columns from tablet landscape up: media 45%, info card 55% (Figma PDP proportions) */
+  @media (min-width: 990px) {
+    .featured-product__inner {
+      grid-template-columns: 9fr 11fr;
+      align-items: start;
+      gap: clamp(2rem, 3vw, 4rem);
+    }
+
+    .featured-product--media-right .featured-product__media {
+      order: 2;
+    }
+  }
+
+  /*
+    Gallery: a sideways scroller that snaps to one medium at a time (swipe on phones, trackpad or
+    Shift + wheel on desktop, arrow keys once focused). Square slides, like the PDP photos.
+  */
+  .featured-product__gallery {
+    position: relative; /* slides measure offsetLeft from the gallery itself */
+    display: grid;
+    grid-auto-columns: 100%;
+    grid-auto-flow: column;
+    gap: var(--space-sm);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none; /* the thumbnails show where you are */
+    border-radius: var(--radius-lg);
+  }
+
+  .featured-product__gallery::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Thumbnails: small rounded squares; the one on show gets an accent outline */
+  .featured-product__thumbs {
+    display: flex;
+    gap: var(--space-sm);
+    margin-block-start: var(--space-sm);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .featured-product__thumb {
+    position: relative;
+    flex: none;
+    inline-size: 4.5rem;
+    aspect-ratio: 1;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 2px solid transparent;
+    border-radius: var(--radius-md);
+    background-color: var(--color-tint);
+    opacity: 0.6;
+    cursor: pointer;
+    transition:
+      opacity var(--duration-fast) var(--ease-out),
+      border-color var(--duration-fast) var(--ease-out);
+  }
+
+  .featured-product__thumb img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .featured-product__thumb:hover,
+  .featured-product__thumb[aria-current='true'] {
+    opacity: 1;
+  }
+
+  .featured-product__thumb[aria-current='true'] {
+    border-color: var(--color-accent);
+  }
+
+  /* Video / 3D marker on a thumbnail */
+  .featured-product__thumb-badge {
+    position: absolute;
+    inset-block-end: 0.25rem;
+    inset-inline-end: 0.25rem;
+    padding: 0.1rem 0.35rem;
+    border-radius: var(--radius-pill);
+    background-color: #000000b3;
+    color: #ffffff;
+    font-size: 0.625rem;
+    line-height: 1.4;
+  }
+
+  .featured-product__gallery:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 4px;
+  }
+
+  .featured-product__slide {
+    aspect-ratio: 1;
+    scroll-snap-align: start;
+  }
+
+  .featured-product__slide--placeholder {
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+    background-color: var(--color-tint);
+  }
+
+  .featured-product__placeholder {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  /* Figma PDP: the info sits in a large, light, rounded card with a hairline border */
+  .featured-product__info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    padding: clamp(1.5rem, 3.3vw, 4rem);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: var(--radius-lg);
+    background-color: color-mix(in srgb, var(--color-background) 40%, #ffffff);
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <featured-product>: scrolls the gallery to the chosen variant's photo, and loads Shopify's 3D model
+   * controls (model-viewer-ui) when the product has a 3D model.
+   */
+  class FeaturedProduct extends HTMLElement {
+    connectedCallback() {
+      this.gallery = this.querySelector('[data-gallery]');
+      this.thumbs = [...this.querySelectorAll('[data-thumb]')];
+
+      this.onVariantChange = (event) => this.showMedia(event.detail.mediaId);
+      this.addEventListener('variant:change', this.onVariantChange);
+
+      // Thumbnail click shows that medium; swiping the gallery moves the thumbnail outline along
+      this.thumbs.forEach((thumb) => thumb.addEventListener('click', () => this.showMedia(thumb.dataset.thumb)));
+      this.gallery?.addEventListener('scroll', () => {
+        if (this.scrollFrame) return;
+        this.scrollFrame = requestAnimationFrame(() => {
+          this.scrollFrame = null;
+          const index = Math.round(this.gallery.scrollLeft / this.gallery.clientWidth);
+          this.markThumb(index);
+        });
+      }, { passive: true });
+
+      if (this.hasAttribute('data-has-3d')) this.loadModelViewer();
+    }
+
+    disconnectedCallback() {
+      this.removeEventListener('variant:change', this.onVariantChange);
+    }
+
+    /** Scrolls only the gallery sideways to one medium (scrollIntoView would also scroll the page) */
+    showMedia(mediaId) {
+      const slide = mediaId && this.gallery?.querySelector(`[data-media-id="${mediaId}"]`);
+      if (!slide) return;
+      const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      this.gallery.scrollTo({ left: slide.offsetLeft, behavior: smooth ? 'smooth' : 'auto' });
+      this.markThumb([...this.gallery.children].indexOf(slide));
+    }
+
+    markThumb(index) {
+      this.thumbs.forEach((thumb, i) => thumb.setAttribute('aria-current', String(i === index)));
+    }
+
+    /** Shopify's loader adds the 3D viewer's controls (play, zoom, full screen) to each <model-viewer> */
+    loadModelViewer() {
+      if (!window.Shopify?.loadFeatures) return;
+      window.Shopify.loadFeatures([
+        {
+          name: 'model-viewer-ui',
+          version: '1.0',
+          onLoad: (error) => {
+            if (error || !window.Shopify.ModelViewerUI) return;
+            this.querySelectorAll('model-viewer').forEach((model) => new window.Shopify.ModelViewerUI(model));
+          },
+        },
+      ]);
+    }
+  }
+
+  if (!customElements.get('featured-product')) {
+    customElements.define('featured-product', FeaturedProduct);
+  }
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.featured_product",
+  "blocks": [{ "type": "@theme" }, { "type": "@app" }],
+  "disabled_on": {
+    "groups": ["header", "footer"]
+  },
+  "settings": [
+    {
+      "type": "product",
+      "id": "product",
+      "label": "t:labels.product"
+    },
+    {
+      "type": "select",
+      "id": "media_position",
+      "label": "t:labels.media_position",
+      "options": [
+        { "value": "left", "label": "t:options.media_position.left" },
+        { "value": "right", "label": "t:options.media_position.right" }
+      ],
+      "default": "left"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.featured_product",
+      "blocks": [
+        { "type": "product-title", "settings": { "size": "h1", "tag": "h2", "link_to_product": true } },
+        { "type": "product-price", "settings": { "size": "large", "show_savings": true, "show_tax_note": true } },
+        { "type": "product-description", "settings": { "word_limit": 40 } },
+        { "type": "buy-buttons", "settings": { "show_dynamic_checkout": true } }
+      ]
+    }
+  ]
+}
+{% endschema %}

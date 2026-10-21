@@ -1,0 +1,87 @@
+{% doc %}
+  The product's title. The product comes from closest.product: the nearest section or block with a
+  product setting (e.g. Featured product), or the product page itself (M6), so this block works in
+  both without its own product picker.
+
+  Without a product: a placeholder title in the theme editor, nothing on the live store.
+
+  @example
+  {% content_for 'block', type: 'product-title', id: 'product-title' %}
+{% enddoc %}
+
+{%- assign title_product = closest.product -%}
+
+{%- if title_product != blank or request.design_mode -%}
+  <{{ block.settings.tag }}
+    class="product-title {{ block.settings.size }}"
+    {{ block.shopify_attributes }}
+  >
+    {%- if title_product == blank -%}
+      {{ 'products.card.placeholder_title' | t }}
+    {%- elsif block.settings.link_to_product -%}
+      <a href="{{ title_product.url }}" class="product-title__link">{{ title_product.title | escape }}</a>
+    {%- else -%}
+      {{ title_product.title | escape }}
+    {%- endif -%}
+  </{{ block.settings.tag }}>
+{%- endif -%}
+
+{% stylesheet %}
+  .product-title {
+    margin: 0;
+  }
+
+  .product-title__link {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .product-title__link:hover {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.product_title",
+  "tag": null,
+  "settings": [
+    {
+      "type": "select",
+      "id": "size",
+      "label": "t:labels.heading_size",
+      "options": [
+        { "value": "h1", "label": "t:options.heading_size.h1" },
+        { "value": "h2", "label": "t:options.heading_size.h2" },
+        { "value": "h3", "label": "t:options.heading_size.h3" }
+      ],
+      "default": "h1"
+    },
+    {
+      "type": "select",
+      "id": "tag",
+      "label": "t:labels.heading_tag",
+      "info": "t:labels.product_title_tag_info",
+      "options": [
+        { "value": "h1", "label": "t:options.heading_tag.h1" },
+        { "value": "h2", "label": "t:options.heading_tag.h2" },
+        { "value": "h3", "label": "t:options.heading_tag.h3" }
+      ],
+      "default": "h2"
+    },
+    {
+      "type": "checkbox",
+      "id": "link_to_product",
+      "label": "t:labels.link_to_product",
+      "default": true
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.product_title",
+      "category": "t:general.product"
+    }
+  ]
+}
+{% endschema %}

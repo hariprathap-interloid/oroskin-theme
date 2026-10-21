@@ -1,0 +1,55 @@
+{% doc %}
+  Renders one product media item, whatever its type (Theme Store: all media must be viewable):
+  - image: the responsive image snippet, with the merchant's alt text
+  - video (uploaded to Shopify): a <video> with the browser's controls, never autoplaying
+  - external_video (YouTube / Vimeo): the platform's player in an iframe
+  - model (3D): Shopify's <model-viewer>; the section loads its controls (model-viewer-ui)
+
+  The parent decides the box size; everything here fills it.
+
+  @param {media} media - One item from product.media
+  @param {string} [sizes] - The image `sizes` attribute, e.g. '(min-width: 990px) 50vw, 100vw'
+  @param {string} [loading] - 'lazy' to load the image only when scrolled near; empty = automatic
+
+  @example
+  {% render 'product-media', media: media, sizes: '(min-width: 990px) 50vw, 100vw' %}
+{% enddoc %}
+
+<div class="product-media product-media--{{ media.media_type }}">
+  {%- case media.media_type -%}
+    {%- when 'image' -%}
+      {% render 'image', image: media.preview_image, alt: media.alt, sizes: sizes, class: 'image--cover', loading: loading %}
+    {%- when 'video' -%}
+      {{ media | video_tag: controls: true, preload: 'metadata' }}
+    {%- when 'external_video' -%}
+      {{ media | external_video_tag }}
+    {%- when 'model' -%}
+      {{ media | model_viewer_tag: reveal: 'interaction', toggleable: true }}
+    {%- else -%}
+      {{ media | media_tag }}
+  {%- endcase -%}
+</div>
+
+{% stylesheet %}
+  .product-media {
+    position: relative;
+    block-size: 100%;
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+    background-color: var(--color-tint);
+  }
+
+  .product-media .image,
+  .product-media :is(video, iframe, model-viewer) {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    border: 0;
+  }
+
+  .product-media .image > img,
+  .product-media video {
+    block-size: 100%;
+    object-fit: cover;
+  }
+{% endstylesheet %}

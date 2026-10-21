@@ -39,7 +39,12 @@
     "hero_product": "Product image",
     "hero_decoration": "Decoration",
     "hero_decorations": "Decorations",
-    "scrolling_showcase": "Scrolling showcase"
+    "scrolling_showcase": "Scrolling showcase",
+    "featured_product": "Featured product",
+    "product_title": "Product title",
+    "product_price": "Product price",
+    "product_description": "Product description",
+    "buy_buttons": "Buy buttons"
   },
   "labels": {
     "alignment": "Alignment",
@@ -254,7 +259,17 @@
     "scene_smoothing_info": "Soft and Extra soft let the animation glide after the scroll, so it stays smooth with a mouse wheel.",
     "scene_photo_info": "Position = the centre of the photo, in % of the screen. Width in % of the screen width.",
     "showcase_text": "Sentence",
-    "showcase_text_info": "Type [images] for the photo stack, [arrow] for the double arrow and [break] for a line break on desktop. Italic text shows in the highlight colour."
+    "showcase_text_info": "Type [images] for the photo stack, [arrow] for the double arrow and [break] for a line break on desktop. Italic text shows in the highlight colour.",
+    "product_title_tag_info": "Use H1 only on a product page; on the homepage the main heading is elsewhere.",
+    "link_to_product": "Link to the product page",
+    "price_size": "Price size",
+    "show_savings": "Show savings (e.g. \"13% off\")",
+    "show_tax_note": "Show taxes and shipping note",
+    "word_limit": "Shorten to (words)",
+    "word_limit_info": "0 shows the full description.",
+    "show_dynamic_checkout": "Show accelerated checkout buttons",
+    "show_dynamic_checkout_info": "Shop Pay, Apple Pay, Google Pay and more, depending on your payment settings.",
+    "media_position": "Media position"
   },
   "options": {
     "alignment": {
@@ -418,6 +433,14 @@
       "off": "Off (follows the scroll exactly)",
       "soft": "Soft",
       "extra": "Extra soft"
+    },
+    "price_size": {
+      "large": "Large",
+      "regular": "Regular"
+    },
+    "media_position": {
+      "left": "Left",
+      "right": "Right"
     }
   },
   "color_scheme": {

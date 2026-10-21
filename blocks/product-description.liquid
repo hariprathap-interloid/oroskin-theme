@@ -1,0 +1,56 @@
+{% doc %}
+  The product's description (formatted text from the product admin). The product comes from
+  closest.product. "Shorten to" keeps a teaser on the homepage; 0 shows the full description.
+
+  Without a product: a sample sentence in the theme editor, nothing on the live store.
+
+  @example
+  {% content_for 'block', type: 'product-description', id: 'product-description' %}
+{% enddoc %}
+
+{%- assign description_product = closest.product -%}
+
+{%- if description_product != blank or request.design_mode -%}
+  <div class="product-description rte" {{ block.shopify_attributes }}>
+    {%- if description_product == blank -%}
+      <p>{{ 'products.description_placeholder' | t }}</p>
+    {%- elsif block.settings.word_limit > 0 -%}
+      {%- comment -%} A shortened description is plain text: cutting HTML mid-tag would break it {%- endcomment -%}
+      <p>{{ description_product.description | strip_html | truncatewords: block.settings.word_limit }}</p>
+    {%- else -%}
+      {{ description_product.description }}
+    {%- endif -%}
+  </div>
+{%- endif -%}
+
+{% stylesheet %}
+  .product-description {
+    color: color-mix(in srgb, var(--color-text) 80%, var(--color-background));
+    font-size: var(--font-size-body-lg);
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.product_description",
+  "tag": null,
+  "settings": [
+    {
+      "type": "range",
+      "id": "word_limit",
+      "label": "t:labels.word_limit",
+      "info": "t:labels.word_limit_info",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "default": 0
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.product_description",
+      "category": "t:general.product"
+    }
+  ]
+}
+{% endschema %}

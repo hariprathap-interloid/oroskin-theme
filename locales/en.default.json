@@ -98,7 +98,11 @@
       "regular": "Regular price",
       "sale": "Sale price",
       "from_html": "From {{ price }}",
-      "unit": "Unit price"
+      "unit": "Unit price",
+      "percent_off": "{{ percent }}% off",
+      "taxes_included": "Taxes included.",
+      "shipping": "Shipping calculated at checkout.",
+      "shipping_html": "<a href=\"{{ link }}\">Shipping</a> calculated at checkout."
     },
     "add_to_cart": "Add to cart",
     "sold_out": "Sold out",
@@ -107,6 +111,16 @@
     },
     "card": {
       "placeholder_title": "Product title"
-    }
+    },
+    "variant": "Variant",
+    "quantity": "Quantity",
+    "unavailable": "Unavailable",
+    "description_placeholder": "Share what makes this product special: the key ingredients, how it feels and why customers love it.",
+    "media": {
+      "gallery": "{{ title }}: photos and videos",
+      "show": "Show item {{ index }} of {{ count }}"
+    },
+    "quantity_decrease": "Decrease quantity",
+    "quantity_increase": "Increase quantity"
   }
 }

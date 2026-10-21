@@ -1,0 +1,440 @@
+{% doc %}
+  Variant picker, quantity, Add to cart and the accelerated checkout buttons (Shop Pay, Apple Pay...),
+  for closest.product (Featured product section or the product page).
+
+  The form is Shopify's product form: without JavaScript it posts to /cart/add and opens the cart, so
+  buying always works. The Quick add AJAX (M4.5) will plug into this same form later.
+
+  Variant picker (Figma PDP "SIZE": pill buttons):
+  - The real field is one <select name="id"> listing every variant: it is what the form sends.
+    Without JavaScript it is the visible picker (sold-out variants can't be chosen).
+  - With JavaScript the select is hidden and each option (Size, Colour...) gets its own row of pills.
+    Picking pills finds the variant with exactly those values, selects it, updates the button
+    (Add to cart / Sold out / Unavailable) and sends "variant:change", which the Price block and
+    the section's media listen to.
+  Known limits until M6: no colour swatches, and a Liquid for loop stops at 50 variants.
+
+  Without a product: a sample, disabled form in the theme editor, nothing on the live store.
+
+  @example
+  {% content_for 'block', type: 'buy-buttons', id: 'buy-buttons' %}
+{% enddoc %}
+
+{%- liquid
+  assign buy_product = closest.product
+  if buy_product != blank
+    assign current_variant = buy_product.selected_or_first_available_variant
+  endif
+-%}
+
+{%- if buy_product != blank -%}
+  <buy-buttons
+    class="buy-buttons"
+    data-label-add="{{ 'products.add_to_cart' | t | escape }}"
+    data-label-sold-out="{{ 'products.sold_out' | t | escape }}"
+    data-label-unavailable="{{ 'products.unavailable' | t | escape }}"
+    {{ block.shopify_attributes }}
+  >
+    {%- form 'product', buy_product, class: 'buy-buttons__form' -%}
+      {%- if buy_product.has_only_default_variant -%}
+        <input type="hidden" name="id" value="{{ current_variant.id }}">
+      {%- else -%}
+        {%- comment -%} Pills: one group per option. Shown only once the script runs (see the CSS) {%- endcomment -%}
+        <div class="buy-buttons__options">
+          {%- for option in buy_product.options_with_values -%}
+            {%- assign option_index = forloop.index0 -%}
+            <fieldset class="buy-buttons__option" data-option>
+              <legend class="buy-buttons__label">{{ option.name | escape }}</legend>
+              <div class="buy-buttons__pills">
+                {%- for value in option.values -%}
+                  {%- assign input_id = block.id | append: '-' | append: option_index | append: '-' | append: forloop.index0 -%}
+                  <input
+                    class="buy-buttons__pill-input"
+                    type="radio"
+                    id="{{ input_id }}"
+                    name="{{ block.id }}-option-{{ option_index }}"
+                    value="{{ value.name | escape }}"
+                    {% if value.selected %}
+                      checked
+                    {% endif %}
+                    data-option-input
+                  >
+                  <label class="buy-buttons__pill" for="{{ input_id }}">{{ value.name | escape }}</label>
+                {%- endfor -%}
+              </div>
+            </fieldset>
+          {%- endfor -%}
+        </div>
+
+        <div class="buy-buttons__select">
+          <label class="buy-buttons__label" for="Variant-{{ block.id }}">{{ 'products.variant' | t }}</label>
+          <select id="Variant-{{ block.id }}" name="id">
+            {%- for variant in buy_product.variants -%}
+              <option
+                value="{{ variant.id }}"
+                data-options="{{ variant.options | join: '||' | escape }}"
+                data-available="{{ variant.available }}"
+                {% if variant.featured_media %}
+                  data-media-id="{{ variant.featured_media.id }}"
+                {% endif %}
+                {% if variant == current_variant %}
+                  selected
+                {% endif %}
+                {% unless variant.available %}
+                  disabled
+                {% endunless %}
+              >
+                {{ variant.title | escape }} - {{ variant.price | money }}
+                {%- unless variant.available %} ({{ 'products.sold_out' | t }}){% endunless %}
+              </option>
+            {%- endfor -%}
+          </select>
+        </div>
+      {%- endif -%}
+
+      <div class="buy-buttons__row">
+        <div class="buy-buttons__quantity">
+          <label class="visually-hidden" for="Quantity-{{ block.id }}">{{ 'products.quantity' | t }}</label>
+          <button
+            type="button"
+            class="buy-buttons__step"
+            data-step="-1"
+            aria-label="{{ 'products.quantity_decrease' | t | escape }}"
+          >
+            &minus;
+          </button>
+          <input
+            id="Quantity-{{ block.id }}"
+            class="buy-buttons__quantity-input"
+            type="number"
+            name="quantity"
+            min="1"
+            step="1"
+            value="1"
+            inputmode="numeric"
+          >
+          <button
+            type="button"
+            class="buy-buttons__step"
+            data-step="1"
+            aria-label="{{ 'products.quantity_increase' | t | escape }}"
+          >
+            +
+          </button>
+        </div>
+
+        <button
+          type="submit"
+          class="button buy-buttons__submit"
+          {% unless current_variant.available %}
+            disabled
+          {% endunless %}
+          data-submit
+        >
+          {%- if current_variant.available -%}
+            {{ 'products.add_to_cart' | t }}
+          {%- else -%}
+            {{ 'products.sold_out' | t }}
+          {%- endif -%}
+        </button>
+      </div>
+
+      {%- if block.settings.show_dynamic_checkout -%}
+        <div class="buy-buttons__payment">{{ form | payment_button }}</div>
+      {%- endif -%}
+    {%- endform -%}
+  </buy-buttons>
+{%- elsif request.design_mode -%}
+  <div class="buy-buttons" {{ block.shopify_attributes }}>
+    <div class="buy-buttons__row">
+      <button type="button" class="button buy-buttons__submit" disabled>{{ 'products.add_to_cart' | t }}</button>
+    </div>
+  </div>
+{%- endif -%}
+
+{% stylesheet %}
+  .buy-buttons__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .buy-buttons__label {
+    display: block;
+    margin-block-end: var(--space-xs);
+    padding: 0;
+    font-size: var(--font-size-label);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  /* Without JavaScript: the select is the picker, the pills stay hidden (they need the script) */
+  .buy-buttons__options {
+    display: none;
+  }
+
+  buy-buttons.is-enhanced .buy-buttons__options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  buy-buttons.is-enhanced .buy-buttons__select {
+    display: none;
+  }
+
+  .buy-buttons__option {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .buy-buttons__pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+  }
+
+  /* The radio itself is invisible but still focusable and clickable through its label */
+  .buy-buttons__pill-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* Figma PDP: outlined grey pill; the chosen one filled with the accent colour */
+  .buy-buttons__pill {
+    padding: 0.55em 1.25em;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    color: color-mix(in srgb, var(--color-text) 70%, var(--color-background));
+    cursor: pointer;
+    transition:
+      background-color var(--duration-fast) var(--ease-out),
+      color var(--duration-fast) var(--ease-out);
+  }
+
+  .buy-buttons__pill-input:checked + .buy-buttons__pill {
+    border-color: var(--color-accent);
+    background-color: var(--color-accent);
+    color: var(--color-button-text);
+  }
+
+  .buy-buttons__pill-input:focus-visible + .buy-buttons__pill {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  .buy-buttons__select select {
+    inline-size: 100%;
+  }
+
+  .buy-buttons__row {
+    display: flex;
+    gap: var(--space-sm);
+  }
+
+  /*
+    Quantity: a pill with − and + around the number, the same height and roundness as Add to cart.
+    Without JavaScript the − / + are hidden and the number field works on its own.
+  */
+  .buy-buttons__quantity {
+    display: flex;
+    align-items: center;
+    min-block-size: 3.125rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    background-color: #ffffff;
+  }
+
+  .buy-buttons__step {
+    display: none;
+    place-items: center;
+    inline-size: 2.75rem;
+    block-size: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: none;
+    color: var(--color-text);
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  buy-buttons.has-js .buy-buttons__step {
+    display: grid;
+  }
+
+  .buy-buttons__step:hover {
+    color: var(--color-accent);
+  }
+
+  .buy-buttons__quantity-input {
+    inline-size: 3rem;
+    min-block-size: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-weight: var(--font-weight-medium);
+    text-align: center;
+    appearance: textfield; /* hides the browser's tiny up/down arrows */
+  }
+
+  .buy-buttons__quantity-input::-webkit-inner-spin-button,
+  .buy-buttons__quantity-input::-webkit-outer-spin-button {
+    margin: 0;
+    appearance: none;
+  }
+
+  .buy-buttons__quantity-input:focus-visible {
+    outline: none;
+  }
+
+  .buy-buttons__quantity:focus-within {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  /*
+    Accelerated checkout (Shopify's own buttons). Branded ones (Shop Pay, Apple Pay...) take their size
+    and corner radius from Shopify's CSS variables; the plain "Buy it now" is styled like our buttons:
+    a full-width dark pill, the same height as Add to cart.
+  */
+  .buy-buttons__payment {
+    --shopify-accelerated-checkout-button-block-size: 3.125rem;
+    --shopify-accelerated-checkout-button-border-radius: 3.125rem;
+  }
+
+  .buy-buttons__payment .shopify-payment-button__button--unbranded {
+    min-block-size: 3.125rem;
+    padding: 0 var(--space-lg);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-text);
+    color: var(--color-background);
+    font-family: inherit;
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  .buy-buttons__payment .shopify-payment-button__button--unbranded:hover:not([disabled]) {
+    background-color: color-mix(in srgb, var(--color-text) 85%, var(--color-background));
+  }
+
+  .buy-buttons__payment .shopify-payment-button__more-options {
+    margin-block-start: var(--space-xs);
+    color: inherit;
+    font-size: var(--font-size-small);
+  }
+
+  .buy-buttons__submit {
+    flex: 1;
+  }
+
+  .buy-buttons__submit:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <buy-buttons>: turns the option pills into a variant choice. The hidden <select name="id"> stays the
+   * field the form sends; the pills only decide which of its options is selected.
+   */
+  class BuyButtons extends HTMLElement {
+    connectedCallback() {
+      this.select = this.querySelector('select[name="id"]');
+      this.submit = this.querySelector('[data-submit]');
+      this.setUpQuantity();
+      if (!this.select || !this.querySelector('[data-option]')) return;
+
+      this.classList.add('is-enhanced');
+      this.addEventListener('change', (event) => {
+        if (event.target.matches('[data-option-input]')) this.onOptionChange();
+      });
+    }
+
+    /** − / + change the number by one, never below 1 */
+    setUpQuantity() {
+      const input = this.querySelector('input[name="quantity"]');
+      if (!input) return;
+      this.classList.add('has-js');
+      this.querySelectorAll('[data-step]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const next = (parseInt(input.value, 10) || 1) + Number(button.dataset.step);
+          input.value = Math.max(1, next);
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+      });
+    }
+
+    /** Finds the variant whose option values match the checked pills ("15ml||Rose" etc.) */
+    onOptionChange() {
+      const chosen = [...this.querySelectorAll('[data-option]')].map(
+        (group) => group.querySelector('input:checked')?.value
+      );
+      const match = [...this.select.options].find((option) => option.dataset.options === chosen.join('||'));
+
+      if (!match) {
+        // This combination doesn't exist as a variant (e.g. a size only sold in one colour)
+        this.updateButton(false, this.dataset.labelUnavailable);
+        this.notify(null, null);
+        return;
+      }
+
+      this.select.value = match.value;
+      const available = match.dataset.available === 'true';
+      this.updateButton(available, available ? this.dataset.labelAdd : this.dataset.labelSoldOut);
+      this.notify(match.value, match.dataset.mediaId);
+    }
+
+    /**
+     * Add to cart follows the variant; the accelerated checkout buttons (Shop Pay...) are hidden when
+     * it can't be bought, because they would otherwise buy whatever the form last held.
+     */
+    updateButton(enabled, label) {
+      if (this.submit) {
+        this.submit.disabled = !enabled;
+        this.submit.textContent = label;
+      }
+      const payment = this.querySelector('.buy-buttons__payment');
+      if (payment) payment.hidden = !enabled;
+    }
+
+    /** Tells the Price block and the section's media which variant is now chosen */
+    notify(variantId, mediaId) {
+      this.dispatchEvent(new CustomEvent('variant:change', { bubbles: true, detail: { variantId, mediaId } }));
+    }
+  }
+
+  if (!customElements.get('buy-buttons')) {
+    customElements.define('buy-buttons', BuyButtons);
+  }
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.buy_buttons",
+  "tag": null,
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_dynamic_checkout",
+      "label": "t:labels.show_dynamic_checkout",
+      "info": "t:labels.show_dynamic_checkout_info",
+      "default": true
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.buy_buttons",
+      "category": "t:general.product"
+    }
+  ]
+}
+{% endschema %}

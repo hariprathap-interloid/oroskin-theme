@@ -12,6 +12,7 @@
 
   @param {product} product - The product
   @param {variant} [variant] - A specific variant (product page). Leave out for a product card
+  @param {boolean} [show_savings] - Adds a "13% off" pill when on sale (product page, Featured product)
 
   @example
   {% render 'price', product: product %}
@@ -42,6 +43,12 @@
   # Filters inside a t: argument must be assigned first
   assign price_money = price | money
   assign compare_money = compare_at | money
+
+  # Savings as a whole percentage of the old price: (200 - 185) / 200 = 7.5% -> "8% off".
+  # times: 100.0 keeps the decimals before rounding (whole-number maths would cut 7.5 to 7).
+  if on_sale and show_savings
+    assign savings = compare_at | minus: price | times: 100.0 | divided_by: compare_at | round
+  endif
 -%}
 
 <div class="price{% if on_sale %} price--on-sale{% endif %}{% unless available %} price--sold-out{% endunless %}">
@@ -65,6 +72,10 @@
       <span class="visually-hidden">{{ 'products.price.regular' | t }}</span>
       <s>{{ compare_money }}</s>
     </span>
+  {%- endif -%}
+
+  {%- if on_sale and show_savings -%}
+    <span class="price__savings">{{ 'products.price.percent_off' | t: percent: savings }}</span>
   {%- endif -%}
 
   {%- if target.unit_price_measurement -%}
@@ -93,6 +104,20 @@
   .price__compare {
     color: color-mix(in srgb, var(--color-text) 70%, var(--color-background));
     font-size: 0.85em;
+  }
+
+  /* Savings pill (Figma PDP "13% OFF"): small uppercase label on a soft accent tint */
+  .price__savings {
+    align-self: center;
+    padding: 0.25em 0.75em;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-tint);
+    color: var(--color-accent);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    line-height: 1.4;
+    text-transform: uppercase;
   }
 
   /* Unit price on its own line, small */

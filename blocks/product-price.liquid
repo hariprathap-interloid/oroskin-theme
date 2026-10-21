@@ -1,0 +1,161 @@
+{% doc %}
+  The product's price (Figma PDP: large price, struck-through old price, "13% off" pill), plus an
+  optional "Taxes included / Shipping calculated at checkout" note. The product comes from
+  closest.product (Featured product section or the product page).
+
+  Changing variant: the Buy buttons block sends a "variant:change" event; this block swaps in that
+  variant's price from a <template> rendered here for every variant, so prices are always formatted
+  by Liquid in the store's own currency format (no money formatting in JavaScript).
+  Known limit: a Liquid for loop stops at 50 items, so products with more than 50 variants only get
+  the first 50 price templates (the M6 product page handles large products).
+
+  Without a product: a sample price in the theme editor, nothing on the live store.
+
+  @example
+  {% content_for 'block', type: 'product-price', id: 'product-price' %}
+{% enddoc %}
+
+{%- liquid
+  assign price_product = closest.product
+  assign shipping_link = shop.shipping_policy.url
+-%}
+
+{%- if price_product != blank or request.design_mode -%}
+  <product-price
+    class="product-price product-price--{{ block.settings.size }}"
+    {{ block.shopify_attributes }}
+  >
+    <div data-price-current>
+      {%- if price_product != blank -%}
+        {% render 'price',
+          product: price_product,
+          variant: price_product.selected_or_first_available_variant,
+          show_savings: block.settings.show_savings
+        %}
+      {%- else -%}
+        <div class="price"><span class="price__current">{{ 1999 | money }}</span></div>
+      {%- endif -%}
+    </div>
+
+    {%- if price_product != blank and price_product.has_only_default_variant == false -%}
+      {%- for variant in price_product.variants -%}
+        <template data-variant-id="{{ variant.id }}">
+          {%- render 'price', product: price_product, variant: variant, show_savings: block.settings.show_savings -%}
+        </template>
+      {%- endfor -%}
+    {%- endif -%}
+
+    {%- if block.settings.show_tax_note -%}
+      <p class="product-price__note">
+        {%- if cart.taxes_included -%}
+          {{ 'products.price.taxes_included' | t }}
+        {% endif -%}
+        {%- if shop.shipping_policy.body != blank -%}
+          {{ 'products.price.shipping_html' | t: link: shipping_link }}
+        {%- else -%}
+          {{ 'products.price.shipping' | t }}
+        {%- endif -%}
+      </p>
+    {%- endif -%}
+  </product-price>
+{%- endif -%}
+
+{% stylesheet %}
+  .product-price {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  /* Large (Figma PDP): a big, dark price in the body font; the old price and pill sit beside it */
+  .product-price--large .price {
+    gap: 0 var(--space-sm);
+  }
+
+  .product-price--large .price__current {
+    color: var(--color-text);
+    font-size: var(--font-size-h1);
+    font-weight: 600;
+    line-height: 1.1;
+  }
+
+  .product-price--large .price__compare {
+    font-size: var(--font-size-h3);
+  }
+
+  /* "Shipping calculated at checkout": small uppercase label, softer colour */
+  .product-price__note {
+    margin: 0;
+    color: color-mix(in srgb, var(--color-text) 70%, var(--color-background));
+    font-size: var(--font-size-small);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  .product-price__note a {
+    color: inherit;
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <product-price>: shows the price of the variant the visitor picks. Listens for "variant:change"
+   * on its section (sent by the Buy buttons block) and copies in that variant's <template>.
+   */
+  class ProductPrice extends HTMLElement {
+    connectedCallback() {
+      this.scope = this.closest('.shopify-section') || document;
+      this.onVariantChange = (event) => {
+        const template = this.querySelector(`template[data-variant-id="${event.detail.variantId}"]`);
+        const current = this.querySelector('[data-price-current]');
+        if (template && current) current.replaceChildren(template.content.cloneNode(true));
+      };
+      this.scope.addEventListener('variant:change', this.onVariantChange);
+    }
+
+    disconnectedCallback() {
+      this.scope?.removeEventListener('variant:change', this.onVariantChange);
+    }
+  }
+
+  if (!customElements.get('product-price')) {
+    customElements.define('product-price', ProductPrice);
+  }
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.product_price",
+  "tag": null,
+  "settings": [
+    {
+      "type": "select",
+      "id": "size",
+      "label": "t:labels.price_size",
+      "options": [
+        { "value": "large", "label": "t:options.price_size.large" },
+        { "value": "regular", "label": "t:options.price_size.regular" }
+      ],
+      "default": "large"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_savings",
+      "label": "t:labels.show_savings",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_tax_note",
+      "label": "t:labels.show_tax_note",
+      "default": true
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.product_price",
+      "category": "t:general.product"
+    }
+  ]
+}
+{% endschema %}
