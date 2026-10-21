@@ -39,7 +39,7 @@
     "hero_product": "Product image",
     "hero_decoration": "Decoration",
     "hero_decorations": "Decorations",
-    "statement": "Statement"
+    "scrolling_showcase": "Scrolling showcase"
   },
   "labels": {
     "alignment": "Alignment",
@@ -235,13 +235,26 @@
     "label_override_info": "Leave empty to use the collection or product title. Type here only to change the wording.",
     "content": "Content",
     "eyebrow": "Eyebrow",
-    "statement_text": "Statement",
-    "statement_text_info": "Type [images] for the photo stack, [arrow] for the double arrow and [break] for a line break on desktop. Italic text shows in the highlight colour.",
     "image_1": "Image 1",
     "image_2": "Image 2",
     "image_3": "Image 3",
     "highlight_color": "Highlight colour",
-    "highlight_color_info": "The eyebrow, the arrow and italic text. Gold on a light background is hard to read for small text: check the contrast."
+    "highlight_color_info": "The eyebrow, the arrow and italic text. Gold on a light background is hard to read for small text: check the contrast.",
+    "scroll_scene": "Scroll scene",
+    "enable_scene": "Gold scroll scene",
+    "enable_scene_info": "The section stays on screen while a band in the highlight colour rises, the text turns white and the scene photos come in and leave one by one. Off with reduced motion, when animations are off, or for the first section. Top/Bottom padding move the text inside the pinned screen.",
+    "scene_length": "Scene length",
+    "scene_length_info": "How long the scene lasts, in screen heights. Longer = slower animation (400% = four screens of scrolling).",
+    "scene_image_1": "Scene photo 1 (top left)",
+    "scene_image_2": "Scene photo 2 (right)",
+    "scene_image_3": "Scene photo 3 (bottom)",
+    "scene_text_color": "Text on the band",
+    "scene_arrow_color": "Arrow on the band",
+    "scene_smoothing": "Smoothing",
+    "scene_smoothing_info": "Soft and Extra soft let the animation glide after the scroll, so it stays smooth with a mouse wheel.",
+    "scene_photo_info": "Position = the centre of the photo, in % of the screen. Width in % of the screen width.",
+    "showcase_text": "Sentence",
+    "showcase_text_info": "Type [images] for the photo stack, [arrow] for the double arrow and [break] for a line break on desktop. Italic text shows in the highlight colour."
   },
   "options": {
     "alignment": {
@@ -400,6 +413,11 @@
       "between": "Space between (top to bottom)",
       "around": "Space around each block",
       "evenly": "Space evenly"
+    },
+    "scene_smoothing": {
+      "off": "Off (follows the scroll exactly)",
+      "soft": "Soft",
+      "extra": "Extra soft"
     }
   },
   "color_scheme": {

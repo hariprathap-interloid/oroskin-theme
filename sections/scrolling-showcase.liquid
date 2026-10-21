@@ -1,0 +1,838 @@
+{%- comment -%}
+  Scrolling showcase (was "Statement"): a centred eyebrow and one very large sentence (Figma
+  "Find your glow here" / "All the [3 photos] products you need →>, right at our shop!!!").
+
+  The sentence is ONE text setting, so it stays one real heading that reads as a normal sentence.
+  The merchant places the extras with short codes typed into the text:
+  - [images] -> the overlapping stack of up to 3 small photos (Image 1-3)
+  - [arrow]  -> the double arrow
+  - [break]  -> a line break on desktop (ignored on phones and tablets, where the text wraps on its own)
+  Italic text (Ctrl+I in the editor) shows in the highlight colour instead of italic: "shop<em>!!!</em>".
+
+  The highlight colour (gold in the Figma) is a setting, not the scheme's accent: Scheme 1's accent is
+  the brand red. The eyebrow, the italic text and the arrow each get their own CSS variable, so the
+  scroll scene (M4.4) can recolour them separately (on gold, the "!!!" turns white and the arrow dark).
+
+  Scroll scene (M4.4, Figma home sequence): the section pins to the screen for a few screen heights while
+  a gold band rises from the bottom and fills the screen. Where the band covers the sentence it turns
+  white (a second, white copy of the text, clipped to the band). Three large photos come up into place,
+  hold, then leave upwards one by one. Then the pin lets go and the gold screen scrolls away into the
+  next section (the cream text is not shown again). The real heading stays underneath, so screen
+  readers read it once.
+  Only <scrolling-showcase> switches the scene on (attribute data-scene-active), and only with JavaScript,
+  the theme's animations on and no reduced-motion preference. Otherwise the section stays the static
+  M4.3 version: no pinning, no empty scroll space.
+{%- endcomment -%}
+
+{%- liquid
+  # Never animate the first section on the page (hero / LCP must paint immediately)
+  assign animation = section.settings.animation
+  if section.index == 1
+    assign animation = 'none'
+  endif
+
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-1'
+
+  # Scroll scene: needs the theme's "Enable animations" setting, and never for the first section (it would
+  # pin the top of the page). Unlike the fade-up reveals it also runs in the theme editor: it never hides
+  # content (the real heading is always underneath), so the merchant can preview it there.
+  # (The layout's animations-on class is off in the editor, so the setting is checked here instead.)
+  assign scene = false
+  if section.settings.enable_scene and settings.animations_enabled
+    if section.index != 1
+      assign scene = true
+    endif
+  endif
+
+  # The fade-up moves text 2rem down until it shows; with two stacked text layers that would split the
+  # dark and white copies apart, so the scene does without it (the band is the entrance instead)
+  if scene
+    assign animation = 'none'
+  endif
+
+  # The photo stack. Each photo: a small, lazy image (shown about 90px wide, so 100/200/300px files cover
+  # every screen density). alt="" because the photos are decoration: the sentence already says it all.
+  # In the theme editor, empty slots show a placeholder so the stack can be judged before choosing photos.
+  capture showcase_images
+    for i in (1..3)
+      assign image_key = 'image_' | append: i
+      assign showcase_image = section.settings[image_key]
+      if showcase_image != blank
+        echo '<span class="scrolling-showcase__image">'
+        echo showcase_image | image_url: width: 300 | image_tag: widths: '100, 200, 300', sizes: '92px', alt: '', loading: 'lazy'
+        echo '</span>'
+      elsif request.design_mode
+        assign placeholder_name = 'product-' | append: i
+        echo '<span class="scrolling-showcase__image scrolling-showcase__image--placeholder">'
+        echo placeholder_name | placeholder_svg_tag
+        echo '</span>'
+      endif
+    endfor
+  endcapture
+
+  if showcase_images != blank
+    assign showcase_images = showcase_images | prepend: '<span class="scrolling-showcase__images">' | append: '</span>'
+  endif
+
+  assign arrow_icon = 'icon-arrow-double.svg' | inline_asset_content
+  assign showcase_arrow = arrow_icon | prepend: '<span class="scrolling-showcase__arrow">' | append: '</span>'
+  assign showcase_break = '<br class="scrolling-showcase__break">'
+
+  # Swap the short codes for the markup above (each one worked out first: filters can't go inside
+  # another filter's arguments)
+  assign showcase_text = section.settings.text | replace: '[images]', showcase_images | replace: '[arrow]', showcase_arrow | replace: '[break]', showcase_break
+
+  # The scene's large photos. The merchant sets each photo's spot (centre, % of the screen), width and
+  # tilt; the timing (which photo comes and goes when) is fixed per photo in the CSS.
+  capture scene_photos
+    if scene
+      for i in (1..3)
+        assign photo_key = 'scene_image_' | append: i
+        assign scene_photo = section.settings[photo_key]
+        assign x_key = 'scene_x_' | append: i
+        assign y_key = 'scene_y_' | append: i
+        assign width_key = 'scene_width_' | append: i
+        assign rotate_key = 'scene_rotate_' | append: i
+        capture photo_style
+          echo '--x: ' | append: section.settings[x_key] | append: '%; --y: ' | append: section.settings[y_key] | append: '%; --w: ' | append: section.settings[width_key] | append: '%; --tilt: ' | append: section.settings[rotate_key] | append: ';'
+        endcapture
+        if scene_photo != blank
+          echo '<div class="scrolling-showcase__photo scrolling-showcase__photo--' | append: i | append: '" style="' | append: photo_style | append: '">'
+          echo scene_photo | image_url: width: 1200 | image_tag: widths: '400, 600, 800, 1000, 1200', sizes: '(min-width: 750px) 30vw, 60vw', alt: '', loading: 'lazy'
+          echo '</div>'
+        elsif request.design_mode
+          echo '<div class="scrolling-showcase__photo scrolling-showcase__photo--' | append: i | append: ' scrolling-showcase__photo--placeholder" style="' | append: photo_style | append: '">'
+          echo 'image' | placeholder_svg_tag
+          echo '</div>'
+        endif
+      endfor
+    endif
+  endcapture
+-%}
+
+{%- if section.settings.text != blank or section.settings.eyebrow != blank -%}
+  <scrolling-showcase
+    class="scrolling-showcase full-width color-{{ scheme_id }}"
+    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --showcase-highlight: {{ section.settings.highlight_color }}; --scene-length: {{ section.settings.scene_length }}; --scene-text: {{ section.settings.scene_text_color }}; --scene-arrow: {{ section.settings.scene_arrow_color }}; --p: 0;"
+    {% if scene %}
+      data-scene
+      data-smoothing="{{ section.settings.scene_smoothing }}"
+    {% endif %}
+  >
+    <div class="scrolling-showcase__track">
+      <div class="scrolling-showcase__stage">
+        <animate-on-scroll class="scrolling-showcase__inner scrolling-showcase__layer">
+          {%- if section.settings.eyebrow != blank -%}
+            <p
+              class="eyebrow eyebrow--center scrolling-showcase__eyebrow"
+              {% if animation != 'none' %}
+                data-animate="{{ animation }}"
+              {% endif %}
+            >
+              {{ section.settings.eyebrow | escape }}
+            </p>
+          {%- endif -%}
+
+          {%- if section.settings.text != blank -%}
+            <h2
+              class="scrolling-showcase__title"
+              {% if animation != 'none' %}
+                data-animate="{{ animation }}"
+                style="--animate-delay: 120ms;"
+              {% endif %}
+            >
+              {{ showcase_text }}
+            </h2>
+          {%- endif -%}
+        </animate-on-scroll>
+
+        {%- if scene -%}
+          {%- comment -%}
+            Three scene layers on top of the real text, bottom to top:
+            1. the gold band (clipped to the rising band)
+            2. the photos (NOT clipped, so a photo is never cut off by the band's edge)
+            3. a white copy of the eyebrow + sentence (clipped like the band, so it sits on the gold only)
+            All decorative (aria-hidden); the copy is inert so links in the sentence aren't focusable twice.
+          {%- endcomment -%}
+          <div class="scrolling-showcase__band" aria-hidden="true"></div>
+          <div class="scrolling-showcase__photos" aria-hidden="true">{{ scene_photos }}</div>
+          <div class="scrolling-showcase__inner scrolling-showcase__layer scrolling-showcase__band-text" aria-hidden="true" inert>
+            {%- if section.settings.eyebrow != blank -%}
+              <p class="eyebrow eyebrow--center scrolling-showcase__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+            {%- endif -%}
+            {%- if section.settings.text != blank -%}
+              <div class="scrolling-showcase__title">{{ showcase_text }}</div>
+            {%- endif -%}
+          </div>
+        {%- endif -%}
+      </div>
+    </div>
+  </scrolling-showcase>
+{%- endif -%}
+
+{% stylesheet %}
+  .scrolling-showcase {
+    /* Separate colours for each highlighted part (the M4.4 scroll scene changes them one by one) */
+    --showcase-eyebrow-color: var(--showcase-highlight);
+    --showcase-em-color: var(--showcase-highlight);
+    --showcase-arrow-color: var(--showcase-highlight);
+
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  .scrolling-showcase__inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(2.5rem, 1.5rem + 4vw, 7.5rem); /* 40px on phones -> 120px at 1920px (Figma) */
+    inline-size: min(
+      calc(var(--page-width) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+    text-align: center;
+  }
+
+  .scrolling-showcase__eyebrow {
+    margin: 0;
+    color: var(--showcase-eyebrow-color);
+  }
+
+  /*
+    The sentence: 56px on phones -> 108px at 1920px (the display-xl token). The tall line height leaves
+    room for the photo stack, which is taller than the letters. Everything inside is sized in em, so the
+    photos and the arrow grow and shrink with the text.
+  */
+  /*
+    The font is set here, not left to the h2 rules in critical.css: the band's white copy is a <div>
+    (one heading per page area), so it would otherwise fall back to the body font and break its lines
+    differently from the real heading.
+  */
+  .scrolling-showcase__title {
+    max-inline-size: 15em;
+    margin: 0;
+    font-family: var(--font-heading--family);
+    font-style: var(--font-heading--style);
+    font-weight: var(--font-heading--weight);
+    font-size: var(--font-size-display-xl);
+    line-height: 1.6;
+    letter-spacing: 0;
+    text-wrap: balance;
+  }
+
+  .scrolling-showcase__title em {
+    font-style: normal;
+    color: var(--showcase-em-color);
+  }
+
+  /* [break]: only on wide screens, where the Figma's three lines fit; smaller screens wrap freely */
+  .scrolling-showcase__break {
+    display: none;
+  }
+
+  @media (min-width: 990px) {
+    .scrolling-showcase__break {
+      display: inline;
+    }
+  }
+
+  /* [images]: up to three rounded photos overlapping like a fanned hand of cards */
+  .scrolling-showcase__images {
+    display: inline-flex;
+    margin-inline: 0.1em;
+    vertical-align: middle;
+  }
+
+  .scrolling-showcase__image {
+    display: block;
+    flex: none;
+    inline-size: 0.85em;
+    block-size: 1.27em;
+    overflow: hidden;
+    border: 0.03em solid #ffffff;
+    border-radius: 0.16em;
+    background-color: var(--color-tint);
+    box-shadow: 0 0.04em 0.12em #00000026;
+  }
+
+  .scrolling-showcase__image + .scrolling-showcase__image {
+    margin-inline-start: -0.13em;
+  }
+
+  .scrolling-showcase__image > :is(img, svg) {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  /* [arrow]: the Figma's double arrow (→>), drawn with currentColor so one variable colours it */
+  .scrolling-showcase__arrow {
+    display: inline-block;
+    margin-inline: 0.12em;
+    color: var(--showcase-arrow-color);
+    vertical-align: middle;
+  }
+
+  .scrolling-showcase__arrow svg {
+    display: block;
+    inline-size: 1.5em;
+    block-size: auto;
+  }
+
+  scrolling-showcase {
+    display: block;
+  }
+
+  /* Static (scene off, or not switched on by the script): the band is never shown */
+  .scrolling-showcase__band {
+    display: none;
+  }
+
+  /*
+    Scroll scene. Everything below applies only once the script has added data-scene-active.
+
+    The track is several screens tall (Scene length, e.g. 300 = 3 screen heights); the stage inside it
+    is sticky, so it stays on screen while the visitor scrolls through the track. The script turns the
+    scroll position inside the track into --p: 0 when the stage pins, 1 when it lets go.
+  */
+  .scrolling-showcase[data-scene-active] {
+    padding-block: 0;
+  }
+
+  .scrolling-showcase[data-scene-active] .scrolling-showcase__track {
+    block-size: calc(var(--scene-length) * 1svh);
+  }
+
+  .scrolling-showcase[data-scene-active] .scrolling-showcase__stage {
+    /*
+      Timeline, from --p (0 = the stage pins, 1 = it lets go):
+      - 0    -> 0.20  rise: the band comes up from the bottom and fills the screen
+      - 0.05 -> 0.40  the photos come up into place, one shortly after the other
+      - 0.40 -> 0.45  hold: all three sit in their spots
+      - 0.45 -> 0.89  the photos leave upwards one by one (each starts when the one before is halfway)
+      - 0.89 -> 1     only the white text on gold; then the pin lets go and the gold screen scrolls up
+                      like any section, straight into the next one
+      clamp() keeps each value between 0 and 1 before and after its part of the scroll.
+    */
+    --rise: clamp(0, calc(var(--p) / 0.2), 1);
+
+    position: sticky;
+    inset-block-start: 0;
+    display: grid;
+    block-size: 100svh;
+    overflow: hidden;
+  }
+
+  /*
+    All layers share one grid cell (so the two texts line up exactly); z-index sets the order:
+    real text 0, gold band 1, photos 2, white text 3.
+  */
+  .scrolling-showcase[data-scene-active] .scrolling-showcase__stage > * {
+    grid-area: 1 / 1;
+  }
+
+  /* Top/Bottom padding move the text down/up inside the pinned screen (e.g. clear of the header) */
+  .scrolling-showcase[data-scene-active] .scrolling-showcase__layer {
+    align-self: center;
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  .scrolling-showcase[data-scene-active] .scrolling-showcase__band {
+    z-index: 1;
+    display: block;
+    background-color: var(--showcase-highlight);
+  }
+
+  /* Top edge = the rising band. Only that part of the band and of the white text shows. */
+  .scrolling-showcase[data-scene-active] :is(.scrolling-showcase__band, .scrolling-showcase__band-text) {
+    clip-path: inset(calc((1 - var(--rise)) * 100%) 0 0 0);
+  }
+
+  .scrolling-showcase[data-scene-active] .scrolling-showcase__band-text {
+    z-index: 3;
+    color: var(--scene-text);
+
+    /* The M4.3 colour variables, recoloured for the band: white text and "!!!", dark arrow */
+    --showcase-eyebrow-color: var(--scene-text);
+    --showcase-em-color: var(--scene-text);
+    --showcase-arrow-color: var(--scene-arrow);
+  }
+
+  /* Photos: placed by their centre (x / y = % of the screen), between the band and the white text */
+  .scrolling-showcase[data-scene-active] .scrolling-showcase__photos {
+    position: relative;
+    z-index: 2;
+  }
+
+  .scrolling-showcase__photos {
+    display: none;
+  }
+
+  .scrolling-showcase[data-scene-active] .scrolling-showcase__photos {
+    display: block;
+  }
+
+  .scrolling-showcase__photo {
+    /*
+      Each photo has its own two moments (start times set per photo below):
+      --in:  0 -> 1 over 0.25 of the scroll from --in-start (coming up into place)
+      --out: 0 -> 1 over 0.22 of the scroll from --out-start (leaving upwards)
+      Before --out-start a photo stays perfectly still, so while one leaves the others wait.
+    */
+    --in: clamp(0, calc((var(--p) - var(--in-start)) / 0.25), 1);
+    --out: clamp(0, calc((var(--p) - var(--out-start)) / 0.22), 1);
+
+    position: absolute;
+    inset-inline-start: var(--x);
+    inset-block-start: var(--y);
+    inline-size: var(--w);
+    aspect-ratio: 3 / 2;
+    overflow: hidden;
+    border-radius: clamp(0.75rem, 1.25vw, 1.5rem);
+    background-color: var(--color-tint);
+    box-shadow: 0 1.25rem 2.5rem #00000033;
+    /*
+      Coming in: starts one screen height lower and extra tilted, slows down as it lands
+      ((1 - in) squared = ease-out). Leaving: speeds up as it goes (out squared = ease-in), moving
+      1.2 screen heights up so it is fully off the stage, and turns a little the other way.
+      Between the two (in = 1, out = 0) both terms are 0: the photo sits exactly at its spot.
+    */
+    transform: translate(-50%, -50%)
+      translateY(calc((1 - var(--in)) * (1 - var(--in)) * 100svh - var(--out) * var(--out) * 120svh))
+      rotate(calc((var(--tilt) + (1 - var(--in)) * var(--spin) - var(--out) * var(--spin)) * 1deg));
+    will-change: transform;
+  }
+
+  .scrolling-showcase__photo > :is(img, svg) {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  /*
+    Timing per photo. Leaving: photo 1 at 0.45, photo 2 at 0.56 (photo 1 halfway out),
+    photo 3 at 0.67 (photo 2 halfway out); each takes 0.22, so the last one is gone at 0.89.
+  */
+  .scrolling-showcase__photo--1 { --spin: 12; --in-start: 0.05; --out-start: 0.45; }
+  .scrolling-showcase__photo--2 { --spin: -10; --in-start: 0.1; --out-start: 0.56; }
+  .scrolling-showcase__photo--3 { --spin: 14; --in-start: 0.15; --out-start: 0.67; }
+
+  /* Phones: the screen is narrow, so each photo takes a bigger share of it */
+  @media (max-width: 749px) {
+    .scrolling-showcase__photo {
+      inline-size: min(calc(var(--w) * 1.6), 70%);
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <scrolling-showcase>: the Scrolling showcase's gold scroll scene. Turns the scroll position inside the section's
+   * tall track into a number --p from 0 to 1; the CSS moves the band and the photos from that number.
+   *
+   * Switches on only when Liquid allowed it (data-scene: scene setting + theme animations on) and the
+   * visitor hasn't asked for reduced motion. Listens to scroll only while the section is on screen.
+   */
+  class ScrollingShowcase extends HTMLElement {
+    connectedCallback() {
+      if (!this.hasAttribute('data-scene')) return;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+      this.track = this.querySelector('.scrolling-showcase__track');
+      this.stage = this.querySelector('.scrolling-showcase__stage');
+      if (!this.track || !this.stage) return;
+
+      // Smoothing: each frame the shown progress moves this share of the way to the real scroll position.
+      // 1 = follows the scroll exactly; smaller = glides after it (smooth even with a jumpy mouse wheel).
+      this.ease = { off: 1, soft: 0.12, extra: 0.06 }[this.dataset.smoothing] ?? 0.12;
+      this.current = this.measure();
+      this.style.setProperty('--p', this.current.toFixed(4));
+
+      this.setAttribute('data-scene-active', '');
+      this.run = () => {
+        if (!this.frame) this.frame = requestAnimationFrame(() => this.step());
+      };
+
+      // Only listen to scrolling while the track is on screen
+      this.observer = new IntersectionObserver(([entry]) => {
+        if (entry.isIntersecting) {
+          window.addEventListener('scroll', this.run, { passive: true });
+          window.addEventListener('resize', this.run);
+          this.run();
+        } else {
+          this.stopListening();
+          this.current = this.measure(); // off screen: jump straight to the end state
+          this.style.setProperty('--p', this.current.toFixed(4));
+        }
+      });
+      this.observer.observe(this.track);
+    }
+
+    disconnectedCallback() {
+      this.observer?.disconnect();
+      this.stopListening();
+    }
+
+    stopListening() {
+      window.removeEventListener('scroll', this.run);
+      window.removeEventListener('resize', this.run);
+      if (this.frame) cancelAnimationFrame(this.frame);
+      this.frame = null;
+    }
+
+    /**
+     * The real scroll progress: 0 when the track's top reaches the top of the screen (the stage pins),
+     * 1 when the track's bottom reaches the stage's bottom (it lets go). Measured against the stage's own
+     * height (the real 100svh), so it stays right on phones when the address bar grows or shrinks.
+     */
+    measure() {
+      const distance = this.track.offsetHeight - this.stage.offsetHeight;
+      const scrolled = -this.track.getBoundingClientRect().top;
+      return distance > 0 ? Math.min(Math.max(scrolled / distance, 0), 1) : 0;
+    }
+
+    /** One frame: move the shown progress towards the real one; keep going until they meet. */
+    step() {
+      this.frame = null;
+      const target = this.measure();
+      const gap = target - this.current;
+      this.current = Math.abs(gap) < 0.0005 ? target : this.current + gap * this.ease;
+      this.style.setProperty('--p', this.current.toFixed(4));
+      if (this.current !== target) this.run();
+    }
+  }
+
+  if (!customElements.get('scrolling-showcase')) {
+    customElements.define('scrolling-showcase', ScrollingShowcase);
+  }
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.scrolling_showcase",
+  "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "Find your glow here"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "text",
+      "label": "t:labels.showcase_text",
+      "info": "t:labels.showcase_text_info",
+      "default": "All the [images] products you [break]need [arrow], right at [break]our shop<em>!!!</em>"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_1",
+      "label": "t:labels.image_1"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_2",
+      "label": "t:labels.image_2"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_3",
+      "label": "t:labels.image_3"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "color",
+      "id": "highlight_color",
+      "label": "t:labels.highlight_color",
+      "info": "t:labels.highlight_color_info",
+      "default": "#c8a24b"
+    },
+    {
+      "type": "select",
+      "id": "animation",
+      "label": "t:labels.animation",
+      "info": "t:labels.animation_info",
+      "options": [
+        {
+          "value": "none",
+          "label": "t:options.animation.none"
+        },
+        {
+          "value": "fade-up",
+          "label": "t:options.animation.fade_up"
+        },
+        {
+          "value": "zoom-in",
+          "label": "t:options.animation.zoom_in"
+        }
+      ],
+      "default": "fade-up",
+      "visible_if": "{{ section.settings.enable_scene == false }}"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 96
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 160
+    },
+    {
+      "type": "header",
+      "content": "t:labels.scroll_scene"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_scene",
+      "label": "t:labels.enable_scene",
+      "info": "t:labels.enable_scene_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "scene_length",
+      "label": "t:labels.scene_length",
+      "info": "t:labels.scene_length_info",
+      "min": 200,
+      "max": 500,
+      "step": 25,
+      "unit": "%",
+      "default": 400,
+      "visible_if": "{{ section.settings.enable_scene }}"
+    },
+    {
+      "type": "select",
+      "id": "scene_smoothing",
+      "label": "t:labels.scene_smoothing",
+      "info": "t:labels.scene_smoothing_info",
+      "options": [
+        {
+          "value": "off",
+          "label": "t:options.scene_smoothing.off"
+        },
+        {
+          "value": "soft",
+          "label": "t:options.scene_smoothing.soft"
+        },
+        {
+          "value": "extra",
+          "label": "t:options.scene_smoothing.extra"
+        }
+      ],
+      "default": "soft",
+      "visible_if": "{{ section.settings.enable_scene }}"
+    },
+    {
+      "type": "color",
+      "id": "scene_text_color",
+      "label": "t:labels.scene_text_color",
+      "default": "#ffffff",
+      "visible_if": "{{ section.settings.enable_scene }}"
+    },
+    {
+      "type": "color",
+      "id": "scene_arrow_color",
+      "label": "t:labels.scene_arrow_color",
+      "default": "#1f1f1f",
+      "visible_if": "{{ section.settings.enable_scene }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.scene_image_1",
+      "info": "t:labels.scene_photo_info"
+    },
+    {
+      "type": "image_picker",
+      "id": "scene_image_1",
+      "label": "t:labels.image",
+      "visible_if": "{{ section.settings.enable_scene }}"
+    },
+    {
+      "type": "range",
+      "id": "scene_x_1",
+      "label": "t:labels.position_horizontal",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "%",
+      "default": 26,
+      "visible_if": "{{ section.settings.enable_scene }}"
+    },
+    {
+      "type": "range",
+      "id": "scene_y_1",
+      "label": "t:labels.position_vertical",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "%",
+      "default": 18,
+      "visible_if": "{{ section.settings.enable_scene }}"
+    },
+    {
+      "type": "range",
+      "id": "scene_width_1",
+      "label": "t:labels.image_width",
+      "min": 10,
+      "max": 60,
+      "step": 1,
+      "unit": "%",
+      "default": 27,
+      "visible_if": "{{ section.settings.enable_scene }}"
+    },
+    {
+      "type": "range",
+      "id": "scene_rotate_1",
+      "label": "t:labels.rotation",
+      "min": -30,
+      "max": 30,
+      "step": 1,
+      "unit": "°",
+      "default": -8,
+      "visible_if": "{{ section.settings.enable_scene }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.scene_image_2",
+      "info": "t:labels.scene_photo_info"
+    },
+    {
+      "type": "image_picker",
+      "id": "scene_image_2",
+      "label": "t:labels.image",
+      "visible_if": "{{ section.settings.enable_scene }}"
+    },
+    {
+      "type": "range",
+      "id": "scene_x_2",
+      "label": "t:labels.position_horizontal",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "%",
+      "default": 72,
+      "visible_if": "{{ section.settings.enable_scene }}"
+    },
+    {
+      "type": "range",
+      "id": "scene_y_2",
+      "label": "t:labels.position_vertical",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "%",
+      "default": 35,
+      "visible_if": "{{ section.settings.enable_scene }}"
+    },
+    {
+      "type": "range",
+      "id": "scene_width_2",
+      "label": "t:labels.image_width",
+      "min": 10,
+      "max": 60,
+      "step": 1,
+      "unit": "%",
+      "default": 27,
+      "visible_if": "{{ section.settings.enable_scene }}"
+    },
+    {
+      "type": "range",
+      "id": "scene_rotate_2",
+      "label": "t:labels.rotation",
+      "min": -30,
+      "max": 30,
+      "step": 1,
+      "unit": "°",
+      "default": -3,
+      "visible_if": "{{ section.settings.enable_scene }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.scene_image_3",
+      "info": "t:labels.scene_photo_info"
+    },
+    {
+      "type": "image_picker",
+      "id": "scene_image_3",
+      "label": "t:labels.image",
+      "visible_if": "{{ section.settings.enable_scene }}"
+    },
+    {
+      "type": "range",
+      "id": "scene_x_3",
+      "label": "t:labels.position_horizontal",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "%",
+      "default": 36,
+      "visible_if": "{{ section.settings.enable_scene }}"
+    },
+    {
+      "type": "range",
+      "id": "scene_y_3",
+      "label": "t:labels.position_vertical",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "%",
+      "default": 77,
+      "visible_if": "{{ section.settings.enable_scene }}"
+    },
+    {
+      "type": "range",
+      "id": "scene_width_3",
+      "label": "t:labels.image_width",
+      "min": 10,
+      "max": 60,
+      "step": 1,
+      "unit": "%",
+      "default": 24,
+      "visible_if": "{{ section.settings.enable_scene }}"
+    },
+    {
+      "type": "range",
+      "id": "scene_rotate_3",
+      "label": "t:labels.rotation",
+      "min": -30,
+      "max": 30,
+      "step": 1,
+      "unit": "°",
+      "default": -8,
+      "visible_if": "{{ section.settings.enable_scene }}"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.scrolling_showcase"
+    }
+  ]
+}
+{% endschema %}

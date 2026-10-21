@@ -149,7 +149,7 @@ h6,
   background-color: currentcolor;
 }
 
-/* Centred eyebrow (e.g. the homepage statement): a rule on both sides of the label */
+/* Centred eyebrow (e.g. the Scrolling showcase section): a rule on both sides of the label */
 .eyebrow--center {
   justify-content: center;
   text-align: center;
