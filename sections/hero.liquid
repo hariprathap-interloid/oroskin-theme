@@ -25,7 +25,7 @@
 -%}
 
 <hero-showcase
-  class="hero full-width color-{{ scheme_id }} hero--height-{{ section.settings.height }} hero--x-{{ section.settings.content_x }} hero--y-{{ section.settings.content_y }} hero--scale-{{ section.settings.text_scaling }} hero--spacing-{{ section.settings.content_spacing }}"
+  class="hero full-width section-width--{{ section.settings.section_width | default: 'full' }} color-{{ scheme_id }} hero--height-{{ section.settings.height }} hero--x-{{ section.settings.content_x }} hero--y-{{ section.settings.content_y }} hero--scale-{{ section.settings.text_scaling }} hero--spacing-{{ section.settings.content_spacing }}"
   data-rotate="{{ section.settings.rotate_products }}"
   data-interval="{{ section.settings.rotate_interval | times: 1000 }}"
   data-resume="{{ section.settings.resume_delay | times: 1000 }}"
@@ -193,6 +193,9 @@
     padding-block: max(var(--space-2xl), calc(var(--hero-pad-top) * var(--hero-px)))
       max(var(--space-xl), calc(var(--hero-pad-bottom) * var(--hero-px)));
     padding-inline: max(var(--page-margin), calc(var(--hero-pad-side) * var(--hero-px)));
+    /* Section width: Full (default, Figma) = from the screen edge; Wide / Narrow = a centred column */
+    max-inline-size: var(--section-width, 100vw);
+    margin-inline: auto;
   }
 
   /* Content position: horizontal (start / center / end) */
@@ -770,6 +773,31 @@
       "unit": "s",
       "default": 2.5,
       "visible_if": "{{ section.settings.rotate_products }}"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "full"
     },
     {
       "type": "color_scheme",

@@ -1,0 +1,572 @@
+{%- comment -%}
+  Blog stories (Figma "Stories of Transformation"): an eyebrow, a heading and a "View journal" link
+  above up to 4 story cards in the Figma mosaic: a wide featured story, two stories stacked in the
+  middle, a tall story at the end. Layout "Featured right" mirrors it.
+
+  Where the stories come from (both work together):
+  - Blog: the newest articles of the chosen blog fill the places automatically.
+  - Story blocks (4 by default, drag to reorder, block 1 = the featured card): each block is one place.
+    Pick an Article there to pin that article to the place; leave it empty and the place takes the next
+    newest blog article that isn't pinned elsewhere (so nothing shows twice). Custom image and Category
+    work for pinned and automatic stories alike.
+  - No blocks at all: the 4 newest blog articles, newest first.
+
+  Highlight colour: the eyebrow, the italic words of the heading and the categories (gold in the
+  Figma; Scheme 1's own accent is the brand red).
+{%- endcomment -%}
+
+{%- liquid
+  assign stories_blog = section.settings.blog
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-1'
+
+  # Pinned articles (chosen in a Story block), as "|handle|" marks in one string, so the automatic
+  # fill can skip them: contains on "|my-post|" can't match a different post by accident
+  assign pinned = '|'
+  for block in section.blocks
+    if block.settings.article != blank
+      assign pinned = pinned | append: block.settings.article.handle | append: '|'
+    endif
+  endfor
+  assign used = '|'
+
+  # View journal: the link setting, else the chosen blog, else the blog of the first pinned article
+  # (an article URL is /blogs/<blog-handle>/<article-handle>)
+  assign view_all_url = section.settings.link
+  if view_all_url == blank and stories_blog != blank
+    assign view_all_url = stories_blog.url
+  endif
+  if view_all_url == blank
+    for block in section.blocks
+      if block.settings.article != blank
+        assign url_parts = block.settings.article.url | split: '/'
+        assign view_all_url = '/' | append: url_parts[1] | append: '/' | append: url_parts[2]
+        break
+      endif
+    endfor
+  endif
+
+  assign animation = section.settings.animation
+  if section.index == 1
+    assign animation = 'none'
+  endif
+-%}
+
+<div
+  class="blog-stories full-width section-width--{{ section.settings.section_width | default: 'wide' }} color-{{ scheme_id }}"
+  style="--color-accent: {{ section.settings.highlight_color }}; --section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
+>
+  <div class="blog-stories__inner">
+    <div class="blog-stories__header">
+      <div class="blog-stories__titles">
+        {%- if section.settings.eyebrow != blank -%}
+          <p class="eyebrow blog-stories__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+        {%- endif -%}
+        {%- if section.settings.heading != blank -%}
+          <h2 class="blog-stories__heading">{{ section.settings.heading }}</h2>
+        {%- endif -%}
+      </div>
+      {%- if section.settings.link_label != blank and view_all_url != blank -%}
+        <a class="button button--text blog-stories__view-all" href="{{ view_all_url }}">
+          {{- section.settings.link_label | escape -}}
+          <span class="blog-stories__arrow" aria-hidden="true">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+        </a>
+      {%- endif -%}
+    </div>
+
+    <animate-on-scroll>
+      <ul
+        class="blog-stories__grid blog-stories__grid--{{ section.settings.layout }}"
+        role="list"
+        {% if animation != 'none' %}
+          data-animate="{{ animation }}"
+        {% endif %}
+      >
+        {%- if section.blocks.size > 0 -%}
+          {%- for block in section.blocks -%}
+            {%- liquid
+              # Pinned article, or else the next newest blog article that isn't pinned or already shown
+              assign story = block.settings.article
+              if story == blank and stories_blog != blank
+                for candidate in stories_blog.articles limit: 12
+                  assign mark = '|' | append: candidate.handle | append: '|'
+                  if pinned contains mark or used contains mark
+                    continue
+                  endif
+                  assign story = candidate
+                  break
+                endfor
+              endif
+              if story != blank
+                assign used = used | append: story.handle | append: '|'
+              endif
+            -%}
+            {% render 'story-card',
+              article: story,
+              image: block.settings.image,
+              category: block.settings.category,
+              pill_label: block.settings.pill_label,
+              attributes: block.shopify_attributes
+            %}
+          {%- endfor -%}
+        {%- else -%}
+          {%- for story in stories_blog.articles limit: 4 -%}
+            {%- liquid
+              assign pill = ''
+              if forloop.first
+                assign pill = 'sections.blog_stories.featured' | t
+              endif
+            -%}
+            {% render 'story-card', article: story, pill_label: pill %}
+          {%- endfor -%}
+        {%- endif -%}
+      </ul>
+    </animate-on-scroll>
+  </div>
+</div>
+
+{% stylesheet %}
+  .blog-stories {
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  .blog-stories__inner {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(2.5rem, 1.5rem + 3vw, 6rem);
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  .blog-stories__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-md);
+  }
+
+  .blog-stories__titles {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .blog-stories__eyebrow {
+    margin: 0;
+  }
+
+  .blog-stories__heading {
+    margin: 0;
+    font-size: var(--font-size-display);
+  }
+
+  /* "*Stories of* Transformation": italic words in the highlight colour, not slanted */
+  .blog-stories__heading em {
+    color: var(--color-accent);
+    font-style: normal;
+  }
+
+  .blog-stories__view-all {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    color: color-mix(in srgb, var(--color-text) 70%, var(--color-background));
+  }
+
+  .blog-stories__arrow svg {
+    inline-size: 1em;
+    block-size: auto;
+  }
+
+  /*
+    Mosaic (Figma, 1920px): columns about 10 : 5 : 4, two equal rows.
+    Card 1 (featured) = the wide left column, both rows; cards 2 and 3 = middle column, one row each;
+    card 4 = right column, both rows. Tablets: 2 columns; phones: one card per row.
+  */
+  .blog-stories__grid {
+    display: grid;
+    gap: var(--space-lg);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .blog-stories__card {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    align-items: flex-end;
+    min-block-size: 18rem;
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+    background-color: #1f1f1f;
+    color: #ffffff;
+  }
+
+  @media (min-width: 750px) {
+    .blog-stories__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .blog-stories__card:first-child {
+      grid-row: span 2;
+    }
+  }
+
+  @media (min-width: 990px) {
+    .blog-stories__grid {
+      grid-template-rows: repeat(2, minmax(15rem, 16vw));
+    }
+
+    /* Featured left (Figma): wide featured | 2 stacked | tall */
+    .blog-stories__grid--featured-left {
+      grid-template-columns: 10fr 5fr 4fr;
+    }
+
+    .blog-stories__grid--featured-left .blog-stories__card:nth-child(1) { grid-area: 1 / 1 / 3 / 2; }
+    .blog-stories__grid--featured-left .blog-stories__card:nth-child(2) { grid-area: 1 / 2 / 2 / 3; }
+    .blog-stories__grid--featured-left .blog-stories__card:nth-child(3) { grid-area: 2 / 2 / 3 / 3; }
+    .blog-stories__grid--featured-left .blog-stories__card:nth-child(4) { grid-area: 1 / 3 / 3 / 4; }
+
+    /* Featured right (mirrored): tall | 2 stacked | wide featured */
+    .blog-stories__grid--featured-right {
+      grid-template-columns: 4fr 5fr 10fr;
+    }
+
+    .blog-stories__grid--featured-right .blog-stories__card:nth-child(1) { grid-area: 1 / 3 / 3 / 4; }
+    .blog-stories__grid--featured-right .blog-stories__card:nth-child(2) { grid-area: 1 / 2 / 2 / 3; }
+    .blog-stories__grid--featured-right .blog-stories__card:nth-child(3) { grid-area: 2 / 2 / 3 / 3; }
+    .blog-stories__grid--featured-right .blog-stories__card:nth-child(4) { grid-area: 1 / 1 / 3 / 2; }
+  }
+
+  /* Photo fills the card; a dark fade from the bottom keeps the white text readable */
+  .blog-stories__media {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+  }
+
+  .blog-stories__media .image,
+  .blog-stories__placeholder {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  /* Hover (Figma hover state): the photo slowly zooms in about 12%; the text stays still */
+  .blog-stories__media img {
+    transition: transform 0.9s var(--ease-out);
+  }
+
+  .blog-stories__card:hover .blog-stories__media img,
+  .blog-stories__card:has(.blog-stories__link:focus-visible) .blog-stories__media img {
+    transform: scale(1.12);
+  }
+
+  .blog-stories__media::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(0deg, #000000d9 0%, #00000066 45%, #00000000 75%);
+  }
+
+  .blog-stories__text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-xs);
+    padding: clamp(1.25rem, 1rem + 1vw, 2.25rem);
+  }
+
+  .blog-stories__category {
+    margin: 0;
+    color: var(--color-accent);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  /* Figma: "Featured Story" in a dark glass pill with a thin light edge */
+  .blog-stories__pill {
+    margin-block-end: var(--space-sm);
+    padding: 0.35em 1.25em;
+    border: 1px solid #ffffff4d;
+    border-radius: var(--radius-pill);
+    background-color: #ffffff1f;
+    font-size: var(--font-size-body-sm);
+    backdrop-filter: blur(8px);
+  }
+
+  .blog-stories__title {
+    margin: 0;
+    color: #ffffff;
+    font-size: var(--font-size-h3);
+  }
+
+  /*
+    Featured = the first card: bigger title, pill and excerpt. The other cards don't show a pill or an
+    excerpt; the featured card hides the category when it has a pill (Figma).
+  */
+  .blog-stories__card:first-child .blog-stories__title {
+    font-size: var(--font-size-h1);
+  }
+
+  .blog-stories__card:not(:first-child) :is(.blog-stories__pill, .blog-stories__excerpt),
+  .blog-stories__card:first-child:has(.blog-stories__pill) .blog-stories__category {
+    display: none;
+  }
+
+  .blog-stories__excerpt {
+    margin: var(--space-sm) 0 0;
+    color: #ffffffd9;
+    font-size: var(--font-size-body);
+  }
+
+  /* The title's link covers the whole card: one click target, one tab stop per story */
+  .blog-stories__link {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .blog-stories__link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+
+  .blog-stories__link:focus-visible {
+    outline: none;
+  }
+
+  .blog-stories__card:has(.blog-stories__link:focus-visible) {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 4px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .blog-stories__card:hover .blog-stories__media img {
+      transform: none;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.blog_stories",
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "Beauty rituals"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.trending_heading_info",
+      "default": "<em>Stories of</em> Transformation"
+    },
+    {
+      "type": "text",
+      "id": "link_label",
+      "label": "t:labels.link_label",
+      "default": "View journal"
+    },
+    {
+      "type": "url",
+      "id": "link",
+      "label": "t:labels.link",
+      "info": "t:labels.blog_stories_link_info"
+    },
+    {
+      "type": "blog",
+      "id": "blog",
+      "label": "t:labels.blog",
+      "info": "t:labels.blog_stories_blog_info"
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "t:labels.layout",
+      "options": [
+        {
+          "value": "featured-left",
+          "label": "t:options.stories_layout.featured_left"
+        },
+        {
+          "value": "featured-right",
+          "label": "t:options.stories_layout.featured_right"
+        }
+      ],
+      "default": "featured-left"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "wide"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "color",
+      "id": "highlight_color",
+      "label": "t:labels.highlight_color",
+      "default": "#c8a24b"
+    },
+    {
+      "type": "select",
+      "id": "animation",
+      "label": "t:labels.animation",
+      "info": "t:labels.animation_info",
+      "options": [
+        {
+          "value": "none",
+          "label": "t:options.animation.none"
+        },
+        {
+          "value": "fade-up",
+          "label": "t:options.animation.fade_up"
+        },
+        {
+          "value": "zoom-in",
+          "label": "t:options.animation.zoom_in"
+        },
+        {
+          "value": "slide-top",
+          "label": "t:options.animation.slide_top"
+        },
+        {
+          "value": "slide-bottom",
+          "label": "t:options.animation.slide_bottom"
+        },
+        {
+          "value": "slide-left",
+          "label": "t:options.animation.slide_left"
+        },
+        {
+          "value": "slide-right",
+          "label": "t:options.animation.slide_right"
+        }
+      ],
+      "default": "fade-up"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 96
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 96
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.blog_stories",
+      "blocks": [
+        {
+          "type": "story",
+          "settings": {
+            "pill_label": "Featured story"
+          }
+        },
+        {
+          "type": "story",
+          "settings": {
+            "pill_label": ""
+          }
+        },
+        {
+          "type": "story",
+          "settings": {
+            "pill_label": ""
+          }
+        },
+        {
+          "type": "story",
+          "settings": {
+            "pill_label": ""
+          }
+        }
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "type": "story",
+      "name": "t:general.story",
+      "settings": [
+        {
+          "type": "article",
+          "id": "article",
+          "label": "t:labels.article",
+          "info": "t:labels.story_article_info"
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "t:labels.custom_image",
+          "info": "t:labels.story_image_info"
+        },
+        {
+          "type": "text",
+          "id": "category",
+          "label": "t:labels.category",
+          "info": "t:labels.story_category_info"
+        },
+        {
+          "type": "text",
+          "id": "pill_label",
+          "label": "t:labels.pill_label",
+          "info": "t:labels.pill_label_info",
+          "default": "Featured story"
+        }
+      ]
+    }
+  ],
+  "max_blocks": 4
+}
+{% endschema %}

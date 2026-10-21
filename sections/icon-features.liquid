@@ -15,7 +15,7 @@
 
 {%- if section.blocks.size > 0 -%}
   <div
-    class="icon-features full-width color-{{ scheme_id }}"
+    class="icon-features full-width section-width--{{ section.settings.section_width | default: 'wide' }} color-{{ scheme_id }}"
     style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --columns-desktop: {{ section.settings.columns_desktop }}; --columns-mobile: {{ section.settings.columns_mobile }}; --icon-feature-color: {{ section.settings.icon_color }};"
   >
     <animate-on-scroll class="icon-features__inner">
@@ -38,7 +38,7 @@
 
   .icon-features__inner {
     inline-size: min(
-      calc(var(--page-width) - var(--page-margin) * 2),
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
       calc(100% - var(--page-margin) * 2)
     );
     margin-inline: auto;
@@ -103,6 +103,31 @@
     {
       "type": "header",
       "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "wide"
     },
     {
       "type": "color_scheme",

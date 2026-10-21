@@ -30,7 +30,7 @@
 -%}
 
 <image-banner
-  class="image-banner full-width color-{{ scheme_id }} image-banner--{{ section.settings.height }} image-banner--overlay-{{ section.settings.overlay_style }}"
+  class="image-banner full-width section-width--{{ section.settings.section_width | default: 'wide' }} color-{{ scheme_id }} image-banner--{{ section.settings.height }} image-banner--overlay-{{ section.settings.overlay_style }}"
   style="--banner-overlay: {{ overlay_opacity }}; --section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --p: 0;"
   {% if settings.animations_enabled %}
     data-scene
@@ -146,7 +146,7 @@
     align-items: center;
     gap: var(--space-xl);
     inline-size: min(
-      calc(var(--page-width) - var(--page-margin) * 2),
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
       calc(100% - var(--page-margin) * 2)
     );
     margin-inline: auto;
@@ -388,6 +388,31 @@
     {
       "type": "header",
       "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "wide"
     },
     {
       "type": "color_scheme",

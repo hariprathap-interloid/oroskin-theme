@@ -94,6 +94,11 @@
     },
     "trending": {
       "placeholder_category": "Category"
+    },
+    "blog_stories": {
+      "placeholder_category": "Category",
+      "placeholder_title": "Your story title",
+      "featured": "Featured story"
     }
   },
   "products": {

@@ -600,6 +600,31 @@ animate-on-scroll {
   width: 100%;
 }
 
+/*
+ * Section width (the "Section width" setting): how wide a section's content column may get.
+ * Each section's content column uses var(--section-width) in place of the page width:
+ * - narrow: 1200px, centred
+ * - wide: the theme's page width (Theme settings > Layout), centred
+ * - widest: almost full width, with more space at the sides than full
+ * - full: edge to edge; only the page margins remain
+ */
+.section-width--narrow {
+  --section-width: 75rem;
+}
+
+.section-width--wide {
+  --section-width: var(--page-width);
+}
+
+/* widest: almost full width, keeping about 4% of the screen as space on each side (~77px at 1920px) */
+.section-width--widest {
+  --section-width: calc(100vw - clamp(4rem, 8vw, 10rem));
+}
+
+.section-width--full {
+  --section-width: 100vw;
+}
+
 /* Child elements, by default, are constrained to the central column of the grid. */
 .shopify-section > * {
   grid-column: 2;

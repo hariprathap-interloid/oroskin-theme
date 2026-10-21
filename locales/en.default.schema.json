@@ -53,7 +53,9 @@
     "icon_features": "Feature icons",
     "icon_feature": "Feature",
     "trending_products": "Trending products",
-    "trending_sheet": "Trending sheet"
+    "trending_sheet": "Trending sheet",
+    "blog_stories": "Blog stories",
+    "story": "Story"
   },
   "labels": {
     "alignment": "Alignment",
@@ -308,7 +310,20 @@
     "image_opacity": "Image opacity",
     "trending_background_info": "Shown behind the list, faded by Image opacity.",
     "rows_animation": "Rows animation",
-    "image_animation": "Image animation"
+    "image_animation": "Image animation",
+    "blog": "Blog",
+    "blog_stories_link_info": "Leave empty to link to the blog above.",
+    "article": "Article",
+    "custom_image": "Custom image",
+    "story_image_info": "Leave empty to use the article's own image.",
+    "category": "Category",
+    "story_category_info": "Leave empty to use the article's first tag.",
+    "pill_label": "Pill label",
+    "pill_label_info": "Shown only when this story is first (the featured card).",
+    "blog_stories_blog_info": "Its newest articles fill the stories automatically. Pick an article in a Story block to pin it to that place instead.",
+    "story_article_info": "Leave empty to show the next newest article from the blog above.",
+    "section_width": "Section width",
+    "section_width_info": "Narrow = 1200px, Wide = the page width (Theme settings > Layout), Widest = almost full width with space at the sides, Full width = edge to edge."
   },
   "options": {
     "alignment": {
@@ -520,6 +535,16 @@
       "book": "Book",
       "users": "People",
       "none": "None"
+    },
+    "stories_layout": {
+      "featured_left": "Featured left",
+      "featured_right": "Featured right"
+    },
+    "section_width": {
+      "narrow": "Narrow",
+      "wide": "Wide",
+      "widest": "Widest",
+      "full": "Full width"
     }
   },
   "color_scheme": {

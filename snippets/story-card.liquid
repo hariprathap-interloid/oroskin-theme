@@ -1,0 +1,62 @@
+{% doc %}
+  One card of the Blog stories mosaic: the article's image (or a custom image), its category (the
+  article's first tag, or a custom category) and its title, all one link to the article. The pill and
+  the excerpt are output on every card; the section's CSS shows them on the first (featured) card only.
+  Without an article: a placeholder card in the theme editor, nothing on the live store.
+
+  @param {article} [article] - The article to show
+  @param {image} [image] - Custom image, replaces the article's image
+  @param {string} [category] - Custom category, replaces the article's first tag
+  @param {string} [pill_label] - Pill text for the featured card, e.g. "Featured story"
+  @param {string} [attributes] - The block's shopify_attributes (theme editor selection)
+
+  @example
+  {% render 'story-card', article: story, image: block.settings.image, attributes: block.shopify_attributes %}
+{% enddoc %}
+
+{%- liquid
+  assign story_image = image
+  if story_image == blank and article != blank
+    assign story_image = article.image
+  endif
+
+  assign story_category = category
+  if story_category == blank and article != blank
+    assign story_category = article.tags | first
+  endif
+-%}
+
+{%- if article != blank or request.design_mode -%}
+  <li class="blog-stories__card" {{ attributes }}>
+    <div class="blog-stories__media">
+      {%- if story_image != blank -%}
+        {% render 'image', image: story_image, alt: '', class: 'image--cover', sizes: '(min-width: 990px) 50vw, 100vw' %}
+      {%- else -%}
+        {{ 'lifestyle-1' | placeholder_svg_tag: 'blog-stories__placeholder' }}
+      {%- endif -%}
+    </div>
+    <div class="blog-stories__text">
+      {%- if pill_label != blank -%}
+        <span class="blog-stories__pill">{{ pill_label | escape }}</span>
+      {%- endif -%}
+      {%- if story_category != blank -%}
+        <p class="blog-stories__category">{{ story_category | escape }}</p>
+      {%- elsif article == blank -%}
+        <p class="blog-stories__category">{{ 'sections.blog_stories.placeholder_category' | t }}</p>
+      {%- endif -%}
+      <h3 class="blog-stories__title">
+        {%- if article != blank -%}
+          <a class="blog-stories__link" href="{{ article.url }}">{{ article.title | escape }}</a>
+        {%- else -%}
+          {{ 'sections.blog_stories.placeholder_title' | t }}
+        {%- endif -%}
+      </h3>
+      {%- if article != blank -%}
+        {%- assign excerpt = article.excerpt_or_content | strip_html | truncatewords: 24 -%}
+        {%- if excerpt != blank -%}
+          <p class="blog-stories__excerpt">{{ excerpt }}</p>
+        {%- endif -%}
+      {%- endif -%}
+    </div>
+  </li>
+{%- endif -%}

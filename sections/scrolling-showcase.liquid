@@ -112,7 +112,7 @@
 
 {%- if section.settings.text != blank or section.settings.eyebrow != blank -%}
   <scrolling-showcase
-    class="scrolling-showcase full-width color-{{ scheme_id }}"
+    class="scrolling-showcase full-width section-width--{{ section.settings.section_width | default: 'wide' }} color-{{ scheme_id }}"
     style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --showcase-highlight: {{ section.settings.highlight_color }}; --scene-length: {{ section.settings.scene_length }}; --scene-text: {{ section.settings.scene_text_color }}; --scene-arrow: {{ section.settings.scene_arrow_color }}; --p: 0;"
     {% if scene %}
       data-scene
@@ -186,7 +186,7 @@
     align-items: center;
     gap: clamp(2.5rem, 1.5rem + 4vw, 7.5rem); /* 40px on phones -> 120px at 1920px (Figma) */
     inline-size: min(
-      calc(var(--page-width) - var(--page-margin) * 2),
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
       calc(100% - var(--page-margin) * 2)
     );
     margin-inline: auto;
@@ -548,6 +548,31 @@
     {
       "type": "header",
       "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "wide"
     },
     {
       "type": "color_scheme",
