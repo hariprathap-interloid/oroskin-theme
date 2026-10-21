@@ -557,6 +557,7 @@
         "rotate_products": true,
         "rotate_interval": 4,
         "resume_delay": 2.5,
+        "section_width": "full",
         "color_scheme": "",
         "show_band": true,
         "band_text": "OroSkin • Signature collection • Estd. 2026",
@@ -572,6 +573,7 @@
         "image_1": "shopify://shop_images/31038e5e4d8264fe6801fb289237a5b14d361dfb.png",
         "image_2": "shopify://shop_images/8ca1650e0bc1395f1a1db019baf881e298994caf.png",
         "image_3": "shopify://shop_images/362cb2bed5f5c376c1542cc46c8f94a272735447.png",
+        "section_width": "widest",
         "color_scheme": "scheme-1",
         "highlight_color": "#c8a24b",
         "animation": "fade-up",
@@ -695,6 +697,7 @@
         "height": "medium",
         "overlay_style": "gradient",
         "overlay_opacity": 45,
+        "section_width": "widest",
         "color_scheme": "scheme-5",
         "animation": "fade-up",
         "padding_top": 120,
@@ -755,6 +758,7 @@
       "settings": {
         "columns_desktop": 4,
         "columns_mobile": "1",
+        "section_width": "widest",
         "color_scheme": "",
         "icon_color": "#c8a24b",
         "animation": "slide-bottom",
@@ -910,32 +914,68 @@
         "height": "full",
         "overlay_style": "gradient",
         "overlay_opacity": 80,
+        "section_width": "widest",
         "color_scheme": "scheme-5",
         "animation": "fade-up",
         "padding_top": 120,
         "padding_bottom": 120
       }
     },
-    "trending_products_n4iqft": {
-      "type": "trending-products",
-      "name": "t:general.trending_products",
+    "blog_stories_JzWXeh": {
+      "type": "blog-stories",
+      "blocks": {
+        "story_w33YmJ": {
+          "type": "story",
+          "settings": {
+            "article": "featured/the-art-of-the-morning-ritual",
+            "category": "",
+            "pill_label": "Featured story"
+          }
+        },
+        "story_xLafmm": {
+          "type": "story",
+          "settings": {
+            "article": "featured/scent-as-memory",
+            "category": "",
+            "pill_label": ""
+          }
+        },
+        "story_eBQny4": {
+          "type": "story",
+          "settings": {
+            "article": "featured/the-skin-moisturizer",
+            "category": "",
+            "pill_label": ""
+          }
+        },
+        "story_Xjg6LA": {
+          "type": "story",
+          "settings": {
+            "article": "featured/pure-matte-lipstick",
+            "category": "",
+            "pill_label": ""
+          }
+        }
+      },
+      "block_order": [
+        "story_w33YmJ",
+        "story_xLafmm",
+        "story_eBQny4",
+        "story_Xjg6LA"
+      ],
+      "name": "t:general.blog_stories",
       "settings": {
-        "heading": "Trending <em>Now</em>",
-        "link_label": "View all",
+        "eyebrow": "Beauty rituals",
+        "heading": "<em>Stories of</em> Transformation",
+        "link_label": "View journal",
         "link": "",
-        "heading_size": 64,
-        "title_size": 24,
-        "collection": "",
-        "products_to_show": 7,
-        "image": "shopify://shop_images/6a9da17c3473051a785c2d23aa0bb872cbfeedf7.png",
-        "image_position": "right",
-        "image_overlay": 20,
-        "image_animation": "fade-up",
-        "background_image": "shopify://shop_images/f3d7c3aaceecd21ad298d3526e6f2e831f93a409.png",
-        "background_opacity": 10,
+        "blog": "featured",
+        "layout": "featured-left",
+        "section_width": "widest",
         "color_scheme": "",
-        "animation": "slide-left",
-        "padding_top": 120,
+        "highlight_color": "#c8a24b",
+        "animation": "fade-up",
+        "padding_top": 96,
         "padding_bottom": 96
       }
     }
@@ -946,6 +986,6 @@
     "image_banner_8GrUnC",
     "icon_features_fEU3xe",
     "image_banner_JWCLdE",
-    "trending_products_n4iqft"
+    "blog_stories_JzWXeh"
   ]
 }
