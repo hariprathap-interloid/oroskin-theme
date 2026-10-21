@@ -1,0 +1,194 @@
+{% doc %}
+  The Image banner's Trending sheet (static block): a dark panel with the Trending list (heading,
+  View all, numbered product rows from a collection; snippets/trending-list.liquid).
+
+  Figma: Manifesto and Trending Now are one scene on the same photo. With "Show the Trending sheet"
+  on, the Image banner pins while scrolling: the banner's text and cards slide away and this sheet
+  slides in from the left over the photo, then the page continues. Without JavaScript, with reduced
+  motion or with the theme's animations off, the sheet simply sits under the banner content.
+
+  @example
+  {% content_for 'block', type: '_trending-sheet', id: 'trending-sheet' %}
+{% enddoc %}
+
+{%- if block.settings.show -%}
+  <div
+    class="banner-sheet"
+    style="--sheet-width: {{ block.settings.width }}%;"
+    data-banner-sheet
+    data-scene-length="{{ block.settings.scene_length }}"
+    {{ block.shopify_attributes }}
+  >
+    {%- if block.settings.background_image != blank -%}
+      {%- assign bg_opacity = block.settings.background_opacity | divided_by: 100.0 -%}
+      <div class="trending-bg" style="--trending-bg-opacity: {{ bg_opacity }};" aria-hidden="true">
+        {{ block.settings.background_image | image_url: width: 1600 | image_tag: widths: '600, 900, 1200, 1600', sizes: '(min-width: 990px) 50vw, 100vw', alt: '', loading: 'lazy' }}
+      </div>
+    {%- endif -%}
+    {% render 'trending-list',
+      collection: block.settings.collection,
+      limit: block.settings.products_to_show,
+      heading: block.settings.heading,
+      link_label: block.settings.link_label,
+      link: block.settings.link,
+      heading_size: block.settings.heading_size,
+      title_size: block.settings.title_size
+    %}
+  </div>
+{%- endif -%}
+
+{% stylesheet %}
+  /* The sheet: a solid panel in the section's background colour (dark in the Dark scheme) */
+  .banner-sheet {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: clamp(2rem, 1rem + 4vw, 7.5rem) clamp(var(--page-margin), 3vw, 4rem);
+    background-color: var(--color-background);
+    color: var(--color-text);
+
+    /* Scrollbar (when the list is taller than the screen): thin, gold thumb on a faint track */
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-accent) color-mix(in srgb, var(--color-text) 10%, transparent);
+  }
+
+  .banner-sheet::-webkit-scrollbar {
+    inline-size: 6px;
+  }
+
+  .banner-sheet::-webkit-scrollbar-track {
+    background: color-mix(in srgb, var(--color-text) 10%, transparent);
+  }
+
+  .banner-sheet::-webkit-scrollbar-thumb {
+    border-radius: var(--radius-pill);
+    background: var(--color-accent);
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.trending_sheet",
+  "tag": null,
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show",
+      "label": "t:labels.show_trending_sheet",
+      "info": "t:labels.show_trending_sheet_info",
+      "default": false
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.trending_heading_info",
+      "default": "Trending <em>Now</em>",
+      "visible_if": "{{ block.settings.show }}"
+    },
+    {
+      "type": "text",
+      "id": "link_label",
+      "label": "t:labels.link_label",
+      "default": "View all",
+      "visible_if": "{{ block.settings.show }}"
+    },
+    {
+      "type": "url",
+      "id": "link",
+      "label": "t:labels.link",
+      "info": "t:labels.trending_link_info",
+      "visible_if": "{{ block.settings.show }}"
+    },
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "t:labels.collection",
+      "info": "t:labels.trending_collection_info"
+    },
+    {
+      "type": "range",
+      "id": "products_to_show",
+      "label": "t:labels.products_to_show",
+      "min": 3,
+      "max": 8,
+      "step": 1,
+      "default": 5,
+      "visible_if": "{{ block.settings.show }}"
+    },
+    {
+      "type": "range",
+      "id": "width",
+      "label": "t:labels.sheet_width",
+      "min": 40,
+      "max": 70,
+      "step": 5,
+      "unit": "%",
+      "default": 50,
+      "visible_if": "{{ block.settings.show }}"
+    },
+    {
+      "type": "range",
+      "id": "scene_length",
+      "label": "t:labels.scene_length",
+      "info": "t:labels.sheet_scene_length_info",
+      "min": 150,
+      "max": 400,
+      "step": 25,
+      "unit": "%",
+      "default": 250,
+      "visible_if": "{{ block.settings.show }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.text_size"
+    },
+    {
+      "type": "range",
+      "id": "heading_size",
+      "label": "t:labels.heading_size_px",
+      "info": "t:labels.size_px_info",
+      "min": 32,
+      "max": 120,
+      "step": 2,
+      "unit": "px",
+      "default": 72,
+      "visible_if": "{{ block.settings.show }}"
+    },
+    {
+      "type": "range",
+      "id": "title_size",
+      "label": "t:labels.title_size_px",
+      "min": 14,
+      "max": 40,
+      "step": 1,
+      "unit": "px",
+      "default": 24,
+      "visible_if": "{{ block.settings.show }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.background_image"
+    },
+    {
+      "type": "image_picker",
+      "id": "background_image",
+      "label": "t:labels.image",
+      "visible_if": "{{ block.settings.show }}"
+    },
+    {
+      "type": "range",
+      "id": "background_opacity",
+      "label": "t:labels.image_opacity",
+      "min": 5,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 30,
+      "visible_if": "{{ block.settings.show }}"
+    }
+  ]
+}
+{% endschema %}

@@ -7,6 +7,13 @@
     a parked feature, decision 6)
 
   Two static blocks make the two areas (as in the Hero): _banner-content and _highlight-cards.
+
+  Manifesto + Trending Now as ONE scene (Figma): a third static block, _trending-sheet, holds a dark
+  sheet with the Trending list. When it's switched on, <image-banner> pins the section while scrolling:
+  the photo stays, the content and cards slide away to the left and fade, the sheet slides in from the
+  left over the photo, then the page continues. Runs with the theme's animations on (also in the editor,
+  it never hides anything for good); not with reduced motion or without JavaScript, where the sheet
+  simply sits under the banner content.
 {%- endcomment -%}
 
 {%- liquid
@@ -22,10 +29,15 @@
   endif
 -%}
 
-<div
+<image-banner
   class="image-banner full-width color-{{ scheme_id }} image-banner--{{ section.settings.height }} image-banner--overlay-{{ section.settings.overlay_style }}"
-  style="--banner-overlay: {{ overlay_opacity }}; --section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
+  style="--banner-overlay: {{ overlay_opacity }}; --section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --p: 0;"
+  {% if settings.animations_enabled %}
+    data-scene
+  {% endif %}
 >
+  <div class="image-banner__track">
+  <div class="image-banner__stage">
   <div class="image-banner__media">
     {%- if section.settings.image != blank -%}
       {% render 'image',
@@ -53,33 +65,41 @@
       {% content_for 'block', type: '_highlight-cards', id: 'highlight-cards' %}
     </div>
   </animate-on-scroll>
-</div>
+
+  {% content_for 'block', type: '_trending-sheet', id: 'trending-sheet' %}
+  </div>
+  </div>
+</image-banner>
 
 {% stylesheet %}
   /*
     The photo and the overlay fill the section (absolute, behind); the content sits on top in the
     page-width column, centred vertically.
   */
-  .image-banner {
+  image-banner {
+    display: block;
+  }
+
+  .image-banner__stage {
     position: relative;
     display: grid;
     overflow: hidden;
     isolation: isolate;
   }
 
-  .image-banner--full {
+  .image-banner--full .image-banner__stage {
     min-block-size: 100svh;
   }
 
-  .image-banner--large {
+  .image-banner--large .image-banner__stage {
     min-block-size: 80svh;
   }
 
-  .image-banner--medium {
+  .image-banner--medium .image-banner__stage {
     min-block-size: 64svh;
   }
 
-  .image-banner--small {
+  .image-banner--small .image-banner__stage {
     min-block-size: 48svh;
   }
 
@@ -144,6 +164,58 @@
     display: none;
   }
 
+  /*
+    Scene (only with data-scene-active, added by the script when a Trending sheet is shown):
+    the track is Scene length tall, the stage sticks to the screen, and --p (0 -> 1) drives:
+    - out: 0 -> 1 while --p goes 0.12 -> 0.42 (content + cards slide left and fade)
+    - in:  0 -> 1 while --p goes 0.30 -> 0.65 (the sheet slides in from the left)
+    then the sheet holds until the pin lets go.
+  */
+  .image-banner[data-scene-active] .image-banner__track {
+    block-size: calc(var(--scene-length, 250) * 1svh);
+  }
+
+  .image-banner[data-scene-active] .image-banner__stage {
+    --out: clamp(0, calc((var(--p) - 0.12) / 0.3), 1);
+    --in: clamp(0, calc((var(--p) - 0.3) / 0.35), 1);
+
+    position: sticky;
+    inset-block-start: 0;
+    block-size: 100svh;
+    min-block-size: 0;
+  }
+
+  .image-banner[data-scene-active] .image-banner__inner,
+  .image-banner[data-scene-active] .banner-sheet {
+    grid-area: 1 / 1;
+  }
+
+  .image-banner[data-scene-active] .image-banner__inner {
+    opacity: calc(1 - var(--out));
+    transform: translateX(calc(var(--out) * -6rem));
+  }
+
+  /* Once the sheet is over the photo, the faded content can't be clicked by accident */
+  .image-banner[data-sheet-shown] .image-banner__inner {
+    pointer-events: none;
+  }
+
+  .image-banner[data-scene-active] .banner-sheet {
+    justify-self: start;
+    inline-size: var(--sheet-width, 50%);
+    block-size: 100%;
+    overflow-y: auto;
+    transform: translateX(calc((1 - var(--in)) * -100%));
+    box-shadow: 1.5rem 0 3rem #00000040;
+  }
+
+  /* Phones: the sheet takes the full width */
+  @media (max-width: 749px) {
+    .image-banner[data-scene-active] .banner-sheet {
+      inline-size: 100%;
+    }
+  }
+
   /* Phones: the text needs the full width, so the tint covers the whole photo */
   @media (max-width: 749px) {
     .image-banner--overlay-gradient .image-banner__overlay,
@@ -157,6 +229,83 @@
   }
 {% endstylesheet %}
 
+{% javascript %}
+  /**
+   * <image-banner>: the Manifesto -> Trending scroll scene. Active only when the section shows a
+   * Trending sheet, the theme's animations are on (data-scene) and the visitor allows motion.
+   * Turns the scroll position inside the tall track into --p (0 -> 1), smoothed so a mouse wheel
+   * doesn't make it jump; the CSS moves the content and the sheet from that number.
+   */
+  class ImageBanner extends HTMLElement {
+    connectedCallback() {
+      this.sheet = this.querySelector('[data-banner-sheet]');
+      this.track = this.querySelector('.image-banner__track');
+      this.stage = this.querySelector('.image-banner__stage');
+      if (!this.sheet || !this.track || !this.stage || !this.hasAttribute('data-scene')) return;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+      this.style.setProperty('--scene-length', this.sheet.dataset.sceneLength || 250);
+      this.setAttribute('data-scene-active', '');
+      this.current = this.measure();
+      this.paint();
+
+      this.run = () => {
+        if (!this.frame) this.frame = requestAnimationFrame(() => this.step());
+      };
+      this.observer = new IntersectionObserver(([entry]) => {
+        if (entry.isIntersecting) {
+          window.addEventListener('scroll', this.run, { passive: true });
+          window.addEventListener('resize', this.run);
+          this.run();
+        } else {
+          this.stopListening();
+          this.current = this.measure();
+          this.paint();
+        }
+      });
+      this.observer.observe(this.track);
+    }
+
+    disconnectedCallback() {
+      this.observer?.disconnect();
+      this.stopListening();
+    }
+
+    stopListening() {
+      window.removeEventListener('scroll', this.run);
+      window.removeEventListener('resize', this.run);
+      if (this.frame) cancelAnimationFrame(this.frame);
+      this.frame = null;
+    }
+
+    /** 0 when the stage pins, 1 when it lets go (measured against the stage's own height) */
+    measure() {
+      const distance = this.track.offsetHeight - this.stage.offsetHeight;
+      const scrolled = -this.track.getBoundingClientRect().top;
+      return distance > 0 ? Math.min(Math.max(scrolled / distance, 0), 1) : 0;
+    }
+
+    /** Each frame the shown progress moves 12% of the way to the real one, until they meet */
+    step() {
+      this.frame = null;
+      const target = this.measure();
+      const gap = target - this.current;
+      this.current = Math.abs(gap) < 0.0005 ? target : this.current + gap * 0.12;
+      this.paint();
+      if (this.current !== target) this.run();
+    }
+
+    paint() {
+      this.style.setProperty('--p', this.current.toFixed(4));
+      this.toggleAttribute('data-sheet-shown', this.current > 0.45);
+    }
+  }
+
+  if (!customElements.get('image-banner')) {
+    customElements.define('image-banner', ImageBanner);
+  }
+{% endjavascript %}
+
 {% schema %}
 {
   "name": "t:general.image_banner",
@@ -166,6 +315,9 @@
     },
     {
       "type": "_highlight-cards"
+    },
+    {
+      "type": "_trending-sheet"
     }
   ],
   "settings": [
@@ -389,6 +541,14 @@
               }
             }
           ]
+        },
+        {
+          "type": "_trending-sheet",
+          "id": "trending-sheet",
+          "static": true,
+          "settings": {
+            "show": true
+          }
         }
       ]
     },
@@ -443,6 +603,14 @@
           "type": "_highlight-cards",
           "id": "highlight-cards",
           "static": true
+        },
+        {
+          "type": "_trending-sheet",
+          "id": "trending-sheet",
+          "static": true,
+          "settings": {
+            "show": false
+          }
         }
       ]
     }

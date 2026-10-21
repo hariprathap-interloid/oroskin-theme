@@ -51,7 +51,9 @@
     "highlight_cards": "Highlight cards",
     "highlight_card": "Highlight card",
     "icon_features": "Feature icons",
-    "icon_feature": "Feature"
+    "icon_feature": "Feature",
+    "trending_products": "Trending products",
+    "trending_sheet": "Trending sheet"
   },
   "labels": {
     "alignment": "Alignment",
@@ -289,7 +291,24 @@
     "slide_in_from": "Slide in from",
     "animation_duration": "Duration",
     "animation_stagger": "Delay between cards",
-    "icon_color": "Icon colour"
+    "icon_color": "Icon colour",
+    "trending_heading_info": "Italic words (Ctrl+I) show in the accent colour, like \"Now\".",
+    "link_label": "Link label",
+    "trending_link_info": "Leave empty to link to the chosen collection.",
+    "trending_collection_info": "An automatic collection (e.g. best sellers) keeps the list up to date. The category shown is each product's type.",
+    "show_trending_sheet": "Show the Trending sheet (scroll scene)",
+    "show_trending_sheet_info": "Figma Manifesto + Trending Now: while scrolling, the banner stays in place, its text slides away and this product list slides in over the photo.",
+    "sheet_width": "Sheet width",
+    "sheet_scene_length_info": "How long the scene lasts, in screen heights. Longer = slower.",
+    "text_size": "Text size",
+    "heading_size_px": "Heading size",
+    "title_size_px": "Product title size",
+    "size_px_info": "The size on a large (1920px) screen; it shrinks smoothly on smaller screens.",
+    "background_image": "Background image",
+    "image_opacity": "Image opacity",
+    "trending_background_info": "Shown behind the list, faded by Image opacity.",
+    "rows_animation": "Rows animation",
+    "image_animation": "Image animation"
   },
   "options": {
     "alignment": {

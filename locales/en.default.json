@@ -91,6 +91,9 @@
       "product_placeholder": "Product image: choose one in the block settings",
       "pause": "Pause animation",
       "play": "Play animation"
+    },
+    "trending": {
+      "placeholder_category": "Category"
     }
   },
   "products": {

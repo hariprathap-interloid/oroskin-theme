@@ -1,0 +1,351 @@
+{%- comment -%}
+  Trending products (Figma "Trending Now"): a dark panel with a heading, a "View all" link and a
+  numbered list of products from one collection (01 · thumbnail · category · title · badge · price),
+  next to a full-height photo. Use an automatic collection (e.g. best sellers) and it stays current.
+
+  Per row:
+  - category = the product's type (Products > Product type, e.g. "Makeup"), hidden when empty
+  - badge = the first value of the product's "Badges" field (custom.badges), drawn by the same
+    product-badge snippet as the product cards, so labels and colours match everywhere
+  - the whole row is one link to the product (the title's link stretches over the row)
+  The list itself is snippets/trending-list.liquid, shared with the Image banner's Trending sheet
+  (Manifesto + Trending as one scroll scene).
+
+  Without a collection: placeholder rows, so the layout can be judged before choosing products.
+{%- endcomment -%}
+
+{%- liquid
+  assign trending = section.settings.collection
+  assign limit = section.settings.products_to_show
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-5'
+
+  assign animation = section.settings.animation
+  assign image_animation = section.settings.image_animation
+  if section.index == 1
+    assign animation = 'none'
+    assign image_animation = 'none'
+  endif
+
+  assign overlay_opacity = section.settings.image_overlay | divided_by: 100.0
+  assign bg_opacity = section.settings.background_opacity | divided_by: 100.0
+-%}
+
+<div
+  class="trending full-width color-{{ scheme_id }} trending--image-{{ section.settings.image_position }}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
+>
+  <div class="trending__panel">
+    {%- if section.settings.background_image != blank -%}
+      <div class="trending-bg" style="--trending-bg-opacity: {{ bg_opacity }};" aria-hidden="true">
+        {{ section.settings.background_image | image_url: width: 1600 | image_tag: widths: '600, 900, 1200, 1600', sizes: '(min-width: 990px) 50vw, 100vw', alt: '', loading: 'lazy' }}
+      </div>
+    {%- endif -%}
+    {% render 'trending-list',
+      collection: trending,
+      limit: limit,
+      heading: section.settings.heading,
+      link_label: section.settings.link_label,
+      link: section.settings.link,
+      animation: animation,
+      heading_size: section.settings.heading_size,
+      title_size: section.settings.title_size
+    %}
+  </div>
+
+  <animate-on-scroll
+    class="trending__media"
+    {% if image_animation != 'none' %}
+      data-animate="{{ image_animation }}"
+    {% endif %}
+  >
+    {%- if section.settings.image != blank -%}
+      {% render 'image', image: section.settings.image, class: 'image--cover', sizes: '(min-width: 990px) 50vw, 100vw' %}
+    {%- else -%}
+      {{ 'lifestyle-2' | placeholder_svg_tag: 'trending__placeholder' }}
+    {%- endif -%}
+    {%- if section.settings.image_overlay > 0 -%}
+      <div class="trending__overlay" style="opacity: {{ overlay_opacity }};" aria-hidden="true"></div>
+    {%- endif -%}
+  </animate-on-scroll>
+</div>
+
+{% stylesheet %}
+  /* Figma: two halves, the dark list panel (snippets/trending-list.liquid) and a full-height photo */
+  .trending {
+    display: grid;
+  }
+
+  @media (min-width: 990px) {
+    .trending {
+      grid-template-columns: 1fr 1fr;
+      min-block-size: 100svh;
+    }
+
+    .trending--image-left .trending__media {
+      order: -1;
+    }
+  }
+
+  .trending__panel {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: var(--section-padding-top) clamp(var(--page-margin), 3vw, 4rem) var(--section-padding-bottom);
+  }
+
+  .trending__media {
+    position: relative;
+    min-block-size: 60svh;
+  }
+
+  .trending__media .image,
+  .trending__placeholder {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  .trending__placeholder {
+    background-color: var(--color-tint);
+  }
+
+  /* Image overlay: black at the chosen strength, over the photo */
+  .trending__overlay {
+    position: absolute;
+    inset: 0;
+    background-color: #000000;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.trending_products",
+  "settings": [
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.trending_heading_info",
+      "default": "Trending <em>Now</em>"
+    },
+    {
+      "type": "text",
+      "id": "link_label",
+      "label": "t:labels.link_label",
+      "default": "View all"
+    },
+    {
+      "type": "url",
+      "id": "link",
+      "label": "t:labels.link",
+      "info": "t:labels.trending_link_info"
+    },
+    {
+      "type": "range",
+      "id": "heading_size",
+      "label": "t:labels.heading_size_px",
+      "info": "t:labels.size_px_info",
+      "min": 32,
+      "max": 120,
+      "step": 2,
+      "unit": "px",
+      "default": 72
+    },
+    {
+      "type": "range",
+      "id": "title_size",
+      "label": "t:labels.title_size_px",
+      "min": 14,
+      "max": 40,
+      "step": 1,
+      "unit": "px",
+      "default": 24
+    },
+    {
+      "type": "header",
+      "content": "t:labels.products"
+    },
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "t:labels.collection",
+      "info": "t:labels.trending_collection_info"
+    },
+    {
+      "type": "range",
+      "id": "products_to_show",
+      "label": "t:labels.products_to_show",
+      "min": 3,
+      "max": 10,
+      "step": 1,
+      "default": 5
+    },
+    {
+      "type": "header",
+      "content": "t:labels.image"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.image"
+    },
+    {
+      "type": "select",
+      "id": "image_position",
+      "label": "t:labels.media_position",
+      "options": [
+        {
+          "value": "right",
+          "label": "t:options.media_position.right"
+        },
+        {
+          "value": "left",
+          "label": "t:options.media_position.left"
+        }
+      ],
+      "default": "right"
+    },
+    {
+      "type": "range",
+      "id": "image_overlay",
+      "label": "t:labels.overlay_opacity",
+      "min": 0,
+      "max": 80,
+      "step": 5,
+      "unit": "%",
+      "default": 0
+    },
+    {
+      "type": "select",
+      "id": "image_animation",
+      "label": "t:labels.image_animation",
+      "options": [
+        {
+          "value": "none",
+          "label": "t:options.animation.none"
+        },
+        {
+          "value": "fade-up",
+          "label": "t:options.animation.fade_up"
+        },
+        {
+          "value": "zoom-in",
+          "label": "t:options.animation.zoom_in"
+        },
+        {
+          "value": "slide-top",
+          "label": "t:options.animation.slide_top"
+        },
+        {
+          "value": "slide-bottom",
+          "label": "t:options.animation.slide_bottom"
+        },
+        {
+          "value": "slide-left",
+          "label": "t:options.animation.slide_left"
+        },
+        {
+          "value": "slide-right",
+          "label": "t:options.animation.slide_right"
+        }
+      ],
+      "default": "fade-up"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.background_image"
+    },
+    {
+      "type": "image_picker",
+      "id": "background_image",
+      "label": "t:labels.image",
+      "info": "t:labels.trending_background_info"
+    },
+    {
+      "type": "range",
+      "id": "background_opacity",
+      "label": "t:labels.image_opacity",
+      "min": 5,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 30
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-5"
+    },
+    {
+      "type": "select",
+      "id": "animation",
+      "label": "t:labels.rows_animation",
+      "info": "t:labels.animation_info",
+      "options": [
+        {
+          "value": "none",
+          "label": "t:options.animation.none"
+        },
+        {
+          "value": "fade-up",
+          "label": "t:options.animation.fade_up"
+        },
+        {
+          "value": "zoom-in",
+          "label": "t:options.animation.zoom_in"
+        },
+        {
+          "value": "slide-top",
+          "label": "t:options.animation.slide_top"
+        },
+        {
+          "value": "slide-bottom",
+          "label": "t:options.animation.slide_bottom"
+        },
+        {
+          "value": "slide-left",
+          "label": "t:options.animation.slide_left"
+        },
+        {
+          "value": "slide-right",
+          "label": "t:options.animation.slide_right"
+        }
+      ],
+      "default": "slide-left"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 120
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 96
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.trending_products"
+    }
+  ]
+}
+{% endschema %}
