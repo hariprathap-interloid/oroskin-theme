@@ -55,7 +55,9 @@
     "trending_products": "Trending products",
     "trending_sheet": "Trending sheet",
     "blog_stories": "Blog stories",
-    "story": "Story"
+    "story": "Story",
+    "product_panels": "Product panels",
+    "editors_picks": "Editor's picks"
   },
   "labels": {
     "alignment": "Alignment",
@@ -323,7 +325,15 @@
     "blog_stories_blog_info": "Its newest articles fill the stories automatically. Pick an article in a Story block to pin it to that place instead.",
     "story_article_info": "Leave empty to show the next newest article from the blog above.",
     "section_width": "Section width",
-    "section_width_info": "Narrow = 1200px, Wide = the page width (Theme settings > Layout), Widest = almost full width with space at the sides, Full width = edge to edge."
+    "section_width_info": "Narrow = 1200px, Wide = the page width (Theme settings > Layout), Widest = almost full width with space at the sides, Full width = edge to edge.",
+    "product_panels_collection_info": "One strip per product. The short text is the product's Subtitle field, or the start of its description.",
+    "panel_height": "Strip height",
+    "cart_button": "Cart button",
+    "cart_button_size": "Button size",
+    "cart_icon_color": "Icon colour",
+    "cart_icon_color_info": "Pick a dark colour when the product photos have white backgrounds.",
+    "cart_options": "Products with options",
+    "cart_options_info": "For products with several variants (sizes, shades). Sold-out products always open their page."
   },
   "options": {
     "alignment": {
@@ -545,6 +555,16 @@
       "wide": "Wide",
       "widest": "Widest",
       "full": "Full width"
+    },
+    "cart_button_size": {
+      "small": "Small (44px)",
+      "medium": "Medium (50px)",
+      "large": "Large (60px)",
+      "extra_large": "Extra large (70px)"
+    },
+    "cart_options": {
+      "add_first": "Add the first available option",
+      "link": "Open the product page"
     }
   },
   "color_scheme": {

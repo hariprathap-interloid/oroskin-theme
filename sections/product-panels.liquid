@@ -1,0 +1,640 @@
+{%- comment -%}
+  Product panels (Figma "Editor's Picks"): an eyebrow, a heading and a "View all" link above a row of
+  tall photo strips, one per product of a collection, each with a big faded number (01, 02...).
+  One strip is open: wider, with a glass card (title, short text, price) and a round cart button.
+  Hovering, focusing (keyboard) or tapping another strip opens that one instead (<product-panels>).
+
+  Short text = the product's Subtitle field (custom.subtitle, as on the product cards), else the first
+  words of its description. The cart button opens the product for now; Quick add (M4.5) will turn it
+  into add-to-cart. Without JavaScript: the first strip stays open and every strip is a normal link.
+  Phones: the strips become a sideways-scrolling row of cards, all showing their text.
+{%- endcomment -%}
+
+{%- liquid
+  assign picks = section.settings.collection
+  assign limit = section.settings.products_to_show
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-1'
+
+  assign view_all_url = section.settings.link
+  if view_all_url == blank and picks != blank
+    assign view_all_url = picks.url
+  endif
+
+  assign animation = section.settings.animation
+  if section.index == 1
+    assign animation = 'none'
+  endif
+
+-%}
+
+<product-panels
+  class="product-panels full-width section-width--{{ section.settings.section_width | default: 'wide' }} color-{{ scheme_id }}"
+  style="--color-accent: {{ section.settings.highlight_color }}; --panels-height: {{ section.settings.panel_height }}; --section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
+>
+  <div class="product-panels__inner">
+    <div class="product-panels__header">
+      <div class="product-panels__titles">
+        {%- if section.settings.eyebrow != blank -%}
+          <p class="eyebrow product-panels__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+        {%- endif -%}
+        {%- if section.settings.heading != blank -%}
+          <h2 class="product-panels__heading">{{ section.settings.heading }}</h2>
+        {%- endif -%}
+      </div>
+      {%- if section.settings.link_label != blank and view_all_url != blank -%}
+        <a class="button button--text product-panels__view-all" href="{{ view_all_url }}">
+          {{- section.settings.link_label | escape -}}
+          <span class="product-panels__arrow" aria-hidden="true">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+        </a>
+      {%- endif -%}
+    </div>
+
+    <animate-on-scroll>
+      <ul
+        class="product-panels__list"
+        role="list"
+        {% if animation != 'none' %}
+          data-animate="{{ animation }}"
+        {% endif %}
+      >
+        {%- if picks != blank and picks.products_count > 0 -%}
+          {%- for product in picks.products limit: limit -%}
+            {%- liquid
+              assign number = forloop.index | prepend: '0' | slice: -2, 2
+              assign short_text = product.metafields.custom.subtitle.value
+              if short_text == blank
+                assign short_text = product.description | strip_html | truncatewords: 12
+              endif
+            -%}
+            <li class="product-panels__item{% if forloop.first %} is-active{% endif %}" data-panel>
+              <div class="product-panels__media">
+                {%- if product.featured_media != blank -%}
+                  {% render 'image',
+                    image: product.featured_media.preview_image,
+                    alt: '',
+                    class: 'image--cover',
+                    sizes: '(min-width: 990px) 25vw, 70vw'
+                  %}
+                {%- else -%}
+                  {{ 'product-1' | placeholder_svg_tag: 'product-panels__placeholder' }}
+                {%- endif -%}
+              </div>
+              <span class="product-panels__number" aria-hidden="true">{{ number }}</span>
+
+              {% render 'quick-add', product: product, class: 'product-panels__cart', size: section.settings.cart_size, icon_color: section.settings.cart_icon_color, options: section.settings.cart_options %}
+
+              <div class="product-panels__card">
+                <h3 class="product-panels__title">
+                  <a class="product-panels__link" href="{{ product.url }}">{{ product.title | escape }}</a>
+                </h3>
+                {%- if short_text != blank -%}
+                  <p class="product-panels__text">{{ short_text | escape }}</p>
+                {%- endif -%}
+                <div class="product-panels__price">{% render 'price', product: product %}</div>
+              </div>
+            </li>
+          {%- endfor -%}
+        {%- else -%}
+          {%- for i in (1..limit) -%}
+            <li class="product-panels__item{% if forloop.first %} is-active{% endif %}" data-panel>
+              <div class="product-panels__media">{{ 'product-1' | placeholder_svg_tag: 'product-panels__placeholder' }}</div>
+              <span class="product-panels__number" aria-hidden="true">{{ forloop.index | prepend: '0' | slice: -2, 2 }}</span>
+              <div class="product-panels__card">
+                <h3 class="product-panels__title">{{ 'products.card.placeholder_title' | t }}</h3>
+                <div class="product-panels__price">
+                  <div class="price"><span class="price__current">{{ 1999 | money }}</span></div>
+                </div>
+              </div>
+            </li>
+          {%- endfor -%}
+        {%- endif -%}
+      </ul>
+    </animate-on-scroll>
+  </div>
+</product-panels>
+
+{% stylesheet %}
+  product-panels {
+    display: block;
+  }
+
+  .product-panels {
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  .product-panels__inner {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(2.5rem, 1.5rem + 3vw, 6rem);
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  .product-panels__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-md);
+  }
+
+  .product-panels__titles {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .product-panels__eyebrow,
+  .product-panels__heading {
+    margin: 0;
+  }
+
+  .product-panels__heading {
+    font-size: var(--font-size-display);
+  }
+
+  /* "Editor's *Picks*": italic words in the highlight colour, not slanted */
+  .product-panels__heading em {
+    color: var(--color-accent);
+    font-style: normal;
+  }
+
+  .product-panels__view-all {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    color: color-mix(in srgb, var(--color-text) 70%, var(--color-background));
+  }
+
+  .product-panels__arrow svg {
+    inline-size: 1em;
+    block-size: auto;
+  }
+
+  /*
+    The strips (desktop): one row, all the same height. Every strip grows (flex) by 1; the open one
+    by 1.85, so it is about twice as wide (Figma: ~425px vs ~230px). The width change glides.
+  */
+  .product-panels__list {
+    display: flex;
+    block-size: calc(var(--panels-height, 30) * 1rem);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /*
+    Each strip is a flex column that pushes its glass card to the bottom. The card stays in the normal
+    flow (not absolute), so the strip, not the card, anchors the title's stretched link: the whole
+    strip is clickable.
+  */
+  .product-panels__item {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: var(--space-md);
+    min-inline-size: 0;
+    overflow: hidden;
+    background-color: var(--color-tint);
+    color: #ffffff;
+    transition: flex-grow 0.6s var(--ease-out);
+  }
+
+  .product-panels__item.is-active {
+    flex-grow: 1.85;
+  }
+
+  .product-panels__media {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+  }
+
+  .product-panels__media .image,
+  .product-panels__placeholder {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  /*
+    Figma overlay on every strip: only the lower part (from 45% down, behind the card), fading from
+    clear to 50% black at the bottom: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 100%).
+    The top of the photo stays untouched.
+  */
+  .product-panels__media::after {
+    content: "";
+    position: absolute;
+    inset: 45% 0 0;
+    background: linear-gradient(180deg, #00000000 0%, #00000080 100%);
+  }
+
+
+  /* Big faded number, top left (Figma: gold, semi-transparent) */
+  .product-panels__number {
+    position: absolute;
+    inset-block-start: var(--space-md);
+    inset-inline-start: var(--space-md);
+    color: color-mix(in srgb, var(--color-accent) 70%, transparent);
+    font-size: var(--font-size-h2);
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  /* Round glass cart button, top right of the open strip */
+  /* The quick add button (snippets/quick-add.liquid): 9px from the open strip's top-right corner */
+  .product-panels__cart {
+    position: absolute;
+    inset-block-start: 0.5625rem;
+    inset-inline-end: 0.5625rem;
+    z-index: 2;
+  }
+
+  /*
+    Glass card, bottom left of the open strip: title, short text, price. On closed strips it is
+    transparent (but still focusable: tabbing to its link opens that strip).
+  */
+  .product-panels__card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    /* Full width of the open strip, minus the strip's own padding on both sides (Figma) */
+    inline-size: 100%;
+    padding: var(--space-md) var(--space-lg);
+    border: 1px solid #ffffff59;
+    border-radius: var(--radius-md);
+    /*
+      Figma: light "liquid" glass that takes on the photo's colours (blur), over the overlay below it,
+      which keeps the white text readable.
+    */
+    background-color: #ffffff33;
+    -webkit-backdrop-filter: blur(var(--glass-frost)) saturate(1.2);
+    backdrop-filter: blur(var(--glass-frost)) saturate(1.2);
+    box-shadow: var(--glass-rim);
+    text-shadow: 0 1px 2px #00000033;
+  }
+
+  .product-panels__card,
+  .product-panels__cart {
+    opacity: 0;
+    transition: opacity var(--duration-base) var(--ease-out);
+  }
+
+  /*
+    Desktop: invisible on closed strips, so it mustn't catch clicks there (keyboard focus still opens
+    the strip). Phones show every card's button, so they all stay clickable there.
+  */
+  @media (min-width: 750px) {
+    .product-panels__item:not(.is-active) .product-panels__cart {
+      pointer-events: none;
+    }
+  }
+
+  .product-panels__item.is-active :is(.product-panels__card, .product-panels__cart) {
+    opacity: 1;
+    transition-delay: 0.25s;
+  }
+
+  .product-panels__title {
+    margin: 0;
+    color: #ffffff;
+    font-size: var(--font-size-h3);
+  }
+
+  .product-panels__text {
+    margin: 0;
+    color: #ffffffe6;
+    font-size: var(--font-size-body-sm);
+  }
+
+  .product-panels__price .price__compare {
+    color: #ffffffb3;
+  }
+
+  .product-panels__price .price__current {
+    color: #ffffff;
+    font-size: var(--font-size-body-lg);
+    font-weight: 600;
+  }
+
+  /* The title's link covers the whole strip: one click target per product */
+  .product-panels__link {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .product-panels__link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+
+  .product-panels__link:focus-visible {
+    outline: none;
+  }
+
+  .product-panels__item:has(.product-panels__link:focus-visible) {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -2px;
+  }
+
+  /* The card itself must not take the stretched link's place: let clicks fall through to it */
+  .product-panels__card {
+    pointer-events: none;
+  }
+
+  .product-panels__card a {
+    pointer-events: auto;
+  }
+
+  /* Phones and small tablets: a sideways-scrolling row of cards, all showing their text */
+  @media (max-width: 749px) {
+    .product-panels__list {
+      gap: var(--space-sm);
+      block-size: auto;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      scrollbar-width: none;
+    }
+
+    .product-panels__item,
+    .product-panels__item.is-active {
+      flex: 0 0 75%;
+      aspect-ratio: 3 / 4;
+      scroll-snap-align: start;
+    }
+
+    .product-panels__card,
+    .product-panels__cart {
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .product-panels__item {
+      transition: none;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <product-panels>: opens the strip the visitor points at, tabs to or taps (class is-active).
+   * Touch: the first tap on a closed strip only opens it; a second tap follows its link.
+   */
+  class ProductPanels extends HTMLElement {
+    connectedCallback() {
+      this.panels = [...this.querySelectorAll('[data-panel]')];
+      if (this.panels.length < 2) return;
+
+      this.panels.forEach((panel) => {
+        panel.addEventListener('pointerenter', (event) => {
+          if (event.pointerType === 'mouse') this.open(panel);
+        });
+        panel.addEventListener('focusin', () => this.open(panel));
+        panel.addEventListener('pointerdown', (event) => {
+          this.lastPointer = event.pointerType;
+        });
+        panel.addEventListener('click', (event) => {
+          // Tablets / touch laptops: the first tap opens a closed strip. Phones show every card fully
+          // (no widening), so a tap there goes straight to the product.
+          if (!window.matchMedia('(min-width: 750px)').matches) return;
+          if (this.lastPointer !== 'mouse' && !panel.classList.contains('is-active')) {
+            event.preventDefault();
+            this.open(panel);
+          }
+        });
+      });
+    }
+
+    open(panel) {
+      this.panels.forEach((item) => item.classList.toggle('is-active', item === panel));
+    }
+  }
+
+  if (!customElements.get('product-panels')) {
+    customElements.define('product-panels', ProductPanels);
+  }
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.product_panels",
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "This season"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.trending_heading_info",
+      "default": "Editor's <em>Picks</em>"
+    },
+    {
+      "type": "text",
+      "id": "link_label",
+      "label": "t:labels.link_label",
+      "default": "View all"
+    },
+    {
+      "type": "url",
+      "id": "link",
+      "label": "t:labels.link",
+      "info": "t:labels.trending_link_info"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.products"
+    },
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "t:labels.collection",
+      "info": "t:labels.product_panels_collection_info"
+    },
+    {
+      "type": "range",
+      "id": "products_to_show",
+      "label": "t:labels.products_to_show",
+      "min": 3,
+      "max": 8,
+      "step": 1,
+      "default": 7
+    },
+    {
+      "type": "range",
+      "id": "panel_height",
+      "label": "t:labels.panel_height",
+      "min": 20,
+      "max": 44,
+      "step": 1,
+      "unit": "rem",
+      "default": 29
+    },
+    {
+      "type": "header",
+      "content": "t:labels.cart_button"
+    },
+    {
+      "type": "select",
+      "id": "cart_size",
+      "label": "t:labels.cart_button_size",
+      "options": [
+        {
+          "value": "44",
+          "label": "t:options.cart_button_size.small"
+        },
+        {
+          "value": "50",
+          "label": "t:options.cart_button_size.medium"
+        },
+        {
+          "value": "60",
+          "label": "t:options.cart_button_size.large"
+        },
+        {
+          "value": "70",
+          "label": "t:options.cart_button_size.extra_large"
+        }
+      ],
+      "default": "50"
+    },
+    {
+      "type": "color",
+      "id": "cart_icon_color",
+      "label": "t:labels.cart_icon_color",
+      "info": "t:labels.cart_icon_color_info",
+      "default": "#ffffff"
+    },
+    {
+      "type": "select",
+      "id": "cart_options",
+      "label": "t:labels.cart_options",
+      "info": "t:labels.cart_options_info",
+      "options": [
+        {
+          "value": "add_first",
+          "label": "t:options.cart_options.add_first"
+        },
+        {
+          "value": "link",
+          "label": "t:options.cart_options.link"
+        }
+      ],
+      "default": "add_first"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "wide"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "color",
+      "id": "highlight_color",
+      "label": "t:labels.highlight_color",
+      "default": "#c8a24b"
+    },
+    {
+      "type": "select",
+      "id": "animation",
+      "label": "t:labels.animation",
+      "info": "t:labels.animation_info",
+      "options": [
+        {
+          "value": "none",
+          "label": "t:options.animation.none"
+        },
+        {
+          "value": "fade-up",
+          "label": "t:options.animation.fade_up"
+        },
+        {
+          "value": "zoom-in",
+          "label": "t:options.animation.zoom_in"
+        },
+        {
+          "value": "slide-top",
+          "label": "t:options.animation.slide_top"
+        },
+        {
+          "value": "slide-bottom",
+          "label": "t:options.animation.slide_bottom"
+        },
+        {
+          "value": "slide-left",
+          "label": "t:options.animation.slide_left"
+        },
+        {
+          "value": "slide-right",
+          "label": "t:options.animation.slide_right"
+        }
+      ],
+      "default": "fade-up"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 96
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 96
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.editors_picks"
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,460 @@
+{% doc %}
+  Quick add: a round glass cart button (Figma "Liquid Glass Button") that adds a product to the cart
+  without leaving the page, with the Figma animation:
+  1. the upright cart swaps to the tilted cart and two speed lines appear (two divs)
+  2. it drives off to the right, out of the circle
+  3. it rolls back in from the left (meanwhile the product is added: Cart AJAX API, /cart/add.js)
+  4. a gold circle with a white tick pops onto its top right
+  5. the tilted cart cross-fades into the upright one and the button STAYS
+     in this final state (upright cart + gold tick), showing the product is in the cart; clicking again
+     adds one more and replays the animation
+  The header's cart count updates. On failure: a short shake and a screen-reader message.
+  Reduced motion: no driving, just the tick. Without JavaScript: a normal product form that adds the
+  product and opens the cart.
+
+  Which products are added directly:
+  - one variant, in stock: always
+  - several variants: with options: 'add_first' (default), the first available variant is added (its
+    name goes into the button's label); with options: 'link', the button opens the product page
+  - sold out: never; the button opens the product page
+
+  @param {product} product - The product to add
+  @param {string} [class] - Extra class for positioning, e.g. 'product-panels__cart'
+  @param {number} [size] - Button size in px (44, 50 = Figma, 60, 70); icon, lines and tick scale with it
+  @param {string} [icon_color] - Colour of the cart icon and speed lines (default white), e.g. dark on
+    white photos
+  @param {string} [options] - Products with several variants: 'add_first' (default) or 'link'
+
+  @example
+  {% render 'quick-add', product: product, class: 'product-panels__cart' %}
+{% enddoc %}
+
+{%- liquid
+  assign variant = product.selected_or_first_available_variant
+  assign options_mode = options | default: 'add_first'
+  assign can_add = false
+  if product.available
+    # One variant (with or without a named option, e.g. "Size: 30ml" only)
+    if product.variants.size == 1
+      assign can_add = true
+    # Several variants: add the first available one, unless the merchant prefers the product page
+    elsif options_mode == 'add_first'
+      assign can_add = true
+    endif
+  endif
+
+  # The label names the variant when there are several, e.g. "The Complete Snowboard - Ice"
+  assign add_name = product.title
+  if product.variants.size > 1
+    assign add_name = product.title | append: ' - ' | append: variant.title
+  endif
+  assign add_label = 'products.quick_add.add' | t: title: add_name
+  assign choose_label = 'products.quick_add.choose' | t: title: product.title
+  assign cart_icon = 'icon-cart.svg' | inline_asset_content
+  assign tilt_icon = 'icon-cart-tilt.svg' | inline_asset_content
+
+  assign button_size = size | default: 50
+  assign button_color = icon_color | default: '#ffffff'
+  capture quick_add_style
+    echo '--quick-add-size: ' | append: button_size | append: 'px; --quick-add-color: ' | append: button_color | append: ';'
+  endcapture
+-%}
+
+{%- capture quick_add_art -%}
+  <span class="quick-add__line quick-add__line--1" aria-hidden="true"></span>
+  <span class="quick-add__line quick-add__line--2" aria-hidden="true"></span>
+  <span class="quick-add__cart" aria-hidden="true">
+    <span class="quick-add__icon quick-add__icon--upright">{{ cart_icon }}</span>
+    <span class="quick-add__icon quick-add__icon--tilt">{{ tilt_icon }}</span>
+    <span class="quick-add__tick">
+      <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 12.5 4 4 8-9"/></svg>
+    </span>
+  </span>
+{%- endcapture -%}
+
+{%- if can_add -%}
+  <quick-add
+    class="quick-add {{ class }}"
+    style="{{ quick_add_style }}"
+    data-variant-id="{{ variant.id }}"
+    data-label-added="{{ 'products.quick_add.added' | t: title: add_name | escape }}"
+    data-label-error="{{ 'products.quick_add.error' | t | escape }}"
+  >
+    {%- form 'product', product, class: 'quick-add__form' -%}
+      <input type="hidden" name="id" value="{{ variant.id }}">
+      <input type="hidden" name="quantity" value="1">
+      <button type="submit" class="quick-add__button" aria-label="{{ add_label | escape }}">
+        {{ quick_add_art }}
+      </button>
+    {%- endform -%}
+    <span class="visually-hidden" role="status" data-quick-add-status></span>
+    <span class="quick-add__message" data-quick-add-message hidden></span>
+  </quick-add>
+{%- else -%}
+  <div class="quick-add {{ class }}" style="{{ quick_add_style }}">
+    <a class="quick-add__button" href="{{ product.url }}" aria-label="{{ choose_label | escape }}">
+      {{ quick_add_art }}
+    </a>
+  </div>
+{%- endif -%}
+
+{% stylesheet %}
+  quick-add {
+    display: block;
+  }
+
+  .quick-add__form {
+    margin: 0;
+  }
+
+  /*
+    Figma "Liquid Glass Button": 50px circle, white at 25%, soft grey glow, white 17.5px cart.
+    Scoped under .quick-add so it outranks the theme's general button[type="submit"] style.
+  */
+  .quick-add .quick-add__button {
+    position: relative;
+    display: grid;
+    place-items: center;
+    inline-size: var(--quick-add-size, 50px);
+    block-size: var(--quick-add-size, 50px);
+    min-block-size: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-glass);
+    box-shadow: var(--glass-shadow), var(--glass-rim);
+    color: var(--quick-add-color, #ffffff);
+    cursor: pointer;
+    -webkit-backdrop-filter: blur(var(--glass-frost));
+    backdrop-filter: blur(var(--glass-frost));
+    transition: background-color var(--duration-fast) var(--ease-out);
+  }
+
+  .quick-add .quick-add__button:hover {
+    background-color: #ffffff59;
+    box-shadow: var(--glass-shadow), var(--glass-rim); /* the theme's button:hover removes shadows */
+  }
+
+  .quick-add__button:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+  }
+
+  /* The cart: both poses stacked; the tick sits on its top right */
+  /* Cart icon: 17.5px in the 50px Figma button = 35% of the button */
+  .quick-add__cart {
+    position: relative;
+    display: grid;
+    inline-size: calc(var(--quick-add-size, 50px) * 0.35);
+    block-size: calc(var(--quick-add-size, 50px) * 0.35);
+  }
+
+  .quick-add__icon {
+    grid-area: 1 / 1;
+    display: grid;
+    place-items: center;
+  }
+
+  /*
+    The three poses come from Figma with different canvas sizes (upright 19x19, tilted 21x21,
+    slightly tilted 22x20) but the cart drawing is the same size in each. Each SVG is therefore drawn
+    at its real size relative to the upright one (19 units = the icon box), centred in the same spot,
+    so the cart keeps its scale when the poses swap instead of jumping.
+  */
+  .quick-add__icon svg {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  .quick-add__icon--tilt svg {
+    inline-size: calc(100% * 21 / 19);
+    block-size: calc(100% * 21 / 19);
+  }
+
+  .quick-add__icon--tilt {
+    opacity: 0;
+  }
+
+  /*
+    Speed lines (Figma, in the 50px button): two 7px lines, 1px thick.
+    Line 1: 30px from the top, 22px from the left. Line 2: 32px from the top, 19px from the left.
+  */
+  .quick-add__line {
+    position: absolute;
+    display: block;
+    inline-size: 14%;
+    block-size: max(1px, calc(var(--quick-add-size, 50px) * 0.02));
+    border-radius: var(--radius-pill);
+    background-color: currentcolor;
+    opacity: 0;
+  }
+
+  /* Positions as % of the button (Figma px / 50), so they stay right at every button size */
+  .quick-add__line--1 {
+    inset-block-start: 60%;
+    inset-inline-start: 44%;
+  }
+
+  .quick-add__line--2 {
+    inset-block-start: 64%;
+    inset-inline-start: 38%;
+  }
+
+  /* Gold circle with a white tick */
+  .quick-add__tick {
+    position: absolute;
+    inset-block-start: -45%;
+    inset-inline-end: -50%;
+    display: grid;
+    place-items: center;
+    inline-size: 80%;
+    block-size: 80%;
+    border-radius: var(--radius-pill);
+    background-color: #c8a24b;
+    color: #ffffff;
+    opacity: 0;
+    scale: 0;
+  }
+
+  .quick-add__tick svg {
+    inline-size: 65%;
+    block-size: 65%;
+  }
+
+  /* Adding: tilt, speed lines, drive off right, roll back in from the left (1s) */
+  quick-add.is-adding .quick-add__icon--upright {
+    opacity: 0;
+  }
+
+  quick-add.is-adding .quick-add__icon--tilt {
+    opacity: 1;
+    animation: quick-add-drive 1s var(--ease-out) both;
+  }
+
+  quick-add.is-adding .quick-add__line {
+    animation: quick-add-lines 1s linear both;
+  }
+
+  /*
+    Added (Figma states 4 -> 5): the tick pops in while the cart is still tilted, then the tilted cart
+    cross-fades into the upright one, which stays.
+  */
+  quick-add.is-added .quick-add__icon--tilt {
+    animation: quick-add-tilt-out 0.6s var(--ease-out) both;
+  }
+
+  quick-add.is-added .quick-add__icon--upright {
+    animation: quick-add-upright-in 0.6s var(--ease-out) both;
+  }
+
+  quick-add.is-added .quick-add__tick {
+    animation: quick-add-tick 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  quick-add.is-error .quick-add__button {
+    animation: quick-add-shake 0.4s ease both;
+  }
+
+  /*
+    Error message under the button (e.g. Shopify's "You can't add more mak to the cart." when the
+    cart already holds all the stock): a small dark pill, shown for a few seconds.
+  */
+  quick-add {
+    position: relative;
+  }
+
+  .quick-add__message {
+    position: absolute;
+    inset-block-start: calc(100% + 0.5rem);
+    inset-inline-end: 0;
+    z-index: 3;
+    inline-size: max-content;
+    max-inline-size: 15rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sm);
+    background-color: #1f1f1fe6;
+    color: #ffffff;
+    font-size: var(--font-size-small);
+    line-height: 1.4;
+    text-align: start;
+  }
+
+  .quick-add__message[hidden] {
+    display: none;
+  }
+
+  /* One cross-fade from the tilted to the upright cart, after the tick has popped in */
+  @keyframes quick-add-tilt-out {
+    0%, 35% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  @keyframes quick-add-upright-in {
+    0%, 35% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+
+  /* Figma state 2: the tilted cart edges a few px right while the lines appear, then drives off */
+  @keyframes quick-add-drive {
+    0% { translate: 0 0; }
+    20% { translate: calc(var(--quick-add-size, 50px) * 0.1) 0; }
+    48% { translate: calc(var(--quick-add-size, 50px) * 0.9) 0; }
+    48.01% { translate: calc(var(--quick-add-size, 50px) * -0.9) 0; }
+    85%,
+    100% { translate: 0 0; }
+  }
+
+  /* Speed lines only while the cart drives OFF (they'd cross the cart while it rolls back in) */
+  @keyframes quick-add-lines {
+    0% { opacity: 0; translate: calc(var(--quick-add-size, 50px) * 0.1) 0; }
+    12% { opacity: 1; translate: 0 0; }
+    38% { opacity: 1; translate: calc(var(--quick-add-size, 50px) * -0.06) 0; }
+    48%, 100% { opacity: 0; translate: calc(var(--quick-add-size, 50px) * -0.06) 0; }
+  }
+
+  @keyframes quick-add-tick {
+    from { opacity: 0; scale: 0; }
+    to { opacity: 1; scale: 1; }
+  }
+
+  @keyframes quick-add-shake {
+    0%, 100% { translate: 0 0; }
+    25% { translate: -4px 0; }
+    75% { translate: 4px 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    quick-add.is-adding .quick-add__icon--upright {
+      opacity: 1;
+    }
+
+    quick-add.is-adding :is(.quick-add__icon--tilt, .quick-add__line) {
+      opacity: 0;
+      animation: none;
+    }
+
+    quick-add.is-added .quick-add__icon--tilt {
+      opacity: 0;
+      animation: none;
+    }
+
+    quick-add.is-added .quick-add__icon--upright {
+      opacity: 1;
+      animation: none;
+    }
+
+    quick-add.is-added .quick-add__tick {
+      animation: none;
+      opacity: 1;
+      scale: 1;
+    }
+
+    quick-add.is-error .quick-add__button {
+      animation: none;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <quick-add>: adds the product with Shopify's Cart AJAX API instead of submitting the form, plays
+   * the cart animation, then updates the header's cart count. The animation (1s) and the request run
+   * together; the tick shows once both are done, so a fast request still gets the full animation.
+   */
+  class QuickAdd extends HTMLElement {
+    connectedCallback() {
+      this.form = this.querySelector('form');
+      this.status = this.querySelector('[data-quick-add-status]');
+      this.form?.addEventListener('submit', (event) => {
+        event.preventDefault();
+        this.add();
+      });
+    }
+
+    async add() {
+      if (this.busy) return;
+      this.busy = true;
+      clearTimeout(this.resetTimer);
+      this.classList.remove('is-added', 'is-error');
+      this.classList.add('is-adding');
+
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const root = window.Shopify?.routes?.root || '/';
+      const request = fetch(`${root}cart/add.js`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ items: [{ id: Number(this.dataset.variantId), quantity: 1 }] }),
+      }).then(async (response) => {
+        const data = await response.json().catch(() => ({}));
+        // Shopify explains a refused add (e.g. stock) in "description" or "message"
+        if (!response.ok) throw new Error(data.description || data.message || '');
+        return data;
+      });
+      const drive = new Promise((resolve) => setTimeout(resolve, reduced ? 0 : 1000));
+
+      try {
+        await Promise.all([request, drive]);
+        this.classList.replace('is-adding', 'is-added');
+        this.announce(this.dataset.labelAdded);
+        this.updateCartCount(root);
+        // Stays in the final state (upright cart + gold tick): the product is in the cart. Clicking
+        // again adds one more and plays the animation again.
+      } catch (error) {
+        this.classList.remove('is-adding');
+        this.classList.add('is-error');
+        const reason = error?.message || this.dataset.labelError;
+        this.announce(reason);
+        this.showMessage(reason);
+        this.resetTimer = setTimeout(() => this.classList.remove('is-error'), 600);
+      } finally {
+        this.busy = false;
+      }
+    }
+
+    /** Shows the reason under the button for 4 seconds */
+    showMessage(message) {
+      const box = this.querySelector('[data-quick-add-message]');
+      if (!box || !message) return;
+      box.textContent = message;
+      box.hidden = false;
+      clearTimeout(this.messageTimer);
+      this.messageTimer = setTimeout(() => {
+        box.hidden = true;
+      }, 4000);
+    }
+
+    announce(message) {
+      if (!this.status) return;
+      this.status.textContent = '';
+      requestAnimationFrame(() => {
+        this.status.textContent = message;
+      });
+    }
+
+    /** Refreshes the red count bubble on the header's cart icon (creates it on the first item) */
+    async updateCartCount(root) {
+      try {
+        const cart = await fetch(`${root}cart.js`, { headers: { Accept: 'application/json' } }).then((r) => r.json());
+        document.dispatchEvent(new CustomEvent('cart:updated', { detail: { cart } }));
+        const link = document.querySelector(`.header__icon-button[href="${root}cart"]`);
+        if (!link) return;
+        let bubble = link.querySelector('.header__count');
+        if (!bubble) {
+          bubble = document.createElement('span');
+          bubble.className = 'header__count';
+          bubble.setAttribute('aria-hidden', 'true');
+          link.append(bubble);
+        }
+        bubble.textContent = cart.item_count < 100 ? cart.item_count : '99+';
+      } catch (error) {
+        // The add worked; only the count refresh failed. The cart page shows the right total.
+      }
+    }
+  }
+
+  if (!customElements.get('quick-add')) {
+    customElements.define('quick-add', QuickAdd);
+  }
+{% endjavascript %}
