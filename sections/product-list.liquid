@@ -127,7 +127,11 @@
 {% schema %}
 {
   "name": "t:general.product_list",
-  "blocks": [{ "type": "@theme" }],
+  "blocks": [
+    {
+      "type": "@theme"
+    }
+  ],
   "settings": [
     {
       "type": "header",
@@ -166,8 +170,14 @@
       "id": "columns_mobile",
       "label": "t:labels.columns_mobile",
       "options": [
-        { "value": "1", "label": "t:options.columns.one" },
-        { "value": "2", "label": "t:options.columns.two" }
+        {
+          "value": "1",
+          "label": "t:options.columns.one"
+        },
+        {
+          "value": "2",
+          "label": "t:options.columns.two"
+        }
       ],
       "default": "2"
     },
@@ -176,10 +186,22 @@
       "id": "image_ratio",
       "label": "t:labels.image_ratio",
       "options": [
-        { "value": "portrait", "label": "t:options.image_shape.portrait" },
-        { "value": "square", "label": "t:options.image_shape.square" },
-        { "value": "landscape", "label": "t:options.image_shape.landscape" },
-        { "value": "original", "label": "t:options.image_shape.original" }
+        {
+          "value": "portrait",
+          "label": "t:options.image_shape.portrait"
+        },
+        {
+          "value": "square",
+          "label": "t:options.image_shape.square"
+        },
+        {
+          "value": "landscape",
+          "label": "t:options.image_shape.landscape"
+        },
+        {
+          "value": "original",
+          "label": "t:options.image_shape.original"
+        }
       ],
       "default": "portrait"
     },
@@ -205,9 +227,34 @@
       "label": "t:labels.animation",
       "info": "t:labels.animation_info",
       "options": [
-        { "value": "none", "label": "t:options.animation.none" },
-        { "value": "fade-up", "label": "t:options.animation.fade_up" },
-        { "value": "zoom-in", "label": "t:options.animation.zoom_in" }
+        {
+          "value": "none",
+          "label": "t:options.animation.none"
+        },
+        {
+          "value": "fade-up",
+          "label": "t:options.animation.fade_up"
+        },
+        {
+          "value": "zoom-in",
+          "label": "t:options.animation.zoom_in"
+        },
+        {
+          "value": "slide-top",
+          "label": "t:options.animation.slide_top"
+        },
+        {
+          "value": "slide-bottom",
+          "label": "t:options.animation.slide_bottom"
+        },
+        {
+          "value": "slide-left",
+          "label": "t:options.animation.slide_left"
+        },
+        {
+          "value": "slide-right",
+          "label": "t:options.animation.slide_right"
+        }
       ],
       "default": "fade-up"
     },
@@ -238,7 +285,11 @@
       "blocks": [
         {
           "type": "heading",
-          "settings": { "heading": "Featured <em>products</em>", "size": "h2", "tag": "h2" }
+          "settings": {
+            "heading": "Featured <em>products</em>",
+            "size": "h2",
+            "tag": "h2"
+          }
         }
       ]
     }

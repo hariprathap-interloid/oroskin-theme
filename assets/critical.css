@@ -496,6 +496,23 @@ animate-on-scroll {
   .js.animations-on [data-animate="zoom-in"]:not(.is-visible) {
     transform: scale(0.96);
   }
+
+  /* Slide in: starts off to one side (further than Fade up) and glides into place */
+  .js.animations-on [data-animate="slide-top"]:not(.is-visible) {
+    transform: translateY(-3rem);
+  }
+
+  .js.animations-on [data-animate="slide-bottom"]:not(.is-visible) {
+    transform: translateY(3rem);
+  }
+
+  .js.animations-on [data-animate="slide-left"]:not(.is-visible) {
+    transform: translateX(-4rem);
+  }
+
+  .js.animations-on [data-animate="slide-right"]:not(.is-visible) {
+    transform: translateX(4rem);
+  }
 }
 
 /**
@@ -505,6 +522,12 @@ animate-on-scroll {
  */
 .main-content {
   flex-grow: 1;
+  /*
+    Cuts off anything pushed past the screen edge (e.g. a section sliding in from the right), so the
+    page never scrolls sideways. clip, not hidden: hidden would break position: sticky (Scrolling
+    showcase), clip doesn't create a scroll container.
+  */
+  overflow-x: clip;
 }
 
 .main-content:focus {

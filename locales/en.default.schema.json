@@ -49,7 +49,9 @@
     "image_banner_stats": "Image banner with stats",
     "promo_banner": "Promo banner",
     "highlight_cards": "Highlight cards",
-    "highlight_card": "Highlight card"
+    "highlight_card": "Highlight card",
+    "icon_features": "Feature icons",
+    "icon_feature": "Feature"
   },
   "labels": {
     "alignment": "Alignment",
@@ -286,7 +288,8 @@
     "card_animation": "Card animation",
     "slide_in_from": "Slide in from",
     "animation_duration": "Duration",
-    "animation_stagger": "Delay between cards"
+    "animation_stagger": "Delay between cards",
+    "icon_color": "Icon colour"
   },
   "options": {
     "alignment": {
@@ -318,7 +321,11 @@
     "animation": {
       "none": "None",
       "fade_up": "Fade up",
-      "zoom_in": "Zoom in"
+      "zoom_in": "Zoom in",
+      "slide_top": "Slide in from top",
+      "slide_bottom": "Slide in from bottom",
+      "slide_left": "Slide in from left",
+      "slide_right": "Slide in from right"
     },
     "mega_menu_width": {
       "bar": "Same as header",
@@ -484,6 +491,16 @@
       "bottom": "Bottom",
       "left": "Left",
       "right": "Right"
+    },
+    "feature_icon": {
+      "truck": "Delivery truck",
+      "shield": "Shield (secure)",
+      "return": "Return arrow",
+      "headset": "Headset (support)",
+      "sparkle": "Sparkle",
+      "book": "Book",
+      "users": "People",
+      "none": "None"
     }
   },
   "color_scheme": {

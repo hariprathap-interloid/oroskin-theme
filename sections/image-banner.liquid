@@ -160,7 +160,14 @@
 {% schema %}
 {
   "name": "t:general.image_banner",
-  "blocks": [{ "type": "_banner-content" }, { "type": "_highlight-cards" }],
+  "blocks": [
+    {
+      "type": "_banner-content"
+    },
+    {
+      "type": "_highlight-cards"
+    }
+  ],
   "settings": [
     {
       "type": "image_picker",
@@ -173,11 +180,26 @@
       "id": "height",
       "label": "t:labels.section_height",
       "options": [
-        { "value": "full", "label": "t:options.banner_height.full" },
-        { "value": "large", "label": "t:options.banner_height.large" },
-        { "value": "medium", "label": "t:options.banner_height.medium" },
-        { "value": "small", "label": "t:options.banner_height.small" },
-        { "value": "auto", "label": "t:options.banner_height.auto" }
+        {
+          "value": "full",
+          "label": "t:options.banner_height.full"
+        },
+        {
+          "value": "large",
+          "label": "t:options.banner_height.large"
+        },
+        {
+          "value": "medium",
+          "label": "t:options.banner_height.medium"
+        },
+        {
+          "value": "small",
+          "label": "t:options.banner_height.small"
+        },
+        {
+          "value": "auto",
+          "label": "t:options.banner_height.auto"
+        }
       ],
       "default": "full"
     },
@@ -186,9 +208,18 @@
       "id": "overlay_style",
       "label": "t:labels.overlay_style",
       "options": [
-        { "value": "gradient", "label": "t:options.overlay_style.gradient" },
-        { "value": "gradient-right", "label": "t:options.overlay_style.gradient_right" },
-        { "value": "even", "label": "t:options.overlay_style.even" }
+        {
+          "value": "gradient",
+          "label": "t:options.overlay_style.gradient"
+        },
+        {
+          "value": "gradient-right",
+          "label": "t:options.overlay_style.gradient_right"
+        },
+        {
+          "value": "even",
+          "label": "t:options.overlay_style.even"
+        }
       ],
       "default": "gradient"
     },
@@ -219,9 +250,34 @@
       "label": "t:labels.animation",
       "info": "t:labels.animation_info",
       "options": [
-        { "value": "none", "label": "t:options.animation.none" },
-        { "value": "fade-up", "label": "t:options.animation.fade_up" },
-        { "value": "zoom-in", "label": "t:options.animation.zoom_in" }
+        {
+          "value": "none",
+          "label": "t:options.animation.none"
+        },
+        {
+          "value": "fade-up",
+          "label": "t:options.animation.fade_up"
+        },
+        {
+          "value": "zoom-in",
+          "label": "t:options.animation.zoom_in"
+        },
+        {
+          "value": "slide-top",
+          "label": "t:options.animation.slide_top"
+        },
+        {
+          "value": "slide-bottom",
+          "label": "t:options.animation.slide_bottom"
+        },
+        {
+          "value": "slide-left",
+          "label": "t:options.animation.slide_left"
+        },
+        {
+          "value": "slide-right",
+          "label": "t:options.animation.slide_right"
+        }
       ],
       "default": "fade-up"
     },
@@ -260,7 +316,10 @@
           "type": "_banner-content",
           "id": "banner-content",
           "static": true,
-          "settings": { "gap": 40, "max_width": 780 },
+          "settings": {
+            "gap": 40,
+            "max_width": 780
+          },
           "blocks": [
             {
               "type": "text",
@@ -305,9 +364,30 @@
           "id": "highlight-cards",
           "static": true,
           "blocks": [
-            { "type": "_highlight-card", "settings": { "icon": "book", "label": "Stories", "value": "48 Articles" } },
-            { "type": "_highlight-card", "settings": { "icon": "video", "label": "Films", "value": "Ritual Series" } },
-            { "type": "_highlight-card", "settings": { "icon": "users", "label": "Community", "value": "42k Members" } }
+            {
+              "type": "_highlight-card",
+              "settings": {
+                "icon": "book",
+                "label": "Stories",
+                "value": "48 Articles"
+              }
+            },
+            {
+              "type": "_highlight-card",
+              "settings": {
+                "icon": "video",
+                "label": "Films",
+                "value": "Ritual Series"
+              }
+            },
+            {
+              "type": "_highlight-card",
+              "settings": {
+                "icon": "users",
+                "label": "Community",
+                "value": "42k Members"
+              }
+            }
           ]
         }
       ]
@@ -325,7 +405,10 @@
           "type": "_banner-content",
           "id": "banner-content",
           "static": true,
-          "settings": { "gap": 32, "max_width": 880 },
+          "settings": {
+            "gap": 32,
+            "max_width": 880
+          },
           "blocks": [
             {
               "type": "heading",

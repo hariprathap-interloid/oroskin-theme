@@ -48,7 +48,11 @@
 {% schema %}
 {
   "name": "t:general.custom_section",
-  "blocks": [{ "type": "@theme" }],
+  "blocks": [
+    {
+      "type": "@theme"
+    }
+  ],
   "settings": [
     {
       "type": "color_scheme",
@@ -62,9 +66,34 @@
       "label": "t:labels.animation",
       "info": "t:labels.animation_info",
       "options": [
-        { "value": "none", "label": "t:options.animation.none" },
-        { "value": "fade-up", "label": "t:options.animation.fade_up" },
-        { "value": "zoom-in", "label": "t:options.animation.zoom_in" }
+        {
+          "value": "none",
+          "label": "t:options.animation.none"
+        },
+        {
+          "value": "fade-up",
+          "label": "t:options.animation.fade_up"
+        },
+        {
+          "value": "zoom-in",
+          "label": "t:options.animation.zoom_in"
+        },
+        {
+          "value": "slide-top",
+          "label": "t:options.animation.slide_top"
+        },
+        {
+          "value": "slide-bottom",
+          "label": "t:options.animation.slide_bottom"
+        },
+        {
+          "value": "slide-left",
+          "label": "t:options.animation.slide_left"
+        },
+        {
+          "value": "slide-right",
+          "label": "t:options.animation.slide_right"
+        }
       ],
       "default": "fade-up"
     },

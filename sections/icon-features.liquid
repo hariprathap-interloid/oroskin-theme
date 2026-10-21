@@ -1,0 +1,217 @@
+{%- comment -%}
+  Feature icons (Figma homepage, under the promo): a row of reassurances (Free shipping, Secure
+  payment, Easy returns, Trusted service), each a round icon badge, a title and a short text.
+  Columns on desktop and phones are settings; the icons take the Icon colour (gold in the Figma).
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-1'
+
+  assign animation = section.settings.animation
+  if section.index == 1
+    assign animation = 'none'
+  endif
+-%}
+
+{%- if section.blocks.size > 0 -%}
+  <div
+    class="icon-features full-width color-{{ scheme_id }}"
+    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --columns-desktop: {{ section.settings.columns_desktop }}; --columns-mobile: {{ section.settings.columns_mobile }}; --icon-feature-color: {{ section.settings.icon_color }};"
+  >
+    <animate-on-scroll class="icon-features__inner">
+      <div
+        class="icon-features__grid"
+        {% if animation != 'none' %}
+          data-animate="{{ animation }}"
+        {% endif %}
+      >
+        {% content_for 'blocks' %}
+      </div>
+    </animate-on-scroll>
+  </div>
+{%- endif -%}
+
+{% stylesheet %}
+  .icon-features {
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  .icon-features__inner {
+    inline-size: min(
+      calc(var(--page-width) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  .icon-features__grid {
+    display: grid;
+    grid-template-columns: repeat(var(--columns-mobile), minmax(0, 1fr));
+    gap: var(--space-2xl) var(--space-lg);
+  }
+
+  /* Tablets: at most 2 columns, so the titles don't squeeze */
+  @media (min-width: 750px) {
+    .icon-features__grid {
+      grid-template-columns: repeat(min(var(--columns-desktop), 2), minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 990px) {
+    .icon-features__grid {
+      grid-template-columns: repeat(var(--columns-desktop), minmax(0, 1fr));
+      gap: var(--space-xl);
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.icon_features",
+  "blocks": [
+    {
+      "type": "_icon-feature"
+    }
+  ],
+  "max_blocks": 8,
+  "settings": [
+    {
+      "type": "range",
+      "id": "columns_desktop",
+      "label": "t:labels.columns_desktop",
+      "min": 2,
+      "max": 6,
+      "step": 1,
+      "default": 4
+    },
+    {
+      "type": "select",
+      "id": "columns_mobile",
+      "label": "t:labels.columns_mobile",
+      "options": [
+        {
+          "value": "1",
+          "label": "1"
+        },
+        {
+          "value": "2",
+          "label": "2"
+        }
+      ],
+      "default": "1"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "color",
+      "id": "icon_color",
+      "label": "t:labels.icon_color",
+      "default": "#c8a24b"
+    },
+    {
+      "type": "select",
+      "id": "animation",
+      "label": "t:labels.animation",
+      "info": "t:labels.animation_info",
+      "options": [
+        {
+          "value": "none",
+          "label": "t:options.animation.none"
+        },
+        {
+          "value": "fade-up",
+          "label": "t:options.animation.fade_up"
+        },
+        {
+          "value": "zoom-in",
+          "label": "t:options.animation.zoom_in"
+        },
+        {
+          "value": "slide-top",
+          "label": "t:options.animation.slide_top"
+        },
+        {
+          "value": "slide-bottom",
+          "label": "t:options.animation.slide_bottom"
+        },
+        {
+          "value": "slide-left",
+          "label": "t:options.animation.slide_left"
+        },
+        {
+          "value": "slide-right",
+          "label": "t:options.animation.slide_right"
+        }
+      ],
+      "default": "fade-up"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 80
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 80
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.icon_features",
+      "blocks": [
+        {
+          "type": "_icon-feature",
+          "settings": {
+            "icon": "truck",
+            "title": "Free shipping",
+            "text": "<p>Orders over $200 qualify for fast, free delivery</p>"
+          }
+        },
+        {
+          "type": "_icon-feature",
+          "settings": {
+            "icon": "shield",
+            "title": "Secure payment",
+            "text": "<p>Trusted payment processing with advanced security</p>"
+          }
+        },
+        {
+          "type": "_icon-feature",
+          "settings": {
+            "icon": "return",
+            "title": "Easy 30-day returns",
+            "text": "<p>Try it for 30 days first, decide when you're ready.</p>"
+          }
+        },
+        {
+          "type": "_icon-feature",
+          "settings": {
+            "icon": "headset",
+            "title": "Trusted service",
+            "text": "<p>Our dedicated support staff is always on duty</p>"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}
