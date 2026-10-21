@@ -579,16 +579,240 @@
         "padding_bottom": 160,
         "enable_scene": true,
         "scene_length": 300,
+        "scene_smoothing": "soft",
         "scene_text_color": "#ffffff",
         "scene_arrow_color": "#1f1f1f",
         "scene_image_1": "shopify://shop_images/10f104c2974349b90d1225248144b2b154c9a84d.png",
+        "scene_x_1": 26,
+        "scene_y_1": 18,
+        "scene_width_1": 27,
+        "scene_rotate_1": -8,
         "scene_image_2": "shopify://shop_images/61dbb478132af9412fe741847503763330b5424a.png",
-        "scene_image_3": "shopify://shop_images/7decbd8df28cc278bf6aa141e3a89881b453e7e8.png"
+        "scene_x_2": 72,
+        "scene_y_2": 35,
+        "scene_width_2": 27,
+        "scene_rotate_2": -3,
+        "scene_image_3": "shopify://shop_images/7decbd8df28cc278bf6aa141e3a89881b453e7e8.png",
+        "scene_x_3": 36,
+        "scene_y_3": 77,
+        "scene_width_3": 24,
+        "scene_rotate_3": -8
+      }
+    },
+    "image_banner_8GrUnC": {
+      "type": "image-banner",
+      "blocks": {
+        "banner-content": {
+          "type": "_banner-content",
+          "static": true,
+          "settings": {
+            "gap": 32,
+            "max_width": 880
+          },
+          "blocks": {
+            "heading_gYWxAa": {
+              "type": "heading",
+              "settings": {
+                "heading": "The Ultimate Glow-Up Event: <em>Up to 40% Off</em>",
+                "size": "h1",
+                "use_custom_size": true,
+                "custom_size": 72,
+                "tag": "h2",
+                "color": "default",
+                "font": "heading-font",
+                "italic_style": "accent",
+                "alignment": "left",
+                "indent": 0
+              },
+              "blocks": {}
+            },
+            "text_CzcLY3": {
+              "type": "text",
+              "settings": {
+                "text": "<p>Your skincare ritual, upgraded. Lock in exclusive savings on our award-winning makeup, targeted serums, and luxury fragrances before time runs out.</p>",
+                "style": "body-lg",
+                "use_custom_size": false,
+                "custom_size": 20,
+                "font": "body-font",
+                "color": "default",
+                "alignment": "left",
+                "max_width": "60ch"
+              },
+              "blocks": {}
+            },
+            "button_gwPfQD": {
+              "type": "button",
+              "settings": {
+                "label": "Shop the event",
+                "link": "",
+                "new_tab": false,
+                "style": "text",
+                "show_arrow": true,
+                "alignment": "left"
+              },
+              "blocks": {}
+            }
+          },
+          "block_order": [
+            "heading_gYWxAa",
+            "text_CzcLY3",
+            "button_gwPfQD"
+          ]
+        },
+        "highlight-cards": {
+          "type": "_highlight-cards",
+          "static": true,
+          "settings": {},
+          "blocks": {}
+        }
+      },
+      "name": "t:general.promo_banner",
+      "settings": {
+        "image": "shopify://shop_images/f3d7c3aaceecd21ad298d3526e6f2e831f93a409.png",
+        "height": "medium",
+        "overlay_style": "gradient",
+        "overlay_opacity": 45,
+        "color_scheme": "scheme-5",
+        "animation": "fade-up",
+        "padding_top": 120,
+        "padding_bottom": 120
+      }
+    },
+    "image_banner_UNKnKm": {
+      "type": "image-banner",
+      "blocks": {
+        "banner-content": {
+          "type": "_banner-content",
+          "static": true,
+          "settings": {
+            "gap": 40,
+            "max_width": 780
+          },
+          "blocks": {
+            "text_QUVkWQ": {
+              "type": "text",
+              "settings": {
+                "text": "<p>The Oroskin edit</p>",
+                "style": "eyebrow",
+                "use_custom_size": false,
+                "custom_size": 20,
+                "font": "body-font",
+                "color": "accent",
+                "alignment": "left",
+                "max_width": "none"
+              },
+              "blocks": {}
+            },
+            "heading_jqYjAr": {
+              "type": "heading",
+              "settings": {
+                "heading": "The New <em>Glow</em> Manifesto",
+                "size": "h1",
+                "use_custom_size": true,
+                "custom_size": 72,
+                "tag": "h2",
+                "color": "default",
+                "font": "heading-font",
+                "italic_style": "accent",
+                "alignment": "left",
+                "indent": 0
+              },
+              "blocks": {}
+            },
+            "text_r4qzeb": {
+              "type": "text",
+              "settings": {
+                "text": "<p>This season, beauty transcends skin — it becomes a language. How our editors reimagined the ritual of light across six cities.</p>",
+                "style": "body-lg",
+                "use_custom_size": false,
+                "custom_size": 20,
+                "font": "body-font",
+                "color": "default",
+                "alignment": "left",
+                "max_width": "60ch"
+              },
+              "blocks": {}
+            },
+            "button_nfXG9R": {
+              "type": "button",
+              "settings": {
+                "label": "Read the editorial",
+                "link": "",
+                "new_tab": false,
+                "style": "primary",
+                "show_arrow": true,
+                "alignment": "left"
+              },
+              "blocks": {}
+            }
+          },
+          "block_order": [
+            "text_QUVkWQ",
+            "heading_jqYjAr",
+            "text_r4qzeb",
+            "button_nfXG9R"
+          ]
+        },
+        "highlight-cards": {
+          "type": "_highlight-cards",
+          "static": true,
+          "settings": {},
+          "blocks": {
+            "stat_card_PqBzM4": {
+              "type": "_highlight-card",
+              "settings": {
+                "icon": "book",
+                "label": "Stories",
+                "value": "48 Articles",
+                "link": ""
+              },
+              "blocks": {}
+            },
+            "stat_card_XNJNdr": {
+              "type": "_highlight-card",
+              "settings": {
+                "icon": "video",
+                "label": "Films",
+                "value": "Ritual Series",
+                "link": ""
+              },
+              "blocks": {}
+            },
+            "stat_card_4XcG8H": {
+              "type": "_highlight-card",
+              "settings": {
+                "icon": "users",
+                "label": "Community",
+                "value": "42k Members",
+                "link": ""
+              },
+              "blocks": {}
+            }
+          },
+          "block_order": [
+            "stat_card_PqBzM4",
+            "stat_card_XNJNdr",
+            "stat_card_4XcG8H"
+          ]
+        }
+      },
+      "name": "t:general.image_banner_stats",
+      "settings": {
+        "image": "shopify://shop_images/6a9da17c3473051a785c2d23aa0bb872cbfeedf7.png",
+        "height": "full",
+        "overlay_style": "gradient",
+        "overlay_opacity": 80,
+        "color_scheme": "scheme-5",
+        "animation": "fade-up",
+        "padding_top": 120,
+        "padding_bottom": 120
       }
     }
   },
   "order": [
     "hero_ceiA99",
-    "scrolling_showcase_kj7qC7"
+    "scrolling_showcase_kj7qC7",
+    "image_banner_8GrUnC",
+    "image_banner_UNKnKm"
   ]
 }
