@@ -1,0 +1,1195 @@
+{%- comment -%}
+  Testimonials (Figma "What our Clients Say"): a centred eyebrow and heading, then three columns:
+  - scattered round avatars; the active reviewer takes the large slot (top right, gold ring); the
+    last reviewer waits in the centre slot while the others rotate round the remaining slots, and on
+    the last reviewer's turn only it and the previous one move (see placeAvatars() in the script)
+  - a thin vertical line with one dot per review; the active dot is filled
+  - the review cards: the active one in full (big gold quote marks, name, date, stars, text) with the
+    next one faded below it; changing review slides the cards up
+  Each review is a Review block (avatar, name, date, rating, text); order = the block order.
+  <testimonial-showcase> handles dots, avatar clicks, arrow keys and the optional autoplay (with a
+  pause button, WCAG 2.2.2). Without JavaScript the first review shows with the others under it.
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-1'
+
+  # Layout split: avatars + dots / cards, e.g. 40 -> 40fr / 60fr
+  assign split_left = section.settings.split | default: '40' | plus: 0
+  assign split_right = 100 | minus: split_left
+  assign review_count = section.blocks.size
+  # Avatar slots on load (review 1 active): the last reviewer parks in the centre slot (2); the others
+  # take the ring slots in order, starting with the large slot 0
+  assign ring_slots = '0,1,3,4,5,6,7' | split: ','
+  assign star_path = 'M12 2.6l2.85 6.08 6.65.72-4.95 4.53 1.35 6.57L12 17.2l-5.9 3.3 1.35-6.57L2.5 9.4l6.65-.72z'
+
+  assign animation = section.settings.animation
+  if section.index == 1
+    assign animation = 'none'
+  endif
+-%}
+
+{%- if review_count > 0 -%}
+  <testimonial-showcase
+    class="testimonials full-width section-width--{{ section.settings.section_width | default: 'wide' }} testimonials--height-{{ section.settings.height | default: 'auto' }} color-{{ scheme_id }}"
+    style="--split-left: {{ split_left }}fr; --split-right: {{ split_right }}fr; --color-accent: {{ section.settings.highlight_color }}; --section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
+    {% if section.settings.autoplay %}
+      data-autoplay="{{ section.settings.interval | times: 1000 }}"
+    {% endif %}
+  >
+    <div class="testimonials__inner">
+      <div class="testimonials__header">
+        {%- if section.settings.eyebrow != blank -%}
+          <p class="eyebrow eyebrow--center testimonials__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+        {%- endif -%}
+        {%- if section.settings.heading != blank -%}
+          <h2 class="testimonials__heading">{{ section.settings.heading }}</h2>
+        {%- endif -%}
+      </div>
+
+      <animate-on-scroll
+        class="testimonials__body"
+        {% if animation != 'none' %}
+          data-animate="{{ animation }}"
+        {% endif %}
+      >
+        {%- comment -%} Avatars: decorative copies of the reviewers (the cards carry the names) {%- endcomment -%}
+        <div class="testimonials__avatars" data-count="{{ review_count }}" aria-hidden="true">
+          {%- for block in section.blocks -%}
+            <button
+              type="button"
+              class="testimonials__avatar{% if forloop.first %} is-active{% endif %}"
+              data-slot="{% if forloop.last and review_count > 1 %}2{% else %}{{ ring_slots[forloop.index0] }}{% endif %}"
+              data-review-index="{{ forloop.index0 }}"
+              tabindex="-1"
+            >
+              {%- if block.settings.avatar != blank -%}
+                {{ block.settings.avatar | image_url: width: 240, height: 240, crop: 'center' | image_tag: widths: '120, 240', sizes: '120px', alt: '', loading: 'lazy' }}
+              {%- else -%}
+                <span class="testimonials__initial">{{ block.settings.name | default: '?' | slice: 0 }}</span>
+              {%- endif -%}
+            </button>
+          {%- endfor -%}
+        </div>
+
+        <div class="testimonials__timeline">
+          <ol class="testimonials__dots" role="list">
+            {%- for block in section.blocks -%}
+              {%- assign dot_label = 'sections.testimonials.show_review' | t: index: forloop.index, count: review_count, name: block.settings.name -%}
+              <li>
+                <button
+                  type="button"
+                  class="testimonials__dot"
+                  data-review-index="{{ forloop.index0 }}"
+                  aria-label="{{ dot_label | escape }}"
+                  {% if forloop.first %}
+                    aria-current="true"
+                  {% endif %}
+                ></button>
+              </li>
+            {%- endfor -%}
+          </ol>
+          {%- if section.settings.autoplay -%}
+            <button
+              type="button"
+              class="testimonials__pause"
+              aria-pressed="false"
+              data-label-pause="{{ 'sections.testimonials.pause' | t | escape }}"
+              data-label-play="{{ 'sections.testimonials.play' | t | escape }}"
+            >
+              <span class="visually-hidden">{{ 'sections.testimonials.pause' | t }}</span>
+              <svg class="testimonials__pause-icon testimonials__pause-icon--pause" aria-hidden="true" focusable="false" viewBox="0 0 16 16"><rect x="3.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/><rect x="9.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/></svg>
+              <svg class="testimonials__pause-icon testimonials__pause-icon--play" aria-hidden="true" focusable="false" viewBox="0 0 16 16"><path d="M4.5 2.8v10.4a.8.8 0 0 0 1.2.7l8.4-5.2a.8.8 0 0 0 0-1.4L5.7 2.1a.8.8 0 0 0-1.2.7z" fill="currentColor"/></svg>
+            </button>
+          {%- endif -%}
+        </div>
+
+        <div class="testimonials__cards-area">
+          <span class="testimonials__quote" aria-hidden="true">{{ 'icon-quote-open.svg' | inline_asset_content }}</span>
+          <div class="testimonials__viewport">
+          <ul class="testimonials__cards" role="list">
+            {%- for block in section.blocks -%}
+              {%- liquid
+                assign rating = block.settings.rating
+                assign rating_fill = rating | times: 20
+                assign rating_label = 'sections.testimonials.rating' | t: rating: rating
+              -%}
+              {%- capture card_inner -%}
+                <div class="testimonials__meta">
+                  <div>
+                    {%- if block.settings.name != blank -%}
+                      <p class="testimonials__name">{{ block.settings.name | escape }}</p>
+                    {%- endif -%}
+                    {%- if block.settings.date != blank -%}
+                      <p class="testimonials__date">{{ block.settings.date | escape }}</p>
+                    {%- endif -%}
+                  </div>
+                  {%- if rating > 0 -%}
+                    <div class="testimonials__stars" role="img" aria-label="{{ rating_label | escape }}">
+                      <span class="testimonials__stars-row testimonials__stars-row--empty" aria-hidden="true">
+                        {%- for i in (1..5) -%}<svg viewBox="0 0 24 24"><path d="{{ star_path }}"/></svg>{%- endfor -%}
+                      </span>
+                      <span class="testimonials__stars-row testimonials__stars-row--full" style="--rating-fill: {{ rating_fill }}%;" aria-hidden="true">
+                        {%- for i in (1..5) -%}<svg viewBox="0 0 24 24"><path d="{{ star_path }}"/></svg>{%- endfor -%}
+                      </span>
+                    </div>
+                  {%- endif -%}
+                </div>
+                {%- if block.settings.text != blank -%}
+                  <div class="testimonials__text rte">{{ block.settings.text }}</div>
+                {%- endif -%}
+              {%- endcapture -%}
+              {%- if forloop.first -%}
+                {%- assign first_card_inner = card_inner -%}
+              {%- endif -%}
+              <li
+                class="testimonials__card{% if forloop.first %} is-active{% endif %}"
+                data-review-card
+                {{ block.shopify_attributes }}
+              >
+                {{ card_inner }}
+              </li>
+            {%- endfor -%}
+            {%- comment -%}
+              A decorative copy of the first review after the last one (Figma): when the last review is
+              active, the first shows faded below it, so the list feels endless. Hidden from screen
+              readers and not one of the switchable cards.
+            {%- endcomment -%}
+            {%- if review_count > 1 -%}
+              <li class="testimonials__card testimonials__card--clone" aria-hidden="true">
+                {{ first_card_inner }}
+              </li>
+            {%- endif -%}
+          </ul>
+          </div>
+        </div>
+        <span class="testimonials__quote testimonials__quote--end" aria-hidden="true">{{ 'icon-quote-close.svg' | inline_asset_content }}</span>
+      </animate-on-scroll>
+    </div>
+  </testimonial-showcase>
+{%- endif -%}
+
+{% stylesheet %}
+  testimonial-showcase {
+    display: block;
+  }
+
+  /*
+    Section height: at least the chosen share of the screen, the content centred vertically inside.
+    Fit content = as tall as the content needs. svh = the small viewport height, so the address bar on
+    phones never pushes the bottom out of view.
+  */
+  .testimonials {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+    overflow: hidden;
+  }
+
+  .testimonials--height-full {
+    min-block-size: 100svh;
+  }
+
+  .testimonials--height-large {
+    min-block-size: 80svh;
+  }
+
+  .testimonials--height-medium {
+    min-block-size: 64svh;
+  }
+
+  .testimonials--height-small {
+    min-block-size: 48svh;
+  }
+
+  .testimonials__inner {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(2.5rem, 1.5rem + 3vw, 5rem);
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  .testimonials__header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+    text-align: center;
+  }
+
+  .testimonials__eyebrow,
+  .testimonials__heading {
+    margin: 0;
+  }
+
+  .testimonials__heading {
+    font-size: var(--font-size-display);
+  }
+
+  /* "What our *Clients* Say": italic words in the highlight colour, not slanted */
+  .testimonials__heading em {
+    color: var(--color-accent);
+    font-style: normal;
+  }
+
+  /* Three columns (Figma 1920px): avatars ~420px | timeline | cards ~870px */
+  /*
+    Figma spacing (1920px): ~90px from the avatars to the dots, ~110px from the dots to the card (the
+    opening quote sits in that gap, over the card's corner). The avatar column scales with the screen
+    and the card column takes all the remaining width, so the section fills its Section width.
+  */
+  .testimonials__body {
+    position: relative;
+    /* Own layer: the closing quote (z-index -1) stays above the section's background, behind the cards */
+    isolation: isolate;
+    display: grid;
+    /* Laptops and normal desktops: avatar column up to 30rem, the cards take the rest */
+    grid-template-columns: clamp(16rem, 24vw, 30rem) auto minmax(0, 1fr);
+    column-gap: clamp(2rem, 4.6vw, 5.5rem);
+    align-items: start;
+  }
+
+  /*
+    Desktop: the closing ” gets its own space on the right (Figma: the card stops ~290px before the
+    edge and the quote sits in that gutter, bottom right), instead of lying under the card.
+  */
+  .testimonials__body {
+    --quote-end-size: clamp(6rem, 12vw, 9rem); /* tablets and phones: behind the card, no gutter */
+  }
+
+  /*
+    Desktop: cards are at least the Figma card height (343px), even for a short review; longer reviews
+    still grow (the tallest one sets --card-height). While the script measures, --card-height is
+    'auto', which makes this max() invalid for a moment, so the cards fall back to their natural height
+    and are measured correctly.
+  */
+  @media (min-width: 990px) {
+    .testimonials__card {
+      min-block-size: max(var(--card-height, 0px), 21.4375rem);
+    }
+  }
+
+  /* Laptops and normal desktops: a smaller quote and gutter, so the card keeps enough width */
+  @media (min-width: 990px) {
+    .testimonials__body {
+      --quote-end-size: clamp(6rem, 10.5vw, 11rem);
+
+      padding-inline-end: calc(var(--quote-end-size) + 1rem);
+    }
+  }
+
+  /* Large desktops (1700px+): the Figma size, 292px at 1920px */
+  @media (min-width: 1700px) {
+    .testimonials__body {
+      --quote-end-size: clamp(8rem, 15.2vw, 18.25rem);
+    }
+  }
+
+  /* Large desktops (24" and up, 1700px+): the Layout split setting, 40/60, 45/55 or 50/50 */
+  @media (min-width: 1700px) {
+    .testimonials__body {
+      grid-template-columns: minmax(0, var(--split-left, 40fr)) auto minmax(0, var(--split-right, 60fr));
+    }
+  }
+
+  /* ---------- Avatars: fixed slots, the active reviewer in slot 0 (large, top right) ---------- */
+  /*
+    The avatar column is a size container: the avatars are sized in cqi (1cqi = 1% of this column's
+    width), so a wider column (bigger screen, or a 50/50 split) gives bigger faces.
+  */
+  .testimonials__avatars {
+    position: relative;
+    /*
+      The Figma avatar area is ~420 x 480 (7 : 8). Keeping that shape (height follows the width) puts
+      every slot exactly where the Figma has it at any size, instead of stretching the group over the
+      tall cards column. Its top lines up with the top of the dots and the card.
+    */
+    align-self: start;
+    aspect-ratio: 7 / 8;
+    container-type: inline-size;
+  }
+
+  .testimonials__avatar {
+    --avatar-size: clamp(4.25rem, 19cqi, 8rem);
+
+    position: absolute;
+    inset-inline-start: var(--x);
+    inset-block-start: var(--y);
+    display: grid;
+    place-items: center;
+    inline-size: var(--avatar-size);
+    block-size: var(--avatar-size);
+    min-block-size: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 3px solid #ffffff;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-tint);
+    box-shadow: 0 0.5rem 1.25rem #00000026;
+    cursor: pointer;
+    translate: -50% -50%;
+    transition:
+      inset-inline-start 0.7s var(--ease-out),
+      inset-block-start 0.7s var(--ease-out),
+      inline-size 0.7s var(--ease-out),
+      block-size 0.7s var(--ease-out),
+      border-color 0.7s var(--ease-out);
+  }
+
+  .testimonials__avatar img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .testimonials__initial {
+    color: var(--color-accent);
+    font-family: var(--font-heading--family);
+    font-size: 1.5rem;
+  }
+
+  .testimonials__avatar[data-slot='0'] {
+    --avatar-size: clamp(6rem, 27cqi, 11.5rem);
+
+    border-color: var(--color-accent);
+  }
+
+  /* Slot positions (centre of each avatar, % of the avatar area), measured on the Figma */
+  .testimonials__avatar[data-slot='0'] { --x: 79%; --y: 15%; }
+  .testimonials__avatar[data-slot='1'] { --x: 19%; --y: 31%; }
+  .testimonials__avatar[data-slot='2'] { --x: 54%; --y: 53%; }
+  .testimonials__avatar[data-slot='3'] { --x: 13%; --y: 76%; }
+  .testimonials__avatar[data-slot='4'] { --x: 71%; --y: 89%; }
+  .testimonials__avatar[data-slot='5'] { --x: 40%; --y: 12%; }
+  .testimonials__avatar[data-slot='6'] { --x: 92%; --y: 55%; }
+  .testimonials__avatar[data-slot='7'] { --x: 33%; --y: 95%; }
+
+  /*
+    More than 5 reviews: a balanced layout per count, spread round the centre slot (2), so the extra
+    faces don't crowd the Figma group. Ring order (0 -> 1 -> 3 -> 4 -> ...) goes round the group, so
+    the rotation flows. 5 or fewer reviews use the Figma positions above.
+  */
+  .testimonials__avatars[data-count='6'] .testimonials__avatar[data-slot='0'] { --x: 78%; --y: 13%; }
+  .testimonials__avatars[data-count='6'] .testimonials__avatar[data-slot='1'] { --x: 22%; --y: 18%; }
+  .testimonials__avatars[data-count='6'] .testimonials__avatar[data-slot='2'] { --x: 50%; --y: 48%; }
+  .testimonials__avatars[data-count='6'] .testimonials__avatar[data-slot='3'] { --x: 12%; --y: 62%; }
+  .testimonials__avatars[data-count='6'] .testimonials__avatar[data-slot='4'] { --x: 40%; --y: 92%; }
+  .testimonials__avatars[data-count='6'] .testimonials__avatar[data-slot='5'] { --x: 86%; --y: 70%; }
+
+  .testimonials__avatars[data-count='7'] .testimonials__avatar[data-slot='0'] { --x: 78%; --y: 13%; }
+  .testimonials__avatars[data-count='7'] .testimonials__avatar[data-slot='1'] { --x: 22%; --y: 14%; }
+  .testimonials__avatars[data-count='7'] .testimonials__avatar[data-slot='2'] { --x: 51%; --y: 50%; }
+  .testimonials__avatars[data-count='7'] .testimonials__avatar[data-slot='3'] { --x: 11%; --y: 52%; }
+  .testimonials__avatars[data-count='7'] .testimonials__avatar[data-slot='4'] { --x: 26%; --y: 89%; }
+  .testimonials__avatars[data-count='7'] .testimonials__avatar[data-slot='5'] { --x: 74%; --y: 90%; }
+  .testimonials__avatars[data-count='7'] .testimonials__avatar[data-slot='6'] { --x: 91%; --y: 52%; }
+
+  .testimonials__avatars[data-count='8'] .testimonials__avatar[data-slot='0'] { --x: 78%; --y: 12%; }
+  .testimonials__avatars[data-count='8'] .testimonials__avatar[data-slot='1'] { --x: 34%; --y: 8%; }
+  .testimonials__avatars[data-count='8'] .testimonials__avatar[data-slot='2'] { --x: 51%; --y: 50%; }
+  .testimonials__avatars[data-count='8'] .testimonials__avatar[data-slot='3'] { --x: 10%; --y: 38%; }
+  .testimonials__avatars[data-count='8'] .testimonials__avatar[data-slot='4'] { --x: 14%; --y: 76%; }
+  .testimonials__avatars[data-count='8'] .testimonials__avatar[data-slot='5'] { --x: 46%; --y: 94%; }
+  .testimonials__avatars[data-count='8'] .testimonials__avatar[data-slot='6'] { --x: 82%; --y: 82%; }
+  .testimonials__avatars[data-count='8'] .testimonials__avatar[data-slot='7'] { --x: 92%; --y: 46%; }
+
+  /* ---------- Timeline: line + dots ---------- */
+  .testimonials__timeline {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-lg);
+    padding-block: var(--space-xl);
+  }
+
+  .testimonials__timeline::before {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 50%;
+    inline-size: 1px;
+    background-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
+  }
+
+  .testimonials__dots {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(1.75rem, 2.8vw, 2.5rem);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .testimonials__dot {
+    display: block;
+    inline-size: 1rem;
+    block-size: 1rem;
+    min-block-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-background);
+    cursor: pointer;
+    transition:
+      background-color var(--duration-base) var(--ease-out),
+      scale var(--duration-base) var(--ease-out);
+  }
+
+  .testimonials__dot[aria-current='true'] {
+    background-color: var(--color-accent);
+    scale: 1.3;
+  }
+
+  .testimonials__dot:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+  }
+
+  .testimonials__pause {
+    position: relative;
+    display: grid;
+    place-items: center;
+    inline-size: 2rem;
+    block-size: 2rem;
+    min-block-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, var(--color-accent) 50%, transparent);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-background);
+    color: var(--color-accent);
+    cursor: pointer;
+  }
+
+  .testimonials__pause svg {
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
+  }
+
+  .testimonials__pause-icon--play,
+  .testimonials__pause[aria-pressed='true'] .testimonials__pause-icon--pause {
+    display: none;
+  }
+
+  .testimonials__pause[aria-pressed='true'] .testimonials__pause-icon--play {
+    display: block;
+  }
+
+  /* ---------- Cards: the active one in full, the next one faded below ---------- */
+  /*
+    The quote marks sit in this wrapper, outside the viewport: the viewport clips (overflow: hidden)
+    and would cut off the marks that overlap the card's top-left corner.
+  */
+  /*
+    The space above the card (for the quote) and the extra gap after the dots are on this wrapper, not
+    inside the clipped viewport: inside it, the previous card would show through above the active one.
+  */
+  .testimonials__cards-area {
+    position: relative;
+    margin-inline-start: clamp(0.75rem, 1.4vw, 1.75rem);
+    padding-block-start: clamp(1.75rem, 2.4vw, 2.8rem);
+  }
+
+  .testimonials__viewport {
+    position: relative;
+  }
+
+  /*
+    Figma quote marks (icon-quote-open / -close.svg, currentColor). Opening: 125px wide at 1920px, gold
+    at 42%, overlapping the card's top-left corner (~55px left of it, ~45px above).
+  */
+  .testimonials__quote {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: calc(clamp(3.5rem, 6.5vw, 7.8rem) * -0.45);
+    z-index: 2;
+    display: block;
+    inline-size: clamp(3.5rem, 6.5vw, 7.8rem);
+    color: color-mix(in srgb, var(--color-accent) 42%, transparent);
+    pointer-events: none;
+  }
+
+  .testimonials__quote svg {
+    display: block;
+    inline-size: 100%;
+    block-size: auto;
+  }
+
+  /* Closing: 292px wide at 1920px, gold at 10%, bottom right of the section, behind everything */
+  .testimonials__quote--end {
+    inset: auto 0 calc(var(--quote-end-size) * -0.3) auto;
+    z-index: -1;
+    inline-size: var(--quote-end-size);
+    color: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  }
+
+  .testimonials__cards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /*
+    Light glass card (Figma). All cards get the height of the tallest review (--card-height, set by the
+    script), so the section keeps one height while the reviews change.
+  */
+  .testimonials__card {
+    min-block-size: var(--card-height, auto);
+    display: flex;
+    flex-direction: column;
+    /* Figma: ~55px between the name / date and the review text */
+    gap: clamp(1.75rem, 1rem + 2vw, 3.4rem);
+    /* Figma: ~50px top, ~72px at the sides */
+    padding: clamp(1.5rem, 1rem + 2vw, 3.1rem) clamp(1.5rem, 1rem + 3vw, 4.5rem);
+    border: 0;
+    /* Figma "Rectangle 2213": 29px corners, fill rgba(252, 246, 232, 0.2) = cream at 20% */
+    border-radius: 1.8125rem;
+    background-color: #fcf6e833;
+    /*
+      Figma Glass for this card, as INNER shadows only (the Figma card "Rectangle 2213" has no drop
+      shadow; its glass look is all inner light):
+      - Light -45deg 80%: a 1px inner highlight on the top-left edges (80%) and the bottom-right
+        edges (~74%)
+      - Depth 20: a soft 20px inner light band along the edges, the visible effect of the 20px glass
+        bevel on a flat background
+      - Frost 4 = a 1.4px backdrop blur (below)
+      Refraction / Dispersion bend the background behind the rim: invisible on flat cream, left out.
+    */
+    /*
+      Made stronger than the Figma numbers so the card shows on the cream page (a 20% cream fill on
+      cream is otherwise invisible): a 1.5px white rim (top-left 100%, bottom-right 90%), a 24px inner
+      light band at 50%, and a very faint warm outer shadow that only separates it from the page.
+    */
+    box-shadow:
+      inset 1.5px 1.5px 0 #ffffff,
+      inset -1.5px -1.5px 0 #ffffffe6,
+      inset 0 0 1.5rem #ffffff80,
+      0 0.5rem 2rem #c8a24b14;
+    -webkit-backdrop-filter: blur(1.4px);
+    backdrop-filter: blur(1.4px);
+    opacity: 0.45;
+    transition: opacity 0.6s var(--ease-out);
+  }
+
+  .testimonials__card.is-active {
+    opacity: 1;
+  }
+
+  .testimonials__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-sm);
+  }
+
+  .testimonials__name,
+  .testimonials__date {
+    margin: 0;
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  /* Figma: semi-bold, letter-spaced name; the date in body size, muted grey, a little below */
+  .testimonials__name {
+    font-size: var(--font-size-body-sm);
+    font-weight: 600;
+  }
+
+  .testimonials__date {
+    margin-block-start: 0.25rem;
+    color: color-mix(in srgb, var(--color-text) 50%, var(--color-background));
+    font-size: var(--font-size-body-sm);
+  }
+
+  /* Stars: five outlines, with the filled row on top cut to the rating (4.5 -> 90%) */
+  .testimonials__stars {
+    position: relative;
+    display: inline-grid;
+    color: #e3a83a;
+  }
+
+  .testimonials__stars-row {
+    grid-area: 1 / 1;
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  .testimonials__stars-row svg {
+    inline-size: 1.4rem;
+    block-size: 1.4rem;
+  }
+
+  .testimonials__stars-row--empty svg path {
+    fill: none;
+    stroke: currentcolor;
+    stroke-width: 1.5;
+  }
+
+  .testimonials__stars-row--full {
+    clip-path: inset(0 calc(100% - var(--rating-fill, 100%)) 0 0);
+  }
+
+  .testimonials__stars-row--full svg path {
+    fill: currentcolor;
+  }
+
+  .testimonials__text {
+    font-size: var(--font-size-body-lg);
+  }
+
+  .testimonials__text > * {
+    margin: 0;
+  }
+
+  /*
+    With the script: the cards list moves up so the active card sits at the top of the viewport, which
+    shows the active card plus the top of the next one, fading out.
+  */
+  testimonial-showcase.is-enhanced .testimonials__viewport {
+    overflow: hidden;
+    block-size: var(--viewport-height, auto);
+    /* Only the last ~12% fades, so the next review stays readable (faded), as in the Figma */
+    mask-image: linear-gradient(to bottom, #000000 88%, #00000000 100%);
+    transition: block-size 0.6s var(--ease-out);
+  }
+
+  testimonial-showcase.is-enhanced .testimonials__cards {
+    translate: 0 var(--cards-offset, 0);
+    transition: translate 0.7s var(--ease-out);
+  }
+
+  /* Tablets and phones: avatars in a row above, timeline hidden, the cards below */
+  @media (max-width: 989px) {
+    .testimonials__body {
+      grid-template-columns: 1fr;
+    }
+
+    .testimonials__avatars {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: var(--space-sm);
+      min-block-size: 0;
+      aspect-ratio: auto;
+    }
+
+    .testimonials__avatar,
+    .testimonials__avatar[data-slot] {
+      --avatar-size: 4rem;
+
+      position: static;
+      translate: none;
+    }
+
+    .testimonials__avatar[data-slot='0'] {
+      --avatar-size: 5rem;
+    }
+
+    .testimonials__timeline {
+      flex-direction: row;
+      justify-content: center;
+      padding-block: 0;
+    }
+
+    .testimonials__timeline::before {
+      inset-block: 50% auto;
+      inset-inline: 0;
+      inline-size: auto;
+      block-size: 1px;
+    }
+
+    .testimonials__dots {
+      flex-direction: row;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .testimonials__avatar,
+    .testimonials__card,
+    testimonial-showcase.is-enhanced .testimonials__cards,
+    testimonial-showcase.is-enhanced .testimonials__viewport {
+      transition: none;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <testimonial-showcase>: shows one review at a time. Dots (buttons) and avatars switch reviews;
+   * arrow keys move between dots; optional autoplay (with a pause button, paused on hover / focus).
+   * The cards list slides so the active card is at the top; the avatars move as described in
+   * placeAvatars().
+   */
+  class TestimonialShowcase extends HTMLElement {
+    connectedCallback() {
+      this.cards = [...this.querySelectorAll('[data-review-card]')];
+      this.dots = [...this.querySelectorAll('.testimonials__dot')];
+      this.avatars = [...this.querySelectorAll('.testimonials__avatar')];
+      this.list = this.querySelector('.testimonials__cards');
+      this.viewport = this.querySelector('.testimonials__viewport');
+      if (this.cards.length < 2) return;
+
+      this.classList.add('is-enhanced');
+      this.active = 0;
+
+      this.addEventListener('click', (event) => {
+        const target = event.target.closest('[data-review-index]');
+        if (target) this.show(Number(target.dataset.reviewIndex), true);
+      });
+
+      this.querySelector('.testimonials__dots')?.addEventListener('keydown', (event) => {
+        const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[event.key];
+        if (!step) return;
+        event.preventDefault();
+        const next = (this.active + step + this.cards.length) % this.cards.length;
+        this.show(next, true);
+        this.dots[next]?.focus();
+      });
+
+      // Theme editor: selecting a Review block shows it
+      document.addEventListener('shopify:block:select', (this.onBlockSelect = (event) => {
+        const index = this.cards.indexOf(event.target);
+        if (index >= 0) this.show(index, true);
+      }));
+
+      // Re-measure when the width changes (text re-wraps); height changes we cause ourselves are ignored
+      this.resizeObserver = new ResizeObserver(([entry]) => {
+        const width = Math.round(entry.contentRect.width);
+        if (width !== this.lastWidth) {
+          this.lastWidth = width;
+          this.equalizeCards();
+        }
+        this.layout();
+      });
+      this.resizeObserver.observe(this.viewport);
+      this.layout();
+      this.setUpAutoplay();
+    }
+
+    disconnectedCallback() {
+      this.resizeObserver?.disconnect();
+      this.visibilityObserver?.disconnect();
+      clearInterval(this.timer);
+      document.removeEventListener('shopify:block:select', this.onBlockSelect);
+    }
+
+    show(index, byVisitor = false) {
+      const count = this.cards.length;
+      this.active = (index + count) % count;
+      this.cards.forEach((card, i) => card.classList.toggle('is-active', i === this.active));
+      this.dots.forEach((dot, i) => dot.setAttribute('aria-current', String(i === this.active)));
+      this.placeAvatars();
+      this.layout();
+      if (byVisitor) this.restartAutoplay();
+    }
+
+    /**
+     * Avatar slots for the active review (Figma rotation):
+     * - the LAST reviewer parks in the centre slot (2) and waits there;
+     * - the others rotate round the ring slots (0 = the large slot, then 1, 3, 4...): the active one
+     *   in slot 0, the following ones after it;
+     * - on the last reviewer's turn only two move: the last one takes slot 0 and the one before it
+     *   (just active) parks in the centre; the rest keep their places. On the next turn the last one
+     *   returns to the centre and the ring rotates again.
+     */
+    placeAvatars() {
+      const count = this.avatars.length;
+      if (count < 2) return;
+      const last = count - 1;
+      const ringSize = count - 1;
+      const ringSlots = ['0', '1', '3', '4', '5', '6', '7'];
+      const lastIsActive = this.active === last;
+      const parked = lastIsActive ? last - 1 : last;
+      const ringActive = lastIsActive ? last - 1 : this.active;
+
+      this.avatars.forEach((avatar, i) => {
+        let slot;
+        if (i === parked) slot = '2';
+        else if (lastIsActive && i === last) slot = '0';
+        else slot = ringSlots[(i - ringActive + ringSize) % ringSize];
+        avatar.dataset.slot = slot;
+      });
+    }
+
+    /** Gives every card the height of the tallest one (measured at their natural height first) */
+    equalizeCards() {
+      this.style.setProperty('--card-height', 'auto');
+      const tallest = Math.max(...this.cards.map((card) => card.offsetHeight));
+      this.style.setProperty('--card-height', `${tallest}px`);
+    }
+
+    /**
+     * Moves the list so the active card is on top. The viewport is always the card + 70% of a card
+     * (all cards share one height), also for the last review that has no next card: so the section
+     * never changes height and the heading never shifts.
+     */
+    layout() {
+      const card = this.cards[this.active];
+      if (!card) return;
+      const gap = parseFloat(getComputedStyle(this.list).rowGap) || 0;
+      // The next card peeks in: 70% of a card, at most 256px (Figma), so tall reviews never push the
+      // window off a laptop screen
+      const peek = Math.min(card.offsetHeight * 0.7, 256);
+      const height = card.offsetHeight + gap + peek;
+      this.style.setProperty('--cards-offset', `${-card.offsetTop + this.list.offsetTop}px`);
+      this.style.setProperty('--viewport-height', `${height}px`);
+    }
+
+    setUpAutoplay() {
+      const delay = Number(this.dataset.autoplay);
+      if (!delay || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        this.querySelector('.testimonials__pause')?.setAttribute('hidden', '');
+        return;
+      }
+      this.delay = delay;
+      this.pauseButton = this.querySelector('.testimonials__pause');
+      this.pauseButton?.addEventListener('click', () => {
+        this.paused = !this.paused;
+        this.pauseButton.setAttribute('aria-pressed', String(this.paused));
+        this.pauseButton.querySelector('.visually-hidden').textContent = this.paused
+          ? this.pauseButton.dataset.labelPlay
+          : this.pauseButton.dataset.labelPause;
+        this.restartAutoplay();
+      });
+      /*
+        What holds the current review (hovering does NOT: the reviews keep moving under the mouse):
+        - the visitor CHOSE a review: clicked an avatar or a dot, or moved to a dot with the keyboard.
+          It stays until they leave: focus moves out of the section, or the mouse leaves it; then the
+          rotation starts again from the chosen review.
+        - the section being off screen (no point changing reviews nobody sees)
+      */
+      this.addEventListener('click', (event) => {
+        if (event.target.closest('[data-review-index]')) this.choiceHold = true;
+      });
+      this.addEventListener('focusin', (event) => {
+        if (event.target.matches('.testimonials__dot:focus-visible')) this.choiceHold = true;
+      });
+      this.addEventListener('focusout', (event) => {
+        if (!this.contains(event.relatedTarget)) this.release();
+      });
+      this.addEventListener('pointerleave', () => this.release());
+      this.visibilityObserver = new IntersectionObserver(([entry]) => {
+        this.onScreen = entry.isIntersecting;
+      });
+      this.visibilityObserver.observe(this);
+      this.restartAutoplay();
+    }
+
+    /** The visitor left after choosing a review: the rotation starts again, a full interval from now */
+    release() {
+      if (!this.choiceHold) return;
+      this.choiceHold = false;
+      this.restartAutoplay();
+    }
+
+    restartAutoplay() {
+      clearInterval(this.timer);
+      if (!this.delay || this.paused) return;
+      this.timer = setInterval(() => {
+        if (this.choiceHold || this.onScreen === false) return;
+        this.show(this.active + 1);
+      }, this.delay);
+    }
+  }
+
+  if (!customElements.get('testimonial-showcase')) {
+    customElements.define('testimonial-showcase', TestimonialShowcase);
+  }
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.testimonials",
+  "max_blocks": 8,
+  "blocks": [
+    {
+      "type": "review",
+      "name": "t:general.review",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "avatar",
+          "label": "t:labels.avatar",
+          "info": "t:labels.avatar_info"
+        },
+        {
+          "type": "text",
+          "id": "name",
+          "label": "t:labels.reviewer_name",
+          "default": "Patricia D."
+        },
+        {
+          "type": "text",
+          "id": "date",
+          "label": "t:labels.review_date",
+          "default": "Apr 15, 2026"
+        },
+        {
+          "type": "range",
+          "id": "rating",
+          "label": "t:labels.rating",
+          "min": 0,
+          "max": 5,
+          "step": 0.5,
+          "default": 4.5
+        },
+        {
+          "type": "richtext",
+          "id": "text",
+          "label": "t:labels.review_text",
+          "default": "<p>This is the holy grail of lip glosses. It is not sticky at all, feels super hydrating, and makes your lips look naturally plump and shiny.</p>"
+        }
+      ]
+    }
+  ],
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "Our reviews"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.trending_heading_info",
+      "default": "What our <em>Clients</em> Say"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.autoplay"
+    },
+    {
+      "type": "checkbox",
+      "id": "autoplay",
+      "label": "t:labels.testimonials_autoplay",
+      "info": "t:labels.testimonials_autoplay_info",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "interval",
+      "label": "t:labels.testimonials_interval",
+      "min": 1,
+      "max": 12,
+      "step": 1,
+      "unit": "s",
+      "default": 7,
+      "visible_if": "{{ section.settings.autoplay }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "height",
+      "label": "t:labels.section_height",
+      "options": [
+        {
+          "value": "auto",
+          "label": "t:options.banner_height.auto"
+        },
+        {
+          "value": "full",
+          "label": "t:options.banner_height.full"
+        },
+        {
+          "value": "large",
+          "label": "t:options.banner_height.large"
+        },
+        {
+          "value": "medium",
+          "label": "t:options.banner_height.medium"
+        },
+        {
+          "value": "small",
+          "label": "t:options.banner_height.small"
+        }
+      ],
+      "default": "auto"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "wide"
+    },
+    {
+      "type": "select",
+      "id": "split",
+      "label": "t:labels.layout_split",
+      "info": "t:labels.layout_split_info",
+      "options": [
+        {
+          "value": "40",
+          "label": "t:options.layout_split.40"
+        },
+        {
+          "value": "45",
+          "label": "t:options.layout_split.45"
+        },
+        {
+          "value": "50",
+          "label": "t:options.layout_split.50"
+        }
+      ],
+      "default": "40"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "color",
+      "id": "highlight_color",
+      "label": "t:labels.highlight_color",
+      "default": "#c8a24b"
+    },
+    {
+      "type": "select",
+      "id": "animation",
+      "label": "t:labels.animation",
+      "info": "t:labels.animation_info",
+      "options": [
+        {
+          "value": "none",
+          "label": "t:options.animation.none"
+        },
+        {
+          "value": "fade-up",
+          "label": "t:options.animation.fade_up"
+        },
+        {
+          "value": "zoom-in",
+          "label": "t:options.animation.zoom_in"
+        },
+        {
+          "value": "slide-top",
+          "label": "t:options.animation.slide_top"
+        },
+        {
+          "value": "slide-bottom",
+          "label": "t:options.animation.slide_bottom"
+        },
+        {
+          "value": "slide-left",
+          "label": "t:options.animation.slide_left"
+        },
+        {
+          "value": "slide-right",
+          "label": "t:options.animation.slide_right"
+        }
+      ],
+      "default": "fade-up"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 96
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 96
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.testimonials",
+      "blocks": [
+        {
+          "type": "review",
+          "settings": {
+            "name": "Patricia D.",
+            "date": "Apr 15, 2026",
+            "rating": 4.5,
+            "text": "<p>This is the holy grail of lip glosses. It is not sticky at all, feels super hydrating, and makes your lips look naturally plump and shiny. This provides flawless coverage that lasts through sweat and long days without budging.</p>"
+          }
+        },
+        {
+          "type": "review",
+          "settings": {
+            "name": "Helen G.",
+            "date": "Mar 28, 2026",
+            "rating": 4.5,
+            "text": "<p>It gives incredible volume and length without clumping. My lashes look like falsies, and it does not smudge or flake throughout the day. This completely transformed my skin texture.</p>"
+          }
+        },
+        {
+          "type": "review",
+          "settings": {
+            "name": "Susan B.",
+            "date": "Feb 09, 2026",
+            "rating": 4.5,
+            "text": "<p>An absolute lifesaver for dry, sensitive skin. It is thick but non-greasy, locks in moisture all night, and never causes breakouts or irritation. The perfect blend of lavender and orange blossom. It smells incredibly elegant.</p>"
+          }
+        },
+        {
+          "type": "review",
+          "settings": {
+            "name": "Joanne M.",
+            "date": "Jan 15, 2026",
+            "rating": 4.5,
+            "text": "<p>The perfect blend of lavender and orange blossom. It smells incredibly elegant, powerful, and expensive, and I get compliments every single time I wear it.</p>"
+          }
+        },
+        {
+          "type": "review",
+          "settings": {
+            "name": "Maria L.",
+            "date": "Dec 02, 2025",
+            "rating": 5,
+            "text": "<p>Lightweight, glowy and it lasts all day. My new everyday foundation: it looks like skin, only better.</p>"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

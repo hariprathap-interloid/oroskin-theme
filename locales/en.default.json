@@ -99,6 +99,12 @@
       "placeholder_category": "Category",
       "placeholder_title": "Your story title",
       "featured": "Featured story"
+    },
+    "testimonials": {
+      "show_review": "Show review {{ index }} of {{ count }}: {{ name }}",
+      "rating": "Rated {{ rating }} out of 5",
+      "pause": "Pause reviews",
+      "play": "Play reviews"
     }
   },
   "products": {

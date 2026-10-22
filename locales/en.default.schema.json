@@ -57,7 +57,9 @@
     "blog_stories": "Blog stories",
     "story": "Story",
     "product_panels": "Product panels",
-    "editors_picks": "Editor's picks"
+    "editors_picks": "Editor's picks",
+    "testimonials": "Testimonials",
+    "review": "Review"
   },
   "labels": {
     "alignment": "Alignment",
@@ -333,7 +335,19 @@
     "cart_icon_color": "Icon colour",
     "cart_icon_color_info": "Pick a dark colour when the product photos have white backgrounds.",
     "cart_options": "Products with options",
-    "cart_options_info": "For products with several variants (sizes, shades). Sold-out products always open their page."
+    "cart_options_info": "For products with several variants (sizes, shades). Sold-out products always open their page.",
+    "avatar": "Avatar",
+    "avatar_info": "A square photo of the reviewer. Without one, their initial is shown.",
+    "reviewer_name": "Name",
+    "review_date": "Date",
+    "rating": "Rating (stars)",
+    "review_text": "Review",
+    "autoplay": "Autoplay",
+    "testimonials_autoplay": "Change reviews automatically",
+    "testimonials_autoplay_info": "Shows a pause button. Stops while the visitor points at or tabs into the section, and with reduced motion.",
+    "testimonials_interval": "Time per review",
+    "layout_split": "Layout split",
+    "layout_split_info": "On large desktops (1700px and wider): width of the avatars and dots versus the review cards. Laptops keep the standard layout."
   },
   "options": {
     "alignment": {
@@ -565,6 +579,11 @@
     "cart_options": {
       "add_first": "Add the first available option",
       "link": "Open the product page"
+    },
+    "layout_split": {
+      "40": "40 / 60",
+      "45": "45 / 55",
+      "50": "50 / 50"
     }
   },
   "color_scheme": {
