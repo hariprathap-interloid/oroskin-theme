@@ -39,7 +39,7 @@
 
 <product-deck
   class="product-deck full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
-  style="--half: {{ middle }}; --color-accent: {{ section.settings.highlight_color }}; --section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
+  style="--half: {{ middle }}; --card-ratio: {{ section.settings.card_height | divided_by: 100.0 }};--color-accent: {{ section.settings.highlight_color }}; --section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
   {% if fan %}
     data-fan
   {% endif %}
@@ -153,7 +153,11 @@
       <div class="product-deck__controls">
         <a class="button product-deck__explore" href="{{ explore_url }}">
           {{- section.settings.link_label | escape -}}
-          <span class="product-deck__explore-icon" aria-hidden="true">{{ 'icon-send.svg' | inline_asset_content }}</span>
+          {%- comment -%} Second copy: the plane that parks in while the first one is still leaving {%- endcomment -%}
+          <span class="product-deck__explore-icon" aria-hidden="true">
+            {{- 'icon-send.svg' | inline_asset_content -}}
+            {{- 'icon-send.svg' | inline_asset_content -}}
+          </span>
         </a>
       </div>
     {%- endif -%}
@@ -248,7 +252,7 @@
   */
   .product-deck__stage {
     --fan: 1;
-    --card-w: clamp(13rem, 24cqi, 27rem);
+    --card-w: clamp(14rem, 26cqi, 29rem);
     --spread: min(13cqi, 38cqi / max(var(--half, 3), 1));
     --drop: clamp(0.75rem, 1.6cqi, 2rem);
     --turn: 5deg;
@@ -262,7 +266,7 @@
 
   .product-deck__list {
     position: relative;
-    block-size: calc(var(--card-w) * 0.7 + clamp(9rem, 6rem + 6vw, 13rem));
+    block-size: calc(var(--card-w) * var(--card-ratio, 0.7) + clamp(9rem, 6rem + 6vw, 13rem));
     margin: 0;
     padding: 0;
     list-style: none;
@@ -277,7 +281,7 @@
     inset-inline-start: 50%;
     z-index: calc(10 - round(down, var(--d), 1));
     inline-size: var(--card-w);
-    aspect-ratio: 10 / 7;
+    aspect-ratio: 1 / var(--card-ratio, 0.7); /* Card height setting: height / width, 0.7 = the Figma 10 : 7 */
     margin-inline-start: calc(var(--card-w) / -2);
     transform: translate(var(--x), var(--y)) rotate(var(--r));
   }
@@ -315,9 +319,20 @@
     inset-inline-end: 6%;
     z-index: 2;
     padding: 0.2em 0.85em;
+    /*
+      Figma Glass (Light -45deg 80%, Frost 100): 1px rim top-left 80% + weaker bottom-right, 35px blur.
+      Border = the highlight colour (default #c8a24b, the Figma value). Refraction / Depth / Dispersion /
+      Splay are left out, as on every other glass element.
+    */
+    border: 1px solid var(--color-accent);
     border-radius: var(--radius-pill);
     background-color: color-mix(in srgb, var(--color-accent) 75%, transparent);
-    box-shadow: var(--glass-rim);
+    box-shadow:
+      0 4px 10px 0 #00000040,
+      inset 1px 1px 0 #ffffffcc,
+      inset -1px -1px 0 #ffffffbd;
+    -webkit-backdrop-filter: blur(var(--glass-frost));
+    backdrop-filter: blur(var(--glass-frost));
     color: #ffffff;
     font-size: var(--font-size-caption);
   }
@@ -347,23 +362,32 @@
   }
 
   /*
-    The glass info card: hangs off the bottom of the active card (Figma), slightly wider on the right.
-    Hidden (and out of the tab order) on the other cards.
+    The glass info card: hangs off the bottom of the active card (Figma), centred and 6% narrower than
+    the card on each side, so it never pokes out sideways. Hidden (and out of the tab order) on the
+    other cards.
+    Figma Glass: Frost 100 = the theme's 35px blur, so the product image shows through as a soft tint at
+    the top; Light -45deg 80% = a 1px rim on the top-left edges (80%) and a weaker one bottom-right;
+    drop shadow 0 4px 15px #00000040. Refraction / Depth / Splay bend the background along the rim
+    (SVG filter, Chrome only) and are left out, as on every other glass element.
   */
   .product-deck__info {
     position: absolute;
     inset-block-start: 66%;
-    inset-inline: 4% -8%;
+    inset-inline: 6%;
     z-index: 4;
     display: flex;
     flex-direction: column;
-    gap: var(--space-xs);
-    padding: clamp(1rem, 0.75rem + 1vw, 1.75rem);
+    gap: var(--space-sm);
+    padding-block: clamp(1.25rem, 1rem + 1.2vw, 2.25rem);
+    padding-inline: clamp(1rem, 0.75rem + 1vw, 1.75rem);
     border-radius: clamp(0.9rem, 1.4cqi, 1.4rem);
-    background-color: color-mix(in srgb, var(--color-background) 85%, transparent);
-    box-shadow: var(--glass-shadow), var(--glass-rim), 0 0.75rem 2rem #0000001f;
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
+    background-color: color-mix(in srgb, var(--color-background) 40%, transparent);
+    box-shadow:
+      0 4px 15px 0 #00000040,
+      inset 1px 1px 0 #ffffffcc,
+      inset -1px -1px 0 #ffffffbd;
+    -webkit-backdrop-filter: blur(var(--glass-frost));
+    backdrop-filter: blur(var(--glass-frost));
     color: var(--color-text);
   }
 
@@ -373,11 +397,22 @@
     visibility: hidden;
   }
 
+  /*
+    Shown quickly (0.08s wait, 0.25s fade) so it keeps up with the card growing; the old 0.25s wait +
+    0.4s fade felt like lag. The info card also rises 0.5rem as it fades in (not with reduced motion).
+  */
   .product-deck__card.is-active .product-deck__cart,
   .product-deck__card.is-active .product-deck__info {
     transition:
-      opacity 0.4s var(--ease-out) 0.25s,
-      visibility 0s linear 0.25s;
+      opacity 0.25s var(--ease-out) 0.08s,
+      transform 0.3s var(--ease-out) 0.08s,
+      visibility 0s linear 0.08s;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .product-deck__card:not(.is-active) .product-deck__info {
+      transform: translateY(0.5rem);
+    }
   }
 
   .product-deck__title {
@@ -434,9 +469,12 @@
   }
 
   /*
-    "Explore all" (Figma hover animation): at rest a pale gold glass pill with gold text. On hover a gold
-    circle grows from the left edge until it fills the pill (::before, 250% of the width so its radius
-    covers the far corner), the text turns white and the paper plane flies off and lands back.
+    "Explore all" (Figma hover animation): at rest a solid gold pill with white text (a gold circle,
+    ::before, 250% of the width so its radius covers the far corner, fills the pale glass pill). On hover
+    it turns into the pale secondary pill at once (circle at scale 0, gold text), then the circle grows
+    from the left edge until it is full again and the text goes back to white. Meanwhile the paper plane
+    turns to point straight right, flies off, then parks: in from outside the bottom left of the button.
+    The animations end on the rest look, so mouse-out changes nothing.
   */
   .product-deck__explore {
     position: relative;
@@ -448,8 +486,7 @@
     border-color: var(--color-accent);
     background-color: color-mix(in srgb, var(--color-accent) 14%, var(--color-background));
     box-shadow: var(--glass-shadow), var(--glass-rim);
-    color: var(--color-accent);
-    transition: color 0.3s var(--ease-out) 0.1s;
+    color: #ffffff;
   }
 
   .product-deck__explore::before {
@@ -462,51 +499,97 @@
     aspect-ratio: 1;
     border-radius: 50%;
     background-color: var(--color-accent);
-    transform: translate(-50%, -50%) scale(0);
-    transition: transform 0.6s var(--ease-out);
+    transform: translate(-50%, -50%) scale(1);
   }
 
   .product-deck__explore:hover,
   .product-deck__explore:focus-visible {
     background-color: color-mix(in srgb, var(--color-accent) 14%, var(--color-background));
     box-shadow: var(--glass-shadow), var(--glass-rim);
-    color: #ffffff;
+    animation: product-deck-explore-text 0.8s var(--ease-out) 0.25s backwards;
   }
 
+  /*
+    The fill waits 0.25s (the plane's turn, see product-deck-plane-out) and starts as the plane starts moving.
+    "backwards" holds the "from" look (pale, no fill) during that wait.
+  */
   .product-deck__explore:hover::before,
   .product-deck__explore:focus-visible::before {
-    transform: translate(-50%, -50%) scale(1);
+    animation: product-deck-explore-fill 0.8s var(--ease-out) 0.25s backwards;
+  }
+
+  /* Gold text while the pill is pale, white once the fill has passed under it */
+  @keyframes product-deck-explore-text {
+    from {
+      color: var(--color-accent);
+    }
+  }
+
+  /* From the secondary look (no fill) back to the full gold fill, growing from the left edge */
+  @keyframes product-deck-explore-fill {
+    from {
+      transform: translate(-50%, -50%) scale(0);
+    }
+  }
+
+  /* Both planes share one grid cell, so the second rests exactly where the first does */
+  .product-deck__explore-icon {
+    display: grid;
   }
 
   .product-deck__explore-icon svg {
     display: block;
+    grid-area: 1 / 1;
     inline-size: 1.2em;
     block-size: auto;
   }
 
-  .product-deck__explore:hover .product-deck__explore-icon svg,
-  .product-deck__explore:focus-visible .product-deck__explore-icon svg {
-    animation: product-deck-fly 0.7s var(--ease-out);
+  /* The parking plane waits outside the bottom-left of the button (Figma position), clipped by overflow: hidden */
+  .product-deck__explore-icon svg + svg {
+    transform: translate(-2.1em, 2.5em);
   }
 
-  /* Up and out to the top right, then in again from the bottom left */
-  @keyframes product-deck-fly {
-    45% {
-      opacity: 0;
-      transform: translate(0.9em, -0.9em) rotate(-12deg);
+  /*
+    Plane 1 (0 - 0.6s): turns 35deg (the icon points up-right, so it now points straight right) in
+    0.24s, then flies right until the button's edge has cut it off (4em clears the padding); no fade.
+    Plane 2 (0.45 - 0.95s): starts parking just before plane 1 is gone, flies in diagonally, overshoots
+    a little and settles. Both end where the rest state puts the other one, so mouse-out is invisible.
+  */
+  .product-deck__explore:hover .product-deck__explore-icon svg:first-child,
+  .product-deck__explore:focus-visible .product-deck__explore-icon svg:first-child {
+    animation: product-deck-plane-out 0.6s ease-in forwards;
+  }
+
+  .product-deck__explore:hover .product-deck__explore-icon svg + svg,
+  .product-deck__explore:focus-visible .product-deck__explore-icon svg + svg {
+    animation: product-deck-plane-park 0.5s var(--ease-out) 0.45s forwards;
+  }
+
+  @keyframes product-deck-plane-out {
+    40% {
+      transform: rotate(35deg);
     }
 
-    46% {
-      opacity: 0;
-      transform: translate(-0.9em, 0.9em);
+    100% {
+      transform: translateX(4em) rotate(35deg);
+    }
+  }
+
+  @keyframes product-deck-plane-park {
+    70% {
+      transform: translate(0.1em, -0.12em);
+    }
+
+    100% {
+      transform: none;
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .product-deck__explore::before {
-      transition: none;
-    }
-
+    .product-deck__explore:hover,
+    .product-deck__explore:focus-visible,
+    .product-deck__explore:hover::before,
+    .product-deck__explore:focus-visible::before,
     .product-deck__explore:hover .product-deck__explore-icon svg,
     .product-deck__explore:focus-visible .product-deck__explore-icon svg {
       animation: none;
@@ -541,7 +624,7 @@
     }
 
     .product-deck__info {
-      inset-inline: 0 -6%;
+      inset-inline: 4%;
     }
   }
 {% endstylesheet %}
@@ -718,6 +801,17 @@
       "label": "t:labels.deck_fan_on_scroll",
       "info": "t:labels.deck_fan_on_scroll_info",
       "default": true
+    },
+    {
+      "type": "range",
+      "id": "card_height",
+      "label": "t:labels.deck_card_height",
+      "info": "t:labels.deck_card_height_info",
+      "min": 60,
+      "max": 130,
+      "step": 5,
+      "unit": "%",
+      "default": 70
     },
     {
       "type": "header",

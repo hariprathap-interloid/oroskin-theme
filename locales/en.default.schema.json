@@ -358,7 +358,9 @@
     "deck_buy_label": "Card button label",
     "deck_buy_label_info": "The button on the front card; opens the product page. Leave empty to hide it.",
     "deck_fan_on_scroll": "Fan out the cards on scroll",
-    "deck_fan_on_scroll_info": "The cards start as a stack and spread out as the section scrolls in. Off, or with animations off in Theme settings, the fan is always open."
+    "deck_fan_on_scroll_info": "The cards start as a stack and spread out as the section scrolls in. Off, or with animations off in Theme settings, the fan is always open.",
+    "deck_card_height": "Card height",
+    "deck_card_height_info": "Height of each product card as a percentage of its width. 70% is a wide card, 100% a square, above 100% a tall card."
   },
   "options": {
     "alignment": {
