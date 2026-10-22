@@ -898,11 +898,10 @@
             "link": "shopify://collections",
             "collection": "",
             "products_to_show": 7,
-            "width": 40,
+            "width": 50,
             "scene_length": 250,
             "heading_size": 54,
             "title_size": 24,
-            "background_image": "shopify://shop_images/31038e5e4d8264fe6801fb289237a5b14d361dfb.png",
             "background_opacity": 10
           },
           "blocks": {}
@@ -991,8 +990,86 @@
         "products_to_show": 7,
         "panel_height": 29,
         "cart_size": "60",
-        "cart_icon_color": "#DE3838",
+        "cart_icon_color": "#de3838",
+        "cart_options": "add_first",
         "section_width": "wide",
+        "color_scheme": "",
+        "highlight_color": "#c8a24b",
+        "animation": "fade-up",
+        "padding_top": 96,
+        "padding_bottom": 96
+      }
+    },
+    "testimonials_ExrT4N": {
+      "type": "testimonials",
+      "blocks": {
+        "review_ic8Kke": {
+          "type": "review",
+          "settings": {
+            "avatar": "shopify://shop_images/faa1c8058a578c2a8a62f56f20fc78f3dad2eb3e.png",
+            "name": "Patricia D.",
+            "date": "Apr 15, 2026",
+            "rating": 4.5,
+            "text": "<p>This is the holy grail of lip glosses. It is not sticky at all, feels super hydrating, and makes your lips look naturally plump and shiny. This provides flawless coverage that lasts through sweat and long days without budging.</p>"
+          }
+        },
+        "review_gUYWfM": {
+          "type": "review",
+          "settings": {
+            "avatar": "shopify://shop_images/e4bfe2f07695827a45362fbeab15f77aa6f593e7.png",
+            "name": "Helen G.",
+            "date": "Mar 28, 2026",
+            "rating": 4.5,
+            "text": "<p>It gives incredible volume and length without clumping. My lashes look like falsies, and it does not smudge or flake throughout the day. This completely transformed my skin texture.</p>"
+          }
+        },
+        "review_qey8DF": {
+          "type": "review",
+          "settings": {
+            "avatar": "shopify://shop_images/2b2bb137cf961a3fc56cbd5f9056e82a26b476ed.png",
+            "name": "Susan B.",
+            "date": "Feb 09, 2026",
+            "rating": 4.5,
+            "text": "<p>An absolute lifesaver for dry, sensitive skin. It is thick but non-greasy, locks in moisture all night, and never causes breakouts or irritation. The perfect blend of lavender and orange blossom. It smells incredibly elegant.</p>"
+          }
+        },
+        "review_MfhmgR": {
+          "type": "review",
+          "settings": {
+            "avatar": "shopify://shop_images/65d686cd5c291aaaeffc673e64392c69fa1bb792.png",
+            "name": "Joanne M.",
+            "date": "Jan 15, 2026",
+            "rating": 4.5,
+            "text": "<p>The perfect blend of lavender and orange blossom. It smells incredibly elegant, powerful, and expensive, and I get compliments every single time I wear it.</p>"
+          }
+        },
+        "review_dzXE3w": {
+          "type": "review",
+          "settings": {
+            "avatar": "shopify://shop_images/279dd4ab3ee0edd87e35bae96027ec2d99bd87c4.png",
+            "name": "Maria L.",
+            "date": "Dec 02, 2025",
+            "rating": 5,
+            "text": "<p>Lightweight, glowy and it lasts all day. My new everyday foundation: it looks like skin, only better.</p>"
+          }
+        }
+      },
+      "block_order": [
+        "review_ic8Kke",
+        "review_gUYWfM",
+        "review_qey8DF",
+        "review_MfhmgR",
+        "review_dzXE3w"
+      ],
+      "name": "t:general.testimonials",
+      "settings": {
+        "eyebrow": "Our reviews",
+        "heading": "What our <em>Clients</em> Say",
+        "autoplay": true,
+        "interval": 4,
+        "height": "full",
+        "section_width": "widest",
+        "split": "40",
         "color_scheme": "",
         "highlight_color": "#c8a24b",
         "animation": "fade-up",
@@ -1008,6 +1085,7 @@
     "icon_features_fEU3xe",
     "image_banner_JWCLdE",
     "blog_stories_JzWXeh",
-    "product_panels_iTjtDf"
+    "product_panels_iTjtDf",
+    "testimonials_ExrT4N"
   ]
 }
