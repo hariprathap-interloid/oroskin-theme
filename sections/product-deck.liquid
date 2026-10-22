@@ -1,0 +1,842 @@
+{%- comment -%}
+  Product deck (Figma "New Arrivals"): a centred eyebrow ("Just landed") and heading, a small pill on
+  the right ("Fresh this week"), then the products of one collection as photo cards. The cards start
+  as a tidy stack and fan out into an arc as the section scrolls into view (<product-deck>, --fan
+  0 -> 1). The fan itself never moves. One card is active (the middle one at first): it comes to the
+  front IN ITS OWN PLACE, a little bigger, with a round quick-add button and a glass info card (title,
+  short text, price, "Buy now"). Hovering (mouse), tapping or tabbing to another card makes that one
+  active instead (Figma).
+
+  Short text = the product's Subtitle field (custom.subtitle), else the first words of its description
+  (as in Editor's Picks). Without JavaScript, with reduced motion or with animations off: the fan is
+  open and the middle card is active. Phones: the same deck, smaller, the cards overlapping more.
+{%- endcomment -%}
+
+{%- liquid
+  assign deck = section.settings.collection
+  assign limit = section.settings.products_to_show
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-1'
+
+  assign count = limit
+  if deck != blank and deck.products_count > 0
+    assign count = deck.products_count | at_most: limit
+  endif
+  # Each card's place in the fan: its offset from the middle (7 cards: -3 ... 3; 8 cards: -3.5 ... 3.5).
+  # The middle card (rounded down) starts active.
+  assign middle = count | minus: 1 | divided_by: 2.0
+  assign start = count | minus: 1 | divided_by: 2
+
+  assign explore_url = section.settings.link
+  if explore_url == blank and deck != blank
+    assign explore_url = deck.url
+  endif
+
+  assign fan = section.settings.fan_on_scroll
+  if section.index == 1 or settings.animations_enabled == false
+    assign fan = false
+  endif
+-%}
+
+<product-deck
+  class="product-deck full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
+  style="--half: {{ middle }}; --color-accent: {{ section.settings.highlight_color }}; --section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
+  {% if fan %}
+    data-fan
+  {% endif %}
+>
+  <div class="product-deck__inner">
+    <div class="product-deck__header">
+      <div class="product-deck__titles">
+        {%- if section.settings.eyebrow != blank -%}
+          <p class="eyebrow eyebrow--center product-deck__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+        {%- endif -%}
+        {%- if section.settings.heading != blank -%}
+          <h2 class="product-deck__heading">{{ section.settings.heading }}</h2>
+        {%- endif -%}
+      </div>
+      {%- if section.settings.pill != blank -%}
+        <p class="product-deck__pill">{{ section.settings.pill | escape }}</p>
+      {%- endif -%}
+    </div>
+
+    <div class="product-deck__stage">
+      <ul class="product-deck__list" role="list">
+        {%- for i in (1..count) -%}
+          {%- liquid
+            assign index = forloop.index0
+            assign offset = index | minus: middle
+            assign distance = offset | abs
+            assign product = blank
+            if deck != blank and deck.products_count > 0
+              assign product = deck.products[index]
+            endif
+          -%}
+          <li
+            class="product-deck__card{% if index == start %} is-active{% endif %}"
+            style="--o: {{ offset }}; --d: {{ distance }};"
+            data-card
+          >
+            <div class="product-deck__media">
+              {%- if product != blank and product.featured_media != blank -%}
+                {% render 'image',
+                  image: product.featured_media.preview_image,
+                  alt: '',
+                  class: 'image--cover',
+                  sizes: '(min-width: 990px) 28vw, 70vw'
+                %}
+              {%- else -%}
+                {{ 'product-1' | placeholder_svg_tag: 'product-deck__placeholder' }}
+              {%- endif -%}
+            </div>
+
+            {%- if section.settings.badge != blank -%}
+              <span class="product-deck__badge" aria-hidden="true">{{ section.settings.badge | escape }}</span>
+            {%- endif -%}
+
+            {%- comment -%}
+              Covers the photo: a tap picks the card, and Tab stops here first, so a keyboard reaches every
+              card (focus picks it), then the active card's cart button and links.
+            {%- endcomment -%}
+            {%- liquid
+              assign pick_title = 'products.card.placeholder_title' | t
+              if product != blank
+                assign pick_title = product.title
+              endif
+            -%}
+            <button
+              class="product-deck__pick"
+              type="button"
+              aria-label="{{ 'products.deck.show' | t: title: pick_title | escape }}"
+              data-pick
+            ></button>
+
+            {%- if product != blank -%}
+              {% render 'quick-add', product: product, class: 'product-deck__cart', size: section.settings.cart_size, icon_color: section.settings.cart_icon_color, options: section.settings.cart_options %}
+            {%- endif -%}
+
+            <div class="product-deck__info">
+              {%- if product != blank -%}
+                {%- liquid
+                  assign short_text = product.metafields.custom.subtitle.value
+                  if short_text == blank
+                    assign short_text = product.description | strip_html | truncatewords: 12
+                  endif
+                -%}
+                <h3 class="product-deck__title">
+                  <a class="product-deck__link" href="{{ product.url }}">{{ product.title | escape }}</a>
+                </h3>
+                {%- if short_text != blank -%}
+                  <p class="product-deck__text">{{ short_text | escape }}</p>
+                {%- endif -%}
+                <div class="product-deck__footer">
+                  <div class="product-deck__price">{% render 'price', product: product %}</div>
+                  {%- if section.settings.buy_label != blank -%}
+                    <a class="button product-deck__buy" href="{{ product.url }}">
+                      <span class="product-deck__buy-icon" aria-hidden="true">{{ 'icon-buy.svg' | inline_asset_content }}</span>
+                      {{- section.settings.buy_label | escape -}}
+                    </a>
+                  {%- endif -%}
+                </div>
+              {%- else -%}
+                <h3 class="product-deck__title">{{ 'products.card.placeholder_title' | t }}</h3>
+                <div class="product-deck__price">
+                  <div class="price"><span class="price__current">{{ 1999 | money }}</span></div>
+                </div>
+              {%- endif -%}
+            </div>
+          </li>
+        {%- endfor -%}
+      </ul>
+    </div>
+
+    {%- if section.settings.link_label != blank and explore_url != blank -%}
+      <div class="product-deck__controls">
+        <a class="button product-deck__explore" href="{{ explore_url }}">
+          {{- section.settings.link_label | escape -}}
+          <span class="product-deck__explore-icon" aria-hidden="true">{{ 'icon-send.svg' | inline_asset_content }}</span>
+        </a>
+      </div>
+    {%- endif -%}
+  </div>
+</product-deck>
+
+{% stylesheet %}
+  product-deck {
+    display: block;
+  }
+
+  .product-deck {
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  .product-deck__inner {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(2rem, 1rem + 3vw, 4.5rem);
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  /* Titles in the middle column, the pill in the right one (Figma), so the titles stay centred */
+  .product-deck__header {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: var(--space-md);
+  }
+
+  .product-deck__titles {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-sm);
+    text-align: center;
+  }
+
+  .product-deck__eyebrow,
+  .product-deck__heading,
+  .product-deck__pill {
+    margin: 0;
+  }
+
+  .product-deck__heading {
+    font-size: var(--font-size-display);
+  }
+
+  /* "New *Arrivals*": italic words in the highlight colour, not slanted */
+  .product-deck__heading em {
+    color: var(--color-accent);
+    font-style: normal;
+  }
+
+  /* "• Fresh this week": a pale gold pill with a dot */
+  .product-deck__pill {
+    grid-column: 3;
+    justify-self: end;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6em;
+    padding: 0.45em 1.1em;
+    border: 1px solid color-mix(in srgb, var(--color-accent) 35%, transparent);
+    border-radius: var(--radius-pill);
+    background-color: color-mix(in srgb, var(--color-accent) 18%, var(--color-background));
+    color: color-mix(in srgb, var(--color-accent) 70%, var(--color-text));
+    font-size: var(--font-size-caption);
+  }
+
+  .product-deck__pill::before {
+    content: "";
+    inline-size: 0.45em;
+    block-size: 0.45em;
+    border-radius: 50%;
+    background-color: currentcolor;
+  }
+
+  /*
+    The deck. Every card sits in the middle; its place comes from:
+    --o    offset from the middle of the deck (7 cards: -3 ... 3), set by Liquid, never changes
+    --d    the same without the sign (how far from the middle)
+    --half the biggest offset (7 cards: 3)
+    --fan  0 = stacked, 1 = fanned out (the script turns it from 0 to 1 while the section scrolls in)
+    Fanned: each step moves the card --spread sideways, --drop down (an arc) and --turn round. The
+    spread shares ~38% of the width between the steps, so 3 or 8 cards both fill the row.
+    Stacked: the cards are only nudged (0.6rem, 3deg), like a pile of photos.
+  */
+  .product-deck__stage {
+    --fan: 1;
+    --card-w: clamp(13rem, 24cqi, 27rem);
+    --spread: min(13cqi, 38cqi / max(var(--half, 3), 1));
+    --drop: clamp(0.75rem, 1.6cqi, 2rem);
+    --turn: 5deg;
+    position: relative;
+    container-type: inline-size;
+  }
+
+  .product-deck[data-fan-active] .product-deck__stage {
+    --fan: var(--fan-progress, 0);
+  }
+
+  .product-deck__list {
+    position: relative;
+    block-size: calc(var(--card-w) * 0.7 + clamp(9rem, 6rem + 6vw, 13rem));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .product-deck__card {
+    --x: calc(var(--o) * (var(--spread) * var(--fan) + 0.6rem * (1 - var(--fan))));
+    --y: calc(var(--d) * var(--drop) * var(--fan));
+    --r: calc(var(--o) * (var(--turn) * var(--fan) + 3deg * (1 - var(--fan))));
+    position: absolute;
+    inset-block-start: var(--space-md);
+    inset-inline-start: 50%;
+    z-index: calc(10 - round(down, var(--d), 1));
+    inline-size: var(--card-w);
+    aspect-ratio: 10 / 7;
+    margin-inline-start: calc(var(--card-w) / -2);
+    transform: translate(var(--x), var(--y)) rotate(var(--r));
+  }
+
+  /* A card growing or shrinking glides (not while scrolling: the script drives that, frame by frame) */
+  .product-deck[data-moving] .product-deck__card {
+    transition: transform 0.45s var(--ease-out);
+  }
+
+  /* The active card: in its own place and tilt, on top and a little bigger (Figma) */
+  .product-deck__card.is-active {
+    z-index: 20;
+    transform: translate(var(--x), var(--y)) rotate(var(--r)) scale(calc(1 + 0.08 * var(--fan)));
+  }
+
+  .product-deck__media {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    border-radius: clamp(1rem, 1.6cqi, 1.6rem);
+    background-color: var(--color-tint);
+    box-shadow: 0 0.75rem 2rem #00000033;
+  }
+
+  .product-deck__media .image,
+  .product-deck__placeholder {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  /* "New": a gold glass pill, top right */
+  .product-deck__badge {
+    position: absolute;
+    inset-block-start: 7%;
+    inset-inline-end: 6%;
+    z-index: 2;
+    padding: 0.2em 0.85em;
+    border-radius: var(--radius-pill);
+    background-color: color-mix(in srgb, var(--color-accent) 75%, transparent);
+    box-shadow: var(--glass-rim);
+    color: #ffffff;
+    font-size: var(--font-size-caption);
+  }
+
+  /* Covers the card, under the active card's cart button and info card */
+  .product-deck__pick {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    padding: 0;
+    border: 0;
+    border-radius: inherit;
+    background: none;
+    box-shadow: none;
+    cursor: pointer;
+  }
+
+  .product-deck__pick:focus-visible {
+    outline-offset: 4px;
+  }
+
+  .product-deck__cart {
+    position: absolute;
+    inset-block-start: 7%;
+    inset-inline-start: 5%;
+    z-index: 4;
+  }
+
+  /*
+    The glass info card: hangs off the bottom of the active card (Figma), slightly wider on the right.
+    Hidden (and out of the tab order) on the other cards.
+  */
+  .product-deck__info {
+    position: absolute;
+    inset-block-start: 66%;
+    inset-inline: 4% -8%;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    padding: clamp(1rem, 0.75rem + 1vw, 1.75rem);
+    border-radius: clamp(0.9rem, 1.4cqi, 1.4rem);
+    background-color: color-mix(in srgb, var(--color-background) 85%, transparent);
+    box-shadow: var(--glass-shadow), var(--glass-rim), 0 0.75rem 2rem #0000001f;
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    color: var(--color-text);
+  }
+
+  .product-deck__card:not(.is-active) .product-deck__cart,
+  .product-deck__card:not(.is-active) .product-deck__info {
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  .product-deck__card.is-active .product-deck__cart,
+  .product-deck__card.is-active .product-deck__info {
+    transition:
+      opacity 0.4s var(--ease-out) 0.25s,
+      visibility 0s linear 0.25s;
+  }
+
+  .product-deck__title {
+    margin: 0;
+    font-size: clamp(1.125rem, 0.9rem + 0.6vw, 1.6rem);
+  }
+
+  .product-deck__link {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .product-deck__link:hover {
+    text-decoration: underline;
+  }
+
+  .product-deck__text {
+    display: -webkit-box;
+    margin: 0;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    color: color-mix(in srgb, var(--color-text) 80%, var(--color-background));
+  }
+
+  .product-deck__footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+  }
+
+  .product-deck__price {
+    color: var(--color-accent);
+    font-weight: 600;
+  }
+
+  /* "Buy now": a small gold pill (Figma) */
+  .product-deck__buy {
+    --color-button: var(--color-accent);
+    --color-button-border: var(--color-accent);
+    --color-button-text: #ffffff;
+    min-block-size: 2.5rem;
+    padding-block: 0.4rem;
+    padding-inline: 1.1rem;
+  }
+
+  .product-deck__buy-icon svg {
+    display: block;
+    inline-size: 1.5em;
+    block-size: auto;
+  }
+
+  /*
+    "Explore all" (Figma hover animation): at rest a pale gold glass pill with gold text. On hover a gold
+    circle grows from the left edge until it fills the pill (::before, 250% of the width so its radius
+    covers the far corner), the text turns white and the paper plane flies off and lands back.
+  */
+  .product-deck__explore {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    gap: 0.75rem;
+    min-block-size: 3.5rem;
+    padding-inline: 2.25rem;
+    border-color: var(--color-accent);
+    background-color: color-mix(in srgb, var(--color-accent) 14%, var(--color-background));
+    box-shadow: var(--glass-shadow), var(--glass-rim);
+    color: var(--color-accent);
+    transition: color 0.3s var(--ease-out) 0.1s;
+  }
+
+  .product-deck__explore::before {
+    content: "";
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 0;
+    z-index: -1;
+    inline-size: 250%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background-color: var(--color-accent);
+    transform: translate(-50%, -50%) scale(0);
+    transition: transform 0.6s var(--ease-out);
+  }
+
+  .product-deck__explore:hover,
+  .product-deck__explore:focus-visible {
+    background-color: color-mix(in srgb, var(--color-accent) 14%, var(--color-background));
+    box-shadow: var(--glass-shadow), var(--glass-rim);
+    color: #ffffff;
+  }
+
+  .product-deck__explore:hover::before,
+  .product-deck__explore:focus-visible::before {
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  .product-deck__explore-icon svg {
+    display: block;
+    inline-size: 1.2em;
+    block-size: auto;
+  }
+
+  .product-deck__explore:hover .product-deck__explore-icon svg,
+  .product-deck__explore:focus-visible .product-deck__explore-icon svg {
+    animation: product-deck-fly 0.7s var(--ease-out);
+  }
+
+  /* Up and out to the top right, then in again from the bottom left */
+  @keyframes product-deck-fly {
+    45% {
+      opacity: 0;
+      transform: translate(0.9em, -0.9em) rotate(-12deg);
+    }
+
+    46% {
+      opacity: 0;
+      transform: translate(-0.9em, 0.9em);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .product-deck__explore::before {
+      transition: none;
+    }
+
+    .product-deck__explore:hover .product-deck__explore-icon svg,
+    .product-deck__explore:focus-visible .product-deck__explore-icon svg {
+      animation: none;
+    }
+  }
+
+  .product-deck__controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-md);
+  }
+
+  /* Phones: bigger cards that overlap more, the pill under the heading */
+  @media (max-width: 749px) {
+    .product-deck__header {
+      grid-template-columns: 1fr;
+      justify-items: center;
+    }
+
+    .product-deck__titles,
+    .product-deck__pill {
+      grid-column: 1;
+      justify-self: center;
+    }
+
+    .product-deck__stage {
+      --card-w: 58cqi;
+      --spread: min(12cqi, 21cqi / max(var(--half, 3), 1));
+      --drop: 0.75rem;
+      --turn: 6deg;
+    }
+
+    .product-deck__info {
+      inset-inline: 0 -6%;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <product-deck>: makes a card active (class is-active) when the mouse moves onto it, or when it is
+   * tapped or reached with Tab; the active card stays until another one is picked. With data-fan, it
+   * also fans the cards out while the section scrolls into view (--fan-progress 0 -> 1, smoothed like
+   * the Image banner scene). The cards' places never change: only which one is in front.
+   */
+  class ProductDeck extends HTMLElement {
+    connectedCallback() {
+      this.cards = [...this.querySelectorAll('[data-card]')];
+      this.list = this.querySelector('.product-deck__list');
+      if (this.cards.length < 2) return;
+
+      this.cards.forEach((card) => {
+        card.addEventListener('pointerenter', (event) => {
+          if (event.pointerType === 'mouse') this.select(card);
+        });
+        card.addEventListener('focusin', () => this.select(card));
+        card.querySelector('[data-pick]')?.addEventListener('click', () => this.select(card));
+      });
+
+      if (this.hasAttribute('data-fan') && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        this.startFan();
+      }
+    }
+
+    disconnectedCallback() {
+      this.observer?.disconnect();
+      this.stopListening();
+      clearTimeout(this.movingTimer);
+    }
+
+    /** The other cards' info and cart button are visibility: hidden (CSS), so Tab skips them */
+    select(card) {
+      if (card.classList.contains('is-active')) return;
+      this.setAttribute('data-moving', '');
+      clearTimeout(this.movingTimer);
+      this.movingTimer = setTimeout(() => this.removeAttribute('data-moving'), 500);
+      this.cards.forEach((item) => item.classList.toggle('is-active', item === card));
+    }
+
+    startFan() {
+      this.setAttribute('data-fan-active', '');
+      this.current = this.measure();
+      this.paint();
+      this.run = () => {
+        if (!this.frame) this.frame = requestAnimationFrame(() => this.step());
+      };
+      this.observer = new IntersectionObserver(([entry]) => {
+        if (entry.isIntersecting) {
+          window.addEventListener('scroll', this.run, { passive: true });
+          window.addEventListener('resize', this.run);
+          this.run();
+        } else {
+          this.stopListening();
+          this.current = this.measure();
+          this.paint();
+        }
+      });
+      this.observer.observe(this.list);
+    }
+
+    stopListening() {
+      if (!this.run) return;
+      window.removeEventListener('scroll', this.run);
+      window.removeEventListener('resize', this.run);
+      if (this.frame) cancelAnimationFrame(this.frame);
+      this.frame = null;
+    }
+
+    /** 0 while the deck's top is at the bottom of the screen, 1 once it has reached 35% from the top */
+    measure() {
+      const top = this.list.getBoundingClientRect().top;
+      const height = window.innerHeight;
+      return Math.min(Math.max((height - top) / (height * 0.65), 0), 1);
+    }
+
+    /** Each frame the shown progress moves 12% of the way to the real one, until they meet */
+    step() {
+      this.frame = null;
+      const target = this.measure();
+      const gap = target - this.current;
+      this.current = Math.abs(gap) < 0.0005 ? target : this.current + gap * 0.12;
+      this.paint();
+      if (this.current !== target) this.run();
+    }
+
+    paint() {
+      this.style.setProperty('--fan-progress', this.current.toFixed(4));
+    }
+  }
+
+  if (!customElements.get('product-deck')) {
+    customElements.define('product-deck', ProductDeck);
+  }
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.product_deck",
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "Just landed"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.trending_heading_info",
+      "default": "New <em>Arrivals</em>"
+    },
+    {
+      "type": "text",
+      "id": "pill",
+      "label": "t:labels.deck_pill",
+      "info": "t:labels.deck_pill_info",
+      "default": "Fresh this week"
+    },
+    {
+      "type": "text",
+      "id": "link_label",
+      "label": "t:labels.link_label",
+      "default": "Explore all"
+    },
+    {
+      "type": "url",
+      "id": "link",
+      "label": "t:labels.link",
+      "info": "t:labels.trending_link_info"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.products"
+    },
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "t:labels.collection",
+      "info": "t:labels.deck_collection_info"
+    },
+    {
+      "type": "range",
+      "id": "products_to_show",
+      "label": "t:labels.products_to_show",
+      "min": 3,
+      "max": 8,
+      "step": 1,
+      "default": 7
+    },
+    {
+      "type": "text",
+      "id": "badge",
+      "label": "t:labels.deck_badge",
+      "info": "t:labels.deck_badge_info",
+      "default": "New"
+    },
+    {
+      "type": "text",
+      "id": "buy_label",
+      "label": "t:labels.deck_buy_label",
+      "info": "t:labels.deck_buy_label_info",
+      "default": "Buy now"
+    },
+    {
+      "type": "checkbox",
+      "id": "fan_on_scroll",
+      "label": "t:labels.deck_fan_on_scroll",
+      "info": "t:labels.deck_fan_on_scroll_info",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.cart_button"
+    },
+    {
+      "type": "select",
+      "id": "cart_size",
+      "label": "t:labels.cart_button_size",
+      "options": [
+        {
+          "value": "44",
+          "label": "t:options.cart_button_size.small"
+        },
+        {
+          "value": "50",
+          "label": "t:options.cart_button_size.medium"
+        },
+        {
+          "value": "60",
+          "label": "t:options.cart_button_size.large"
+        },
+        {
+          "value": "70",
+          "label": "t:options.cart_button_size.extra_large"
+        }
+      ],
+      "default": "50"
+    },
+    {
+      "type": "color",
+      "id": "cart_icon_color",
+      "label": "t:labels.cart_icon_color",
+      "info": "t:labels.cart_icon_color_info",
+      "default": "#ffffff"
+    },
+    {
+      "type": "select",
+      "id": "cart_options",
+      "label": "t:labels.cart_options",
+      "info": "t:labels.cart_options_info",
+      "options": [
+        {
+          "value": "add_first",
+          "label": "t:options.cart_options.add_first"
+        },
+        {
+          "value": "link",
+          "label": "t:options.cart_options.link"
+        }
+      ],
+      "default": "add_first"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "color",
+      "id": "highlight_color",
+      "label": "t:labels.highlight_color",
+      "default": "#c8a24b"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 96
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 96
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.new_arrivals"
+    }
+  ]
+}
+{% endschema %}

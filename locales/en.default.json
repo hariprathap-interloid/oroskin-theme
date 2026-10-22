@@ -141,6 +141,9 @@
       "choose": "Choose options for {{ title }}",
       "added": "{{ title }} added to your cart",
       "error": "Couldn't add this to your cart. Please try again."
+    },
+    "deck": {
+      "show": "Show {{ title }}"
     }
   }
 }
