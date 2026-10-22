@@ -284,6 +284,26 @@ input[type="submit"]:hover {
   box-shadow: none;
 }
 
+/*
+  Glass (Figma "Liquid Glass Button", the hero "Explore collection"): solid fill, no border, the
+  glass shadows, 60px tall, 25px side padding, 10px gap, lighter lettering. Hover darkens it a touch
+  and keeps the shadows.
+*/
+.button--glass {
+  gap: 0.625rem;
+  min-block-size: 3.75rem;
+  padding-inline: 1.5625rem;
+  border: none; /* Figma: no border (the height stays 60px through min-block-size) */
+  background-color: var(--color-button);
+  box-shadow: var(--shadow-button-glass);
+  font-weight: 400;
+}
+
+.button--glass:hover {
+  background-color: color-mix(in srgb, var(--color-button) 88%, #000000);
+  box-shadow: var(--shadow-button-glass);
+}
+
 .button--secondary {
   border-color: var(--color-secondary-button-border);
   background-color: var(--color-secondary-button);

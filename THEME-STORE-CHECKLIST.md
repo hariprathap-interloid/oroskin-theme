@@ -82,9 +82,9 @@ Why first: every later section reads these settings, CSS variables and base styl
 
 ## M4 Homepage
 
-- [ ] ❌ The Figma homepage sections. Each one needs a **preset**, real placeholder content and `!= blank` empty states. *§14*
-- [ ] ❌ **Featured product** section with `@app` blocks and rich media. *§4, §5*
-- [ ] ❌ No empty sections in the template. *§6, since Lighthouse tests real content.*
+- [ ] 🟡 The Figma homepage sections. Each one needs a **preset**, real placeholder content and `!= blank` empty states. *§14* *M4 (2026-10-22): 9 of 10 built, each with a preset and placeholders (hero, scrolling showcase, editor's picks, image banner ×2 presets, trending, testimonials, blog stories, feature icons, featured product). New Arrivals deck (M4.6) still open: a Product list stands in on the homepage.*
+- [x] ✅ **Featured product** section with `@app` blocks and rich media. *§4, §5* *Done M4.13 (5b79cab): images, video, external video, 3D; `@app` + `@theme` blocks; swatches in M6.*
+- [x] ✅ No empty sections in the template. *§6, since Lighthouse tests real content.* *M4.14: every homepage section has content; button links set; New Arrivals = Product list until the deck exists.*
 
 ---
 

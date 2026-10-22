@@ -59,7 +59,9 @@
     "product_panels": "Product panels",
     "editors_picks": "Editor's picks",
     "testimonials": "Testimonials",
-    "review": "Review"
+    "review": "Review",
+    "product_deck": "Product deck",
+    "new_arrivals": "New arrivals"
   },
   "labels": {
     "alignment": "Alignment",
@@ -347,7 +349,16 @@
     "testimonials_autoplay_info": "Shows a pause button. Stops while the visitor points at or tabs into the section, and with reduced motion.",
     "testimonials_interval": "Time per review",
     "layout_split": "Layout split",
-    "layout_split_info": "On large desktops (1700px and wider): width of the avatars and dots versus the review cards. Laptops keep the standard layout."
+    "layout_split_info": "On large desktops (1700px and wider): width of the avatars and dots versus the review cards. Laptops keep the standard layout.",
+    "deck_pill": "Pill text",
+    "deck_pill_info": "Small label at the top right, e.g. \"Fresh this week\". Leave empty to hide it.",
+    "deck_collection_info": "Pick a collection sorted by \"Date, new to old\" to show the newest products.",
+    "deck_badge": "Card badge",
+    "deck_badge_info": "Shown on every card, e.g. \"New\". Leave empty to hide it.",
+    "deck_buy_label": "Card button label",
+    "deck_buy_label_info": "The button on the front card; opens the product page. Leave empty to hide it.",
+    "deck_fan_on_scroll": "Fan out the cards on scroll",
+    "deck_fan_on_scroll_info": "The cards start as a stack and spread out as the section scrolls in. Off, or with animations off in Theme settings, the fan is always open."
   },
   "options": {
     "alignment": {
@@ -437,7 +448,8 @@
     "button_style": {
       "primary": "Primary (red pill)",
       "secondary": "Secondary (outline pill)",
-      "text": "Text link"
+      "text": "Text link",
+      "glass": "Glass"
     },
     "vertical_alignment": {
       "top": "Top",

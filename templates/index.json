@@ -505,9 +505,9 @@
                   "type": "button",
                   "settings": {
                     "label": "Explore collection",
-                    "link": "",
+                    "link": "shopify://collections",
                     "new_tab": false,
-                    "style": "primary",
+                    "style": "glass",
                     "show_arrow": false,
                     "alignment": "left"
                   },
@@ -601,6 +601,317 @@
         "scene_rotate_3": -8
       }
     },
+    "product_panels_iTjtDf": {
+      "type": "product-panels",
+      "name": "t:general.editors_picks",
+      "settings": {
+        "eyebrow": "This season",
+        "heading": "Editor's <em>Picks</em>",
+        "link_label": "View all",
+        "link": "",
+        "collection": "automated-collection",
+        "products_to_show": 7,
+        "panel_height": 29,
+        "cart_size": "60",
+        "cart_icon_color": "#de3838",
+        "cart_options": "add_first",
+        "section_width": "widest",
+        "color_scheme": "",
+        "highlight_color": "#c8a24b",
+        "animation": "fade-up",
+        "padding_top": 96,
+        "padding_bottom": 96
+      }
+    },
+    "image_banner_JWCLdE": {
+      "type": "image-banner",
+      "blocks": {
+        "banner-content": {
+          "type": "_banner-content",
+          "static": true,
+          "settings": {
+            "gap": 40,
+            "max_width": 780
+          },
+          "blocks": {
+            "text_9FQDtR": {
+              "type": "text",
+              "settings": {
+                "text": "<p>The Oroskin edit</p>",
+                "style": "eyebrow",
+                "use_custom_size": false,
+                "custom_size": 20,
+                "font": "body-font",
+                "color": "accent",
+                "alignment": "left",
+                "max_width": "none"
+              },
+              "blocks": {}
+            },
+            "heading_wVJJQT": {
+              "type": "heading",
+              "settings": {
+                "heading": "The New <em>Glow</em> Manifesto",
+                "size": "h1",
+                "use_custom_size": true,
+                "custom_size": 72,
+                "tag": "h2",
+                "color": "default",
+                "font": "heading-font",
+                "italic_style": "accent",
+                "alignment": "left",
+                "indent": 0
+              },
+              "blocks": {}
+            },
+            "text_p7yjJD": {
+              "type": "text",
+              "settings": {
+                "text": "<p>This season, beauty transcends skin — it becomes a language. How our editors reimagined the ritual of light across six cities.</p>",
+                "style": "body-lg",
+                "use_custom_size": false,
+                "custom_size": 20,
+                "font": "body-font",
+                "color": "default",
+                "alignment": "left",
+                "max_width": "60ch"
+              },
+              "blocks": {}
+            },
+            "button_kFUpUt": {
+              "type": "button",
+              "settings": {
+                "label": "Read the editorial",
+                "link": "shopify://blogs/featured",
+                "new_tab": false,
+                "style": "primary",
+                "show_arrow": true,
+                "alignment": "left"
+              },
+              "blocks": {}
+            }
+          },
+          "block_order": [
+            "text_9FQDtR",
+            "heading_wVJJQT",
+            "text_p7yjJD",
+            "button_kFUpUt"
+          ]
+        },
+        "highlight-cards": {
+          "type": "_highlight-cards",
+          "static": true,
+          "settings": {
+            "radius": 24,
+            "animation": "slide-right",
+            "duration": 900,
+            "stagger": 150
+          },
+          "blocks": {
+            "highlight_card_PyaWh9": {
+              "type": "_highlight-card",
+              "settings": {
+                "icon": "book",
+                "label": "Stories",
+                "value": "48 Articles",
+                "link": ""
+              },
+              "blocks": {}
+            },
+            "highlight_card_LhBj3R": {
+              "type": "_highlight-card",
+              "settings": {
+                "icon": "video",
+                "label": "Films",
+                "value": "Ritual Series",
+                "link": ""
+              },
+              "blocks": {}
+            },
+            "highlight_card_A3mTc7": {
+              "type": "_highlight-card",
+              "settings": {
+                "icon": "users",
+                "label": "Community",
+                "value": "42k Members",
+                "link": ""
+              },
+              "blocks": {}
+            }
+          },
+          "block_order": [
+            "highlight_card_PyaWh9",
+            "highlight_card_LhBj3R",
+            "highlight_card_A3mTc7"
+          ]
+        },
+        "trending-sheet": {
+          "type": "_trending-sheet",
+          "static": true,
+          "settings": {
+            "show": true,
+            "heading": "Trending <em>Now</em>",
+            "link_label": "View all",
+            "link": "shopify://collections",
+            "collection": "",
+            "products_to_show": 7,
+            "width": 50,
+            "scene_length": 250,
+            "heading_size": 54,
+            "title_size": 24,
+            "background_opacity": 10
+          },
+          "blocks": {}
+        }
+      },
+      "name": "t:general.image_banner_stats",
+      "settings": {
+        "image": "shopify://shop_images/6a9da17c3473051a785c2d23aa0bb872cbfeedf7.png",
+        "height": "full",
+        "overlay_style": "gradient",
+        "overlay_opacity": 80,
+        "section_width": "widest",
+        "color_scheme": "scheme-5",
+        "animation": "fade-up",
+        "padding_top": 120,
+        "padding_bottom": 120
+      }
+    },
+    "testimonials_ExrT4N": {
+      "type": "testimonials",
+      "blocks": {
+        "review_ic8Kke": {
+          "type": "review",
+          "settings": {
+            "avatar": "shopify://shop_images/faa1c8058a578c2a8a62f56f20fc78f3dad2eb3e.png",
+            "name": "Patricia D.",
+            "date": "Apr 15, 2026",
+            "rating": 4.5,
+            "text": "<p>This is the holy grail of lip glosses. It is not sticky at all, feels super hydrating, and makes your lips look naturally plump and shiny. This provides flawless coverage that lasts through sweat and long days without budging.</p>"
+          }
+        },
+        "review_gUYWfM": {
+          "type": "review",
+          "settings": {
+            "avatar": "shopify://shop_images/e4bfe2f07695827a45362fbeab15f77aa6f593e7.png",
+            "name": "Helen G.",
+            "date": "Mar 28, 2026",
+            "rating": 4.5,
+            "text": "<p>It gives incredible volume and length without clumping. My lashes look like falsies, and it does not smudge or flake throughout the day. This completely transformed my skin texture.</p>"
+          }
+        },
+        "review_qey8DF": {
+          "type": "review",
+          "settings": {
+            "avatar": "shopify://shop_images/2b2bb137cf961a3fc56cbd5f9056e82a26b476ed.png",
+            "name": "Susan B.",
+            "date": "Feb 09, 2026",
+            "rating": 4.5,
+            "text": "<p>An absolute lifesaver for dry, sensitive skin. It is thick but non-greasy, locks in moisture all night, and never causes breakouts or irritation. The perfect blend of lavender and orange blossom. It smells incredibly elegant.</p>"
+          }
+        },
+        "review_MfhmgR": {
+          "type": "review",
+          "settings": {
+            "avatar": "shopify://shop_images/65d686cd5c291aaaeffc673e64392c69fa1bb792.png",
+            "name": "Joanne M.",
+            "date": "Jan 15, 2026",
+            "rating": 4.5,
+            "text": "<p>The perfect blend of lavender and orange blossom. It smells incredibly elegant, powerful, and expensive, and I get compliments every single time I wear it.</p>"
+          }
+        },
+        "review_dzXE3w": {
+          "type": "review",
+          "settings": {
+            "avatar": "shopify://shop_images/279dd4ab3ee0edd87e35bae96027ec2d99bd87c4.png",
+            "name": "Maria L.",
+            "date": "Dec 02, 2025",
+            "rating": 5,
+            "text": "<p>Lightweight, glowy and it lasts all day. My new everyday foundation: it looks like skin, only better.</p>"
+          }
+        }
+      },
+      "block_order": [
+        "review_ic8Kke",
+        "review_gUYWfM",
+        "review_qey8DF",
+        "review_MfhmgR",
+        "review_dzXE3w"
+      ],
+      "name": "t:general.testimonials",
+      "settings": {
+        "eyebrow": "Our reviews",
+        "heading": "What our <em>Clients</em> Say",
+        "autoplay": true,
+        "interval": 4,
+        "height": "full",
+        "section_width": "widest",
+        "split": "40",
+        "color_scheme": "",
+        "highlight_color": "#c8a24b",
+        "animation": "fade-up",
+        "padding_top": 96,
+        "padding_bottom": 96
+      }
+    },
+    "blog_stories_JzWXeh": {
+      "type": "blog-stories",
+      "blocks": {
+        "story_w33YmJ": {
+          "type": "story",
+          "settings": {
+            "article": "featured/the-art-of-the-morning-ritual",
+            "category": "",
+            "pill_label": "Featured story"
+          }
+        },
+        "story_xLafmm": {
+          "type": "story",
+          "settings": {
+            "article": "featured/scent-as-memory",
+            "category": "",
+            "pill_label": ""
+          }
+        },
+        "story_eBQny4": {
+          "type": "story",
+          "settings": {
+            "article": "featured/the-skin-moisturizer",
+            "category": "",
+            "pill_label": ""
+          }
+        },
+        "story_Xjg6LA": {
+          "type": "story",
+          "settings": {
+            "article": "featured/pure-matte-lipstick",
+            "category": "",
+            "pill_label": ""
+          }
+        }
+      },
+      "block_order": [
+        "story_w33YmJ",
+        "story_xLafmm",
+        "story_eBQny4",
+        "story_Xjg6LA"
+      ],
+      "name": "t:general.blog_stories",
+      "settings": {
+        "eyebrow": "Beauty rituals",
+        "heading": "<em>Stories of</em> Transformation",
+        "link_label": "View journal",
+        "link": "",
+        "blog": "featured",
+        "layout": "featured-left",
+        "section_width": "widest",
+        "color_scheme": "",
+        "highlight_color": "#c8a24b",
+        "animation": "fade-up",
+        "padding_top": 96,
+        "padding_bottom": 96
+      }
+    },
     "image_banner_8GrUnC": {
       "type": "image-banner",
       "blocks": {
@@ -646,7 +957,7 @@
               "type": "button",
               "settings": {
                 "label": "Shop the event",
-                "link": "",
+                "link": "shopify://collections/all",
                 "new_tab": false,
                 "style": "text",
                 "show_arrow": true,
@@ -765,327 +1076,16 @@
         "padding_top": 80,
         "padding_bottom": 80
       }
-    },
-    "image_banner_JWCLdE": {
-      "type": "image-banner",
-      "blocks": {
-        "banner-content": {
-          "type": "_banner-content",
-          "static": true,
-          "settings": {
-            "gap": 40,
-            "max_width": 780
-          },
-          "blocks": {
-            "text_9FQDtR": {
-              "type": "text",
-              "settings": {
-                "text": "<p>The Oroskin edit</p>",
-                "style": "eyebrow",
-                "use_custom_size": false,
-                "custom_size": 20,
-                "font": "body-font",
-                "color": "accent",
-                "alignment": "left",
-                "max_width": "none"
-              },
-              "blocks": {}
-            },
-            "heading_wVJJQT": {
-              "type": "heading",
-              "settings": {
-                "heading": "The New <em>Glow</em> Manifesto",
-                "size": "h1",
-                "use_custom_size": true,
-                "custom_size": 72,
-                "tag": "h2",
-                "color": "default",
-                "font": "heading-font",
-                "italic_style": "accent",
-                "alignment": "left",
-                "indent": 0
-              },
-              "blocks": {}
-            },
-            "text_p7yjJD": {
-              "type": "text",
-              "settings": {
-                "text": "<p>This season, beauty transcends skin — it becomes a language. How our editors reimagined the ritual of light across six cities.</p>",
-                "style": "body-lg",
-                "use_custom_size": false,
-                "custom_size": 20,
-                "font": "body-font",
-                "color": "default",
-                "alignment": "left",
-                "max_width": "60ch"
-              },
-              "blocks": {}
-            },
-            "button_kFUpUt": {
-              "type": "button",
-              "settings": {
-                "label": "Read the editorial",
-                "link": "",
-                "new_tab": false,
-                "style": "primary",
-                "show_arrow": true,
-                "alignment": "left"
-              },
-              "blocks": {}
-            }
-          },
-          "block_order": [
-            "text_9FQDtR",
-            "heading_wVJJQT",
-            "text_p7yjJD",
-            "button_kFUpUt"
-          ]
-        },
-        "highlight-cards": {
-          "type": "_highlight-cards",
-          "static": true,
-          "settings": {
-            "radius": 24,
-            "animation": "slide-right",
-            "duration": 900,
-            "stagger": 150
-          },
-          "blocks": {
-            "highlight_card_PyaWh9": {
-              "type": "_highlight-card",
-              "settings": {
-                "icon": "book",
-                "label": "Stories",
-                "value": "48 Articles",
-                "link": ""
-              },
-              "blocks": {}
-            },
-            "highlight_card_LhBj3R": {
-              "type": "_highlight-card",
-              "settings": {
-                "icon": "video",
-                "label": "Films",
-                "value": "Ritual Series",
-                "link": ""
-              },
-              "blocks": {}
-            },
-            "highlight_card_A3mTc7": {
-              "type": "_highlight-card",
-              "settings": {
-                "icon": "users",
-                "label": "Community",
-                "value": "42k Members",
-                "link": ""
-              },
-              "blocks": {}
-            }
-          },
-          "block_order": [
-            "highlight_card_PyaWh9",
-            "highlight_card_LhBj3R",
-            "highlight_card_A3mTc7"
-          ]
-        },
-        "trending-sheet": {
-          "type": "_trending-sheet",
-          "static": true,
-          "settings": {
-            "show": true,
-            "heading": "Trending <em>Now</em>",
-            "link_label": "View all",
-            "link": "shopify://collections",
-            "collection": "",
-            "products_to_show": 7,
-            "width": 50,
-            "scene_length": 250,
-            "heading_size": 54,
-            "title_size": 24,
-            "background_opacity": 10
-          },
-          "blocks": {}
-        }
-      },
-      "name": "t:general.image_banner_stats",
-      "settings": {
-        "image": "shopify://shop_images/6a9da17c3473051a785c2d23aa0bb872cbfeedf7.png",
-        "height": "full",
-        "overlay_style": "gradient",
-        "overlay_opacity": 80,
-        "section_width": "widest",
-        "color_scheme": "scheme-5",
-        "animation": "fade-up",
-        "padding_top": 120,
-        "padding_bottom": 120
-      }
-    },
-    "blog_stories_JzWXeh": {
-      "type": "blog-stories",
-      "blocks": {
-        "story_w33YmJ": {
-          "type": "story",
-          "settings": {
-            "article": "featured/the-art-of-the-morning-ritual",
-            "category": "",
-            "pill_label": "Featured story"
-          }
-        },
-        "story_xLafmm": {
-          "type": "story",
-          "settings": {
-            "article": "featured/scent-as-memory",
-            "category": "",
-            "pill_label": ""
-          }
-        },
-        "story_eBQny4": {
-          "type": "story",
-          "settings": {
-            "article": "featured/the-skin-moisturizer",
-            "category": "",
-            "pill_label": ""
-          }
-        },
-        "story_Xjg6LA": {
-          "type": "story",
-          "settings": {
-            "article": "featured/pure-matte-lipstick",
-            "category": "",
-            "pill_label": ""
-          }
-        }
-      },
-      "block_order": [
-        "story_w33YmJ",
-        "story_xLafmm",
-        "story_eBQny4",
-        "story_Xjg6LA"
-      ],
-      "name": "t:general.blog_stories",
-      "settings": {
-        "eyebrow": "Beauty rituals",
-        "heading": "<em>Stories of</em> Transformation",
-        "link_label": "View journal",
-        "link": "",
-        "blog": "featured",
-        "layout": "featured-left",
-        "section_width": "widest",
-        "color_scheme": "",
-        "highlight_color": "#c8a24b",
-        "animation": "fade-up",
-        "padding_top": 96,
-        "padding_bottom": 96
-      }
-    },
-    "product_panels_iTjtDf": {
-      "type": "product-panels",
-      "name": "t:general.editors_picks",
-      "settings": {
-        "eyebrow": "This season",
-        "heading": "Editor's <em>Picks</em>",
-        "link_label": "View all",
-        "link": "",
-        "collection": "automated-collection",
-        "products_to_show": 7,
-        "panel_height": 29,
-        "cart_size": "60",
-        "cart_icon_color": "#de3838",
-        "cart_options": "add_first",
-        "section_width": "wide",
-        "color_scheme": "",
-        "highlight_color": "#c8a24b",
-        "animation": "fade-up",
-        "padding_top": 96,
-        "padding_bottom": 96
-      }
-    },
-    "testimonials_ExrT4N": {
-      "type": "testimonials",
-      "blocks": {
-        "review_ic8Kke": {
-          "type": "review",
-          "settings": {
-            "avatar": "shopify://shop_images/faa1c8058a578c2a8a62f56f20fc78f3dad2eb3e.png",
-            "name": "Patricia D.",
-            "date": "Apr 15, 2026",
-            "rating": 4.5,
-            "text": "<p>This is the holy grail of lip glosses. It is not sticky at all, feels super hydrating, and makes your lips look naturally plump and shiny. This provides flawless coverage that lasts through sweat and long days without budging.</p>"
-          }
-        },
-        "review_gUYWfM": {
-          "type": "review",
-          "settings": {
-            "avatar": "shopify://shop_images/e4bfe2f07695827a45362fbeab15f77aa6f593e7.png",
-            "name": "Helen G.",
-            "date": "Mar 28, 2026",
-            "rating": 4.5,
-            "text": "<p>It gives incredible volume and length without clumping. My lashes look like falsies, and it does not smudge or flake throughout the day. This completely transformed my skin texture.</p>"
-          }
-        },
-        "review_qey8DF": {
-          "type": "review",
-          "settings": {
-            "avatar": "shopify://shop_images/2b2bb137cf961a3fc56cbd5f9056e82a26b476ed.png",
-            "name": "Susan B.",
-            "date": "Feb 09, 2026",
-            "rating": 4.5,
-            "text": "<p>An absolute lifesaver for dry, sensitive skin. It is thick but non-greasy, locks in moisture all night, and never causes breakouts or irritation. The perfect blend of lavender and orange blossom. It smells incredibly elegant.</p>"
-          }
-        },
-        "review_MfhmgR": {
-          "type": "review",
-          "settings": {
-            "avatar": "shopify://shop_images/65d686cd5c291aaaeffc673e64392c69fa1bb792.png",
-            "name": "Joanne M.",
-            "date": "Jan 15, 2026",
-            "rating": 4.5,
-            "text": "<p>The perfect blend of lavender and orange blossom. It smells incredibly elegant, powerful, and expensive, and I get compliments every single time I wear it.</p>"
-          }
-        },
-        "review_dzXE3w": {
-          "type": "review",
-          "settings": {
-            "avatar": "shopify://shop_images/279dd4ab3ee0edd87e35bae96027ec2d99bd87c4.png",
-            "name": "Maria L.",
-            "date": "Dec 02, 2025",
-            "rating": 5,
-            "text": "<p>Lightweight, glowy and it lasts all day. My new everyday foundation: it looks like skin, only better.</p>"
-          }
-        }
-      },
-      "block_order": [
-        "review_ic8Kke",
-        "review_gUYWfM",
-        "review_qey8DF",
-        "review_MfhmgR",
-        "review_dzXE3w"
-      ],
-      "name": "t:general.testimonials",
-      "settings": {
-        "eyebrow": "Our reviews",
-        "heading": "What our <em>Clients</em> Say",
-        "autoplay": true,
-        "interval": 4,
-        "height": "full",
-        "section_width": "widest",
-        "split": "40",
-        "color_scheme": "",
-        "highlight_color": "#c8a24b",
-        "animation": "fade-up",
-        "padding_top": 96,
-        "padding_bottom": 96
-      }
     }
   },
   "order": [
     "hero_ceiA99",
     "scrolling_showcase_kj7qC7",
-    "image_banner_8GrUnC",
-    "icon_features_fEU3xe",
-    "image_banner_JWCLdE",
-    "blog_stories_JzWXeh",
     "product_panels_iTjtDf",
-    "testimonials_ExrT4N"
+    "image_banner_JWCLdE",
+    "testimonials_ExrT4N",
+    "blog_stories_JzWXeh",
+    "image_banner_8GrUnC",
+    "icon_features_fEU3xe"
   ]
 }

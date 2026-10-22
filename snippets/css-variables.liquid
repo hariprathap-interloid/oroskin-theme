@@ -105,6 +105,12 @@
     --shadow-collection: 0 5px 25px 0 #0000000d;
     --shadow-button: 0 4px 20px 0 #00000033;
     /*
+      Figma "Liquid Glass Button" (hero Explore): two soft drop shadows + a soft white inner glow
+      top-left. Refraction / Depth / Dispersion need a Chrome-only SVG filter, and Frost has nothing
+      to blur behind a solid fill, so they are left out.
+    */
+    --shadow-button-glass: 0 4px 15px #00000040, 0 3px 15px #00000014, inset 1px 1px 4px #ffffff;
+    /*
       Glass (Figma "Glass" effect: Fill 25%, Frost 100, Light 80% at -7deg, drop shadow). Used by every
       glass element: header bar and icon buttons, pause button, footer panel and its controls,
       highlight cards, product panels card, quick add, story pill.

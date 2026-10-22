@@ -1,7 +1,7 @@
 # Project handoff: Oroskin Shopify theme (custom, built on Skeleton)
 
 > **How to use this file:** paste its contents into a new Claude chat as the first message.
-> Last updated: 2026-09-25
+> Last updated: 2026-10-22
 
 ## Who I am
 
@@ -42,29 +42,36 @@ Also `THEME-STORE-CHECKLIST.md`: every Theme Store requirement, grouped by miles
 
 Also at `d:\shopify-oroskin\dawn\DEVELOPER-GUID.md`: CLI commands, Theme Check, Prettier, commit checklist.
 
-## Current state
+## Current state (2026-10-22, end of session)
 
-- Nothing built yet. The new theme folder does not exist.
-- `d:\shopify-oroskin\dawn` is a git repo holding Dawn 15.5.0 and the guide files.
-- **Development store created:** `oroskin-dev` (admin.shopify.com/store/oroskin-dev). Preview with `shopify theme dev -e dev`.
-- **Figma design is ready, but the link has not been shared with me yet.** I am waiting on it from the designer/client.
+- Theme scaffolded from Skeleton at `d:\shopify-oroskin\custom-built-new-theme-oroskin\oroskin-theme`. Dev store `oroskin-dev`; preview with `shopify theme dev -e dev`.
+- **Done and committed:** M1 Foundation, M2 Header & footer (desktop), M3 Shared blocks, and most of M4 Homepage on branch **`feature/m4-homepage`** (last commit `8b33cc6 Add testimonials to the homepage`).
+- **Homepage sections built:** Hero, Scrolling showcase, Editor's Picks (`product-panels`), Image banner (Manifesto + Trending sheet scene), Testimonials, Blog stories, promo Image banner, Icon features, Featured product, Trending products. Quick add (`snippets/quick-add.liquid`) is shared.
+- **Deadline mode is on** (until 22 Oct 2026, then documentation): Claude drafts via `/learn-guide`, I review, test and commit. Session log: `C:\Users\Hariprathap\Desktop\personal-development-os\06-learning-sessions\2026\2026-10-22.md`.
 
-### Blocked until I get these
+### Uncommitted work (review, test, then ship)
 
-- [ ] Figma link (or exported screenshots) — needed before any section work
-- [x] Development store created (`oroskin-dev`)
-- [ ] Brand assets: logo files, fonts (and their licences), product photography
+Two pieces of work are mixed in the working tree. Ship them as two commits.
 
-## Where we're starting
+1. **Hero "Explore collection" glass button + M4.14 homepage order**
+   - `blocks/button.liquid`: new Style option **Glass** (`.button--glass`).
+   - `assets/critical.css`: `.button--glass` = solid `--color-button`, `border: none`, 60px tall, 25px side padding, 10px gap, weight 400, hover darkens and keeps the shadow. Primary button (login, subscribe) is unchanged: 85% fill, 1px border, `0 4px 20px #00000033`.
+   - `snippets/css-variables.liquid`: `--shadow-button-glass: 0 4px 15px #00000040, 0 3px 15px #00000014, inset 1px 1px 4px #ffffff` (the 3 Figma shadows; the Figma Glass Refraction/Depth/Dispersion are not possible in CSS).
+   - `locales/en.default.schema.json`: the "Glass" style label.
+   - `templates/index.json`: pulled from the dev theme with my section order; hero button `style: glass`; banner links restored (`shopify://collections/all`, `shopify://blogs/featured`). **Editor saves overwrite this file while `theme dev` runs: check it before committing.**
+   - `THEME-STORE-CHECKLIST.md`: M4 ticks.
+2. **M4.6 New Arrivals deck (draft, being tested)**
+   - `sections/product-deck.liquid` (new, preset "New arrivals"): eyebrow + heading + "Fresh this week" pill; collection cards that start stacked and fan out on scroll (`--fan-progress`, smoothed like the Image banner). The fan never moves; hover (mouse), tap or Tab makes a card active **in its own place** (on top, 8% bigger, keeps its tilt) with quick add + glass info card (title, subtitle/description, price, Buy now → product page). Each card has a "Show {title}" pick button for keyboard/touch. Spread adapts to 3–8 cards (`--half`).
+   - "Explore all": pale gold glass pill at rest; on hover a gold circle grows from the left and fills it, text turns white, the paper plane flies out and back. (A "filled at rest, two planes" variant was tried and reverted.)
+   - `assets/icon-send.svg` (Figma plane) and `assets/icon-buy.svg` (Figma buy icon; its clip paths were removed so ids don't repeat on the page).
+   - `locales/en.default.json`: `products.deck.show`; `locales/en.default.schema.json`: `general.product_deck`, `general.new_arrivals`, `labels.deck_*`.
+   - Not yet added to `index.json`: I add it in the editor.
 
-1. Create a Shopify Partner account and a free **development store**, with realistic test data plus edge cases: no image, long title, many variants, sold out, on sale, empty collection.
-2. Scaffold the theme: `cd d:/shopify-oroskin` then `shopify theme init oroskin-theme`. Confirm the folder has `assets/ blocks/ config/ layout/ locales/ sections/ snippets/ templates/`. Start a fresh git history and copy both `.md` guides into the new repo.
-3. Run `shopify theme dev --store <my-dev-store>.myshopify.com`.
-4. Then **Milestone 1: Foundation** — design tokens from Figma into `config/settings_schema.json` and CSS variables in `layout/theme.liquid`, plus `base.css` (reset, typography, buttons, forms) and the scroll-animation system from Part 19.4.
+### Open decisions
 
-After the foundation, the build order is: header/footer → shared snippets and theme blocks → homepage → collection (with filters) → product (variants, add to cart, app blocks) → cart → remaining pages → QA/performance → launch.
-
-**Steps 1–3 don't need Figma**, so I can do them while waiting for the design link.
+- White text on gold (Buy now, scroll scene) and gold on pale gold (Explore all) are about 2–2.4:1, below the WCAG 4.5:1 minimum. Decide in M9.
+- M2.6 mobile drawer and all mobile-specific layouts (decision 7). Parked features (decision 6).
+- Multi-variant quick add adds the first available variant (client to confirm).
 
 ## How I want you to work with me
 
@@ -73,10 +80,13 @@ After the foundation, the build order is: header/footer → shared snippets and 
 - **Teach me the Liquid** in what you write. I want to understand every line, not paste it blindly.
 - Every section needs: `{% schema %}` settings, a **preset**, `{{ block.shopify_attributes }}` on blocks, empty states (`!= blank`), placeholder content, and locale strings instead of hardcoded text.
 - Watch for these mistakes: `{% include %}` (use `render`), `img_url` (use `image_url` + `image_tag`), truthiness checks on text settings (use `!= blank`), **filters inside filter arguments** (invalid — `assign` first), hardcoded handles (use settings), lazy-loading the hero image.
-- Keep performance targets in mind from the start: Lighthouse mobile ≥ 60 performance and ≥ 90 accessibility on home, collection and product.
-- Ask me before assuming anything about the design. I'll paste Figma details or screenshots once I have access.
+- Performance: our goal is Lighthouse mobile 100 in all four categories (never below 90); Theme Store minimum ≥ 60 performance, ≥ 90 accessibility.
+- Ask me before assuming anything about the design. Figma details are in `design/figma/` (read first).
 - Don't commit or push unless I ask. Never push to a live theme.
 
-## First task
+## First task (next session)
 
-Confirm you've read `SHOPIFY-LEARNING-ROADMAP.md` (especially Part 19), then walk me through **creating the development store and scaffolding the theme**, step by step, since those don't need the Figma link. Tell me exactly what to click in the Shopify Partner Dashboard, and what test data to add.
+1. `/learn-check` the uncommitted work above, then `/learn-ship` it as two commits: (a) glass button + homepage order + checklist, (b) New Arrivals deck + icons + locales.
+2. Add the New Arrivals section in the editor in the Figma position (after the scrolling showcase / gold band), pick a collection sorted newest first, then pull `index.json` and commit it.
+3. Lighthouse mobile on the preview link (home), then close M4 and merge `feature/m4-homepage`.
+4. Next milestone: **M5 Collection (with filters)**.
