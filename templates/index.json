@@ -28,8 +28,8 @@
                 "brush_word": "glamour",
                 "label_x": -4,
                 "label_y": 50,
-                "x": 85,
-                "y": 24,
+                "x": 84,
+                "y": 23,
                 "width": 34,
                 "rotate": 0
               },
@@ -107,6 +107,7 @@
               "settings": {
                 "title": "Powder compact, top centre",
                 "kind": "compact",
+                "tint": true,
                 "color": "muted",
                 "opacity": 70,
                 "x": 34,
@@ -125,6 +126,7 @@
               "settings": {
                 "title": "Makeup brush, top right",
                 "kind": "brush",
+                "tint": true,
                 "color": "muted",
                 "opacity": 70,
                 "x": 104,
@@ -143,6 +145,7 @@
               "settings": {
                 "title": "Serum bottle, top right",
                 "kind": "bottle",
+                "tint": true,
                 "color": "muted",
                 "opacity": 70,
                 "x": 74,
@@ -161,6 +164,7 @@
               "settings": {
                 "title": "Perfume bottle, middle right",
                 "kind": "perfume",
+                "tint": true,
                 "color": "muted",
                 "opacity": 70,
                 "x": 72,
@@ -179,6 +183,7 @@
               "settings": {
                 "title": "Gold magnolia, middle centre",
                 "kind": "magnolia",
+                "tint": true,
                 "color": "muted",
                 "opacity": 100,
                 "x": 64,
@@ -197,6 +202,7 @@
               "settings": {
                 "title": "Lipstick, middle left",
                 "kind": "lipstick",
+                "tint": true,
                 "color": "muted",
                 "opacity": 70,
                 "x": -6,
@@ -215,6 +221,7 @@
               "settings": {
                 "title": "Round perfume, bottom right",
                 "kind": "perfume-round",
+                "tint": true,
                 "color": "muted",
                 "opacity": 70,
                 "x": 78,
@@ -233,6 +240,7 @@
               "settings": {
                 "title": "Sparkle, top centre",
                 "kind": "sparkle",
+                "tint": true,
                 "color": "white",
                 "opacity": 100,
                 "x": 56,
@@ -251,6 +259,7 @@
               "settings": {
                 "title": "Sparkle, top left",
                 "kind": "sparkle",
+                "tint": true,
                 "color": "white",
                 "opacity": 100,
                 "x": 32,
@@ -269,6 +278,7 @@
               "settings": {
                 "title": "Sparkle, top left 2",
                 "kind": "sparkle",
+                "tint": true,
                 "color": "accent",
                 "opacity": 30,
                 "x": 20,
@@ -287,6 +297,7 @@
               "settings": {
                 "title": "Sparkle, top right",
                 "kind": "sparkle",
+                "tint": true,
                 "color": "accent",
                 "opacity": 30,
                 "x": 78,
@@ -305,6 +316,7 @@
               "settings": {
                 "title": "Sparkle, middle centre",
                 "kind": "sparkle",
+                "tint": true,
                 "color": "white",
                 "opacity": 100,
                 "x": 66,
@@ -323,6 +335,7 @@
               "settings": {
                 "title": "Sparkle, middle left",
                 "kind": "sparkle",
+                "tint": true,
                 "color": "white",
                 "opacity": 100,
                 "x": -6,
@@ -341,6 +354,7 @@
               "settings": {
                 "title": "Sparkle, bottom right",
                 "kind": "sparkle",
+                "tint": true,
                 "color": "accent",
                 "opacity": 30,
                 "x": 88,
@@ -578,6 +592,30 @@
         "band_color_scheme": ""
       }
     },
+    "product_panels_iTjtDf": {
+      "type": "product-panels",
+      "name": "t:general.editors_picks",
+      "settings": {
+        "eyebrow": "This season",
+        "heading": "Editor's <em>Picks</em>",
+        "link_label": "View all",
+        "link": "",
+        "collection": "automated-collection",
+        "products_to_show": 7,
+        "panel_height": 29,
+        "fill_screen": true,
+        "card_radius": 10,
+        "cart_size": "60",
+        "cart_icon_color": "#de3838",
+        "cart_options": "add_first",
+        "section_width": "widest",
+        "color_scheme": "",
+        "highlight_color": "#c8a24b",
+        "animation": "fade-up",
+        "padding_top": 200,
+        "padding_bottom": 96
+      }
+    },
     "scrolling_showcase_kj7qC7": {
       "type": "scrolling-showcase",
       "name": "t:general.scrolling_showcase",
@@ -595,7 +633,7 @@
         "padding_bottom": 160,
         "enable_scene": true,
         "scene_length": 300,
-        "scene_smoothing": "soft",
+        "scene_smoothing": "extra",
         "scene_text_color": "#ffffff",
         "scene_arrow_color": "#1f1f1f",
         "scene_image_1": "shopify://shop_images/10f104c2974349b90d1225248144b2b154c9a84d.png",
@@ -613,28 +651,6 @@
         "scene_y_3": 77,
         "scene_width_3": 24,
         "scene_rotate_3": -8
-      }
-    },
-    "product_panels_iTjtDf": {
-      "type": "product-panels",
-      "name": "t:general.editors_picks",
-      "settings": {
-        "eyebrow": "This season",
-        "heading": "Editor's <em>Picks</em>",
-        "link_label": "View all",
-        "link": "",
-        "collection": "automated-collection",
-        "products_to_show": 7,
-        "panel_height": 29,
-        "cart_size": "60",
-        "cart_icon_color": "#de3838",
-        "cart_options": "add_first",
-        "section_width": "widest",
-        "color_scheme": "",
-        "highlight_color": "#c8a24b",
-        "animation": "fade-up",
-        "padding_top": 96,
-        "padding_bottom": 96
       }
     },
     "image_banner_JWCLdE": {
@@ -1119,8 +1135,8 @@
   },
   "order": [
     "hero_ceiA99",
-    "scrolling_showcase_kj7qC7",
     "product_panels_iTjtDf",
+    "scrolling_showcase_kj7qC7",
     "image_banner_JWCLdE",
     "testimonials_ExrT4N",
     "blog_stories_JzWXeh",
