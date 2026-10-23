@@ -284,6 +284,44 @@
     display: block;
   }
 
+  /*
+    Intro (set by the script, see watchIntro): hidden until the sentence is in view, then each small photo
+    slides in from the left, 0.15s after the one before, and the arrow follows last.
+  */
+  scrolling-showcase[data-intro]:not([data-intro-played]) :is(.scrolling-showcase__image, .scrolling-showcase__arrow) {
+    opacity: 0;
+  }
+
+  scrolling-showcase[data-intro-played] :is(.scrolling-showcase__image, .scrolling-showcase__arrow) {
+    animation: showcase-slide-in 0.6s var(--ease-out) both;
+  }
+
+  scrolling-showcase[data-intro-played] .scrolling-showcase__image:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+
+  scrolling-showcase[data-intro-played] .scrolling-showcase__image:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+
+  scrolling-showcase[data-intro-played] .scrolling-showcase__arrow {
+    animation-delay: 0.5s;
+  }
+
+  @keyframes showcase-slide-in {
+    from {
+      opacity: 0;
+      transform: translateX(-0.6em);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    scrolling-showcase :is(.scrolling-showcase__image, .scrolling-showcase__arrow) {
+      opacity: 1 !important;
+      animation: none !important;
+    }
+  }
+
   /* Static (scene off, or not switched on by the script): the band is never shown */
   .scrolling-showcase__band {
     display: none;
@@ -349,8 +387,16 @@
     clip-path: inset(calc((1 - var(--rise)) * 100%) 0 0 0);
   }
 
+  /*
+    The white copy fills the whole stage, exactly like the band: clip-path % is measured against each
+    element's own box, so a copy only as tall as the text was cut lower than the band, leaving a strip
+    where the gold had covered the dark text and photos but the white copy wasn't drawn yet.
+    justify-content: center + the same padding puts the text exactly where the real (centred) text is.
+  */
   .scrolling-showcase[data-scene-active] .scrolling-showcase__band-text {
     z-index: 3;
+    align-self: stretch;
+    justify-content: center;
     color: var(--scene-text);
 
     /* The M4.3 colour variables, recoloured for the band: white text and "!!!", dark arrow */
@@ -437,6 +483,8 @@
    */
   class ScrollingShowcase extends HTMLElement {
     connectedCallback() {
+      this.watchIntro();
+
       if (!this.hasAttribute('data-scene')) return;
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
@@ -472,7 +520,32 @@
 
     disconnectedCallback() {
       this.observer?.disconnect();
+      this.introObserver?.disconnect();
       this.stopListening();
+    }
+
+    /**
+     * Intro: the small photos and the arrow slide in from the left, one after another, the first time
+     * the sentence comes into view. data-intro (set only here, so without JS nothing is hidden) hides
+     * them; data-intro-played starts the CSS animation. Plays in both text layers at once, because both
+     * sit inside this element. Skipped when the theme's animations are off or with reduced motion.
+     */
+    watchIntro() {
+      if (!document.documentElement.classList.contains('animations-on')) return;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const title = this.querySelector('.scrolling-showcase__title');
+      if (!title || !this.querySelector('.scrolling-showcase__images, .scrolling-showcase__arrow')) return;
+
+      this.setAttribute('data-intro', '');
+      this.introObserver = new IntersectionObserver(
+        ([entry]) => {
+          if (!entry.isIntersecting) return;
+          this.setAttribute('data-intro-played', '');
+          this.introObserver.disconnect(); // once per page view
+        },
+        { threshold: 0.5 }
+      );
+      this.introObserver.observe(title);
     }
 
     stopListening() {
