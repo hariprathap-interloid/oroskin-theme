@@ -105,6 +105,7 @@
             "hero_decoration_BeHfpQ": {
               "type": "_hero-decoration",
               "settings": {
+                "title": "Powder compact, top centre",
                 "kind": "compact",
                 "color": "muted",
                 "opacity": 70,
@@ -122,6 +123,7 @@
             "hero_decoration_RafJGD": {
               "type": "_hero-decoration",
               "settings": {
+                "title": "Makeup brush, top right",
                 "kind": "brush",
                 "color": "muted",
                 "opacity": 70,
@@ -139,6 +141,7 @@
             "hero_decoration_dnTrbE": {
               "type": "_hero-decoration",
               "settings": {
+                "title": "Serum bottle, top right",
                 "kind": "bottle",
                 "color": "muted",
                 "opacity": 70,
@@ -156,6 +159,7 @@
             "hero_decoration_JhraBh": {
               "type": "_hero-decoration",
               "settings": {
+                "title": "Perfume bottle, middle right",
                 "kind": "perfume",
                 "color": "muted",
                 "opacity": 70,
@@ -173,6 +177,7 @@
             "hero_decoration_LajCaF": {
               "type": "_hero-decoration",
               "settings": {
+                "title": "Gold magnolia, middle centre",
                 "kind": "magnolia",
                 "color": "muted",
                 "opacity": 100,
@@ -190,6 +195,7 @@
             "hero_decoration_NHEUNt": {
               "type": "_hero-decoration",
               "settings": {
+                "title": "Lipstick, middle left",
                 "kind": "lipstick",
                 "color": "muted",
                 "opacity": 70,
@@ -207,6 +213,7 @@
             "hero_decoration_nxbzfR": {
               "type": "_hero-decoration",
               "settings": {
+                "title": "Round perfume, bottom right",
                 "kind": "perfume-round",
                 "color": "muted",
                 "opacity": 70,
@@ -224,6 +231,7 @@
             "hero_decoration_zCY7RL": {
               "type": "_hero-decoration",
               "settings": {
+                "title": "Sparkle, top centre",
                 "kind": "sparkle",
                 "color": "white",
                 "opacity": 100,
@@ -241,6 +249,7 @@
             "hero_decoration_PdfNDt": {
               "type": "_hero-decoration",
               "settings": {
+                "title": "Sparkle, top left",
                 "kind": "sparkle",
                 "color": "white",
                 "opacity": 100,
@@ -258,6 +267,7 @@
             "hero_decoration_8ctQK3": {
               "type": "_hero-decoration",
               "settings": {
+                "title": "Sparkle, top left 2",
                 "kind": "sparkle",
                 "color": "accent",
                 "opacity": 30,
@@ -275,6 +285,7 @@
             "hero_decoration_WzE7Pw": {
               "type": "_hero-decoration",
               "settings": {
+                "title": "Sparkle, top right",
                 "kind": "sparkle",
                 "color": "accent",
                 "opacity": 30,
@@ -292,6 +303,7 @@
             "hero_decoration_7993nC": {
               "type": "_hero-decoration",
               "settings": {
+                "title": "Sparkle, middle centre",
                 "kind": "sparkle",
                 "color": "white",
                 "opacity": 100,
@@ -309,6 +321,7 @@
             "hero_decoration_mfQf6F": {
               "type": "_hero-decoration",
               "settings": {
+                "title": "Sparkle, middle left",
                 "kind": "sparkle",
                 "color": "white",
                 "opacity": 100,
@@ -326,6 +339,7 @@
             "hero_decoration_4VHnC8": {
               "type": "_hero-decoration",
               "settings": {
+                "title": "Sparkle, bottom right",
                 "kind": "sparkle",
                 "color": "accent",
                 "opacity": 30,
@@ -1076,6 +1090,31 @@
         "padding_top": 80,
         "padding_bottom": 80
       }
+    },
+    "product_deck_rxUqxi": {
+      "type": "product-deck",
+      "name": "t:general.new_arrivals",
+      "settings": {
+        "eyebrow": "Just landed",
+        "heading": "New <em>Arrivals</em>",
+        "pill": "Fresh this week",
+        "link_label": "Explore all",
+        "link": "shopify://collections",
+        "collection": "automated-collection",
+        "products_to_show": 7,
+        "badge": "New",
+        "buy_label": "Buy now",
+        "fan_on_scroll": true,
+        "card_height": 85,
+        "cart_size": "50",
+        "cart_icon_color": "#ffffff",
+        "cart_options": "add_first",
+        "section_width": "widest",
+        "color_scheme": "",
+        "highlight_color": "#c8a24b",
+        "padding_top": 96,
+        "padding_bottom": 96
+      }
     }
   },
   "order": [
@@ -1086,6 +1125,7 @@
     "testimonials_ExrT4N",
     "blog_stories_JzWXeh",
     "image_banner_8GrUnC",
-    "icon_features_fEU3xe"
+    "icon_features_fEU3xe",
+    "product_deck_rxUqxi"
   ]
 }

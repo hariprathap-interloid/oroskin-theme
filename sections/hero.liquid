@@ -360,6 +360,75 @@
       display: none;
     }
   }
+
+  /*
+    Entrance on page load (pure CSS, starts at first paint: no script to wait for, so it can't leave the
+    hero hidden). The background photo never animates, and the products show within 0.2s (one of them
+    can be the LCP image, see hero-grow). Only with the theme's animations on (the
+    .animations-on class, which is also off in the theme editor) and not with reduced motion.
+    - Content rows slide in from the left, one after another.
+    - The logo (an Image block in the content) drops in from the top instead.
+    - Product images grow from their base like a flower opening: half size -> slightly too big -> settle.
+      `transform` adds on top of their translate / rotate, so they keep their place and tilt.
+  */
+  @media (prefers-reduced-motion: no-preference) {
+    .animations-on .hero-content > * {
+      animation: hero-in-left 0.8s var(--ease-out) both;
+    }
+
+    .animations-on .hero-content > .image-block {
+      animation-name: hero-in-top;
+    }
+
+    .animations-on .hero-content > :nth-child(2) { animation-delay: 0.12s; }
+    .animations-on .hero-content > :nth-child(3) { animation-delay: 0.24s; }
+    .animations-on .hero-content > :nth-child(4) { animation-delay: 0.36s; }
+    .animations-on .hero-content > :nth-child(5) { animation-delay: 0.48s; }
+    .animations-on .hero-content > :nth-child(n + 6) { animation-delay: 0.6s; }
+
+    .animations-on .hero-product {
+      transform-origin: 50% 100%;
+      animation: hero-grow 1s var(--ease-out) both; /* all products bloom together, straight away */
+    }
+  }
+
+  @keyframes hero-in-left {
+    from {
+      opacity: 0;
+      transform: translateX(-3rem);
+    }
+  }
+
+  @keyframes hero-in-top {
+    from {
+      opacity: 0;
+      transform: translateY(-2rem);
+    }
+  }
+
+  /*
+    Starts at half size and fades in over the first 0.2s, so a tiny product is never seen. No delay and a
+    short fade: a product image can be the page's LCP element, and the browser only counts an image
+    once it is visible, so it must show almost at once.
+  */
+  @keyframes hero-grow {
+    0% {
+      opacity: 0;
+      transform: scale(0.5);
+    }
+
+    20% {
+      opacity: 1;
+    }
+
+    60% {
+      transform: scale(1.06);
+    }
+
+    100% {
+      transform: none;
+    }
+  }
 {% endstylesheet %}
 
 {% javascript %}
@@ -844,6 +913,7 @@
             {
               "type": "_hero-decoration",
               "settings": {
+                "title": "Powder compact, top centre",
                 "kind": "compact",
                 "x": 34,
                 "y": 2,
@@ -860,6 +930,7 @@
             {
               "type": "_hero-decoration",
               "settings": {
+                "title": "Makeup brush, top right",
                 "kind": "brush",
                 "x": 100,
                 "y": 0,
@@ -876,6 +947,7 @@
             {
               "type": "_hero-decoration",
               "settings": {
+                "title": "Serum bottle, top right",
                 "kind": "bottle",
                 "x": 74,
                 "y": 12,
@@ -892,6 +964,7 @@
             {
               "type": "_hero-decoration",
               "settings": {
+                "title": "Perfume bottle, middle right",
                 "kind": "perfume",
                 "x": 72,
                 "y": 30,
@@ -908,6 +981,7 @@
             {
               "type": "_hero-decoration",
               "settings": {
+                "title": "Gold magnolia, middle centre",
                 "kind": "magnolia",
                 "x": 50,
                 "y": 38,
@@ -924,6 +998,7 @@
             {
               "type": "_hero-decoration",
               "settings": {
+                "title": "Lipstick, middle left",
                 "kind": "lipstick",
                 "x": -6,
                 "y": 58,
@@ -940,6 +1015,7 @@
             {
               "type": "_hero-decoration",
               "settings": {
+                "title": "Round perfume, bottom right",
                 "kind": "perfume-round",
                 "x": 78,
                 "y": 82,
@@ -956,6 +1032,7 @@
             {
               "type": "_hero-decoration",
               "settings": {
+                "title": "Sparkle, top centre",
                 "kind": "sparkle",
                 "x": 56,
                 "y": 0,
@@ -972,6 +1049,7 @@
             {
               "type": "_hero-decoration",
               "settings": {
+                "title": "Sparkle, top left",
                 "kind": "sparkle",
                 "x": 32,
                 "y": 12,
@@ -988,6 +1066,7 @@
             {
               "type": "_hero-decoration",
               "settings": {
+                "title": "Sparkle, top left 2",
                 "kind": "sparkle",
                 "x": 20,
                 "y": 0,
@@ -1004,6 +1083,7 @@
             {
               "type": "_hero-decoration",
               "settings": {
+                "title": "Sparkle, top right",
                 "kind": "sparkle",
                 "x": 78,
                 "y": 16,
@@ -1020,6 +1100,7 @@
             {
               "type": "_hero-decoration",
               "settings": {
+                "title": "Sparkle, middle centre",
                 "kind": "sparkle",
                 "x": 66,
                 "y": 38,
@@ -1036,6 +1117,7 @@
             {
               "type": "_hero-decoration",
               "settings": {
+                "title": "Sparkle, middle left",
                 "kind": "sparkle",
                 "x": -6,
                 "y": 50,
@@ -1052,6 +1134,7 @@
             {
               "type": "_hero-decoration",
               "settings": {
+                "title": "Sparkle, bottom right",
                 "kind": "sparkle",
                 "x": 88,
                 "y": 62,
