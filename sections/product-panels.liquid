@@ -28,8 +28,8 @@
 -%}
 
 <product-panels
-  class="product-panels full-width section-width--{{ section.settings.section_width | default: 'wide' }} color-{{ scheme_id }}"
-  style="--color-accent: {{ section.settings.highlight_color }}; --panels-height: {{ section.settings.panel_height }}; --section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
+  class="product-panels full-width section-width--{{ section.settings.section_width | default: 'wide' }} color-{{ scheme_id }}{% if section.settings.fill_screen %} product-panels--fill{% endif %}"
+  style="--color-accent: {{ section.settings.highlight_color }}; --panels-height: {{ section.settings.panel_height }}; --panels-card-radius: {{ section.settings.card_radius }}px;--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
 >
   <div class="product-panels__inner">
     <div class="product-panels__header">
@@ -187,6 +187,24 @@
   }
 
   /*
+    "Fill the screen height" (desktop; Figma: the section is one screen, content in the middle, strips
+    about 45% of the screen height). The strips use the bigger of the Strip height setting and 45% of
+    the screen, so they grow on tall monitors and keep the set height on short laptops.
+  */
+  @media (min-width: 750px) {
+    .product-panels--fill {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-block-size: 100svh;
+    }
+
+    .product-panels--fill .product-panels__list {
+      block-size: max(calc(var(--panels-height, 30) * 1rem), 45svh);
+    }
+  }
+
+  /*
     Each strip is a flex column that pushes its glass card to the bottom. The card stays in the normal
     flow (not absolute), so the strip, not the card, anchors the title's stretched link: the whole
     strip is clickable.
@@ -267,7 +285,7 @@
     inline-size: 100%;
     padding: var(--space-md) var(--space-lg);
     border: 1px solid #ffffff59;
-    border-radius: var(--radius-md);
+    border-radius: var(--panels-card-radius, 12px); /* "Card corner size" setting */
     /*
       Figma: light "liquid" glass that takes on the photo's colours (blur), over the overlay below it,
       which keeps the white text readable.
@@ -479,6 +497,24 @@
       "step": 1,
       "unit": "rem",
       "default": 29
+    },
+    {
+      "type": "checkbox",
+      "id": "fill_screen",
+      "label": "t:labels.fill_screen",
+      "info": "t:labels.panels_fill_screen_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "card_radius",
+      "label": "t:labels.card_radius",
+      "info": "t:labels.panels_card_radius_info",
+      "min": 0,
+      "max": 32,
+      "step": 2,
+      "unit": "px",
+      "default": 12
     },
     {
       "type": "header",
