@@ -49,9 +49,13 @@
   class="cart-page full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
   style="--color-accent: {{ section.settings.highlight_color }}; --section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
   data-section-id="{{ section.id }}"
-  data-label-updated="{{ 'cart.updated' | t | escape }}"
-  data-label-error="{{ 'cart.error' | t | escape }}"
-  data-label-selected="{{ 'cart.selected_count' | t | escape }}"
+  data-label-updated="{{ 'cart.updated' | t }}"
+  data-label-error="{{ 'cart.error' | t }}"
+  data-label-selected="{{ 'cart.selected_count' | t }}"
+  data-label-coupon-applied="{{ 'cart.coupon_applied' | t }}"
+  data-label-coupon-invalid="{{ 'cart.coupon_invalid' | t }}"
+  data-label-coupon-exists="{{ 'cart.coupon_exists' | t }}"
+  data-label-coupon-remove="{{ 'cart.coupon_remove' | t: code: '[code]' }}"
 >
   {%- comment -%}
     Screen reader announcements ("Cart updated" or the error). Outside .cart-page__inner, which the
@@ -140,7 +144,79 @@
         </div>
 
         <aside class="cart-page__aside" aria-label="{{ 'cart.summary' | t }}">
-          {%- comment -%} Coupons (M7.5) and Gift wrap (M7.6) cards go above the summary {%- endcomment -%}
+          {%- if section.settings.show_coupons -%}
+            {%- comment -%}
+              Coupons (Figma): a code field with Apply, then the codes that are working, each with its
+              saving and a remove button. With JavaScript, Apply updates the cart in place (cart-page
+              script, /cart/update.js "discount"). Without it, the form goes to checkout with the code
+              (/checkout?discount=CODE), where Shopify applies it.
+              Liquid only knows the codes that apply: cart.discount_applications of type
+              "discount_code" (a wrong or not-yet-valid code simply isn't listed).
+            {%- endcomment -%}
+            {%- assign applied_codes = cart.discount_applications | where: 'type', 'discount_code' -%}
+            <div class="cart-card cart-coupon">
+              <h2 class="cart-card__title">{{ 'cart.coupons' | t }}</h2>
+
+              <form class="cart-coupon__form" action="/checkout" method="get" data-cart-coupon>
+                <label class="visually-hidden" for="CartCoupon">{{ 'cart.coupon_label' | t }}</label>
+                <input
+                  class="cart-coupon__input"
+                  id="CartCoupon"
+                  type="text"
+                  name="discount"
+                  placeholder="{{ 'cart.coupon_placeholder' | t }}"
+                  autocomplete="off"
+                  autocapitalize="characters"
+                  spellcheck="false"
+                  required
+                  data-cart-focus="coupon-input"
+                >
+                <button type="submit" class="button cart-coupon__apply" data-cart-focus="coupon-apply">
+                  {{- 'cart.apply' | t -}}
+                  {{- 'icon-send.svg' | inline_asset_content -}}
+                </button>
+              </form>
+
+              <p class="cart-coupon__message" role="alert" data-cart-coupon-message hidden></p>
+
+              {%- comment -%}
+                Always output (empty = hidden by CSS): the script adds the codes Liquid can't see, such
+                as free-shipping codes, which only take effect at checkout.
+              {%- endcomment -%}
+              <ul class="cart-coupon__codes" role="list" data-cart-coupon-codes>
+                  {%- for application in applied_codes -%}
+                    <li class="cart-coupon__code" data-coupon-code="{{ application.title | escape }}">
+                      <span class="cart-coupon__name">{{ application.title | escape }}</span>
+                      {%- comment -%} Free-shipping codes save nothing in the cart; the saving shows at checkout {%- endcomment -%}
+                      {%- if application.total_allocated_amount > 0 -%}
+                        <span class="cart-coupon__saving">−{{ application.total_allocated_amount | money }}</span>
+                      {%- endif -%}
+                      <button
+                        type="button"
+                        class="cart-coupon__remove"
+                        data-cart-coupon-remove="{{ application.title | escape }}"
+                        aria-label="{{ 'cart.coupon_remove' | t: code: application.title }}"
+                      >
+                        <span aria-hidden="true">×</span>
+                      </button>
+                    </li>
+                  {%- endfor -%}
+              </ul>
+
+              {%- comment -%} Copied by the script for a code Liquid can't list (e.g. free shipping) {%- endcomment -%}
+              <template data-cart-coupon-template>
+                <li class="cart-coupon__code" data-coupon-code="">
+                  <span class="cart-coupon__name"></span>
+                  <span class="cart-coupon__saving">{{ 'cart.coupon_at_checkout' | t }}</span>
+                  <button type="button" class="cart-coupon__remove" data-cart-coupon-remove="" aria-label="">
+                    <span aria-hidden="true">×</span>
+                  </button>
+                </li>
+              </template>
+            </div>
+          {%- endif -%}
+
+          {%- comment -%} Gift wrap (M7.6) goes here, between Coupons and the summary {%- endcomment -%}
 
           {%- comment -%}
             Order summary (Figma). Subtotal = before order discounts; order-level discounts listed;
@@ -342,6 +418,134 @@
   .cart-card__title {
     margin: 0;
     font-size: var(--font-size-h3);
+  }
+
+  /*
+    Coupons (Figma): one white pill holding the code field and, at its right end, the gold "Apply"
+    pill with the paper plane. The field resets the global input rule with two classes (the global
+    input[type="text"] rule beats a single class).
+  */
+  /*
+    Figma: no inset around the field or the button. The pill is exactly as tall as the button (50px),
+    the gold Apply sits flush in its right end, and only the text has room on the left.
+    overflow: hidden keeps the button's square-ish ends inside the pill's round edge.
+  */
+  .cart-coupon__form {
+    display: flex;
+    align-items: stretch;
+    min-block-size: 3.125rem;
+    overflow: hidden;
+    border-radius: var(--radius-pill);
+    background-color: color-mix(in srgb, #ffffff 70%, transparent);
+    box-shadow:
+      0 4px 10px 0 #b9b9b91a,
+      inset 1px 1px 0 #ffffffcc;
+  }
+
+  .cart-coupon__form:has(.cart-coupon__input:focus-visible) {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  .cart-coupon__form .cart-coupon__input {
+    flex: 1;
+    min-inline-size: 0;
+    min-block-size: 0;
+    margin: 0;
+    padding-block: 0; /* the field fills the pill's height, so the text sits in the middle */
+    padding-inline: 1.75rem var(--space-sm);
+    border: 0;
+    border-radius: 0;
+    background: none;
+    color: var(--color-text);
+    font-size: var(--font-size-body-sm);
+  }
+
+  .cart-coupon__form .cart-coupon__input:focus-visible {
+    outline: none;
+  }
+
+  .cart-coupon__apply {
+    --color-button: var(--color-accent);
+    --color-button-border: var(--color-accent);
+    --color-button-text: #ffffff;
+    flex: none;
+    margin: 0;
+    gap: var(--space-xs);
+    min-block-size: 0; /* takes the pill's height (stretch) instead of its own 50px */
+  }
+
+  .cart-coupon__apply svg {
+    inline-size: 1.1em;
+    block-size: auto;
+  }
+
+  /* Result under the field: gold when applied, red when not */
+  .cart-coupon__message {
+    margin: 0;
+    font-size: var(--font-size-small);
+  }
+
+  .cart-coupon__message[data-tone='success'] {
+    color: var(--color-accent);
+  }
+
+  .cart-coupon__message[data-tone='error'] {
+    color: var(--color-error, #b3261e);
+  }
+
+  .cart-coupon__codes:empty {
+    display: none;
+  }
+
+  /* Working codes: small pills "SAVE10  -$5.00  x" */
+  .cart-coupon__codes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .cart-coupon__code {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: 0.25rem 0.25rem 0.25rem 0.85rem;
+    border: 1px solid color-mix(in srgb, var(--color-accent) 50%, transparent);
+    border-radius: var(--radius-pill);
+    background-color: color-mix(in srgb, var(--color-accent) 12%, var(--color-background));
+    font-size: var(--font-size-small);
+  }
+
+  .cart-coupon__name {
+    font-weight: var(--font-weight-medium);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .cart-coupon__saving {
+    color: var(--color-accent);
+  }
+
+  .cart-coupon__remove {
+    display: grid;
+    place-items: center;
+    inline-size: 1.75rem;
+    block-size: 1.75rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--color-text);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .cart-coupon__remove:hover {
+    background-color: color-mix(in srgb, var(--color-text) 8%, transparent);
   }
 
   /* Rows: label left, amount right */
@@ -572,6 +776,15 @@
       // One set of listeners on the element itself: they keep working after the inner HTML is swapped
       this.addEventListener('click', (event) => this.onClick(event));
       this.addEventListener('change', (event) => this.onChange(event));
+      this.addEventListener('submit', (event) => {
+        // Coupon form: apply here; the form's own target (/checkout?discount=...) is the no-JS fallback
+        if (!event.target.matches('[data-cart-coupon]')) return;
+        event.preventDefault();
+        const code = event.target.querySelector('[name="discount"]').value.trim();
+        if (code) this.applyCoupon(code);
+      });
+
+      if (this.querySelector('[data-cart-coupon]')) this.loadCodes();
       this.addEventListener('keydown', (event) => {
         // Enter in a quantity field saves it here instead of submitting the whole form; focus stays
         // in the field (render() puts it back on the new copy)
@@ -602,7 +815,91 @@
         const updates = {};
         this.querySelectorAll('[data-cart-select]:checked').forEach((box) => (updates[box.value] = 0));
         this.change(updates);
+        return;
       }
+
+      const removeCode = event.target.closest('[data-cart-coupon-remove]');
+      if (removeCode) this.removeCoupon(removeCode.dataset.cartCouponRemove);
+    }
+
+    /**
+     * The codes that work right now. Shopify's cart JSON lists every entered code with
+     * "applicable": true / false; that's the truth. Liquid only sees codes that already change a price
+     * (cart.discount_applications), so a free-shipping code, which only acts at checkout, would look
+     * "not working" if we went by the page alone. Until the JSON has loaded, the page's list is used.
+     */
+    appliedCodes() {
+      return this.codes ?? [...this.querySelectorAll('[data-coupon-code]')].map((el) => el.dataset.couponCode);
+    }
+
+    /** Reads the codes from a cart JSON (on load, and after every change) and shows any Liquid missed */
+    setCodes(cart) {
+      this.codes = (cart.discount_codes || []).filter((entry) => entry.applicable).map((entry) => entry.code);
+      const list = this.querySelector('[data-cart-coupon-codes]');
+      const template = this.querySelector('[data-cart-coupon-template]');
+      if (!list || !template) return;
+      const shown = [...list.querySelectorAll('[data-coupon-code]')].map((el) => el.dataset.couponCode.toLowerCase());
+      for (const code of this.codes) {
+        if (shown.includes(code.toLowerCase())) continue;
+        const chip = template.content.firstElementChild.cloneNode(true);
+        chip.dataset.couponCode = code;
+        chip.querySelector('.cart-coupon__name').textContent = code;
+        const remove = chip.querySelector('[data-cart-coupon-remove]');
+        remove.dataset.cartCouponRemove = code;
+        remove.setAttribute('aria-label', this.dataset.labelCouponRemove.replace('[code]', code));
+        list.append(chip);
+      }
+    }
+
+    /** On page load: ask Shopify which codes are in the cart (only when the coupon card is shown) */
+    async loadCodes() {
+      try {
+        const cart = await fetch(`${this.root}cart.js`, { headers: { Accept: 'application/json' } }).then((r) => r.json());
+        this.setCodes(cart);
+      } catch (error) {
+        // The page's own list stays; applying still works
+      }
+    }
+
+    /**
+     * Shopify's "discount" field replaces ALL codes, so a new code is sent together with the ones
+     * already working. Shopify's answer says whether it applies (wrong, expired, scheduled, or the
+     * cart doesn't qualify yet = not applicable), and the message says which.
+     */
+    async applyCoupon(code) {
+      const same = (a) => a.toLowerCase() === code.toLowerCase();
+      if (this.appliedCodes().some(same)) {
+        this.couponMessage(this.dataset.labelCouponExists, code, 'error');
+        return;
+      }
+
+      const cart = await this.change({}, null, { discount: [...this.appliedCodes(), code].join(',') });
+      if (!cart) return;
+
+      const applied = Boolean((cart.discount_codes || []).find((entry) => same(entry.code))?.applicable);
+      this.couponMessage(applied ? this.dataset.labelCouponApplied : this.dataset.labelCouponInvalid, code, applied ? 'success' : 'error');
+      if (!applied) {
+        // Keep what they typed, so a typo can be fixed instead of retyped
+        const input = this.querySelector('[data-cart-coupon] [name="discount"]');
+        if (input) input.value = code;
+      }
+    }
+
+    removeCoupon(code) {
+      const rest = this.appliedCodes().filter((c) => c.toLowerCase() !== code.toLowerCase());
+      this.change({}, null, { discount: rest.join(',') });
+    }
+
+    /** Shows the coupon result under the field (and, for screen readers, in the live region) */
+    couponMessage(template, code, tone) {
+      const box = this.querySelector('[data-cart-coupon-message]');
+      const message = template.replace('[code]', code);
+      if (box) {
+        box.textContent = message;
+        box.dataset.tone = tone;
+        box.hidden = false;
+      }
+      this.announce(message);
     }
 
     onChange(event) {
@@ -649,8 +946,11 @@
     /**
      * updates = { lineKey: quantity, ... }. /cart/update.js accepts several lines at once and finds each
      * line by its key, so it works the same for one line or for "Remove selected".
+     * extra = other cart fields to send in the same request (e.g. { discount: 'A,B' }).
+     * Returns Shopify's cart JSON once the new cart is on the page, false if it failed or a newer
+     * change won.
      */
-    async change(updates, line) {
+    async change(updates, line, extra = {}) {
       const lines = line ? [line] : Object.keys(updates).map((key) => this.querySelector(`[data-line-key="${CSS.escape(key)}"]`));
       lines.forEach((el) => el?.classList.add('is-loading'));
       this.setAttribute('aria-busy', 'true');
@@ -666,18 +966,20 @@
         const response = await fetch(`${this.root}cart/update.js`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({ updates, sections, sections_url: window.location.pathname }),
+          body: JSON.stringify({ updates, ...extra, sections, sections_url: window.location.pathname }),
         });
         const data = await response.json();
         // Shopify explains a refused change (e.g. not enough stock) in "description" or "message"
         if (!response.ok) throw new Error(data.description || data.message || '');
-        if (requestId !== this.latestRequest) return; // a newer change is on its way; it will render
+        if (requestId !== this.latestRequest) return false; // a newer change is on its way; it will render
 
         this.render(data.sections, sections, header);
+        this.setCodes(data); // the fresh card only lists what Liquid sees; add e.g. free-shipping codes
         this.announce(this.dataset.labelUpdated);
         document.dispatchEvent(new CustomEvent('cart:updated', { detail: { cart: data } }));
+        return data;
       } catch (error) {
-        if (requestId !== this.latestRequest) return;
+        if (requestId !== this.latestRequest) return false;
         lines.forEach((el) => el?.classList.remove('is-loading'));
         const message = error?.message || this.dataset.labelError;
         const box = this.querySelector('[data-cart-error]');
@@ -686,6 +988,7 @@
           box.hidden = false;
         }
         this.announce(message);
+        return false;
       } finally {
         if (requestId === this.latestRequest) this.removeAttribute('aria-busy');
       }
@@ -771,6 +1074,13 @@
       "type": "checkbox",
       "id": "show_note",
       "label": "t:labels.show_cart_note",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_coupons",
+      "label": "t:labels.show_coupons",
+      "info": "t:labels.show_coupons_info",
       "default": true
     },
     {

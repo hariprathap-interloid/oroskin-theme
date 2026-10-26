@@ -45,7 +45,16 @@
     "tax_included": "Included",
     "total": "Total",
     "note_label": "Add a note to your order",
-    "proceed_to_checkout": "Proceed to checkout"
+    "proceed_to_checkout": "Proceed to checkout",
+    "coupons": "Coupons",
+    "coupon_label": "Coupon code",
+    "coupon_placeholder": "Enter coupon code",
+    "apply": "Apply",
+    "coupon_applied": "[code] applied",
+    "coupon_invalid": "[code] can't be used right now. It may have expired or reached its limit, or your cart may not qualify yet.",
+    "coupon_exists": "[code] is already applied",
+    "coupon_remove": "Remove code {{ code }}",
+    "coupon_at_checkout": "Applied at checkout"
   },
   "collections": {
     "title": "Collections"

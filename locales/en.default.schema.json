@@ -396,7 +396,9 @@
     "checkout": "Checkout",
     "show_express_checkout": "Show express checkout buttons",
     "show_express_checkout_info": "Shop Pay, PayPal, Apple Pay and others, for the payment methods turned on in Settings > Payments.",
-    "show_cart_note": "Let customers add a note to their order"
+    "show_cart_note": "Let customers add a note to their order",
+    "show_coupons": "Show the coupon field",
+    "show_coupons_info": "Customers can enter discount codes in the cart. Create the codes in Discounts."
   },
   "options": {
     "alignment": {
