@@ -22,9 +22,10 @@
     assign count = deck.products_count | at_most: limit
   endif
   # Each card's place in the fan: its offset from the middle (7 cards: -3 ... 3; 8 cards: -3.5 ... 3.5).
-  # The middle card (rounded down) starts active.
+  # The middle card starts active; with an even count, the one just right of the middle (Figma: 6
+  # cards, the 4th is in front).
   assign middle = count | minus: 1 | divided_by: 2.0
-  assign start = count | minus: 1 | divided_by: 2
+  assign start = count | divided_by: 2
 
   assign explore_url = section.settings.link
   if explore_url == blank and deck != blank
@@ -42,6 +43,7 @@
   style="--half: {{ middle }}; --card-ratio: {{ section.settings.card_height | divided_by: 100.0 }};--color-accent: {{ section.settings.highlight_color }}; --section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
   {% if fan %}
     data-fan
+    data-fan-style="{{ section.settings.fan_style }}"
   {% endif %}
 >
   <div class="product-deck__inner">
@@ -151,14 +153,8 @@
 
     {%- if section.settings.link_label != blank and explore_url != blank -%}
       <div class="product-deck__controls">
-        <a class="button product-deck__explore" href="{{ explore_url }}">
-          {{- section.settings.link_label | escape -}}
-          {%- comment -%} Second copy: the plane that parks in while the first one is still leaving {%- endcomment -%}
-          <span class="product-deck__explore-icon" aria-hidden="true">
-            {{- 'icon-send.svg' | inline_asset_content -}}
-            {{- 'icon-send.svg' | inline_asset_content -}}
-          </span>
-        </a>
+        {%- comment -%} Shared with the Button block's "Explore (animated)" style {%- endcomment -%}
+        {% render 'explore-button', label: section.settings.link_label, url: explore_url %}
       </div>
     {%- endif -%}
   </div>
@@ -252,8 +248,14 @@
   */
   .product-deck__stage {
     --fan: 1;
-    --card-w: clamp(14rem, 26cqi, 29rem);
-    --spread: min(13cqi, 38cqi / max(var(--half, 3), 1));
+    /*
+      Width and spread work together, because the outer cards lie on top (Figma): each step is 66% of
+      a card, so every inner card keeps about a third of itself visible between its neighbours. The
+      width shrinks with more cards so the outermost ones still end inside the row (half x step + half a
+      card <= 50%): 6 cards = 22cqi (the Figma ~420px at 1920), 7 = 20cqi, 8 = ~18cqi.
+    */
+    --card-w: clamp(12rem, min(22cqi, 50cqi / (var(--half, 3) * 0.66 + 0.55)), 26rem);
+    --spread: calc(var(--card-w) * 0.66);
     --drop: clamp(0.75rem, 1.6cqi, 2rem);
     --turn: 5deg;
     position: relative;
@@ -266,7 +268,8 @@
 
   .product-deck__list {
     position: relative;
-    block-size: calc(var(--card-w) * var(--card-ratio, 0.7) + clamp(9rem, 6rem + 6vw, 13rem));
+    /* Room under the cards for the details card, which hangs well below the front card (Figma) */
+    block-size: calc(var(--card-w) * var(--card-ratio, 0.7) + clamp(11rem, 7rem + 7vw, 16rem));
     margin: 0;
     padding: 0;
     list-style: none;
@@ -279,7 +282,8 @@
     position: absolute;
     inset-block-start: var(--space-md);
     inset-inline-start: 50%;
-    z-index: calc(10 - round(down, var(--d), 1));
+    /* Figma: the outer cards lie on top of the inner ones (the rose card over the serum card) */
+    z-index: calc(10 + round(down, var(--d), 1));
     inline-size: var(--card-w);
     aspect-ratio: 1 / var(--card-ratio, 0.7); /* Card height setting: height / width, 0.7 = the Figma 10 : 7 */
     margin-inline-start: calc(var(--card-w) / -2);
@@ -291,10 +295,10 @@
     transition: transform 0.45s var(--ease-out);
   }
 
-  /* The active card: in its own place and tilt, on top and a little bigger (Figma) */
+  /* The active card: in its own place and tilt, on top and clearly bigger (Figma: about +12%) */
   .product-deck__card.is-active {
     z-index: 20;
-    transform: translate(var(--x), var(--y)) rotate(var(--r)) scale(calc(1 + 0.08 * var(--fan)));
+    transform: translate(var(--x), var(--y)) rotate(var(--r)) scale(calc(1 + 0.12 * var(--fan)));
   }
 
   .product-deck__media {
@@ -362,7 +366,7 @@
   }
 
   /*
-    The glass info card: hangs off the bottom of the active card (Figma), centred and 6% narrower than
+    The glass info card: hangs low off the bottom of the active card (Figma), centred and 6% narrower than
     the card on each side, so it never pokes out sideways. Hidden (and out of the tab order) on the
     other cards.
     Figma Glass: Frost 100 = the theme's 35px blur, so the product image shows through as a soft tint at
@@ -372,7 +376,7 @@
   */
   .product-deck__info {
     position: absolute;
-    inset-block-start: 66%;
+    inset-block-start: 76%; /* Figma: starts about three quarters down the card and hangs below it */
     inset-inline: 6%;
     z-index: 4;
     display: flex;
@@ -468,133 +472,7 @@
     block-size: auto;
   }
 
-  /*
-    "Explore all" (Figma hover animation): at rest a solid gold pill with white text (a gold circle,
-    ::before, 250% of the width so its radius covers the far corner, fills the pale glass pill). On hover
-    it turns into the pale secondary pill at once (circle at scale 0, gold text), then the circle grows
-    from the left edge until it is full again and the text goes back to white. Meanwhile the paper plane
-    turns to point straight right, flies off, then parks: in from outside the bottom left of the button.
-    The animations end on the rest look, so mouse-out changes nothing.
-  */
-  .product-deck__explore {
-    position: relative;
-    isolation: isolate;
-    overflow: hidden;
-    gap: 0.75rem;
-    min-block-size: 3.5rem;
-    padding-inline: 2.25rem;
-    border-color: var(--color-accent);
-    background-color: color-mix(in srgb, var(--color-accent) 14%, var(--color-background));
-    box-shadow: var(--glass-shadow), var(--glass-rim);
-    color: #ffffff;
-  }
-
-  .product-deck__explore::before {
-    content: "";
-    position: absolute;
-    inset-block-start: 50%;
-    inset-inline-start: 0;
-    z-index: -1;
-    inline-size: 250%;
-    aspect-ratio: 1;
-    border-radius: 50%;
-    background-color: var(--color-accent);
-    transform: translate(-50%, -50%) scale(1);
-  }
-
-  .product-deck__explore:hover,
-  .product-deck__explore:focus-visible {
-    background-color: color-mix(in srgb, var(--color-accent) 14%, var(--color-background));
-    box-shadow: var(--glass-shadow), var(--glass-rim);
-    animation: product-deck-explore-text 0.8s var(--ease-out) 0.25s backwards;
-  }
-
-  /*
-    The fill waits 0.25s (the plane's turn, see product-deck-plane-out) and starts as the plane starts moving.
-    "backwards" holds the "from" look (pale, no fill) during that wait.
-  */
-  .product-deck__explore:hover::before,
-  .product-deck__explore:focus-visible::before {
-    animation: product-deck-explore-fill 0.8s var(--ease-out) 0.25s backwards;
-  }
-
-  /* Gold text while the pill is pale, white once the fill has passed under it */
-  @keyframes product-deck-explore-text {
-    from {
-      color: var(--color-accent);
-    }
-  }
-
-  /* From the secondary look (no fill) back to the full gold fill, growing from the left edge */
-  @keyframes product-deck-explore-fill {
-    from {
-      transform: translate(-50%, -50%) scale(0);
-    }
-  }
-
-  /* Both planes share one grid cell, so the second rests exactly where the first does */
-  .product-deck__explore-icon {
-    display: grid;
-  }
-
-  .product-deck__explore-icon svg {
-    display: block;
-    grid-area: 1 / 1;
-    inline-size: 1.2em;
-    block-size: auto;
-  }
-
-  /* The parking plane waits outside the bottom-left of the button (Figma position), clipped by overflow: hidden */
-  .product-deck__explore-icon svg + svg {
-    transform: translate(-2.1em, 2.5em);
-  }
-
-  /*
-    Plane 1 (0 - 0.6s): turns 35deg (the icon points up-right, so it now points straight right) in
-    0.24s, then flies right until the button's edge has cut it off (4em clears the padding); no fade.
-    Plane 2 (0.45 - 0.95s): starts parking just before plane 1 is gone, flies in diagonally, overshoots
-    a little and settles. Both end where the rest state puts the other one, so mouse-out is invisible.
-  */
-  .product-deck__explore:hover .product-deck__explore-icon svg:first-child,
-  .product-deck__explore:focus-visible .product-deck__explore-icon svg:first-child {
-    animation: product-deck-plane-out 0.6s ease-in forwards;
-  }
-
-  .product-deck__explore:hover .product-deck__explore-icon svg + svg,
-  .product-deck__explore:focus-visible .product-deck__explore-icon svg + svg {
-    animation: product-deck-plane-park 0.5s var(--ease-out) 0.45s forwards;
-  }
-
-  @keyframes product-deck-plane-out {
-    40% {
-      transform: rotate(35deg);
-    }
-
-    100% {
-      transform: translateX(4em) rotate(35deg);
-    }
-  }
-
-  @keyframes product-deck-plane-park {
-    70% {
-      transform: translate(0.1em, -0.12em);
-    }
-
-    100% {
-      transform: none;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .product-deck__explore:hover,
-    .product-deck__explore:focus-visible,
-    .product-deck__explore:hover::before,
-    .product-deck__explore:focus-visible::before,
-    .product-deck__explore:hover .product-deck__explore-icon svg,
-    .product-deck__explore:focus-visible .product-deck__explore-icon svg {
-      animation: none;
-    }
-  }
+  /* "Explore all": snippets/explore-button.liquid (shared with the Button block) */
 
   .product-deck__controls {
     display: flex;
@@ -623,6 +501,11 @@
       --turn: 6deg;
     }
 
+    /* Phones: the big cards overlap too much for the Figma order, so the inner cards lie on top */
+    .product-deck__card {
+      z-index: calc(10 - round(down, var(--d), 1));
+    }
+
     .product-deck__info {
       inset-inline: 4%;
     }
@@ -633,8 +516,11 @@
   /**
    * <product-deck>: makes a card active (class is-active) when the mouse moves onto it, or when it is
    * tapped or reached with Tab; the active card stays until another one is picked. With data-fan, it
-   * also fans the cards out while the section scrolls into view (--fan-progress 0 -> 1, smoothed like
-   * the Image banner scene). The cards' places never change: only which one is in front.
+   * also fans the cards out (--fan-progress 0 -> 1), in one of two ways (setting "How the cards fan out"):
+   * - scroll: follows the scroll while the section comes into view (smoothed like the Image banner
+   *   scene), and folds back if the visitor scrolls up
+   * - auto: plays once by itself (about 1.2s) when the deck is a third on screen, then stays open
+   * The cards' places never change: only which one is in front.
    */
   class ProductDeck extends HTMLElement {
     connectedCallback() {
@@ -651,7 +537,11 @@
       });
 
       if (this.hasAttribute('data-fan') && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        this.startFan();
+        if (this.dataset.fanStyle === 'auto') {
+          this.startAutoFan();
+        } else {
+          this.startFan();
+        }
       }
     }
 
@@ -659,6 +549,36 @@
       this.observer?.disconnect();
       this.stopListening();
       clearTimeout(this.movingTimer);
+      if (this.playFrame) cancelAnimationFrame(this.playFrame);
+    }
+
+    /** "Play once": stacked until a third of the deck is on screen, then fans out by itself and stays */
+    startAutoFan() {
+      this.setAttribute('data-fan-active', '');
+      this.current = 0;
+      this.paint();
+      this.observer = new IntersectionObserver(
+        ([entry]) => {
+          if (!entry.isIntersecting) return;
+          this.observer.disconnect(); // once per page view
+          this.play();
+        },
+        { threshold: 0.35 }
+      );
+      this.observer.observe(this.list);
+    }
+
+    /** 0 -> 1 over 1.2s, fast at first and gently settling (ease-out cubic), one step per frame */
+    play() {
+      const duration = 1200;
+      const start = performance.now();
+      const frame = (now) => {
+        const t = Math.min((now - start) / duration, 1);
+        this.current = 1 - Math.pow(1 - t, 3);
+        this.paint();
+        this.playFrame = t < 1 ? requestAnimationFrame(frame) : null;
+      };
+      this.playFrame = requestAnimationFrame(frame);
     }
 
     /** The other cards' info and cart button are visibility: hidden (CSS), so Tab skips them */
@@ -801,6 +721,17 @@
       "label": "t:labels.deck_fan_on_scroll",
       "info": "t:labels.deck_fan_on_scroll_info",
       "default": true
+    },
+    {
+      "type": "select",
+      "id": "fan_style",
+      "label": "t:labels.deck_fan_style",
+      "options": [
+        { "value": "scroll", "label": "t:options.deck_fan_style.scroll" },
+        { "value": "auto", "label": "t:options.deck_fan_style.auto" }
+      ],
+      "default": "scroll",
+      "visible_if": "{{ section.settings.fan_on_scroll }}"
     },
     {
       "type": "range",

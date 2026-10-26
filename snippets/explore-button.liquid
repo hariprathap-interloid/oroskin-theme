@@ -1,0 +1,171 @@
+{% doc %}
+  The Figma "Explore all" button (New Arrivals): a solid accent-colour pill with white text and a paper
+  plane. On hover it turns pale for a moment, the colour fills it again from the left, and the plane
+  flies off to the right while a second plane parks in from the bottom left.
+
+  Used by the New Arrivals deck (Explore all) and by the Button block's "Explore (animated)" style, so
+  both always look and move the same. The colour is the section's accent (--color-accent).
+
+  @param {string} label - Button text
+  @param {string} [url] - Link. Without one the button shows but is marked disabled (theme editor)
+  @param {boolean} [new_tab] - Open the link in a new tab
+  @param {string} [class] - Extra classes on the link (e.g. the Button block's alignment)
+  @param {string} [attributes] - Extra attributes, e.g. block.shopify_attributes
+
+  @example
+  {% render 'explore-button', label: section.settings.link_label, url: explore_url %}
+{% enddoc %}
+
+<a
+  class="button explore-button {{ class }}"
+  {% if url != blank %}
+    href="{{ url }}"
+    {% if new_tab %}
+      target="_blank" rel="noopener"
+    {% endif %}
+  {% else %}
+    role="link"
+    aria-disabled="true"
+  {% endif %}
+  {{ attributes }}
+>
+  {{- label | escape -}}
+  {%- if new_tab and url != blank -%}
+    <span class="visually-hidden"> ({{ 'accessibility.new_window' | t }})</span>
+  {%- endif -%}
+  {%- comment -%} Second copy: the plane that parks in while the first one is still leaving {%- endcomment -%}
+  <span class="explore-button__icon" aria-hidden="true">
+    {{- 'icon-send.svg' | inline_asset_content -}}
+    {{- 'icon-send.svg' | inline_asset_content -}}
+  </span>
+</a>
+
+{% stylesheet %}
+  /*
+    At rest: a solid accent pill with white text (a circle, ::before, 250% of the width so its radius
+    covers the far corner, fills the pale glass pill). On hover it turns into the pale pill at once
+    (circle at scale 0, accent text), then the circle grows from the left edge until it is full again
+    and the text goes back to white. Meanwhile the paper plane turns to point straight right, flies off,
+    then parks: in from outside the bottom left of the button. The animations end on the rest look, so
+    mouse-out changes nothing.
+  */
+  .explore-button {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    gap: 0.75rem;
+    min-block-size: 3.5rem;
+    padding-inline: 2.25rem;
+    border-color: var(--color-accent);
+    background-color: color-mix(in srgb, var(--color-accent) 14%, var(--color-background));
+    box-shadow: var(--glass-shadow), var(--glass-rim);
+    color: #ffffff;
+  }
+
+  .explore-button::before {
+    content: "";
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 0;
+    z-index: -1;
+    inline-size: 250%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background-color: var(--color-accent);
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  .explore-button:hover,
+  .explore-button:focus-visible {
+    background-color: color-mix(in srgb, var(--color-accent) 14%, var(--color-background));
+    box-shadow: var(--glass-shadow), var(--glass-rim);
+    animation: explore-button-text 0.8s var(--ease-out) 0.25s backwards;
+  }
+
+  /*
+    The fill waits 0.25s (the plane's turn, see explore-button-plane-out) and starts as the plane starts
+    moving. "backwards" holds the "from" look (pale, no fill) during that wait.
+  */
+  .explore-button:hover::before,
+  .explore-button:focus-visible::before {
+    animation: explore-button-fill 0.8s var(--ease-out) 0.25s backwards;
+  }
+
+  /* Accent text while the pill is pale, white once the fill has passed under it */
+  @keyframes explore-button-text {
+    from {
+      color: var(--color-accent);
+    }
+  }
+
+  /* From the pale look (no fill) back to the full fill, growing from the left edge */
+  @keyframes explore-button-fill {
+    from {
+      transform: translate(-50%, -50%) scale(0);
+    }
+  }
+
+  /* Both planes share one grid cell, so the second rests exactly where the first does */
+  .explore-button__icon {
+    display: grid;
+  }
+
+  .explore-button__icon svg {
+    display: block;
+    grid-area: 1 / 1;
+    inline-size: 1.2em;
+    block-size: auto;
+  }
+
+  /* The parking plane waits outside the bottom-left of the button (Figma position), clipped by overflow: hidden */
+  .explore-button__icon svg + svg {
+    transform: translate(-2.1em, 2.5em);
+  }
+
+  /*
+    Plane 1 (0 - 0.6s): turns 35deg (the icon points up-right, so it now points straight right) in
+    0.24s, then flies right until the button's edge has cut it off (4em clears the padding); no fade.
+    Plane 2 (0.45 - 0.95s): starts parking just before plane 1 is gone, flies in diagonally, overshoots
+    a little and settles. Both end where the rest state puts the other one, so mouse-out is invisible.
+  */
+  .explore-button:hover .explore-button__icon svg:first-child,
+  .explore-button:focus-visible .explore-button__icon svg:first-child {
+    animation: explore-button-plane-out 0.6s ease-in forwards;
+  }
+
+  .explore-button:hover .explore-button__icon svg + svg,
+  .explore-button:focus-visible .explore-button__icon svg + svg {
+    animation: explore-button-plane-park 0.5s var(--ease-out) 0.45s forwards;
+  }
+
+  @keyframes explore-button-plane-out {
+    40% {
+      transform: rotate(35deg);
+    }
+
+    100% {
+      transform: translateX(4em) rotate(35deg);
+    }
+  }
+
+  @keyframes explore-button-plane-park {
+    70% {
+      transform: translate(0.1em, -0.12em);
+    }
+
+    100% {
+      transform: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .explore-button:hover,
+    .explore-button:focus-visible,
+    .explore-button:hover::before,
+    .explore-button:focus-visible::before,
+    .explore-button:hover .explore-button__icon svg,
+    .explore-button:focus-visible .explore-button__icon svg {
+      animation: none;
+    }
+  }
+{% endstylesheet %}

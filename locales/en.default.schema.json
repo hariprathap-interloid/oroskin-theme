@@ -368,10 +368,23 @@
     "deck_badge_info": "Shown on every card, e.g. \"New\". Leave empty to hide it.",
     "deck_buy_label": "Card button label",
     "deck_buy_label_info": "The button on the front card; opens the product page. Leave empty to hide it.",
-    "deck_fan_on_scroll": "Fan out the cards on scroll",
-    "deck_fan_on_scroll_info": "The cards start as a stack and spread out as the section scrolls in. Off, or with animations off in Theme settings, the fan is always open.",
+    "deck_fan_on_scroll": "Fan out the cards",
+    "deck_fan_on_scroll_info": "The cards start as a stack and spread out into an arc. Off, or with animations off in Theme settings, the fan is always open.",
     "deck_card_height": "Card height",
-    "deck_card_height_info": "Height of each product card as a percentage of its width. 70% is a wide card, 100% a square, above 100% a tall card."
+    "deck_card_height_info": "Height of each product card as a percentage of its width. 70% is a wide card, 100% a square, above 100% a tall card.",
+    "sheet_scene_style": "Trending sheet transition",
+    "sheet_scene_style_info": "Only with \"Show the Trending sheet\" on. Sideways: the banner text slides left and the list comes in from the left. Vertical: the banner text slides up and the list rises from the bottom.",
+    "sheet_header_slide": "Slide in the heading and \"View all\"",
+    "sheet_header_slide_info": "Only with the Trending sheet on. Once the list is in place, the heading slides in from the left edge and \"View all\" from the right edge.",
+    "story_card_shape": "Card shape",
+    "story_size": "Shape",
+    "story_size_info": "Automatic keeps the design's mosaic (1st featured, 2nd and 3rd small, 4th portrait). Choosing a shape on any story, or adding more than 4 stories, switches to free shapes: cards fill the rows in order. Tip: Featured, Small, Portrait, Small rebuilds the design.",
+    "story_hover_zoom": "Hover zoom",
+    "story_zoom": "Zoom amount",
+    "story_zoom_info": "How much the photo grows when the visitor points at the card. 100% = no zoom.",
+    "story_zoom_point": "Zoom towards",
+    "story_zoom_point_info": "Image focal point: drag it on the image itself (Custom image > Edit), e.g. onto a face. Or pick a direction. While this story is selected, the preview stays zoomed and a dot shows the point.",
+    "deck_fan_style": "How the cards fan out"
   },
   "options": {
     "alignment": {
@@ -462,7 +475,8 @@
       "primary": "Primary (red pill)",
       "secondary": "Secondary (outline pill)",
       "text": "Text link",
-      "glass": "Glass"
+      "glass": "Glass",
+      "explore": "Explore (animated, like New Arrivals)"
     },
     "vertical_alignment": {
       "top": "Top",
@@ -617,6 +631,33 @@
       "40": "40 / 60",
       "45": "45 / 55",
       "50": "50 / 50"
+    },
+    "sheet_scene_style": {
+      "sideways": "Sideways",
+      "vertical": "Vertical"
+    },
+    "story_size": {
+      "auto": "Automatic (design mosaic)",
+      "featured": "Featured (large, with excerpt)",
+      "landscape": "Landscape (wide)",
+      "small": "Small",
+      "portrait": "Portrait (tall)"
+    },
+    "story_zoom_point": {
+      "focal": "Image focal point",
+      "top_left": "↖ Top left",
+      "top": "↑ Top",
+      "top_right": "↗ Top right",
+      "left": "← Left",
+      "center": "• Centre",
+      "right": "→ Right",
+      "bottom_left": "↙ Bottom left",
+      "bottom": "↓ Bottom",
+      "bottom_right": "↘ Bottom right"
+    },
+    "deck_fan_style": {
+      "scroll": "Follow the scroll",
+      "auto": "Play once when the section appears"
     }
   },
   "color_scheme": {
