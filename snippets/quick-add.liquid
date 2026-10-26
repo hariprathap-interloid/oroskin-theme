@@ -77,8 +77,8 @@
     class="quick-add {{ class }}"
     style="{{ quick_add_style }}"
     data-variant-id="{{ variant.id }}"
-    data-label-added="{{ 'products.quick_add.added' | t: title: add_name | escape }}"
-    data-label-error="{{ 'products.quick_add.error' | t | escape }}"
+    data-label-added="{{ 'products.quick_add.added' | t: title: add_name }}"
+    data-label-error="{{ 'products.quick_add.error' | t }}"
   >
     {%- form 'product', product, class: 'quick-add__form' -%}
       <input type="hidden" name="id" value="{{ variant.id }}">

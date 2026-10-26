@@ -17,6 +17,8 @@
 {% enddoc %}
 
 {%- liquid
+  # Escaped copy for printing; t filters get item.product.title (t escapes its own output, so an
+  # escaped title would show as &amp;#39; etc.)
   assign title = item.product.title | escape
   assign on_sale = false
   if item.original_line_price > item.final_line_price
@@ -27,7 +29,7 @@
 <li class="cart-item" data-line-key="{{ item.key }}" data-index="{{ index }}">
   <label class="cart-item__select">
     <input class="cart-item__checkbox" type="checkbox" value="{{ item.key }}" data-cart-select data-cart-focus="select-{{ item.key }}">
-    <span class="visually-hidden">{{ 'cart.select_item' | t: title: title }}</span>
+    <span class="visually-hidden">{{ 'cart.select_item' | t: title: item.product.title }}</span>
   </label>
 
   <a class="cart-item__media" href="{{ item.url }}" tabindex="-1" aria-hidden="true">
@@ -127,11 +129,11 @@
         class="cart-item__step"
         data-cart-step="-1"
         data-cart-focus="minus-{{ item.key }}"
-        aria-label="{{ 'cart.decrease' | t: title: title }}"
+        aria-label="{{ 'cart.decrease' | t: title: item.product.title }}"
       >
         {{- 'icon-minus.svg' | inline_asset_content -}}
       </button>
-      <label class="visually-hidden" for="CartQuantity-{{ index }}">{{ 'cart.quantity_for' | t: title: title }}</label>
+      <label class="visually-hidden" for="CartQuantity-{{ index }}">{{ 'cart.quantity_for' | t: title: item.product.title }}</label>
       <input
         class="cart-item__input"
         id="CartQuantity-{{ index }}"
@@ -148,7 +150,7 @@
         class="cart-item__step"
         data-cart-step="1"
         data-cart-focus="plus-{{ item.key }}"
-        aria-label="{{ 'cart.increase' | t: title: title }}"
+        aria-label="{{ 'cart.increase' | t: title: item.product.title }}"
       >
         {{- 'icon-plus.svg' | inline_asset_content -}}
       </button>
@@ -158,7 +160,7 @@
       class="cart-item__remove"
       href="{{ item.url_to_remove }}"
       data-cart-remove
-      aria-label="{{ 'cart.remove_item' | t: title: title }}"
+      aria-label="{{ 'cart.remove_item' | t: title: item.product.title }}"
     >
       {{- 'icon-trash.svg' | inline_asset_content -}}
     </a>

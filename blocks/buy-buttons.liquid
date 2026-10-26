@@ -30,9 +30,9 @@
 {%- if buy_product != blank -%}
   <buy-buttons
     class="buy-buttons"
-    data-label-add="{{ 'products.add_to_cart' | t | escape }}"
-    data-label-sold-out="{{ 'products.sold_out' | t | escape }}"
-    data-label-unavailable="{{ 'products.unavailable' | t | escape }}"
+    data-label-add="{{ 'products.add_to_cart' | t }}"
+    data-label-sold-out="{{ 'products.sold_out' | t }}"
+    data-label-unavailable="{{ 'products.unavailable' | t }}"
     {{ block.shopify_attributes }}
   >
     {%- form 'product', buy_product, class: 'buy-buttons__form' -%}
@@ -99,7 +99,7 @@
             type="button"
             class="buy-buttons__step"
             data-step="-1"
-            aria-label="{{ 'products.quantity_decrease' | t | escape }}"
+            aria-label="{{ 'products.quantity_decrease' | t }}"
           >
             &minus;
           </button>
@@ -117,7 +117,7 @@
             type="button"
             class="buy-buttons__step"
             data-step="1"
-            aria-label="{{ 'products.quantity_increase' | t | escape }}"
+            aria-label="{{ 'products.quantity_increase' | t }}"
           >
             +
           </button>
