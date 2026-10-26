@@ -653,6 +653,102 @@
         "scene_rotate_3": -8
       }
     },
+    "product_deck_rxUqxi": {
+      "type": "product-deck",
+      "name": "t:general.new_arrivals",
+      "settings": {
+        "eyebrow": "Just landed",
+        "heading": "New <em>Arrivals</em>",
+        "pill": "Fresh this week",
+        "link_label": "Explore all",
+        "link": "shopify://collections",
+        "collection": "new-arrivals",
+        "products_to_show": 7,
+        "badge": "New",
+        "buy_label": "Buy now",
+        "fan_on_scroll": true,
+        "fan_style": "auto",
+        "card_height": 85,
+        "cart_size": "50",
+        "cart_icon_color": "#ffffff",
+        "cart_options": "add_first",
+        "section_width": "widest",
+        "color_scheme": "",
+        "highlight_color": "#c8a24b",
+        "padding_top": 128,
+        "padding_bottom": 128
+      }
+    },
+    "blog_stories_JzWXeh": {
+      "type": "blog-stories",
+      "blocks": {
+        "story_w33YmJ": {
+          "type": "story",
+          "settings": {
+            "article": "featured/the-art-of-the-morning-ritual",
+            "category": "",
+            "pill_label": "Featured story",
+            "size": "auto",
+            "zoom": 144,
+            "zoom_point": "top-left"
+          }
+        },
+        "story_xLafmm": {
+          "type": "story",
+          "settings": {
+            "article": "featured/scent-as-memory",
+            "category": "",
+            "pill_label": "",
+            "size": "auto",
+            "zoom": 140,
+            "zoom_point": "top"
+          }
+        },
+        "story_eBQny4": {
+          "type": "story",
+          "settings": {
+            "article": "featured/the-skin-moisturizer",
+            "category": "",
+            "pill_label": "",
+            "size": "auto",
+            "zoom": 112,
+            "zoom_point": "focal"
+          }
+        },
+        "story_Xjg6LA": {
+          "type": "story",
+          "settings": {
+            "article": "featured/pure-matte-lipstick",
+            "category": "",
+            "pill_label": "",
+            "size": "auto",
+            "zoom": 112,
+            "zoom_point": "focal"
+          }
+        }
+      },
+      "block_order": [
+        "story_w33YmJ",
+        "story_xLafmm",
+        "story_eBQny4",
+        "story_Xjg6LA"
+      ],
+      "name": "t:general.blog_stories",
+      "settings": {
+        "eyebrow": "Beauty rituals",
+        "heading": "<em>Stories of</em> Transformation",
+        "link_label": "View journal",
+        "link": "",
+        "blog": "featured",
+        "layout": "featured-left",
+        "section_width": "widest",
+        "color_scheme": "",
+        "highlight_color": "#c8a24b",
+        "animation": "slide-bottom",
+        "padding_top": 96,
+        "padding_bottom": 96
+      }
+    },
     "image_banner_JWCLdE": {
       "type": "image-banner",
       "blocks": {
@@ -714,7 +810,7 @@
                 "label": "Read the editorial",
                 "link": "shopify://blogs/featured",
                 "new_tab": false,
-                "style": "primary",
+                "style": "explore",
                 "show_arrow": true,
                 "alignment": "left"
               },
@@ -733,7 +829,7 @@
           "static": true,
           "settings": {
             "radius": 24,
-            "animation": "slide-right",
+            "animation": "slide-left",
             "duration": 900,
             "stagger": 150
           },
@@ -802,7 +898,9 @@
         "overlay_opacity": 80,
         "section_width": "widest",
         "color_scheme": "scheme-5",
-        "animation": "fade-up",
+        "animation": "slide-right",
+        "scene_style": "vertical",
+        "header_slide": true,
         "padding_top": 120,
         "padding_bottom": 120
       }
@@ -877,64 +975,6 @@
         "height": "full",
         "section_width": "widest",
         "split": "40",
-        "color_scheme": "",
-        "highlight_color": "#c8a24b",
-        "animation": "fade-up",
-        "padding_top": 96,
-        "padding_bottom": 96
-      }
-    },
-    "blog_stories_JzWXeh": {
-      "type": "blog-stories",
-      "blocks": {
-        "story_w33YmJ": {
-          "type": "story",
-          "settings": {
-            "article": "featured/the-art-of-the-morning-ritual",
-            "category": "",
-            "pill_label": "Featured story"
-          }
-        },
-        "story_xLafmm": {
-          "type": "story",
-          "settings": {
-            "article": "featured/scent-as-memory",
-            "category": "",
-            "pill_label": ""
-          }
-        },
-        "story_eBQny4": {
-          "type": "story",
-          "settings": {
-            "article": "featured/the-skin-moisturizer",
-            "category": "",
-            "pill_label": ""
-          }
-        },
-        "story_Xjg6LA": {
-          "type": "story",
-          "settings": {
-            "article": "featured/pure-matte-lipstick",
-            "category": "",
-            "pill_label": ""
-          }
-        }
-      },
-      "block_order": [
-        "story_w33YmJ",
-        "story_xLafmm",
-        "story_eBQny4",
-        "story_Xjg6LA"
-      ],
-      "name": "t:general.blog_stories",
-      "settings": {
-        "eyebrow": "Beauty rituals",
-        "heading": "<em>Stories of</em> Transformation",
-        "link_label": "View journal",
-        "link": "",
-        "blog": "featured",
-        "layout": "featured-left",
-        "section_width": "widest",
         "color_scheme": "",
         "highlight_color": "#c8a24b",
         "animation": "fade-up",
@@ -1041,6 +1081,8 @@
         "section_width": "widest",
         "color_scheme": "scheme-5",
         "animation": "fade-up",
+        "scene_style": "sideways",
+        "header_slide": true,
         "padding_top": 120,
         "padding_bottom": 120
       }
@@ -1106,42 +1148,17 @@
         "padding_top": 80,
         "padding_bottom": 80
       }
-    },
-    "product_deck_rxUqxi": {
-      "type": "product-deck",
-      "name": "t:general.new_arrivals",
-      "settings": {
-        "eyebrow": "Just landed",
-        "heading": "New <em>Arrivals</em>",
-        "pill": "Fresh this week",
-        "link_label": "Explore all",
-        "link": "shopify://collections",
-        "collection": "automated-collection",
-        "products_to_show": 7,
-        "badge": "New",
-        "buy_label": "Buy now",
-        "fan_on_scroll": true,
-        "card_height": 85,
-        "cart_size": "50",
-        "cart_icon_color": "#ffffff",
-        "cart_options": "add_first",
-        "section_width": "widest",
-        "color_scheme": "",
-        "highlight_color": "#c8a24b",
-        "padding_top": 96,
-        "padding_bottom": 96
-      }
     }
   },
   "order": [
     "hero_ceiA99",
     "product_panels_iTjtDf",
     "scrolling_showcase_kj7qC7",
+    "product_deck_rxUqxi",
+    "blog_stories_JzWXeh",
     "image_banner_JWCLdE",
     "testimonials_ExrT4N",
-    "blog_stories_JzWXeh",
     "image_banner_8GrUnC",
-    "icon_features_fEU3xe",
-    "product_deck_rxUqxi"
+    "icon_features_fEU3xe"
   ]
 }
