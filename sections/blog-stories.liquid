@@ -1,7 +1,9 @@
 {%- comment -%}
   Blog stories (Figma "Stories of Transformation"): an eyebrow, a heading and a "View journal" link
-  above up to 4 story cards in the Figma mosaic: a wide featured story, two stories stacked in the
-  middle, a tall story at the end. Layout "Featured right" mirrors it.
+  above story cards. With 4 stories on "Automatic": the Figma mosaic (a wide featured story, two
+  stories stacked in the middle, a tall story at the end; Layout "Featured right" mirrors it). Any
+  number of stories can be added; with more than 4, or once a story picks its own Shape, a free grid
+  takes over (see grid_mode below).
 
   Where the stories come from (both work together):
   - Blog: the newest articles of the chosen blog fill the places automatically.
@@ -49,6 +51,21 @@
   if section.index == 1
     assign animation = 'none'
   endif
+
+  # Card shapes: as long as every Story block is on "Automatic", the Figma mosaic is used (Layout
+  # setting). As soon as one block picks its own shape, the grid switches to "custom": a 12-column grid
+  # where each card takes its shape's space and the cards pack in order, filling gaps.
+  # More than 4 stories don't fit the 4-place mosaic either, so they use the custom grid too.
+  assign grid_mode = section.settings.layout
+  if section.blocks.size > 4
+    assign grid_mode = 'custom'
+  endif
+  for block in section.blocks
+    if block.settings.size != blank and block.settings.size != 'auto'
+      assign grid_mode = 'custom'
+      break
+    endif
+  endfor
 -%}
 
 <div
@@ -75,7 +92,7 @@
 
     <animate-on-scroll>
       <ul
-        class="blog-stories__grid blog-stories__grid--{{ section.settings.layout }}"
+        class="blog-stories__grid blog-stories__grid--{{ grid_mode }}"
         role="list"
         {% if animation != 'none' %}
           data-animate="{{ animation }}"
@@ -87,7 +104,7 @@
               # Pinned article, or else the next newest blog article that isn't pinned or already shown
               assign story = block.settings.article
               if story == blank and stories_blog != blank
-                for candidate in stories_blog.articles limit: 12
+                for candidate in stories_blog.articles limit: 50
                   assign mark = '|' | append: candidate.handle | append: '|'
                   if pinned contains mark or used contains mark
                     continue
@@ -99,12 +116,77 @@
               if story != blank
                 assign used = used | append: story.handle | append: '|'
               endif
+
+              # "Automatic" shape. In the mosaic: 1 featured, 4 portrait, the others small (the mosaic
+              # CSS places them). In the custom grid: the repeating pattern Featured, Small, Portrait,
+              # Small, which packs into the same mosaic band every 4 stories, so 8 or 12 stories still
+              # look designed.
+              assign card_size = block.settings.size
+              if card_size == blank or card_size == 'auto'
+                if grid_mode == 'custom'
+                  assign pattern_place = forloop.index0 | modulo: 4
+                  case pattern_place
+                    when 0
+                      assign card_size = 'featured'
+                    when 2
+                      assign card_size = 'portrait'
+                    else
+                      assign card_size = 'small'
+                  endcase
+                else
+                  case forloop.index
+                    when 1
+                      assign card_size = 'featured'
+                    when 4
+                      assign card_size = 'portrait'
+                    else
+                      assign card_size = 'small'
+                  endcase
+                endif
+              endif
+
+              # Zoom point in % (x, y): one of the 9 arrow positions, or blank = the image's focal point
+              assign zoom_x = blank
+              assign zoom_y = blank
+              case block.settings.zoom_point
+                when 'top-left'
+                  assign zoom_x = 15
+                  assign zoom_y = 15
+                when 'top'
+                  assign zoom_x = 50
+                  assign zoom_y = 15
+                when 'top-right'
+                  assign zoom_x = 85
+                  assign zoom_y = 15
+                when 'left'
+                  assign zoom_x = 15
+                  assign zoom_y = 50
+                when 'center'
+                  assign zoom_x = 50
+                  assign zoom_y = 50
+                when 'right'
+                  assign zoom_x = 85
+                  assign zoom_y = 50
+                when 'bottom-left'
+                  assign zoom_x = 15
+                  assign zoom_y = 85
+                when 'bottom'
+                  assign zoom_x = 50
+                  assign zoom_y = 85
+                when 'bottom-right'
+                  assign zoom_x = 85
+                  assign zoom_y = 85
+              endcase
             -%}
             {% render 'story-card',
               article: story,
               image: block.settings.image,
               category: block.settings.category,
               pill_label: block.settings.pill_label,
+              size: card_size,
+              zoom: block.settings.zoom,
+              zoom_x: zoom_x,
+              zoom_y: zoom_y,
               attributes: block.shopify_attributes
             %}
           {%- endfor -%}
@@ -112,11 +194,15 @@
           {%- for story in stories_blog.articles limit: 4 -%}
             {%- liquid
               assign pill = ''
+              assign card_size = 'small'
               if forloop.first
                 assign pill = 'sections.blog_stories.featured' | t
+                assign card_size = 'featured'
+              elsif forloop.index == 4
+                assign card_size = 'portrait'
               endif
             -%}
-            {% render 'story-card', article: story, pill_label: pill %}
+            {% render 'story-card', article: story, pill_label: pill, size: card_size %}
           {%- endfor -%}
         {%- endif -%}
       </ul>
@@ -211,7 +297,20 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .blog-stories__card:first-child {
+    .blog-stories__card--featured {
+      grid-row: span 2;
+    }
+
+    /* Custom shapes on tablets: two columns, cards pack in order and fill gaps */
+    .blog-stories__grid--custom {
+      grid-auto-flow: row dense;
+    }
+
+    .blog-stories__grid--custom .blog-stories__card--landscape {
+      grid-column: span 2;
+    }
+
+    .blog-stories__grid--custom .blog-stories__card--portrait {
       grid-row: span 2;
     }
   }
@@ -248,6 +347,24 @@
     .blog-stories__grid--featured-right .blog-stories__card:nth-child(2) { grid-area: 1 / 2 / 2 / 3; }
     .blog-stories__grid--featured-right .blog-stories__card:nth-child(3) { grid-area: 2 / 2 / 3 / 3; }
     .blog-stories__grid--featured-right .blog-stories__card:nth-child(4) { grid-area: 1 / 1 / 3 / 2; }
+
+    /*
+      Custom (a Story block picked its own shape): 12 columns, rows as tall as the mosaic's rows, as many
+      rows as needed. Featured = half the width x 2 rows, Landscape = half x 1, Small = a quarter x 1,
+      Portrait = a quarter x 2. "dense" lets a later small card fill a hole left earlier, so e.g.
+      Featured, Small, Portrait, Small rebuilds the Figma mosaic.
+    */
+    .blog-stories__grid--custom {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      grid-template-rows: none;
+      grid-auto-rows: minmax(clamp(15rem, 17vw, 24rem), auto);
+      grid-auto-flow: row dense;
+    }
+
+    .blog-stories__grid--custom .blog-stories__card--featured { grid-column: span 6; grid-row: span 2; }
+    .blog-stories__grid--custom .blog-stories__card--landscape { grid-column: span 6; grid-row: auto; }
+    .blog-stories__grid--custom .blog-stories__card--small { grid-column: span 3; grid-row: auto; }
+    .blog-stories__grid--custom .blog-stories__card--portrait { grid-column: span 3; grid-row: span 2; }
   }
 
   /* Photo fills the card; a dark fade from the bottom keeps the white text readable */
@@ -263,14 +380,19 @@
     block-size: 100%;
   }
 
-  /* Hover (Figma hover state): the photo slowly zooms in about 12%; the text stays still */
+  /*
+    Hover (Figma hover state): the photo slowly zooms in (Story block "Hover zoom", 112% by default;
+    100% = none) towards its zoom point: the block's own position, else the image's focal point set in
+    the image picker, else the centre. The text stays still.
+  */
   .blog-stories__media img {
+    transform-origin: var(--story-x, 50%) var(--story-y, 50%);
     transition: transform 0.9s var(--ease-out);
   }
 
   .blog-stories__card:hover .blog-stories__media img,
   .blog-stories__card:has(.blog-stories__link:focus-visible) .blog-stories__media img {
-    transform: scale(1.12);
+    transform: scale(var(--story-zoom, 1.12));
   }
 
   .blog-stories__media::after {
@@ -317,15 +439,20 @@
   }
 
   /*
-    Featured = the first card: bigger title, pill and excerpt. The other cards don't show a pill or an
-    excerpt; the featured card hides the category when it has a pill (Figma).
+    Featured shape (the first card unless a Story block chooses otherwise): bigger title, pill and
+    excerpt. Other shapes don't show a pill or an excerpt; a featured card hides the category when it
+    has a pill (Figma). Landscape gets a medium title.
   */
-  .blog-stories__card:first-child .blog-stories__title {
+  .blog-stories__card--featured .blog-stories__title {
     font-size: var(--font-size-h1);
   }
 
-  .blog-stories__card:not(:first-child) :is(.blog-stories__pill, .blog-stories__excerpt),
-  .blog-stories__card:first-child:has(.blog-stories__pill) .blog-stories__category {
+  .blog-stories__card--landscape .blog-stories__title {
+    font-size: var(--font-size-h2);
+  }
+
+  .blog-stories__card:not(.blog-stories__card--featured) :is(.blog-stories__pill, .blog-stories__excerpt),
+  .blog-stories__card--featured:has(.blog-stories__pill) .blog-stories__category {
     display: none;
   }
 
@@ -356,12 +483,95 @@
     outline-offset: 4px;
   }
 
+  /*
+    Entrance ("Scroll animation" setting): the grid only triggers (it stays visible); its cards start
+    moved and transparent, then glide in one after another (0.12s apart, capped so a long list doesn't
+    keep the last cards waiting) when the grid scrolls into view. The selectors repeat [data-animate]
+    and :not(.is-visible) to outrank the theme's generic "hide until visible" rule in critical.css,
+    which would otherwise move the whole mosaic as one block.
+  */
+  .blog-stories__grid[data-animate='fade-up'] { --story-from: translateY(2rem); }
+  .blog-stories__grid[data-animate='zoom-in'] { --story-from: scale(0.94); }
+  .blog-stories__grid[data-animate='slide-top'] { --story-from: translateY(-3rem); }
+  .blog-stories__grid[data-animate='slide-bottom'] { --story-from: translateY(3rem); }
+  .blog-stories__grid[data-animate='slide-left'] { --story-from: translateX(-4rem); }
+  .blog-stories__grid[data-animate='slide-right'] { --story-from: translateX(4rem); }
+
+  .blog-stories__card:nth-child(2) { --card-index: 1; }
+  .blog-stories__card:nth-child(3) { --card-index: 2; }
+  .blog-stories__card:nth-child(4) { --card-index: 3; }
+  .blog-stories__card:nth-child(5) { --card-index: 4; }
+  .blog-stories__card:nth-child(n + 6) { --card-index: 5; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .js.animations-on .blog-stories__grid[data-animate],
+    .js.animations-on .blog-stories__grid[data-animate]:not(.is-visible) {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+
+    .js.animations-on .blog-stories__grid[data-animate] .blog-stories__card {
+      transition:
+        opacity 0.8s var(--ease-out),
+        transform 0.8s var(--ease-out);
+      transition-delay: calc(var(--card-index, 0) * 0.12s);
+    }
+
+    .js.animations-on .blog-stories__grid[data-animate]:not(.is-visible) .blog-stories__card {
+      opacity: 0;
+      transform: var(--story-from, none);
+    }
+  }
+
+  /*
+    Theme editor preview: while a Story block is selected (script below), its card stays zoomed in and
+    a dot marks the zoom point, so the merchant sees the effect of Zoom amount / Zoom towards straight
+    away instead of having to hover. Only in the editor; the live store never gets the class.
+  */
+  .blog-stories__card.is-zoom-preview .blog-stories__media img {
+    transform: scale(var(--story-zoom, 1.12));
+  }
+
+  .blog-stories__card.is-zoom-preview .blog-stories__media::before {
+    content: "";
+    position: absolute;
+    inset-block-start: var(--story-y, 50%);
+    inset-inline-start: var(--story-x, 50%);
+    z-index: 1;
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+    border: 3px solid #ffffff;
+    border-radius: 50%;
+    background-color: var(--color-accent);
+    box-shadow: 0 0 0 1px #00000059, 0 2px 8px #00000066;
+    translate: -50% -50%;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .blog-stories__card:hover .blog-stories__media img {
       transform: none;
     }
   }
 {% endstylesheet %}
+
+{% javascript %}
+  /**
+   * Theme editor only: while a Story block is selected, keep its card zoomed in with a dot on the zoom
+   * point (class is-zoom-preview), so Zoom amount / Zoom towards can be judged without hovering.
+   * The editor sends shopify:block:select / shopify:block:deselect to the block's element (the card,
+   * which carries block.shopify_attributes), including after a setting change re-renders the section.
+   */
+  if (window.Shopify?.designMode && !window.oroskinStoryPreview) {
+    window.oroskinStoryPreview = true;
+    const toggle = (event, on) => {
+      const card = event.target.closest?.('.blog-stories__card');
+      if (card) card.classList.toggle('is-zoom-preview', on);
+    };
+    document.addEventListener('shopify:block:select', (event) => toggle(event, true));
+    document.addEventListener('shopify:block:deselect', (event) => toggle(event, false));
+  }
+{% endjavascript %}
 
 {% schema %}
 {
@@ -573,10 +783,61 @@
           "label": "t:labels.pill_label",
           "info": "t:labels.pill_label_info",
           "default": "Featured story"
+        },
+        {
+          "type": "header",
+          "content": "t:labels.story_card_shape"
+        },
+        {
+          "type": "select",
+          "id": "size",
+          "label": "t:labels.story_size",
+          "info": "t:labels.story_size_info",
+          "options": [
+            { "value": "auto", "label": "t:options.story_size.auto" },
+            { "value": "featured", "label": "t:options.story_size.featured" },
+            { "value": "landscape", "label": "t:options.story_size.landscape" },
+            { "value": "small", "label": "t:options.story_size.small" },
+            { "value": "portrait", "label": "t:options.story_size.portrait" }
+          ],
+          "default": "auto"
+        },
+        {
+          "type": "header",
+          "content": "t:labels.story_hover_zoom"
+        },
+        {
+          "type": "range",
+          "id": "zoom",
+          "label": "t:labels.story_zoom",
+          "info": "t:labels.story_zoom_info",
+          "min": 100,
+          "max": 150,
+          "step": 2,
+          "unit": "%",
+          "default": 112
+        },
+        {
+          "type": "select",
+          "id": "zoom_point",
+          "label": "t:labels.story_zoom_point",
+          "info": "t:labels.story_zoom_point_info",
+          "options": [
+            { "value": "focal", "label": "t:options.story_zoom_point.focal" },
+            { "value": "top-left", "label": "t:options.story_zoom_point.top_left" },
+            { "value": "top", "label": "t:options.story_zoom_point.top" },
+            { "value": "top-right", "label": "t:options.story_zoom_point.top_right" },
+            { "value": "left", "label": "t:options.story_zoom_point.left" },
+            { "value": "center", "label": "t:options.story_zoom_point.center" },
+            { "value": "right", "label": "t:options.story_zoom_point.right" },
+            { "value": "bottom-left", "label": "t:options.story_zoom_point.bottom_left" },
+            { "value": "bottom", "label": "t:options.story_zoom_point.bottom" },
+            { "value": "bottom-right", "label": "t:options.story_zoom_point.bottom_right" }
+          ],
+          "default": "focal"
         }
       ]
     }
-  ],
-  "max_blocks": 4
+  ]
 }
 {% endschema %}

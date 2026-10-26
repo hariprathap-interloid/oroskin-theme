@@ -14,6 +14,13 @@
   left over the photo, then the page continues. Runs with the theme's animations on (also in the editor,
   it never hides anything for good); not with reduced motion or without JavaScript, where the sheet
   simply sits under the banner content.
+  This section's "Transition" setting can switch the scene to "vertical" (text slides up, sheet rises
+  from below), and "Slide in the heading and View all" brings those in from outside the sheet once it
+  is in place (data-scene-style / data-sheet-header from Liquid, data-sheet-placed from the script).
+  Both sit next to "Scroll animation", so all the banner's animation choices are in one place.
+
+  Entrance on first view: the banner's text uses this section's "Scroll animation" setting and the
+  cards their own block setting (e.g. text from the right, cards from the left).
 {%- endcomment -%}
 
 {%- liquid
@@ -34,6 +41,10 @@
   style="--banner-overlay: {{ overlay_opacity }}; --section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --p: 0;"
   {% if settings.animations_enabled %}
     data-scene
+    data-scene-style="{{ section.settings.scene_style }}"
+    {% if section.settings.header_slide %}
+      data-sheet-header
+    {% endif %}
   {% endif %}
 >
   <div class="image-banner__track">
@@ -209,6 +220,55 @@
     box-shadow: 1.5rem 0 3rem #00000040;
   }
 
+  /*
+    Transition "vertical" (Trending sheet setting): the banner's text and cards slide UP and away, and
+    the sheet rises from the bottom of the photo instead of coming in from the left. Same --out / --in
+    timing as above; the stage's overflow: hidden keeps the sheet out of sight until it rises.
+  */
+  .image-banner[data-scene-active][data-scene-style='vertical'] .image-banner__inner {
+    transform: translateY(calc(var(--out) * -6rem));
+  }
+
+  .image-banner[data-scene-active][data-scene-style='vertical'] .banner-sheet {
+    transform: translateY(calc((1 - var(--in)) * 100%));
+    box-shadow: 0 -1.5rem 3rem #00000040;
+  }
+
+  /*
+    "Slide in the heading and View all": once the sheet is in place (the script sets data-sheet-placed)
+    both come in from OUTSIDE the sheet to their own side: the heading from beyond the left edge,
+    "View all" from beyond the right edge, quickly. Time-based, not tied to the scroll, so it always
+    finishes. Scrolling back up sends them out again with the sheet.
+    Each travels its own width plus 4rem (more than the sheet's side padding), so it starts fully
+    outside; the sheet hides anything past its edges (overflow-x below), so they appear from the edge.
+  */
+  .image-banner[data-scene-active][data-sheet-header] .banner-sheet {
+    overflow-x: hidden; /* no sideways scrollbar while "View all" is still out to the right */
+  }
+
+  .image-banner[data-scene-active][data-sheet-header] :is(.trending-list__heading, .trending-list__view-all) {
+    transition:
+      transform 0.55s var(--ease-out),
+      opacity 0.3s var(--ease-out),
+      color var(--duration-fast) var(--ease-out),
+      background-color var(--duration-fast) var(--ease-out),
+      box-shadow var(--duration-fast) var(--ease-out);
+  }
+
+  .image-banner[data-scene-active][data-sheet-header] .trending-list__view-all {
+    transition-delay: 0.08s, 0.08s, 0s, 0s, 0s;
+  }
+
+  .image-banner[data-scene-active][data-sheet-header]:not([data-sheet-placed]) .trending-list__heading {
+    opacity: 0;
+    transform: translateX(calc(-100% - 4rem));
+  }
+
+  .image-banner[data-scene-active][data-sheet-header]:not([data-sheet-placed]) .trending-list__view-all {
+    opacity: 0;
+    transform: translateX(calc(100% + 4rem));
+  }
+
   /* Phones: the sheet takes the full width */
   @media (max-width: 749px) {
     .image-banner[data-scene-active] .banner-sheet {
@@ -298,6 +358,8 @@
     paint() {
       this.style.setProperty('--p', this.current.toFixed(4));
       this.toggleAttribute('data-sheet-shown', this.current > 0.45);
+      // The sheet is fully in place at 0.65 (see --in); a hair earlier so the smoothing never holds it back
+      this.toggleAttribute('data-sheet-placed', this.current > 0.64);
     }
   }
 
@@ -459,6 +521,24 @@
       "default": "fade-up"
     },
     {
+      "type": "select",
+      "id": "scene_style",
+      "label": "t:labels.sheet_scene_style",
+      "info": "t:labels.sheet_scene_style_info",
+      "options": [
+        { "value": "sideways", "label": "t:options.sheet_scene_style.sideways" },
+        { "value": "vertical", "label": "t:options.sheet_scene_style.vertical" }
+      ],
+      "default": "sideways"
+    },
+    {
+      "type": "checkbox",
+      "id": "header_slide",
+      "label": "t:labels.sheet_header_slide",
+      "info": "t:labels.sheet_header_slide_info",
+      "default": true
+    },
+    {
       "type": "range",
       "id": "padding_top",
       "label": "t:labels.padding_top",
@@ -486,7 +566,10 @@
         "height": "full",
         "overlay_style": "gradient",
         "overlay_opacity": 80,
-        "color_scheme": "scheme-5"
+        "color_scheme": "scheme-5",
+        "animation": "slide-right",
+        "scene_style": "vertical",
+        "header_slide": true
       },
       "blocks": [
         {
@@ -540,6 +623,9 @@
           "type": "_highlight-cards",
           "id": "highlight-cards",
           "static": true,
+          "settings": {
+            "animation": "slide-left"
+          },
           "blocks": [
             {
               "type": "_highlight-card",

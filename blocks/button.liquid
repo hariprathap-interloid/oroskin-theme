@@ -2,7 +2,8 @@
   Renders a button: a link styled as the Figma's red pill (primary), the bigger glass pill (glass, the
   hero "Explore collection"), outline pill (secondary) or
   underlined text link (text, like "NEW ARRIVALS →"). The looks are the theme's .button classes
-  (critical.css), so every button in the store matches.
+  (critical.css), so every button in the store matches. "Explore (animated)" renders the New Arrivals
+  "Explore all" button instead (snippets/explore-button.liquid: accent pill, refill + paper plane).
 
   Nothing is output without a label. Without a link it shows (so the merchant sees it in the editor)
   but is marked disabled and isn't focusable.
@@ -11,7 +12,17 @@
   {% content_for 'block', type: 'button', id: 'button' %}
 {% enddoc %}
 
-{%- if block.settings.label != blank -%}
+{%- if block.settings.label != blank and block.settings.style == 'explore' -%}
+  {%- comment -%} "Explore (animated)": the New Arrivals button (snippets/explore-button.liquid) {%- endcomment -%}
+  {%- capture explore_class -%}button-block button-block--{{ block.settings.alignment }}{%- endcapture -%}
+  {% render 'explore-button',
+    label: block.settings.label,
+    url: block.settings.link,
+    new_tab: block.settings.new_tab,
+    class: explore_class,
+    attributes: block.shopify_attributes
+  %}
+{%- elsif block.settings.label != blank -%}
   {%- liquid
     assign style_class = ''
     case block.settings.style
@@ -132,6 +143,10 @@
         {
           "value": "text",
           "label": "t:options.button_style.text"
+        },
+        {
+          "value": "explore",
+          "label": "t:options.button_style.explore"
         }
       ],
       "default": "primary"
@@ -140,7 +155,8 @@
       "type": "checkbox",
       "id": "show_arrow",
       "label": "t:labels.show_arrow",
-      "default": false
+      "default": false,
+      "visible_if": "{{ block.settings.style != 'explore' }}"
     },
     {
       "type": "text_alignment",

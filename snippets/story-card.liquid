@@ -1,23 +1,45 @@
 {% doc %}
   One card of the Blog stories mosaic: the article's image (or a custom image), its category (the
   article's first tag, or a custom category) and its title, all one link to the article. The pill and
-  the excerpt are output on every card; the section's CSS shows them on the first (featured) card only.
+  the excerpt are output on every card; the section's CSS shows them on the featured card only.
   Without an article: a placeholder card in the theme editor, nothing on the live store.
 
   @param {article} [article] - The article to show
   @param {image} [image] - Custom image, replaces the article's image
   @param {string} [category] - Custom category, replaces the article's first tag
   @param {string} [pill_label] - Pill text for the featured card, e.g. "Featured story"
+  @param {string} [size] - Card shape: 'featured', 'landscape', 'small' or 'portrait' (default 'small').
+    Featured shows the pill, the excerpt and a bigger title
+  @param {number} [zoom] - Hover zoom in % (100 = no zoom), default 112
+  @param {number} [zoom_x] - Where the zoom heads, % from the left. With zoom_y. Default: the image's
+    focal point (set in the image picker), else the centre
+  @param {number} [zoom_y] - Where the zoom heads, % from the top
   @param {string} [attributes] - The block's shopify_attributes (theme editor selection)
 
   @example
-  {% render 'story-card', article: story, image: block.settings.image, attributes: block.shopify_attributes %}
+  {% render 'story-card', article: story, image: block.settings.image, size: 'featured', attributes: block.shopify_attributes %}
 {% enddoc %}
 
 {%- liquid
   assign story_image = image
   if story_image == blank and article != blank
     assign story_image = article.image
+  endif
+
+  assign card_size = size | default: 'small'
+  assign card_zoom = zoom | default: 112 | divided_by: 100.0
+
+  # Zoom towards the chosen point, else the image's own focal point (x and y in %), else the centre.
+  # Kept as two numbers so the editor preview can put its dot exactly there.
+  assign card_x = zoom_x
+  assign card_y = zoom_y
+  if card_x == blank and story_image.presentation.focal_point != blank
+    assign card_x = story_image.presentation.focal_point.x
+    assign card_y = story_image.presentation.focal_point.y
+  endif
+  if card_x == blank
+    assign card_x = 50
+    assign card_y = 50
   endif
 
   assign story_category = category
@@ -27,7 +49,11 @@
 -%}
 
 {%- if article != blank or request.design_mode -%}
-  <li class="blog-stories__card" {{ attributes }}>
+  <li
+    class="blog-stories__card blog-stories__card--{{ card_size }}"
+    style="--story-zoom: {{ card_zoom }}; --story-x: {{ card_x }}%; --story-y: {{ card_y }}%;"
+    {{ attributes }}
+  >
     <div class="blog-stories__media">
       {%- if story_image != blank -%}
         {% render 'image', image: story_image, alt: '', class: 'image--cover', sizes: '(min-width: 990px) 50vw, 100vw' %}
