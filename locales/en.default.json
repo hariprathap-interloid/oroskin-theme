@@ -17,7 +17,35 @@
     "checkout": "Checkout",
     "title": "Cart",
     "update": "Update",
-    "remove": "Remove"
+    "remove": "Remove",
+    "item_count": {
+      "one": "{{ count }} item",
+      "other": "{{ count }} items"
+    },
+    "empty_title": "Your bag is empty",
+    "empty_text": "Browse our skincare, fragrance and makeup to find something you love.",
+    "continue_shopping": "Continue shopping",
+    "quantity_for": "Quantity for {{ title }}",
+    "subtotal": "Subtotal",
+    "summary": "Order summary",
+    "select_item": "Select {{ title }}",
+    "selected_count": "[count] selected",
+    "remove_selected": "Remove selected",
+    "remove_item": "Remove {{ title }}",
+    "decrease": "Decrease quantity for {{ title }}",
+    "increase": "Increase quantity for {{ title }}",
+    "updated": "Cart updated",
+    "error": "Couldn't update your cart. Please try again.",
+    "free_shipping_unlocked": "You've unlocked free shipping",
+    "free_shipping_remaining": "Add {{ amount }} more for free shipping",
+    "shipping": "Shipping",
+    "free": "Free",
+    "at_checkout": "Calculated at checkout",
+    "tax": "Tax",
+    "tax_included": "Included",
+    "total": "Total",
+    "note_label": "Add a note to your order",
+    "proceed_to_checkout": "Proceed to checkout"
   },
   "collections": {
     "title": "Collections"
@@ -46,7 +74,9 @@
     "previous": "Previous",
     "next": "Next",
     "skip_to_content": "Skip to content",
-    "new_window": "opens in a new window"
+    "new_window": "opens in a new window",
+    "breadcrumb": "Breadcrumb",
+    "home": "Home"
   },
   "header": {
     "menu_by_category": "{{ title }} by category",

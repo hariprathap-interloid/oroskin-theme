@@ -1,37 +1,846 @@
-{% comment %}
-  This section is used in the cart template to render /cart page with an
-  overview of the items in customer's cart.
+{%- comment -%}
+  Cart page (Figma "Cart"): breadcrumb, eyebrow + "Shopping bag" with the item count, then two columns:
+  the items on the left, the cards (coupons, gift wrap, order summary) on the right. An empty cart shows
+  a message and a link back to the shop instead.
 
-  https://shopify.dev/docs/storefronts/themes/architecture/templates/cart
-{% endcomment %}
+  One <form id="CartForm"> holds the quantities; controls in the other column (the checkout button)
+  join it with form="CartForm", so the page works without JavaScript: the browser posts the form to
+  /cart and Shopify updates the cart or goes to checkout.
 
-<h1>{{ 'cart.title' | t }}</h1>
+  M7.1 builds the frame. The item cards (M7.2), free-shipping bar (M7.3), order summary (M7.4), coupons
+  (M7.5) and gift wrap (M7.6) replace the simple placeholders marked below.
+{%- endcomment -%}
 
-<form action="{{ routes.cart_url }}" method="post">
-  <table>
-    {% for item in cart.items %}
-      <tr>
-        <td>
-          {% render 'image', image: item.image, url: item.url %}
-        </td>
-        <td>
-          <p>{{ item.product.title }}</p>
-          {{ 'cart.remove' | t | link_to: item.url_to_remove }}
-        </td>
-        <td>
-          <input type="text" name="updates[]" value="{{ item.quantity }}">
-          <input type="submit" value="{{ 'cart.update' | t }}">
-        </td>
-      </tr>
-    {% endfor %}
-  </table>
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-1'
 
-  <input type="submit" name="checkout" value="{{ 'cart.checkout' | t }}">
-</form>
+  # An empty Heading falls back to the translated word "Cart"
+  assign heading = section.settings.heading
+  if heading == blank
+    assign heading = 'cart.title' | t
+  endif
+
+  assign continue_url = section.settings.continue_link
+  if continue_url == blank
+    assign continue_url = routes.all_products_collection_url
+  endif
+
+  # Free shipping (M7.3; the Order summary's Shipping row uses free_shipping_unlocked too).
+  # The setting is in the store's own currency; Liquid has no exchange rates, so the bar only shows
+  # when the visitor pays in that currency (in another currency a wrong promise is worse than none).
+  # All money in Liquid is in cents: 200 -> 20000.
+  assign show_free_shipping = false
+  assign free_shipping_unlocked = false
+  if section.settings.show_free_shipping and section.settings.free_shipping_threshold > 0
+    if cart.currency.iso_code == shop.currency
+      assign show_free_shipping = true
+      assign threshold = section.settings.free_shipping_threshold | times: 100
+      assign remaining = threshold | minus: cart.total_price
+      if remaining <= 0
+        assign free_shipping_unlocked = true
+      endif
+      # Bar fill in %: total / threshold, never over 100
+      assign progress = cart.total_price | times: 100 | divided_by: threshold | at_most: 100
+    endif
+  endif
+-%}
+
+<cart-page
+  class="cart-page full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
+  style="--color-accent: {{ section.settings.highlight_color }}; --section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
+  data-section-id="{{ section.id }}"
+  data-label-updated="{{ 'cart.updated' | t | escape }}"
+  data-label-error="{{ 'cart.error' | t | escape }}"
+  data-label-selected="{{ 'cart.selected_count' | t | escape }}"
+>
+  {%- comment -%}
+    Screen reader announcements ("Cart updated" or the error). Outside .cart-page__inner, which the
+    script swaps for the new version after each change, so the message isn't lost in the swap.
+  {%- endcomment -%}
+  <p class="visually-hidden" role="status" data-cart-status></p>
+
+  <div class="cart-page__inner">
+    {%- if section.settings.show_breadcrumb -%}
+      <nav class="cart-page__breadcrumb" aria-label="{{ 'accessibility.breadcrumb' | t }}">
+        <ol>
+          <li><a href="{{ routes.root_url }}">{{ 'accessibility.home' | t }}</a></li>
+          <li aria-current="page">{{ 'cart.title' | t }}</li>
+        </ol>
+      </nav>
+    {%- endif -%}
+
+    <header class="cart-page__header">
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="eyebrow cart-page__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+      {%- endif -%}
+      <h1 class="cart-page__title" tabindex="-1" data-cart-heading>
+        {{- heading | escape -}}
+        {%- unless cart.empty? -%}
+          {%- comment -%} The small raised number is for sight only; screen readers hear "(2 items)" {%- endcomment -%}
+          <sup class="cart-page__count" aria-hidden="true">{{ cart.item_count }}</sup>
+          <span class="visually-hidden">({{ 'cart.item_count' | t: count: cart.item_count }})</span>
+        {%- endunless -%}
+      </h1>
+    </header>
+
+    {%- if cart.empty? -%}
+      <div class="cart-page__empty">
+        <p class="cart-page__empty-title h3">{{ 'cart.empty_title' | t }}</p>
+        <p class="cart-page__empty-text">{{ 'cart.empty_text' | t }}</p>
+        <a class="button" href="{{ continue_url }}">{{ 'cart.continue_shopping' | t }}</a>
+      </div>
+    {%- else -%}
+      <div class="cart-page__layout">
+        <div class="cart-page__main">
+          {%- if show_free_shipping -%}
+            {%- comment -%}
+              "You've unlocked free shipping   $285 / $200" with a bar below. The sentence says it all,
+              so the bar itself is hidden from screen readers. Re-rendered with the rest of the cart.
+            {%- endcomment -%}
+            <div class="cart-shipping{% if free_shipping_unlocked %} is-unlocked{% endif %}">
+              <p class="cart-shipping__message">
+                {{- 'icon-truck.svg' | inline_asset_content -}}
+                {%- if free_shipping_unlocked -%}
+                  {{ 'cart.free_shipping_unlocked' | t }}
+                {%- else -%}
+                  {%- comment -%} Format the amount first: a filter can't go inside another filter's argument {%- endcomment -%}
+                  {%- assign remaining_money = remaining | money -%}
+                  {{ 'cart.free_shipping_remaining' | t: amount: remaining_money }}
+                {%- endif -%}
+              </p>
+              <p class="cart-shipping__amounts">
+                {{ cart.total_price | money_without_trailing_zeros }} / {{ threshold | money_without_trailing_zeros }}
+              </p>
+              <div class="cart-shipping__bar" aria-hidden="true">
+                <span class="cart-shipping__fill" style="--progress: {{ progress }}%;"></span>
+              </div>
+            </div>
+          {%- endif -%}
+
+          <form id="CartForm" class="cart-page__form" action="{{ routes.cart_url }}" method="post" novalidate>
+            {%- comment -%} Shown by the script once at least one item is ticked {%- endcomment -%}
+            <div class="cart-page__toolbar" data-cart-toolbar hidden>
+              <span data-cart-selected-count></span>
+              <button type="button" class="button button--text" data-cart-remove-selected data-cart-focus="remove-selected">
+                {{- 'cart.remove_selected' | t -}}
+              </button>
+            </div>
+
+            <p class="cart-page__error" role="alert" data-cart-error hidden></p>
+
+            <ul class="cart-page__items" role="list">
+              {%- for item in cart.items -%}
+                {% render 'cart-item', item: item, index: forloop.index %}
+              {%- endfor -%}
+            </ul>
+
+            {%- comment -%} Without JavaScript, this button saves changed quantities (the script updates them on its own) {%- endcomment -%}
+            <button type="submit" class="button button--secondary cart-page__update" name="update">{{ 'cart.update' | t }}</button>
+          </form>
+        </div>
+
+        <aside class="cart-page__aside" aria-label="{{ 'cart.summary' | t }}">
+          {%- comment -%} Coupons (M7.5) and Gift wrap (M7.6) cards go above the summary {%- endcomment -%}
+
+          {%- comment -%}
+            Order summary (Figma). Subtotal = before order discounts; order-level discounts listed;
+            shipping FREE once the free-shipping amount is reached (M7.3), otherwise worked out at
+            checkout; tax is never known before checkout (it depends on the address), so it says so.
+          {%- endcomment -%}
+          <div class="cart-card cart-summary">
+            <h2 class="cart-card__title">{{ 'cart.summary' | t }}</h2>
+
+            <dl class="cart-summary__rows">
+              <div class="cart-summary__row">
+                <dt>{{ 'cart.subtotal' | t }}</dt>
+                <dd>{{ cart.items_subtotal_price | money }}</dd>
+              </div>
+
+              {%- for discount in cart.cart_level_discount_applications -%}
+                <div class="cart-summary__row cart-summary__row--discount">
+                  <dt>{{ discount.title | escape }}</dt>
+                  <dd>−{{ discount.total_allocated_amount | money }}</dd>
+                </div>
+              {%- endfor -%}
+
+              <div class="cart-summary__row">
+                <dt>{{ 'cart.shipping' | t }}</dt>
+                {%- if free_shipping_unlocked -%}
+                  <dd class="cart-summary__free">{{ 'cart.free' | t }}</dd>
+                {%- else -%}
+                  <dd class="cart-summary__later">{{ 'cart.at_checkout' | t }}</dd>
+                {%- endif -%}
+              </div>
+
+              <div class="cart-summary__row">
+                <dt>{{ 'cart.tax' | t }}</dt>
+                {%- if cart.taxes_included -%}
+                  <dd class="cart-summary__later">{{ 'cart.tax_included' | t }}</dd>
+                {%- else -%}
+                  <dd class="cart-summary__later">{{ 'cart.at_checkout' | t }}</dd>
+                {%- endif -%}
+              </div>
+
+              <div class="cart-summary__row cart-summary__row--total">
+                <dt>{{ 'cart.total' | t }}</dt>
+                {%- comment -%} With more than one currency on sale, the code (USD, EUR) avoids "which dollar?" {%- endcomment -%}
+                <dd>
+                  {%- if shop.enabled_currencies.size > 1 -%}
+                    {{ cart.total_price | money_with_currency }}
+                  {%- else -%}
+                    {{ cart.total_price | money }}
+                  {%- endif -%}
+                </dd>
+              </div>
+            </dl>
+
+            {%- if section.settings.show_note -%}
+              {%- comment -%}
+                Cart note (Theme Store): saved when the visitor checks out (it's part of CartForm) and,
+                with JavaScript, as soon as they leave the field (cart-page script).
+              {%- endcomment -%}
+              <details class="cart-summary__note"{% if cart.note != blank %} open{% endif %}>
+                <summary>{{ 'cart.note_label' | t }}</summary>
+                <label class="visually-hidden" for="CartNote">{{ 'cart.note_label' | t }}</label>
+                <textarea id="CartNote" name="note" form="CartForm" rows="3" data-cart-note>{{ cart.note | escape }}</textarea>
+              </details>
+            {%- endif -%}
+
+            <button type="submit" class="button cart-summary__checkout" name="checkout" form="CartForm">
+              {{- 'cart.proceed_to_checkout' | t -}}
+              {{- 'icon-send.svg' | inline_asset_content -}}
+            </button>
+
+            {%- comment -%}
+              Express checkout (Shop Pay, PayPal, Apple Pay...): Shopify draws these buttons for the
+              payment methods the store has turned on. On by default (Theme Store).
+            {%- endcomment -%}
+            {%- if section.settings.show_express_checkout and additional_checkout_buttons -%}
+              <div class="cart-summary__express">{{ content_for_additional_checkout_buttons }}</div>
+            {%- endif -%}
+
+            <a class="cart-summary__continue" href="{{ continue_url }}">
+              {{- 'icon-arrow.svg' | inline_asset_content -}}
+              {{- 'cart.continue_shopping' | t -}}
+            </a>
+          </div>
+        </aside>
+      </div>
+    {%- endif -%}
+  </div>
+</cart-page>
+
+{% stylesheet %}
+  /* At least one screen tall (Figma: the cart fills the first screen, the footer comes after a scroll) */
+  .cart-page {
+    display: block;
+    min-block-size: 100svh;
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  .cart-page__inner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  /* "HOME > CART": small capitals, the current page in the accent colour (Figma) */
+  .cart-page__breadcrumb ol {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--font-size-small);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  .cart-page__breadcrumb li + li::before {
+    content: "›";
+    margin-inline-end: var(--space-xs);
+    color: var(--color-text);
+  }
+
+  .cart-page__breadcrumb a {
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  .cart-page__breadcrumb a:hover {
+    text-decoration: underline;
+  }
+
+  .cart-page__breadcrumb [aria-current] {
+    color: var(--color-accent);
+  }
+
+  .cart-page__header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  /* The Figma eyebrow here has no rule in front of the label */
+  .cart-page__eyebrow {
+    margin: 0;
+  }
+
+  .cart-page__eyebrow::before {
+    display: none;
+  }
+
+  .cart-page__title {
+    margin: 0;
+    font-size: var(--font-size-h2);
+  }
+
+  /* "Shopping bag²": the count sits raised and small, without pushing the line height */
+  .cart-page__count {
+    margin-inline-start: 0.15em;
+    font-size: 0.55em;
+    line-height: 0;
+    vertical-align: super;
+  }
+
+  /*
+    Items left, cards right. Figma at 1920px: items ~1126px, cards ~556px, ~140px apart, so the cards
+    column is fixed-ish and the items column takes the rest.
+  */
+  .cart-page__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(20rem, 29vw, 34.75rem);
+    gap: clamp(var(--space-xl), 7vw, 8.75rem);
+    align-items: start;
+  }
+
+  .cart-page__aside {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  /*
+    Right-hand cards (Coupons, Gift wrap, Order summary): a soft gold tint of the page background,
+    ~25px corners, ~40px padding at 1920px (Figma).
+  */
+  .cart-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    padding: clamp(var(--space-lg), 2.1vw, 2.5rem);
+    border-radius: var(--radius-md);
+    background-color: color-mix(in srgb, var(--color-accent) 12%, var(--color-background));
+  }
+
+  .cart-card__title {
+    margin: 0;
+    font-size: var(--font-size-h3);
+  }
+
+  /* Rows: label left, amount right */
+  .cart-summary__rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    margin: 0;
+    font-size: var(--font-size-body-sm);
+  }
+
+  .cart-summary__row {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-md);
+  }
+
+  .cart-summary__row dt,
+  .cart-summary__row dd {
+    margin: 0;
+  }
+
+  .cart-summary__row dd {
+    text-align: end;
+  }
+
+  .cart-summary__row--discount,
+  .cart-summary__free {
+    color: var(--color-accent);
+  }
+
+  .cart-summary__later {
+    color: color-mix(in srgb, var(--color-text) 65%, var(--color-background));
+  }
+
+  /* Total: bigger, with more space above (Figma) */
+  .cart-summary__row--total {
+    margin-block-start: var(--space-sm);
+    font-size: var(--font-size-body-lg);
+    font-weight: var(--font-weight-medium);
+  }
+
+  /* "Add a note to your order": a quiet line that opens a text box */
+  .cart-summary__note summary {
+    color: var(--color-accent);
+    font-size: var(--font-size-body-sm);
+    cursor: pointer;
+  }
+
+  .cart-summary__note textarea {
+    margin-block-start: var(--space-sm);
+  }
+
+  /* Proceed to checkout: the gold pill with the paper plane (Figma); the button reads its colours from these */
+  .cart-summary__checkout {
+    --color-button: var(--color-accent);
+    --color-button-border: var(--color-accent);
+    --color-button-text: #ffffff;
+    inline-size: 100%;
+    gap: var(--space-sm);
+  }
+
+  .cart-summary__checkout svg {
+    inline-size: 1.1em;
+    block-size: auto;
+  }
+
+  /* Shopify's express buttons fill the card's width */
+  .cart-summary__express :is(.additional-checkout-buttons, shopify-accelerated-checkout-cart) {
+    --shopify-accelerated-checkout-button-border-radius: var(--radius-pill);
+    inline-size: 100%;
+  }
+
+  /* "<- Continue shopping": the theme arrow turned to point left */
+  .cart-summary__continue {
+    display: inline-flex;
+    align-items: center;
+    align-self: center;
+    gap: var(--space-xs);
+    color: var(--color-text);
+    font-size: var(--font-size-body-sm);
+    text-decoration: none;
+  }
+
+  .cart-summary__continue:hover {
+    text-decoration: underline;
+  }
+
+  .cart-summary__continue svg {
+    inline-size: 1em;
+    block-size: auto;
+    rotate: 180deg;
+  }
+
+  .cart-page__title:focus {
+    outline: none;
+  }
+
+  /*
+    Free-shipping bar (Figma): truck + gold sentence on the left, "$285 / $200" on the right, a
+    rounded bar below that fills with the accent colour.
+  */
+  .cart-shipping {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-sm) var(--space-md);
+    margin-block-end: var(--space-xl);
+  }
+
+  .cart-shipping__message,
+  .cart-shipping__amounts {
+    margin: 0;
+    font-size: var(--font-size-body-lg);
+  }
+
+  .cart-shipping__message {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    color: var(--color-accent);
+  }
+
+  .cart-shipping__message svg {
+    flex: none;
+    inline-size: 1.5rem;
+    block-size: auto;
+  }
+
+  .cart-shipping__amounts {
+    font-weight: var(--font-weight-medium);
+  }
+
+  .cart-shipping__bar {
+    grid-column: 1 / -1;
+    block-size: 0.5rem;
+    overflow: hidden;
+    border-radius: var(--radius-pill);
+    background-color: color-mix(in srgb, var(--color-accent) 18%, var(--color-background));
+  }
+
+  /* The fill grows from the old width to the new one when the cart is re-rendered after a change */
+  .cart-shipping__fill {
+    display: block;
+    inline-size: var(--progress);
+    block-size: 100%;
+    border-radius: inherit;
+    background-color: var(--color-accent);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .cart-shipping__fill {
+      animation: cart-shipping-fill 0.8s var(--ease-out);
+    }
+  }
+
+  @keyframes cart-shipping-fill {
+    from {
+      inline-size: 0;
+    }
+  }
+
+  .cart-page__items {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    margin: 0 0 var(--space-lg);
+    padding: 0;
+    list-style: none;
+  }
+
+  /* "2 selected   Remove selected" above the list */
+  .cart-page__toolbar:not([hidden]) {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+    margin-block-end: var(--space-md);
+  }
+
+  .cart-page__error {
+    margin: 0 0 var(--space-md);
+    color: var(--color-error, #b3261e);
+  }
+
+  /* The script saves quantities on its own; the Update button is only for visitors without JavaScript */
+  .js .cart-page__update {
+    display: none;
+  }
+
+  .cart-page__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-md);
+    padding-block: var(--space-2xl);
+  }
+
+  .cart-page__empty-title,
+  .cart-page__empty-text {
+    margin: 0;
+  }
+
+  /* Tablets and phones: one column, the cards under the items (no mobile design yet, decision 7) */
+  @media (max-width: 989px) {
+    .cart-page__layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <cart-page>: changes the cart without reloading the page.
+   *
+   * Every change (- / +, a typed quantity, remove, remove selected) goes to Shopify's Cart AJAX API
+   * together with `sections`: Shopify answers with the updated cart AND this section (and the header)
+   * rendered again in Liquid. The script swaps in the new HTML, so prices, totals and counts always come
+   * from Shopify, never from JavaScript maths. Focus goes back to the same control after the swap.
+   *
+   * Without JavaScript the page still works: the form posts to /cart (Update / Checkout) and the remove
+   * buttons are plain links.
+   */
+  class CartPage extends HTMLElement {
+    connectedCallback() {
+      this.root = window.Shopify?.routes?.root || '/';
+      this.status = this.querySelector('[data-cart-status]');
+
+      // One set of listeners on the element itself: they keep working after the inner HTML is swapped
+      this.addEventListener('click', (event) => this.onClick(event));
+      this.addEventListener('change', (event) => this.onChange(event));
+      this.addEventListener('keydown', (event) => {
+        // Enter in a quantity field saves it here instead of submitting the whole form; focus stays
+        // in the field (render() puts it back on the new copy)
+        if (event.key === 'Enter' && event.target.matches('[data-cart-quantity]')) {
+          event.preventDefault();
+          this.queueQuantity(event.target, 0);
+        }
+      });
+    }
+
+    onClick(event) {
+      const step = event.target.closest('[data-cart-step]');
+      if (step) {
+        const input = step.closest('.cart-item').querySelector('[data-cart-quantity]');
+        input.value = Math.max(0, Number(input.value) + Number(step.dataset.cartStep));
+        this.queueQuantity(input);
+        return;
+      }
+
+      const remove = event.target.closest('[data-cart-remove]');
+      if (remove) {
+        event.preventDefault(); // the link is the no-JavaScript fallback
+        this.change({ [remove.closest('.cart-item').dataset.lineKey]: 0 }, remove.closest('.cart-item'));
+        return;
+      }
+
+      if (event.target.closest('[data-cart-remove-selected]')) {
+        const updates = {};
+        this.querySelectorAll('[data-cart-select]:checked').forEach((box) => (updates[box.value] = 0));
+        this.change(updates);
+      }
+    }
+
+    onChange(event) {
+      if (event.target.matches('[data-cart-quantity]')) this.queueQuantity(event.target, 0);
+      if (event.target.matches('[data-cart-select]')) this.updateToolbar();
+      if (event.target.matches('[data-cart-note]')) this.saveNote(event.target.value);
+    }
+
+    /**
+     * Saves the cart note as soon as the visitor leaves the box ("change" fires then), so it isn't
+     * lost if they go back to shopping. No re-render: nothing else on the page depends on the note.
+     */
+    async saveNote(note) {
+      try {
+        await fetch(`${this.root}cart/update.js`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ note }),
+        });
+      } catch (error) {
+        // Still sent with the form when they check out
+      }
+    }
+
+    /** Waits a moment, so clicking + three times sends one request with the final number */
+    queueQuantity(input, delay = 400) {
+      const line = input.closest('.cart-item');
+      clearTimeout(line.saveTimer);
+      line.saveTimer = setTimeout(() => {
+        this.change({ [line.dataset.lineKey]: Math.max(0, Number(input.value) || 0) }, line);
+      }, delay);
+    }
+
+    /** "2 selected  Remove selected" appears only while something is ticked */
+    updateToolbar() {
+      const toolbar = this.querySelector('[data-cart-toolbar]');
+      const count = this.querySelectorAll('[data-cart-select]:checked').length;
+      if (!toolbar) return;
+      toolbar.hidden = count === 0;
+      // "[count] selected" from the locale file, with the number filled in
+      toolbar.querySelector('[data-cart-selected-count]').textContent = this.dataset.labelSelected.replace('[count]', count);
+    }
+
+    /**
+     * updates = { lineKey: quantity, ... }. /cart/update.js accepts several lines at once and finds each
+     * line by its key, so it works the same for one line or for "Remove selected".
+     */
+    async change(updates, line) {
+      const lines = line ? [line] : Object.keys(updates).map((key) => this.querySelector(`[data-line-key="${CSS.escape(key)}"]`));
+      lines.forEach((el) => el?.classList.add('is-loading'));
+      this.setAttribute('aria-busy', 'true');
+
+      const header = document.querySelector('sticky-header')?.closest('.shopify-section');
+      const sections = [this.dataset.sectionId, header?.id.replace('shopify-section-', '')].filter(Boolean);
+
+      // Number every request. Two quick changes (e.g. on two lines) can come back in the wrong order;
+      // only the newest answer is shown, so an older cart never replaces a newer one.
+      const requestId = (this.latestRequest = (this.latestRequest || 0) + 1);
+
+      try {
+        const response = await fetch(`${this.root}cart/update.js`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ updates, sections, sections_url: window.location.pathname }),
+        });
+        const data = await response.json();
+        // Shopify explains a refused change (e.g. not enough stock) in "description" or "message"
+        if (!response.ok) throw new Error(data.description || data.message || '');
+        if (requestId !== this.latestRequest) return; // a newer change is on its way; it will render
+
+        this.render(data.sections, sections, header);
+        this.announce(this.dataset.labelUpdated);
+        document.dispatchEvent(new CustomEvent('cart:updated', { detail: { cart: data } }));
+      } catch (error) {
+        if (requestId !== this.latestRequest) return;
+        lines.forEach((el) => el?.classList.remove('is-loading'));
+        const message = error?.message || this.dataset.labelError;
+        const box = this.querySelector('[data-cart-error]');
+        if (box) {
+          box.textContent = message;
+          box.hidden = false;
+        }
+        this.announce(message);
+      } finally {
+        if (requestId === this.latestRequest) this.removeAttribute('aria-busy');
+      }
+    }
+
+    /** Swaps in Shopify's freshly rendered cart (and the header's cart count), then restores focus */
+    render(html, sectionIds, header) {
+      const focusKey = document.activeElement?.closest('[data-cart-focus]')?.dataset.cartFocus;
+      const parse = (id) => html?.[id] && new DOMParser().parseFromString(html[id], 'text/html');
+
+      const fresh = parse(sectionIds[0])?.querySelector('.cart-page__inner');
+      if (fresh) this.querySelector('.cart-page__inner').replaceWith(fresh);
+
+      // Header: only its cart link (the red count bubble and the hidden "Cart, 2 items" label)
+      const freshHeader = parse(sectionIds[1]);
+      if (header && freshHeader) {
+        const link = `.header__icon-button[href="${this.root}cart"]`;
+        const next = freshHeader.querySelector(link);
+        if (next) header.querySelector(link)?.replaceWith(next);
+      }
+
+      // Same control again if it still exists (e.g. the + button); otherwise the heading (line removed).
+      // preventScroll: Safari doesn't focus buttons on click, so focus is often "nowhere" here; without
+      // it, every + click there would jump the page up to the heading.
+      const target = focusKey && this.querySelector(`[data-cart-focus="${CSS.escape(focusKey)}"]`);
+      (target || this.querySelector('[data-cart-heading]'))?.focus({ preventScroll: true });
+    }
+
+    announce(message) {
+      if (!this.status) return;
+      this.status.textContent = '';
+      requestAnimationFrame(() => {
+        this.status.textContent = message;
+      });
+    }
+  }
+
+  if (!customElements.get('cart-page')) {
+    customElements.define('cart-page', CartPage);
+  }
+{% endjavascript %}
 
 {% schema %}
 {
   "name": "t:general.cart",
-  "settings": []
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_breadcrumb",
+      "label": "t:labels.show_breadcrumb",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "Your selection"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "Shopping bag"
+    },
+    {
+      "type": "url",
+      "id": "continue_link",
+      "label": "t:labels.continue_link",
+      "info": "t:labels.continue_link_info"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.checkout"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_express_checkout",
+      "label": "t:labels.show_express_checkout",
+      "info": "t:labels.show_express_checkout_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_note",
+      "label": "t:labels.show_cart_note",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.free_shipping"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_free_shipping",
+      "label": "t:labels.show_free_shipping",
+      "default": true
+    },
+    {
+      "type": "number",
+      "id": "free_shipping_threshold",
+      "label": "t:labels.free_shipping_threshold",
+      "info": "t:labels.free_shipping_threshold_info",
+      "default": 200,
+      "visible_if": "{{ section.settings.show_free_shipping }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        { "value": "narrow", "label": "t:options.section_width.narrow" },
+        { "value": "wide", "label": "t:options.section_width.wide" },
+        { "value": "widest", "label": "t:options.section_width.widest" },
+        { "value": "full", "label": "t:options.section_width.full" }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "color",
+      "id": "highlight_color",
+      "label": "t:labels.highlight_color",
+      "info": "t:labels.cart_highlight_color_info",
+      "default": "#c8a24b"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 96
+    }
+  ]
 }
 {% endschema %}

@@ -371,7 +371,19 @@
     "deck_fan_on_scroll": "Fan out the cards on scroll",
     "deck_fan_on_scroll_info": "The cards start as a stack and spread out as the section scrolls in. Off, or with animations off in Theme settings, the fan is always open.",
     "deck_card_height": "Card height",
-    "deck_card_height_info": "Height of each product card as a percentage of its width. 70% is a wide card, 100% a square, above 100% a tall card."
+    "deck_card_height_info": "Height of each product card as a percentage of its width. 70% is a wide card, 100% a square, above 100% a tall card.",
+    "show_breadcrumb": "Show breadcrumb",
+    "continue_link": "\"Continue shopping\" link",
+    "continue_link_info": "Where the \"Continue shopping\" links go. Leave empty to open all products.",
+    "cart_highlight_color_info": "The small labels, the breadcrumb, the free-shipping bar and the cart cards. Gold in the design.",
+    "free_shipping": "Free shipping",
+    "show_free_shipping": "Show the free-shipping bar",
+    "free_shipping_threshold": "Free shipping from",
+    "free_shipping_threshold_info": "An amount in your store's currency, e.g. 200. Keep it the same as your free shipping rate in Settings > Shipping and delivery. The bar only shows when the visitor pays in your store's currency.",
+    "checkout": "Checkout",
+    "show_express_checkout": "Show express checkout buttons",
+    "show_express_checkout_info": "Shop Pay, PayPal, Apple Pay and others, for the payment methods turned on in Settings > Payments.",
+    "show_cart_note": "Let customers add a note to their order"
   },
   "options": {
     "alignment": {
