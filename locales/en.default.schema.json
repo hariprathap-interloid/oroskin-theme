@@ -371,6 +371,8 @@
     "deck_buy_label_info": "The button on the front card; opens the product page. Leave empty to hide it.",
     "deck_fan_on_scroll": "Fan out the cards",
     "deck_fan_on_scroll_info": "The cards start as a stack and spread out into an arc. Off, or with animations off in Theme settings, the fan is always open.",
+    "deck_card_size": "Card size",
+    "deck_card_size_info": "Width of the cards on desktop. Bigger cards overlap more, so the fan still fits the row.",
     "deck_card_height": "Card height",
     "deck_card_height_info": "Height of each product card as a percentage of its width. 70% is a wide card, 100% a square, above 100% a tall card.",
     "sheet_scene_style": "Trending sheet transition",

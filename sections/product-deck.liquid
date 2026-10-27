@@ -2,14 +2,14 @@
   Product deck (Figma "New Arrivals"): a centred eyebrow ("Just landed") and heading, a small pill on
   the right ("Fresh this week"), then the products of one collection as photo cards. The cards start
   as a tidy stack and fan out into an arc as the section scrolls into view (<product-deck>, --fan
-  0 -> 1). The fan itself never moves. One card is active (the middle one at first): it comes to the
+  0 -> 1). The fan itself never moves. One card is active (the first, leftmost one at first): it comes to the
   front IN ITS OWN PLACE, a little bigger, with a round quick-add button and a glass info card (title,
   short text, price, "Buy now"). Hovering (mouse), tapping or tabbing to another card makes that one
   active instead (Figma).
 
   Short text = the product's Subtitle field (custom.subtitle), else the first words of its description
   (as in Editor's Picks). Without JavaScript, with reduced motion or with animations off: the fan is
-  open and the middle card is active. Phones: the same deck, smaller, the cards overlapping more.
+  open and the first card is active. Phones: the same deck, smaller, the cards overlapping more.
 {%- endcomment -%}
 
 {%- liquid
@@ -22,10 +22,9 @@
     assign count = deck.products_count | at_most: limit
   endif
   # Each card's place in the fan: its offset from the middle (7 cards: -3 ... 3; 8 cards: -3.5 ... 3.5).
-  # The middle card starts active; with an even count, the one just right of the middle (Figma: 6
-  # cards, the 4th is in front).
+  # The first (leftmost) card starts active, so the deck reads from the left.
   assign middle = count | minus: 1 | divided_by: 2.0
-  assign start = count | divided_by: 2
+  assign start = 0
 
   assign explore_url = section.settings.link
   if explore_url == blank and deck != blank
@@ -40,7 +39,7 @@
 
 <product-deck
   class="product-deck full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
-  style="--half: {{ middle }}; --card-ratio: {{ section.settings.card_height | divided_by: 100.0 }};--color-accent: {{ section.settings.highlight_color }}; --section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
+  style="--half: {{ middle }}; --card-ratio: {{ section.settings.card_height | divided_by: 100.0 }}; --card-scale: {{ section.settings.card_size | default: 100 | divided_by: 100.0 }}; --color-accent: {{ section.settings.highlight_color }}; --section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
   {% if fan %}
     data-fan
     data-fan-style="{{ section.settings.fan_style }}"
@@ -242,7 +241,7 @@
     --d    the same without the sign (how far from the middle)
     --half the biggest offset (7 cards: 3)
     --fan  0 = stacked, 1 = fanned out (the script turns it from 0 to 1 while the section scrolls in)
-    Fanned: each step moves the card --spread sideways, --drop down (an arc) and --turn round. The
+    Fanned: each step moves the card --spread sideways and --turn round, and it drops along an arc (--arc). The
     spread shares ~38% of the width between the steps, so 3 or 8 cards both fill the row.
     Stacked: the cards are only nudged (0.6rem, 3deg), like a pile of photos.
   */
@@ -253,13 +252,22 @@
       a card, so every inner card keeps about a third of itself visible between its neighbours. The
       width shrinks with more cards so the outermost ones still end inside the row (half x step + half a
       card <= 50%): 6 cards = 22cqi (the Figma ~420px at 1920), 7 = 20cqi, 8 = ~18cqi.
+      Card size setting (--card-scale, 1 = that width): bigger cards overlap more instead of pushing the
+      outer ones out of the row, so the step is the smaller of 66% of a card and what still fits (the
+      outer card is tilted, which makes it ~0.6 of its width wide on each side of its centre, not 0.5).
     */
-    --card-w: clamp(12rem, min(22cqi, 50cqi / (var(--half, 3) * 0.66 + 0.55)), 26rem);
-    --spread: calc(var(--card-w) * 0.66);
-    --drop: clamp(0.75rem, 1.6cqi, 2rem);
+    --card-w: clamp(12rem, min(22cqi, 50cqi / (var(--half, 3) * 0.66 + 0.55)) * var(--card-scale, 1), 40rem);
+    --spread: min(var(--card-w) * 0.66, (50cqi - var(--card-w) * 0.62) / max(var(--half, 3), 0.5));
+    /* How far the outermost cards sit below the middle one (Figma: ~100px at 1920) */
+    --arc: clamp(2rem, 6cqi, 7.5rem);
     --turn: 5deg;
     position: relative;
     container-type: inline-size;
+    /*
+      Own stacking layer: the cards' z-index (10-20) only counts inside the deck, so the sticky
+      header and its mega menu always stay on top of them
+    */
+    isolation: isolate;
   }
 
   .product-deck[data-fan-active] .product-deck__stage {
@@ -268,22 +276,37 @@
 
   .product-deck__list {
     position: relative;
-    /* Room under the cards for the details card, which hangs well below the front card (Figma) */
-    block-size: calc(var(--card-w) * var(--card-ratio, 0.7) + clamp(11rem, 7rem + 7vw, 16rem));
+    /*
+      Room under the cards for the details card, which hangs well below the front card (Figma), plus
+      the arc, so it still fits when an outer (lowest) card is the active one. The details card is about
+      the same height at every desktop width, so its room is fixed (phones: below).
+    */
+    --info-room: 17.5rem;
+    block-size: calc(var(--card-w) * var(--card-ratio, 0.7) + var(--info-room) + var(--arc));
     margin: 0;
     padding: 0;
     list-style: none;
   }
 
+  /*
+    --y follows an arc, not a V (Figma): with t = distance / biggest distance (0 middle ... 1 outer),
+    the drop is half straight and half squared, so the neighbours of the middle card drop a little and
+    the outer ones a lot. 6 cards: 12%, 48%, 100% of --arc.
+  */
   .product-deck__card {
+    --t: calc(var(--d) / max(var(--half, 3), 0.5));
     --x: calc(var(--o) * (var(--spread) * var(--fan) + 0.6rem * (1 - var(--fan))));
-    --y: calc(var(--d) * var(--drop) * var(--fan));
+    --y: calc((var(--t) + var(--t) * var(--t)) / 2 * var(--arc) * var(--fan));
     --r: calc(var(--o) * (var(--turn) * var(--fan) + 3deg * (1 - var(--fan))));
     position: absolute;
     inset-block-start: var(--space-md);
     inset-inline-start: 50%;
-    /* Figma: the outer cards lie on top of the inner ones (the rose card over the serum card) */
-    z-index: calc(10 + round(down, var(--d), 1));
+    /*
+      One stack from left to right: each card lies on top of the next one, so the left cards cover
+      their inner neighbour (Figma: the rose card over the serum card) and the right ones tuck in
+      behind the middle card. Leftmost = 10 + 2 x --half, rightmost = 10 (the active card is 20).
+    */
+    z-index: calc(10 + round(down, var(--half, 3) - var(--o), 1));
     inline-size: var(--card-w);
     aspect-ratio: 1 / var(--card-ratio, 0.7); /* Card height setting: height / width, 0.7 = the Figma 10 : 7 */
     margin-inline-start: calc(var(--card-w) / -2);
@@ -497,8 +520,12 @@
     .product-deck__stage {
       --card-w: 58cqi;
       --spread: min(12cqi, 21cqi / max(var(--half, 3), 1));
-      --drop: 0.75rem;
+      --arc: 2rem;
       --turn: 6deg;
+    }
+
+    .product-deck__list {
+      --info-room: clamp(11rem, 7rem + 7vw, 16rem);
     }
 
     /* Phones: the big cards overlap too much for the Figma order, so the inner cards lie on top */
@@ -732,6 +759,17 @@
       ],
       "default": "scroll",
       "visible_if": "{{ section.settings.fan_on_scroll }}"
+    },
+    {
+      "type": "range",
+      "id": "card_size",
+      "label": "t:labels.deck_card_size",
+      "info": "t:labels.deck_card_size_info",
+      "min": 80,
+      "max": 150,
+      "step": 5,
+      "unit": "%",
+      "default": 100
     },
     {
       "type": "range",
