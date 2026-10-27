@@ -129,6 +129,9 @@
         class="cart-item__step"
         data-cart-step="-1"
         data-cart-focus="minus-{{ item.key }}"
+        {% if item.quantity <= 1 %}
+          disabled
+        {% endif %}
         aria-label="{{ 'cart.decrease' | t: title: item.product.title }}"
       >
         {{- 'icon-minus.svg' | inline_asset_content -}}
@@ -363,19 +366,32 @@
     cursor: pointer;
   }
 
+  /*
+    critical.css adds a top margin between neighbouring form controls (label + input, input + button)
+    for stacked forms. The stepper is a row, so that margin pushed the number and the + down.
+  */
+  .cart-item__quantity > * {
+    margin-block-start: 0;
+  }
+
+  /* display: block: an inline SVG sits on the text baseline, which pushed the - and + off centre */
   .cart-item__step svg {
+    display: block;
     inline-size: 0.9375rem;
     block-size: auto;
   }
 
-  /* Figma: the minus is light grey, the plus dark */
-  .cart-item__step[data-cart-step="-1"] {
-    color: color-mix(in srgb, var(--color-text) 35%, var(--color-background));
+  .cart-item__step:hover:not(:disabled) {
+    color: var(--color-accent);
   }
 
-  .cart-item__step:hover,
-  .cart-item__step[data-cart-step="-1"]:hover {
-    color: var(--color-accent);
+  /*
+    Figma: at quantity 1 the minus is light grey = disabled (the bin removes a product, not the minus).
+    Above 1 it's dark like the plus.
+  */
+  .cart-item__step:disabled {
+    color: color-mix(in srgb, var(--color-text) 30%, var(--color-background));
+    cursor: default;
   }
 
   /*
@@ -386,6 +402,8 @@
   .cart-item__quantity .cart-item__input {
     inline-size: 2.5rem;
     min-block-size: 0;
+    block-size: 100%;
+    line-height: 1; /* the number sits on the same centre line as the - and + */
     padding: 0;
     border: 0;
     border-radius: 0;
@@ -424,11 +442,15 @@
     background-color: #ffffff;
     box-shadow: 0 4px 10px 0 #b9b9b933;
     color: var(--color-text);
-    transition: color var(--duration-fast) var(--ease-out);
+    transition:
+      color var(--duration-fast) var(--ease-out),
+      background-color var(--duration-fast) var(--ease-out);
   }
 
+  /* Figma: the bin turns brand red with a white icon on hover */
   .cart-item__remove:hover {
-    color: var(--color-accent);
+    background-color: var(--color-button);
+    color: var(--color-button-text);
   }
 
   .cart-item__remove svg {

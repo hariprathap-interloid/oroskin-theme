@@ -61,7 +61,8 @@
     "testimonials": "Testimonials",
     "review": "Review",
     "product_deck": "Product deck",
-    "new_arrivals": "New arrivals"
+    "new_arrivals": "New arrivals",
+    "wrap_style": "Wrap style"
   },
   "labels": {
     "alignment": "Alignment",
@@ -398,7 +399,13 @@
     "show_express_checkout_info": "Shop Pay, PayPal, Apple Pay and others, for the payment methods turned on in Settings > Payments.",
     "show_cart_note": "Let customers add a note to their order",
     "show_coupons": "Show the coupon field",
-    "show_coupons_info": "Customers can enter discount codes in the cart. Create the codes in Discounts."
+    "show_coupons_info": "Customers can enter discount codes in the cart. Create the codes in Discounts.",
+    "gift_wrap": "Gift wrap",
+    "show_gift_wrap": "Show the gift wrap card",
+    "show_gift_wrap_info": "Add one \"Wrap style\" block per wrap (a product, e.g. a gift box). The card only shows when at least one style is set. The message is saved on the order as \"Gift message\".",
+    "wrap_style_product_info": "The wrap product: its photo, name and price are shown. Keep it published to the Online Store, or it can't be added to the cart.",
+    "gift_saved_heading": "Heading once a wrap is added",
+    "gift_saved_heading_info": "Shown with the chosen wrap, its price and the message."
   },
   "options": {
     "alignment": {

@@ -27,6 +27,11 @@ svg {
   height: auto;
 }
 
+/* Browsers give buttons their own font (Arial on Windows): take the page font like the fields below */
+button {
+  font: inherit;
+}
+
 input,
 textarea,
 select {

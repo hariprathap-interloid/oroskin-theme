@@ -54,7 +54,17 @@
     "coupon_invalid": "[code] can't be used right now. It may have expired or reached its limit, or your cart may not qualify yet.",
     "coupon_exists": "[code] is already applied",
     "coupon_remove": "Remove code {{ code }}",
-    "coupon_at_checkout": "Applied at checkout"
+    "coupon_at_checkout": "Applied at checkout",
+    "gift_add": "Add gift wrap",
+    "gift_edit": "Edit",
+    "gift_remove": "Remove",
+    "gift_choose": "Choose a style",
+    "gift_style": "{{ title }} (+{{ price }})",
+    "gift_message_label": "Add a free personal message",
+    "gift_message_placeholder": "e.g. Happy birthday!",
+    "gift_cancel": "Cancel",
+    "gift_save": "Save wrap",
+    "gift_message": "Message:"
   },
   "collections": {
     "title": "Collections"

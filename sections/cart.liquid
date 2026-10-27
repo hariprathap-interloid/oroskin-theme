@@ -216,7 +216,164 @@
             </div>
           {%- endif -%}
 
-          {%- comment -%} Gift wrap (M7.6) goes here, between Coupons and the summary {%- endcomment -%}
+          {%- comment -%}
+            Gift wrap (Figma "Buying for a loved one?"): the wrap styles are real products, one per
+            "Wrap style" block (the price and photo come from the product). "Add gift wrap" turns the
+            card into a small form (Figma, no popup): pick a style, write a free message, Save. The script adds that product to the
+            cart (and removes another wrap if there was one) and saves the message as the cart
+            attribute "Gift message", which the merchant sees on the order (Additional details).
+            Needs JavaScript (the switch and the save), so it's hidden without it.
+          {%- endcomment -%}
+          {%- liquid
+            assign wrap_blocks = section.blocks | where: 'type', 'wrap_style'
+
+            # The wrap products, as "|id|" marks, to spot wrap lines in the cart
+            assign wrap_ids = ''
+            for wrap_block in wrap_blocks
+              if wrap_block.settings.product != blank
+                assign wrap_ids = wrap_ids | append: '|' | append: wrap_block.settings.product.id | append: '|'
+              endif
+            endfor
+
+            # Wrap lines already in the cart (normally one): their keys and variant ids, for the script
+            assign wrap_line = blank
+            assign wrap_keys = ''
+            assign wrap_variants = ''
+            for item in cart.items
+              assign mark = '|' | append: item.product_id | append: '|'
+              if wrap_ids contains mark
+                if wrap_line == blank
+                  assign wrap_line = item
+                endif
+                assign wrap_keys = wrap_keys | append: item.key | append: ','
+                assign wrap_variants = wrap_variants | append: item.variant_id | append: ','
+              endif
+            endfor
+
+            # Fixed attribute name: it's data on the order, read by the merchant, not shopper text
+            assign gift_message = cart.attributes['Gift message']
+          -%}
+          {%- if section.settings.show_gift_wrap and wrap_ids != '' -%}
+            <div
+              class="cart-card cart-gift{% if wrap_line != blank %} cart-gift--saved{% endif %}"
+              data-cart-gift
+              data-wrap-keys="{{ wrap_keys }}"
+              data-wrap-variants="{{ wrap_variants }}"
+            >
+              {%- comment -%}
+                Two states in the same card (Figma): the summary (title, text, Add gift wrap, ribbon) and,
+                after "Add gift wrap" / "Edit", the form in its place (styles, message, Cancel / Save).
+              {%- endcomment -%}
+              <div class="cart-gift__summary" data-cart-gift-summary>
+              {%- comment -%} Decorative ribbon: a gold band with the bow at its top (Figma) {%- endcomment -%}
+              <div class="cart-gift__ribbon" aria-hidden="true">
+                <img class="cart-gift__bow" src="{{ 'cart-gift-ribbon.png' | asset_url }}" alt="" width="676" height="369" loading="lazy">
+              </div>
+
+              <div class="cart-gift__body">
+                {%- if wrap_line != blank -%}
+                  {%- comment -%}
+                    Saved state (Figma): "Gift wrapping", the wrap (photo, name, price), the message,
+                    then Remove on the left and EDIT ↗ on the right.
+                  {%- endcomment -%}
+                  {%- if section.settings.gift_saved_title != blank -%}
+                    <h2 class="cart-gift__title">{{ section.settings.gift_saved_title | escape }}</h2>
+                  {%- endif -%}
+                  <div class="cart-gift__item">
+                    <span class="cart-gift__style-image">
+                      {%- if wrap_line.image != blank -%}
+                        {{ wrap_line.image | image_url: width: 160 | image_tag: alt: '', loading: 'lazy', widths: '80, 160' }}
+                      {%- endif -%}
+                    </span>
+                    <p class="cart-gift__item-name">{{ wrap_line.product.title | escape }}</p>
+                    <p class="cart-gift__item-price">{{ wrap_line.final_line_price | money }}</p>
+                    {%- if gift_message != blank -%}
+                      {%- comment -%} One line, like the design: long messages are cut with "..." {%- endcomment -%}
+                      <p class="cart-gift__message">
+                        <span class="cart-gift__message-label">{{ 'cart.gift_message' | t }}</span>
+                        “{{ gift_message | truncate: 30 | escape }}”
+                      </p>
+                    {%- endif -%}
+                  </div>
+                  <div class="cart-gift__links">
+                    <button type="button" class="cart-gift__remove" data-cart-gift-remove data-cart-focus="gift-remove">
+                      {{- 'cart.gift_remove' | t -}}
+                    </button>
+                    <button type="button" class="cart-gift__link" data-cart-gift-open data-cart-focus="gift-open" aria-controls="CartGiftPanel" aria-expanded="false">
+                      {{- 'cart.gift_edit' | t -}}
+                      <span class="cart-gift__arrow" aria-hidden="true">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+                    </button>
+                  </div>
+                {%- else -%}
+                  {%- if section.settings.gift_title != blank -%}
+                    <h2 class="cart-gift__title">{{ section.settings.gift_title | escape }}</h2>
+                  {%- endif -%}
+                  {%- if section.settings.gift_text != blank -%}
+                    <p class="cart-gift__text">{{ section.settings.gift_text | escape }}</p>
+                  {%- endif -%}
+                  <button type="button" class="cart-gift__link" data-cart-gift-open data-cart-focus="gift-open" aria-controls="CartGiftPanel" aria-expanded="false">
+                    {{- 'cart.gift_add' | t -}}
+                    <span class="cart-gift__arrow" aria-hidden="true">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+                  </button>
+                {%- endif -%}
+              </div>
+              </div>
+
+              <div class="cart-gift__panel" id="CartGiftPanel" data-cart-gift-panel hidden>
+                <form class="cart-gift__form" data-cart-gift-form>
+                  <img class="cart-gift__corner-bow" src="{{ 'cart-gift-ribbon.png' | asset_url }}" alt="" width="676" height="369" loading="lazy">
+
+                  <fieldset class="cart-gift__styles">
+                    <legend class="cart-gift__label" id="CartGiftHeading">{{ 'cart.gift_choose' | t }}</legend>
+                    {%- for wrap_block in wrap_blocks -%}
+                      {%- assign wrap_product = wrap_block.settings.product -%}
+                      {%- if wrap_product != blank and wrap_product.available -%}
+                        {%- liquid
+                          assign wrap_variant = wrap_product.selected_or_first_available_variant
+                          assign wrap_price = wrap_variant.price | money
+                        -%}
+                        <label class="cart-gift__style" {{ wrap_block.shopify_attributes }}>
+                          <input
+                            class="cart-gift__radio"
+                            type="radio"
+                            name="wrap"
+                            value="{{ wrap_variant.id }}"
+                            required
+                            {% if wrap_line != blank and wrap_line.variant_id == wrap_variant.id %}
+                              checked
+                            {% endif %}
+                          >
+                          <span class="cart-gift__style-image">
+                            {%- if wrap_product.featured_image != blank -%}
+                              {{ wrap_product.featured_image | image_url: width: 160 | image_tag: alt: '', loading: 'lazy', widths: '80, 160' }}
+                            {%- endif -%}
+                          </span>
+                          <span class="cart-gift__style-name">{{ 'cart.gift_style' | t: title: wrap_product.title, price: wrap_price }}</span>
+                        </label>
+                      {%- endif -%}
+                    {%- endfor -%}
+                  </fieldset>
+
+                  <label class="cart-gift__label" for="CartGiftMessage">{{ 'cart.gift_message_label' | t }}</label>
+                  <textarea
+                    class="cart-gift__textarea"
+                    id="CartGiftMessage"
+                    name="message"
+                    rows="3"
+                    maxlength="300"
+                    placeholder="{{ 'cart.gift_message_placeholder' | t }}"
+                  >{{ gift_message | escape }}</textarea>
+
+                  <p class="cart-gift__error" role="alert" data-cart-gift-error hidden></p>
+
+                  <div class="cart-gift__actions">
+                    <button type="button" class="cart-gift__cancel" data-cart-gift-close>{{ 'cart.gift_cancel' | t }}</button>
+                    <button type="submit" class="button cart-gift__save">{{ 'cart.gift_save' | t }}</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          {%- endif -%}
 
           {%- comment -%}
             Order summary (Figma). Subtotal = before order discounts; order-level discounts listed;
@@ -548,6 +705,333 @@
     background-color: color-mix(in srgb, var(--color-text) 8%, transparent);
   }
 
+  /*
+    Gift wrap card (Figma): Glass (Light -7deg 80% = the theme's --glass-rim, Frost 100 = 35px blur)
+    over a soft gold tint with a light patch, a gold ribbon band near the right edge with the bow at its
+    top. The text keeps clear of the ribbon. Needs JavaScript, so it's hidden without it.
+  */
+  .no-js .cart-gift {
+    display: none;
+  }
+
+  .cart-gift {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    padding-inline-end: 34%;
+    /*
+      Figma fill: a diagonal gold > light gold > white > light gold > gold sweep, every stop at 15%,
+      over the page colour. Gold = the scheme accent (#C8A24B); light gold = accent mixed half with white (#E3D0A4).
+    */
+    --gift-gold: color-mix(in srgb, var(--color-accent) 15%, transparent);
+    --gift-light: color-mix(in srgb, color-mix(in srgb, var(--color-accent) 50%, #ffffff) 15%, transparent);
+    background:
+      linear-gradient(
+        115.33deg,
+        var(--gift-gold) 2.78%,
+        var(--gift-light) 25.41%,
+        #ffffff26 48.72%,
+        var(--gift-light) 73.66%,
+        var(--gift-gold) 97.89%
+      ),
+      var(--color-background);
+    box-shadow: var(--glass-rim);
+    -webkit-backdrop-filter: blur(var(--glass-frost));
+    backdrop-filter: blur(var(--glass-frost));
+  }
+
+  /* Figma ribbon: linear-gradient(180deg, #D9BB72 0%, #F7EED9 20.95%, #D9BB72 100%) */
+  .cart-gift__ribbon {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 16%;
+    z-index: -1;
+    inline-size: 0.5rem;
+    background: linear-gradient(180deg, #d9bb72 0%, #f7eed9 20.95%, #d9bb72 100%);
+  }
+
+  /* The bow fills ~37% of its (wide, transparent) image, so the image is ~2.7x the bow's width */
+  .cart-gift__bow {
+    position: absolute;
+    inset-block-start: 0.5rem;
+    inset-inline-start: 50%;
+    inline-size: 15rem;
+    max-inline-size: none;
+    block-size: auto;
+    translate: -50% 0;
+    pointer-events: none;
+  }
+
+  .cart-gift__body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-md);
+  }
+
+  .cart-gift__title {
+    margin: 0;
+    color: var(--color-accent);
+    font-family: var(--font-body--family);
+    font-size: var(--font-size-body); /* Figma: 20px at 1920 */
+    font-weight: var(--font-weight-medium);
+  }
+
+  .cart-gift__text {
+    margin: 0;
+    font-size: var(--font-size-body-sm);
+  }
+
+  /* Saved state: content stops before the bow (Figma: the price ends ~50px left of the ribbon) */
+  .cart-gift--saved {
+    padding-inline-end: 27%;
+  }
+
+  .cart-gift--saved .cart-gift__body {
+    align-items: stretch;
+  }
+
+  /* Photo | name | price, then the message under the name */
+  .cart-gift__item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    column-gap: var(--space-md);
+    row-gap: var(--space-xs);
+  }
+
+  /* Figma at 1920: name, message and Remove 16px, price 20px */
+  .cart-gift__item-name,
+  .cart-gift__item-price {
+    margin: 0;
+    font-size: var(--font-size-caption);
+  }
+
+  .cart-gift__item-price {
+    font-size: var(--font-size-body);
+    font-weight: var(--font-weight-medium);
+  }
+
+  /* One line; the Liquid also shortens long messages so the closing quote usually stays visible */
+  .cart-gift__message {
+    grid-column: 2 / -1;
+    margin: 0;
+    overflow: hidden;
+    font-size: var(--font-size-caption);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .cart-gift__message-label {
+    color: var(--color-accent);
+  }
+
+  .cart-gift__links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-lg);
+  }
+
+  /* "Remove": plain dark text (Figma), EDIT ↗ is the gold link on the right */
+  .cart-gift__remove {
+    margin-block-start: var(--space-sm);
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--color-text);
+    font-size: var(--font-size-caption);
+    cursor: pointer;
+  }
+
+  .cart-gift__remove:hover {
+    text-decoration: underline;
+  }
+
+  /* "ADD GIFT WRAP ↗": gold capitals with a small arrow (the theme arrow turned up-right) */
+  .cart-gift__link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin-block-start: var(--space-sm);
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--color-accent);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-nav);
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  .cart-gift__link:hover {
+    text-decoration: underline;
+  }
+
+  .cart-gift__arrow svg {
+    inline-size: 1em;
+    block-size: auto;
+    rotate: -45deg;
+  }
+
+  /*
+    Open state (Figma): the same card shows the form instead of the summary. The ribbon band goes, the
+    text gets the full width, and the bow moves to the top-right corner, tilted, half off the card
+    (the card's overflow: hidden cuts it, as in the design).
+  */
+  .cart-gift.is-open {
+    padding-inline-end: clamp(var(--space-lg), 2.1vw, 2.5rem);
+  }
+
+  .cart-gift__summary {
+    display: contents;
+  }
+
+  .cart-gift__summary[hidden] {
+    display: none;
+  }
+
+  .cart-gift__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  /* Figma: the bow's knot sits ~50px in from the card's top and right edges; only the loops run off the edge */
+  .cart-gift__corner-bow {
+    position: absolute;
+    inset-block-start: -0.75rem;
+    inset-inline-end: -5.5rem;
+    z-index: -1;
+    inline-size: 18rem;
+    max-inline-size: none;
+    block-size: auto;
+    rotate: 25deg;
+    pointer-events: none;
+  }
+
+  .cart-gift__styles {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .cart-gift__label {
+    margin-block-end: var(--space-xs);
+    padding: 0;
+    color: var(--color-accent);
+    font-size: var(--font-size-body-lg);
+    font-weight: var(--font-weight-medium);
+  }
+
+  /* One style: round radio, photo, "Signature Blush Box (+$5.00)" */
+  .cart-gift__style {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    cursor: pointer;
+  }
+
+  .cart-gift__style .cart-gift__radio {
+    flex: none;
+    display: grid;
+    place-content: center;
+    inline-size: 1.75rem;
+    block-size: 1.75rem;
+    margin: 0;
+    border: 1px solid #ffffffcc;
+    border-radius: 50%;
+    background-color: #ffffffd9;
+    box-shadow: 0 2px 6px #b9b9b94d;
+    appearance: none;
+    cursor: pointer;
+  }
+
+  .cart-gift__style .cart-gift__radio::after {
+    content: "";
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
+    border-radius: 50%;
+    background-color: var(--color-accent);
+    scale: 0;
+    transition: scale var(--duration-fast) var(--ease-out);
+  }
+
+  .cart-gift__style .cart-gift__radio:checked::after {
+    scale: 1;
+  }
+
+  .cart-gift__style-image {
+    flex: none;
+    inline-size: 3.25rem;
+    aspect-ratio: 3 / 2;
+    overflow: hidden;
+    border-radius: 0.25rem;
+    background-color: var(--color-tint, #f3ede2);
+  }
+
+  /* Bigger in the style list, where the photo helps choose */
+  .cart-gift__style .cart-gift__style-image {
+    inline-size: 5rem;
+    border-radius: 0.375rem;
+  }
+
+  .cart-gift__style-image img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  /* Two classes: the global textarea rule would otherwise win (see the coupon field) */
+  .cart-gift__form .cart-gift__textarea {
+    min-block-size: 6.5rem;
+    padding: var(--space-md) var(--space-lg);
+    border: 1px solid #ffffffcc;
+    border-radius: var(--radius-md);
+    background-color: #ffffff99;
+    box-shadow: inset 0 1px 3px #b9b9b933;
+    resize: vertical;
+  }
+
+  .cart-gift__error {
+    margin: 0;
+    color: var(--color-error, #b3261e);
+    font-size: var(--font-size-small);
+  }
+
+  .cart-gift__actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    margin-block-start: var(--space-sm);
+  }
+
+  .cart-gift__cancel {
+    padding: var(--space-sm) var(--space-md);
+    border: 0;
+    background: none;
+    color: var(--color-text);
+    font-size: var(--font-size-body);
+    cursor: pointer;
+  }
+
+  .cart-gift__cancel:hover {
+    text-decoration: underline;
+  }
+
+  .cart-gift__save {
+    --color-button: var(--color-accent);
+    --color-button-border: var(--color-accent);
+    --color-button-text: #ffffff;
+    margin: 0;
+  }
+
   /* Rows: label left, amount right */
   .cart-summary__rows {
     display: flex;
@@ -777,6 +1261,12 @@
       this.addEventListener('click', (event) => this.onClick(event));
       this.addEventListener('change', (event) => this.onChange(event));
       this.addEventListener('submit', (event) => {
+        // Gift wrap form: "Save wrap" (saved by the script; the form has no action of its own)
+        if (event.target.matches('[data-cart-gift-form]')) {
+          event.preventDefault();
+          this.saveGift(event.target);
+          return;
+        }
         // Coupon form: apply here; the form's own target (/checkout?discount=...) is the no-JS fallback
         if (!event.target.matches('[data-cart-coupon]')) return;
         event.preventDefault();
@@ -799,7 +1289,8 @@
       const step = event.target.closest('[data-cart-step]');
       if (step) {
         const input = step.closest('.cart-item').querySelector('[data-cart-quantity]');
-        input.value = Math.max(0, Number(input.value) + Number(step.dataset.cartStep));
+        // The minus stops at 1: removing a product is the bin's job (the minus is disabled at 1)
+        input.value = Math.max(1, Number(input.value) + Number(step.dataset.cartStep));
         this.queueQuantity(input);
         return;
       }
@@ -819,7 +1310,99 @@
       }
 
       const removeCode = event.target.closest('[data-cart-coupon-remove]');
-      if (removeCode) this.removeCoupon(removeCode.dataset.cartCouponRemove);
+      if (removeCode) {
+        this.removeCoupon(removeCode.dataset.cartCouponRemove);
+        return;
+      }
+
+      // Gift wrap: switch the card to its form and back, or take the wrap off
+      if (event.target.closest('[data-cart-gift-open]')) {
+        this.toggleGift(true);
+        return;
+      }
+      if (event.target.closest('[data-cart-gift-close]')) {
+        this.toggleGift(false);
+        return;
+      }
+      if (event.target.closest('[data-cart-gift-remove]')) this.removeGift();
+    }
+
+    /**
+     * Figma: the gift card itself turns into the form (no popup). Open: hide the summary, show the
+     * form, put focus on the first style. Close (Cancel or Esc): back, with focus on the button that
+     * opened it, so a keyboard user isn't lost.
+     */
+    toggleGift(open) {
+      const card = this.querySelector('[data-cart-gift]');
+      const panel = card?.querySelector('[data-cart-gift-panel]');
+      if (!panel) return;
+      card.classList.toggle('is-open', open);
+      card.querySelector('[data-cart-gift-summary]').hidden = open;
+      panel.hidden = !open;
+      card.querySelectorAll('[data-cart-gift-open]').forEach((button) => button.setAttribute('aria-expanded', String(open)));
+      if (open) {
+        panel.querySelector('[data-cart-gift-error]').hidden = true;
+        (panel.querySelector('[name="wrap"]:checked') || panel.querySelector('[name="wrap"]'))?.focus();
+        if (!this.giftEscape) {
+          // Esc inside the form = Cancel
+          this.giftEscape = (event) => {
+            if (event.key === 'Escape' && event.target.closest('[data-cart-gift-panel]')) this.toggleGift(false);
+          };
+          this.addEventListener('keydown', this.giftEscape);
+        }
+      } else {
+        card.querySelector('[data-cart-gift-open]')?.focus();
+      }
+    }
+
+    /** The wrap lines in the cart now (keys and variant ids, written by Liquid on the gift card) */
+    wrapLines() {
+      const card = this.querySelector('[data-cart-gift]');
+      const list = (value) => (value || '').split(',').filter(Boolean);
+      const keys = list(card?.dataset.wrapKeys);
+      const variants = list(card?.dataset.wrapVariants);
+      return keys.map((key, index) => ({ key, variant: variants[index] }));
+    }
+
+    /**
+     * Save wrap: add the chosen wrap product (unless it's already in the cart), take any other wrap
+     * out, keep exactly one, and save the message as the "Gift message" cart attribute, then re-render.
+     * Two requests: /cart/add.js only adds; the quantities and the attribute go in one update.
+     */
+    async saveGift(form) {
+      const variant = form.querySelector('[name="wrap"]:checked')?.value;
+      const message = form.querySelector('[name="message"]').value.trim();
+      const errorBox = form.querySelector('[data-cart-gift-error]');
+      if (!variant) return; // the radios are "required", so the browser asks for a choice first
+
+      const lines = this.wrapLines();
+      try {
+        if (!lines.some((line) => line.variant === variant)) {
+          const response = await fetch(`${this.root}cart/add.js`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ items: [{ id: Number(variant), quantity: 1 }] }),
+          });
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.description || data.message || '');
+        }
+      } catch (error) {
+        errorBox.textContent = error?.message || this.dataset.labelError;
+        errorBox.hidden = false;
+        return;
+      }
+
+      // Other wraps out; the chosen one (if it was already there) back to 1. The re-render brings the
+      // card back in its summary state, now showing the wrap and the message.
+      const updates = {};
+      lines.forEach((line) => (updates[line.key] = line.variant === variant ? 1 : 0));
+      await this.change(updates, null, { attributes: { 'Gift message': message } });
+    }
+
+    removeGift() {
+      const updates = {};
+      this.wrapLines().forEach((line) => (updates[line.key] = 0));
+      this.change(updates, null, { attributes: { 'Gift message': '' } });
     }
 
     /**
@@ -1085,6 +1668,39 @@
     },
     {
       "type": "header",
+      "content": "t:labels.gift_wrap"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_gift_wrap",
+      "label": "t:labels.show_gift_wrap",
+      "info": "t:labels.show_gift_wrap_info",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "gift_title",
+      "label": "t:labels.heading",
+      "default": "Buying for a loved one?",
+      "visible_if": "{{ section.settings.show_gift_wrap }}"
+    },
+    {
+      "type": "text",
+      "id": "gift_text",
+      "label": "t:labels.text",
+      "default": "Add a personal message and have your order gift wrapped.",
+      "visible_if": "{{ section.settings.show_gift_wrap }}"
+    },
+    {
+      "type": "text",
+      "id": "gift_saved_title",
+      "label": "t:labels.gift_saved_heading",
+      "info": "t:labels.gift_saved_heading_info",
+      "default": "Gift wrapping",
+      "visible_if": "{{ section.settings.show_gift_wrap }}"
+    },
+    {
+      "type": "header",
       "content": "t:labels.free_shipping"
     },
     {
@@ -1111,10 +1727,22 @@
       "label": "t:labels.section_width",
       "info": "t:labels.section_width_info",
       "options": [
-        { "value": "narrow", "label": "t:options.section_width.narrow" },
-        { "value": "wide", "label": "t:options.section_width.wide" },
-        { "value": "widest", "label": "t:options.section_width.widest" },
-        { "value": "full", "label": "t:options.section_width.full" }
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
       ],
       "default": "widest"
     },
@@ -1150,6 +1778,20 @@
       "step": 8,
       "unit": "px",
       "default": 96
+    }
+  ],
+  "blocks": [
+    {
+      "type": "wrap_style",
+      "name": "t:general.wrap_style",
+      "settings": [
+        {
+          "type": "product",
+          "id": "product",
+          "label": "t:labels.product",
+          "info": "t:labels.wrap_style_product_info"
+        }
+      ]
     }
   ]
 }
