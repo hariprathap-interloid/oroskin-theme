@@ -600,7 +600,7 @@
         "heading": "Editor's <em>Picks</em>",
         "link_label": "View all",
         "link": "",
-        "collection": "editorspick",
+        "collection": "editors-picks",
         "products_to_show": 7,
         "panel_height": 29,
         "fill_screen": true,

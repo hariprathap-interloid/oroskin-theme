@@ -11,7 +11,44 @@
   "sections": {
     "main": {
       "type": "cart",
-      "settings": {}
+      "blocks": {
+        "wrap_style_CVAP4A": {
+          "type": "wrap_style",
+          "settings": {
+            "product": "signature-blush-box"
+          }
+        },
+        "wrap_style_LY3mgw": {
+          "type": "wrap_style",
+          "settings": {
+            "product": "eco-friendly-linen-pouch"
+          }
+        }
+      },
+      "block_order": [
+        "wrap_style_CVAP4A",
+        "wrap_style_LY3mgw"
+      ],
+      "settings": {
+        "show_breadcrumb": true,
+        "eyebrow": "Your selection",
+        "heading": "Shopping bag",
+        "continue_link": "",
+        "show_express_checkout": true,
+        "show_note": true,
+        "show_coupons": true,
+        "show_gift_wrap": true,
+        "gift_title": "Buying for a loved one?",
+        "gift_text": "Add a personal message and have your order gift wrapped.",
+        "gift_saved_title": "Gift wrapping",
+        "show_free_shipping": true,
+        "free_shipping_threshold": 200,
+        "section_width": "widest",
+        "color_scheme": "",
+        "highlight_color": "#c8a24b",
+        "padding_top": 40,
+        "padding_bottom": 96
+      }
     }
   },
   "order": [
