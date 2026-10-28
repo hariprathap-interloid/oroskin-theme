@@ -308,6 +308,143 @@
     ]
   },
   {
+    "name": "t:general.search",
+    "settings": [
+      {
+        "type": "checkbox",
+        "id": "search_show_in_header",
+        "label": "t:labels.search_show_in_header",
+        "info": "t:labels.search_show_in_header_info",
+        "default": true
+      },
+      {
+        "type": "header",
+        "content": "t:labels.search_start_group"
+      },
+      {
+        "type": "checkbox",
+        "id": "search_show_recent",
+        "label": "t:labels.search_show_recent",
+        "info": "t:labels.search_show_recent_info",
+        "default": true,
+        "visible_if": "{{ settings.search_show_in_header }}"
+      },
+      {
+        "type": "text",
+        "id": "search_trending",
+        "label": "t:labels.search_trending",
+        "info": "t:labels.search_trending_info",
+        "default": "Rose perfume, Cloud cleanser, Radiance renewal serum",
+        "visible_if": "{{ settings.search_show_in_header }}"
+      },
+      {
+        "type": "product_list",
+        "id": "search_products",
+        "label": "t:labels.search_products",
+        "info": "t:labels.search_products_info",
+        "limit": 3
+      },
+      {
+        "type": "header",
+        "content": "t:labels.search_results_group"
+      },
+      {
+        "type": "checkbox",
+        "id": "predictive_search_enabled",
+        "label": "t:labels.predictive_search_enabled",
+        "info": "t:labels.predictive_search_enabled_info",
+        "default": true,
+        "visible_if": "{{ settings.search_show_in_header }}"
+      },
+      {
+        "type": "range",
+        "id": "search_results_limit",
+        "label": "t:labels.search_results_limit",
+        "min": 2,
+        "max": 10,
+        "step": 1,
+        "default": 6,
+        "visible_if": "{{ settings.search_show_in_header and settings.predictive_search_enabled }}"
+      },
+      {
+        "type": "checkbox",
+        "id": "search_show_suggestions",
+        "label": "t:labels.search_show_suggestions",
+        "default": true,
+        "visible_if": "{{ settings.search_show_in_header and settings.predictive_search_enabled }}"
+      },
+      {
+        "type": "checkbox",
+        "id": "search_show_products",
+        "label": "t:labels.search_show_products",
+        "default": true,
+        "visible_if": "{{ settings.search_show_in_header and settings.predictive_search_enabled }}"
+      },
+      {
+        "type": "checkbox",
+        "id": "search_show_collections",
+        "label": "t:labels.search_show_collections",
+        "default": true,
+        "visible_if": "{{ settings.search_show_in_header and settings.predictive_search_enabled }}"
+      },
+      {
+        "type": "checkbox",
+        "id": "search_show_pages",
+        "label": "t:labels.search_show_pages",
+        "default": true,
+        "visible_if": "{{ settings.search_show_in_header and settings.predictive_search_enabled }}"
+      },
+      {
+        "type": "checkbox",
+        "id": "search_show_articles",
+        "label": "t:labels.search_show_articles",
+        "default": true,
+        "visible_if": "{{ settings.search_show_in_header and settings.predictive_search_enabled }}"
+      },
+      {
+        "type": "header",
+        "content": "t:labels.search_card_group"
+      },
+      {
+        "type": "paragraph",
+        "content": "t:labels.search_card_info"
+      },
+      {
+        "type": "checkbox",
+        "id": "search_show_product_type",
+        "label": "t:labels.search_show_product_type",
+        "default": true,
+        "visible_if": "{{ settings.search_show_in_header }}"
+      },
+      {
+        "type": "checkbox",
+        "id": "search_show_price",
+        "label": "t:labels.search_show_price",
+        "default": true,
+        "visible_if": "{{ settings.search_show_in_header }}"
+      },
+      {
+        "type": "header",
+        "content": "t:labels.search_style_group"
+      },
+      {
+        "type": "color_scheme",
+        "id": "search_color_scheme",
+        "label": "t:labels.color_scheme",
+        "default": "scheme-1",
+        "visible_if": "{{ settings.search_show_in_header }}"
+      },
+      {
+        "type": "color",
+        "id": "search_highlight_color",
+        "label": "t:labels.highlight_color",
+        "info": "t:labels.search_highlight_color_info",
+        "default": "#c8a24b",
+        "visible_if": "{{ settings.search_show_in_header }}"
+      }
+    ]
+  },
+  {
     "name": "t:general.animations",
     "settings": [
       {

@@ -1,0 +1,802 @@
+{% doc %}
+  The header's search button and its popup (Figma "search popup": a cream panel under the header with a
+  search field, "Recent searches", "Trending searches" and "Top pick products").
+
+  How it works:
+  - Without JavaScript, the search button is a plain link to the search page.
+  - With JavaScript, <search-popup> opens a modal <dialog> instead. While the visitor types, it asks the
+    Predictive Search API for sections/predictive-search.liquid and shows those results in place of the
+    three starting groups.
+  - Enter (or the magnifier) submits a normal GET form to the search page.
+  - Recent searches live only in the visitor's own browser (localStorage), up to 5. Nothing is sent to
+    the store.
+
+  No parameters: every option is a theme setting (Theme settings → Search), read here as settings.*,
+  so the same values also reach sections/predictive-search.liquid when it is fetched.
+
+  @example
+  {% render 'search-popup' %}
+{% enddoc %}
+
+{%- liquid
+  assign scheme_id = settings.search_color_scheme.id | default: 'scheme-1'
+  assign accent = settings.search_highlight_color | default: '#c8a24b'
+  # The scheme's own accent (brand red), kept for the focus ring: --color-accent is replaced by the gold above
+  assign focus_color = settings.search_color_scheme.settings.accent
+  assign recent_on = settings.search_show_recent
+  assign products = settings.search_products
+
+  # "Rose perfume, Cloud cleanser" -> two clean terms. strip removes the spaces around each comma;
+  # empty pieces (e.g. a trailing comma) are skipped when the chips are drawn.
+  assign trending_terms = settings.search_trending | split: ','
+  assign has_trending = false
+  for term in trending_terms
+    assign clean_term = term | strip
+    if clean_term != blank
+      assign has_trending = true
+      break
+    endif
+  endfor
+
+  # Theme settings → Search: the result types the popup asks Shopify for, e.g. "product,collection,query".
+  # Each switched-on type adds ",type"; the first comma is removed at the end. Empty = no live results.
+  assign search_types = ''
+  if settings.predictive_search_enabled
+    if settings.search_show_products
+      assign search_types = search_types | append: ',product'
+    endif
+    if settings.search_show_collections
+      assign search_types = search_types | append: ',collection'
+    endif
+    if settings.search_show_pages
+      assign search_types = search_types | append: ',page'
+    endif
+    if settings.search_show_articles
+      assign search_types = search_types | append: ',article'
+    endif
+    if settings.search_show_suggestions
+      assign search_types = search_types | append: ',query'
+    endif
+    assign search_types = search_types | remove_first: ','
+  endif
+-%}
+
+<search-popup
+  class="search-popup"
+  data-url="{{ routes.predictive_search_url }}"
+  data-search-url="{{ routes.search_url }}"
+  data-section-id="predictive-search"
+  data-types="{{ search_types }}"
+  data-limit="{{ settings.search_results_limit | default: 6 }}"
+  data-label-error="{{ 'search.popup.error' | t | escape }}"
+>
+  <a
+    class="header__icon-button"
+    href="{{ routes.search_url }}"
+    aria-haspopup="dialog"
+    aria-controls="SearchPopup"
+    data-search-open
+  >
+    {{ 'icon-search.svg' | inline_asset_content }}
+    <span class="visually-hidden">{{ 'header.search' | t }}</span>
+  </a>
+
+  <dialog
+    id="SearchPopup"
+    class="search-popup__dialog color-{{ scheme_id }}"
+    aria-label="{{ 'header.search' | t }}"
+    style="--color-accent: {{ accent }}; --search-focus: {{ focus_color }};"
+  >
+    <div class="search-popup__panel">
+      <div class="search-popup__inner">
+        {%- comment -%}
+          The form comes first, so showModal() puts focus straight into the field (a dialog focuses its
+          first focusable element). options[prefix]=last: the last word may be unfinished, so "ros" finds "rose".
+        {%- endcomment -%}
+        <form
+          id="SearchPopupForm"
+          class="search-popup__form"
+          action="{{ routes.search_url }}"
+          method="get"
+          role="search"
+          data-search-form
+        >
+          <label class="visually-hidden" for="SearchPopupInput">{{ 'search.popup.label' | t }}</label>
+          <input
+            id="SearchPopupInput"
+            class="search-popup__input"
+            type="search"
+            name="q"
+            placeholder="{{ 'search.popup.placeholder' | t }}"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            data-search-input
+          >
+          <input type="hidden" name="options[prefix]" value="last">
+          <button type="submit" class="search-popup__submit">
+            {{ 'icon-search.svg' | inline_asset_content }}
+            <span class="visually-hidden">{{ 'search.submit' | t }}</span>
+          </button>
+        </form>
+
+        <hr class="search-popup__rule">
+
+        {%- comment -%} Screen readers hear "6 results" here after each search (polite: it waits for typing to pause) {%- endcomment -%}
+        <p class="visually-hidden" role="status" data-search-status></p>
+
+        <div class="search-popup__start" data-search-start>
+          {%- if recent_on -%}
+            {%- comment -%} Filled by the script from localStorage; stays hidden while empty {%- endcomment -%}
+            <div class="search-popup__group" data-search-recent hidden>
+              <h2 class="search-popup__heading" id="SearchRecentHeading">{{ 'search.popup.recent' | t }}</h2>
+              <ul class="search-popup__chips" role="list" aria-labelledby="SearchRecentHeading"></ul>
+            </div>
+          {%- endif -%}
+
+          {%- if has_trending -%}
+            <div class="search-popup__group">
+              <h2 class="search-popup__heading" id="SearchTrendingHeading">{{ 'search.popup.trending' | t }}</h2>
+              <ul class="search-popup__chips" role="list" aria-labelledby="SearchTrendingHeading">
+                {%- for term in trending_terms -%}
+                  {%- liquid
+                    assign clean_term = term | strip
+                    if clean_term == blank
+                      continue
+                    endif
+                    assign encoded_term = clean_term | url_encode
+                  -%}
+                  <li>
+                    <a
+                      class="search-popup__chip search-popup__chip--trending"
+                      href="{{ routes.search_url }}?q={{ encoded_term }}&options%5Bprefix%5D=last"
+                      data-search-term="{{ clean_term | escape }}"
+                    >
+                      {{- clean_term | escape -}}
+                    </a>
+                  </li>
+                {%- endfor -%}
+              </ul>
+            </div>
+          {%- endif -%}
+
+          {%- if products != blank -%}
+            <div class="search-popup__group">
+              <h2 class="search-popup__heading" id="SearchPicksHeading">{{ 'search.popup.top_picks' | t }}</h2>
+              <ul class="search-popup__products" role="list" aria-labelledby="SearchPicksHeading">
+                {%- for product in products limit: 3 -%}
+                  <li>{% render 'search-product-card', product: product %}</li>
+                {%- endfor -%}
+              </ul>
+            </div>
+          {%- endif -%}
+        </div>
+
+        {%- comment -%} The predictive results go here (sections/predictive-search.liquid) {%- endcomment -%}
+        <div class="search-popup__results" data-search-results hidden></div>
+      </div>
+
+      <button type="button" class="search-popup__close" data-search-close>
+        {{ 'icon-close.svg' | inline_asset_content }}
+        <span class="visually-hidden">{{ 'search.popup.close' | t }}</span>
+      </button>
+    </div>
+  </dialog>
+</search-popup>
+
+{% stylesheet %}
+  /* The custom element adds no box of its own: the search button stays a direct item of the header's row */
+  .search-popup {
+    display: contents;
+  }
+
+  /*
+    The script hides groups with the hidden attribute. The browser's own [hidden] { display: none } is the
+    weakest rule there is, so any class that sets display (e.g. the grid on .search-popup__start) would
+    win and keep the group on screen. Two classes' worth of specificity puts hidden back in charge.
+  */
+  .search-popup [hidden] {
+    display: none;
+  }
+
+  /*
+    The popup (Figma: 1363px wide like the header pill, radius 50px, cream). showModal() puts the dialog in
+    the browser's "top layer", above everything, so the sticky header's z-index and blur don't affect it.
+    It drops in just under the pill: 20px gap + 77px pill + a small gap.
+  */
+  .search-popup__dialog {
+    --search-popup-top: calc(1.25rem + 4.8125rem + var(--space-sm));
+
+    /*
+      The header's wrapper sets pointer-events: none (so the page under the see-through strip stays
+      clickable), and the dialog would inherit it even in the top layer. Turn clicks back on.
+    */
+    pointer-events: auto;
+    inline-size: min(85.25rem, 100% - 2 * var(--space-md));
+    max-inline-size: none;
+    max-block-size: calc(100dvh - var(--search-popup-top) - var(--space-md));
+    margin-block: var(--search-popup-top) auto;
+    margin-inline: auto;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--glass-shadow);
+    overflow-y: auto;
+    overscroll-behavior: contain; /* scrolling the results doesn't scroll the page behind */
+  }
+
+  .search-popup__dialog::backdrop {
+    background-color: #1f1f1f33;
+  }
+
+  /*
+    Focus ring: the theme's usual ring (2px in the scheme's accent, critical.css). Inside the popup
+    --color-accent is the gold highlight, too light for a ring on cream (WCAG asks 3:1), so the ring takes
+    the scheme's own accent instead (--search-focus, brand red), like everywhere else on the site.
+  */
+  .search-popup__dialog :focus-visible {
+    outline-color: var(--search-focus, var(--color-text));
+  }
+
+  .animations-on .search-popup__dialog[open] {
+    animation: search-popup-in var(--duration-base) var(--ease-out);
+  }
+
+  @keyframes search-popup-in {
+    from {
+      opacity: 0;
+      translate: 0 -0.75rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animations-on .search-popup__dialog[open] {
+      animation: none;
+    }
+  }
+
+  /*
+    The panel fills the whole dialog, so a click whose target is the <dialog> itself can only be a click
+    on the dimmed backdrop outside it: that's how the script knows to close.
+  */
+  .search-popup__panel {
+    position: relative;
+    padding-block: 2.5rem 3.5rem;
+    padding-inline: var(--space-xl);
+  }
+
+  /* The content column (Figma: 931px, the width of the field) */
+  .search-popup__inner {
+    max-inline-size: 58.1875rem;
+    margin-inline: auto;
+  }
+
+  .search-popup__form {
+    position: relative;
+  }
+
+  /* Two classes, to beat the global input[type="search"] rule (element + attribute = higher specificity) */
+  /* display: block: no inline text line around the field, so the form is exactly as tall as the field */
+  .search-popup__form .search-popup__input {
+    display: block;
+    min-block-size: 3.125rem; /* 50px, Figma */
+    padding-inline: var(--space-xl) 3.5rem; /* room for the magnifier on the right */
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-pill);
+    background-color: transparent;
+    font-size: var(--font-size-body-sm);
+  }
+
+  /*
+    Focused (Figma: the caret in the field, still the gold border): no dark ring, the border thickens and a
+    soft glow appears instead. Gold on cream is under 3:1, on the M9 contrast list with the other golds.
+  */
+  .search-popup__form .search-popup__input:hover,
+  .search-popup__form .search-popup__input:focus-visible {
+    border-color: var(--color-accent);
+  }
+
+  .search-popup__form .search-popup__input:focus-visible {
+    outline: none;
+    box-shadow:
+      inset 0 0 0 1px var(--color-accent),
+      0 0 0 3px color-mix(in srgb, var(--color-accent) 25%, transparent);
+  }
+
+  .search-popup__form .search-popup__input::placeholder {
+    color: color-mix(in srgb, var(--color-text) 60%, var(--color-background));
+  }
+
+  /* The browser's own "x" in search fields: we already have the close button */
+  .search-popup__input::-webkit-search-cancel-button {
+    display: none;
+  }
+
+  /*
+    The magnifier. Two classes, and every property the global button[type="submit"] rule sets is reset:
+    that rule (element + attribute) beats one class and would draw the red pill button here.
+  */
+  .search-popup__form .search-popup__submit {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-end: 0.3125rem;
+    translate: 0 -50%;
+    display: grid;
+    place-items: center;
+    /* A 40px circle centred in the 50px field, so its focus ring is a full circle too */
+    inline-size: 2.5rem;
+    block-size: 2.5rem;
+    min-block-size: 0;
+    /*
+      The global "space between form controls" rule (critical.css: a control after a control gets a 12px
+      top margin) hits this button, because it comes right after the hidden options[prefix] input. That
+      margin pushed the circle 12px below the centre.
+    */
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: none;
+    box-shadow: none;
+    color: var(--color-accent);
+    cursor: pointer;
+  }
+
+  /* The global rule's :hover is stronger again (it adds a pseudo-class), so the hover needs its own reset */
+  .search-popup__form .search-popup__submit:hover {
+    background: none;
+    color: var(--color-text);
+  }
+
+  .search-popup__submit svg {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+  }
+
+  /* The thin line under the field, as wide as the field */
+  .search-popup__rule {
+    inline-size: 100%;
+    margin-block: 1.5rem 1.25rem;
+    margin-inline: 0;
+    border: 0;
+    border-block-start: 1px solid var(--color-tint-border);
+  }
+
+  .search-popup__start,
+  .search-popup__matches {
+    display: grid;
+    gap: var(--space-xl);
+  }
+
+  .search-popup__heading {
+    margin-block: 0 var(--space-md);
+    font-family: var(--font-heading--family);
+    font-style: var(--font-heading--style);
+    font-weight: var(--font-heading--weight);
+    font-size: var(--font-size-body-lg);
+    line-height: 1.2;
+  }
+
+  .search-popup__chips,
+  .search-popup__products,
+  .search-popup__links {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .search-popup__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm) var(--space-md);
+  }
+
+  /* Recent searches and suggestions: soft beige pills. Trending: solid highlight colour, white text. */
+  .search-popup__chip {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 1.75rem;
+    padding-block: 0.125rem;
+    padding-inline: var(--space-md);
+    border-radius: var(--radius-pill);
+    background-color: color-mix(in srgb, var(--color-accent) 22%, var(--color-background));
+    box-shadow: 0 2px 6px #0000000d;
+    color: var(--color-text);
+    font-size: var(--font-size-caption);
+    text-decoration: none;
+    transition: background-color var(--duration-fast) var(--ease-out);
+  }
+
+  .search-popup__chip:hover {
+    background-color: color-mix(in srgb, var(--color-accent) 38%, var(--color-background));
+  }
+
+  .search-popup__chip--trending {
+    min-block-size: 2.0625rem;
+    background-color: var(--color-accent);
+    color: #ffffff;
+  }
+
+  .search-popup__chip--trending:hover {
+    background-color: color-mix(in srgb, var(--color-accent) 85%, #1f1f1f);
+  }
+
+  /* In suggestions, Shopify marks the part not typed yet: show it a little bolder, not yellow */
+  .search-popup__chip mark {
+    background: none;
+    color: inherit;
+    font-weight: var(--font-weight-medium);
+  }
+
+  /*
+    auto-fit (not auto-fill): empty columns collapse, so 2 results share the whole width instead of
+    leaving a gap where a third card would go. At most 3 per row (the 16rem minimum).
+  */
+  .search-popup__products {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: var(--space-md) 1.25rem;
+  }
+
+  /*
+    Glass for the text panels of the product cards and the result rows (Figma Glass: fill #FFFFFF33,
+    Light 45deg 80%, Frost 100). Light 45deg = the light comes from the top right, so a bright 1px rim on
+    the top and right edges (80% white) and a weaker one bottom-left; Frost 100 = the theme's 35px blur.
+    Refraction / Depth / Dispersion / Splay bend the background along the rim (an SVG filter that only
+    Chrome supports) and are left out, as on every other glass element.
+  */
+  .search-popup__dialog {
+    --search-glass-fill: #ffffff33;
+    --search-glass-rim: inset -1px 1px 0 #ffffffcc, inset 1px -1px 0 #ffffff80;
+  }
+
+  /* Product card (snippets/search-product-card.liquid; Figma 297 x 82: photo + glass panel) */
+  /* The radius matches the photo and panel, so the focus ring (an outline follows border-radius) is rounded too */
+  .search-card {
+    display: flex;
+    gap: 0.6875rem;
+    border-radius: 0.5rem;
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  .search-card__media {
+    flex: none;
+    inline-size: 5.125rem;
+    block-size: 5.125rem;
+    overflow: hidden;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 10px #0000001f;
+  }
+
+  .search-card__media :is(img, svg) {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .search-card__text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.125rem;
+    min-inline-size: 0; /* lets a long title shorten with "…" instead of widening the card */
+    padding-block: var(--space-xs);
+    padding-inline: var(--space-md);
+    border-radius: 0.5rem;
+    background-color: var(--search-glass-fill);
+    box-shadow: var(--search-glass-rim);
+    -webkit-backdrop-filter: blur(var(--glass-frost));
+    backdrop-filter: blur(var(--glass-frost));
+  }
+
+  .search-card__category {
+    color: var(--color-accent);
+    font-size: var(--font-size-small);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  .search-card__title {
+    overflow: hidden;
+    font-size: var(--font-size-caption);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .search-card:hover .search-card__title {
+    text-decoration: underline;
+  }
+
+  .search-card__price {
+    font-size: var(--font-size-caption);
+  }
+
+  /* Figma: the price in dark bold here, not the accent colour the price snippet uses on product cards */
+  .search-card__price .price__current {
+    color: var(--color-text);
+    font-weight: 700;
+  }
+
+  /* Collections, pages and articles: one column each, side by side, sharing the full width */
+  .search-popup__link-groups {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: var(--space-lg) 1.25rem;
+  }
+
+  .search-popup__links {
+    display: grid;
+    gap: var(--space-sm);
+  }
+
+  /* Result row (snippets/search-link-card.liquid): the product card's look, a size smaller */
+  .search-link {
+    display: flex;
+    gap: 0.6875rem;
+    border-radius: 0.5rem; /* rounded focus ring, like the product card */
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  /* The picture, or the title's first letter on a soft highlight tile (pages have no picture) */
+  .search-link__media {
+    display: grid;
+    flex: none;
+    place-items: center;
+    inline-size: 3.5rem;
+    block-size: 3.5rem;
+    overflow: hidden;
+    border-radius: 0.5rem;
+    background-color: color-mix(in srgb, var(--color-accent) 22%, var(--color-background));
+    box-shadow: 0 4px 10px #0000001f;
+    font-family: var(--font-heading--family);
+    font-size: var(--font-size-body-lg);
+  }
+
+  .search-link__media img {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .search-link__text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.125rem;
+    min-inline-size: 0;
+    padding-inline: var(--space-md);
+    border-radius: 0.5rem;
+    background-color: var(--search-glass-fill);
+    box-shadow: var(--search-glass-rim);
+    -webkit-backdrop-filter: blur(var(--glass-frost));
+    backdrop-filter: blur(var(--glass-frost));
+  }
+
+  .search-link__title {
+    overflow: hidden;
+    font-size: var(--font-size-caption);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .search-link:hover .search-link__title {
+    text-decoration: underline;
+  }
+
+  .search-link__meta {
+    color: color-mix(in srgb, var(--color-text) 65%, var(--color-background));
+    font-size: var(--font-size-small);
+  }
+
+  .search-popup__empty {
+    margin: 0;
+  }
+
+  .search-popup__all {
+    justify-self: start;
+  }
+
+  .search-popup__results[aria-busy='true'] {
+    opacity: 0.6;
+  }
+
+  /* Close (Figma quick view: 38px round button, top right) */
+  .search-popup__close {
+    position: absolute;
+    inset-block-start: var(--space-lg);
+    inset-inline-end: var(--space-lg);
+    display: grid;
+    place-items: center;
+    inline-size: 2.375rem;
+    block-size: 2.375rem;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background-color: color-mix(in srgb, var(--color-text) 6%, transparent);
+    color: var(--color-text);
+    cursor: pointer;
+  }
+
+  .search-popup__close:hover {
+    background-color: color-mix(in srgb, var(--color-text) 12%, transparent);
+  }
+
+  .search-popup__close svg {
+    inline-size: 0.875rem;
+    block-size: 0.875rem;
+  }
+
+  /* Small screens: the close button sits above the field instead of over it */
+  @media (max-width: 749px) {
+    .search-popup__panel {
+      padding-block-start: 4rem;
+      padding-inline: var(--space-md);
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <search-popup>: opens the search <dialog>, fetches predictive results while the visitor types, and
+   * keeps the visitor's recent searches in localStorage.
+   */
+  class SearchPopup extends HTMLElement {
+    static storageKey = 'oroskin:recent-searches';
+    static maxRecent = 5;
+
+    connectedCallback() {
+      this.dialog = this.querySelector('dialog');
+      this.input = this.querySelector('[data-search-input]');
+      this.start = this.querySelector('[data-search-start]');
+      this.results = this.querySelector('[data-search-results]');
+      this.status = this.querySelector('[data-search-status]');
+      this.recent = this.querySelector('[data-search-recent]');
+
+      this.querySelector('[data-search-open]').addEventListener('click', (event) => {
+        event.preventDefault(); // the link to the search page is the no-JavaScript fallback
+        this.open();
+      });
+
+      this.dialog.addEventListener('click', (event) => {
+        // The panel fills the dialog, so the dialog itself is only the target for a backdrop click
+        if (event.target === this.dialog || event.target.closest('[data-search-close]')) {
+          this.dialog.close();
+          return;
+        }
+        // A chip or "Search for …" link: remember the term before the page changes
+        const term = event.target.closest('[data-search-term]');
+        if (term) this.remember(term.dataset.searchTerm);
+      });
+
+      this.querySelector('[data-search-form]').addEventListener('submit', () => this.remember(this.input.value));
+      this.input.addEventListener('input', () => this.onInput());
+      this.dialog.addEventListener('close', () => this.controller?.abort());
+    }
+
+    disconnectedCallback() {
+      clearTimeout(this.timer);
+      this.controller?.abort();
+    }
+
+    open() {
+      this.renderRecent();
+      this.dialog.showModal();
+      this.input.focus();
+      this.input.select(); // reopening: typing replaces the old search
+    }
+
+    /** Waits until typing pauses (250ms), so "rose" is one request, not four */
+    onInput() {
+      clearTimeout(this.timer);
+      const terms = this.input.value.trim();
+      // No result types switched on (Theme settings → Search): keep the starting groups, Enter still searches
+      if (!this.dataset.types) return;
+      if (!terms) {
+        this.controller?.abort();
+        this.showStart();
+        return;
+      }
+      this.timer = setTimeout(() => this.search(terms), 250);
+    }
+
+    async search(terms) {
+      // Cancel the previous request: an older, slower answer must never replace a newer one
+      this.controller?.abort();
+      this.controller = new AbortController();
+
+      const params = new URLSearchParams({
+        q: terms,
+        section_id: this.dataset.sectionId,
+        'resources[type]': this.dataset.types, // only the groups switched on in Theme settings → Search
+        'resources[limit]': this.dataset.limit,
+        'resources[limit_scope]': 'each', // up to "limit" of each type, not in total
+      });
+
+      this.results.setAttribute('aria-busy', 'true');
+      try {
+        const response = await fetch(`${this.dataset.url}?${params}`, { signal: this.controller.signal });
+        if (!response.ok) throw new Error(String(response.status));
+
+        // The answer is the section's HTML inside <div id="shopify-section-predictive-search">
+        const html = new DOMParser().parseFromString(await response.text(), 'text/html');
+        const section = html.getElementById(`shopify-section-${this.dataset.sectionId}`);
+        this.results.innerHTML = section ? section.innerHTML : '';
+        this.showResults();
+        this.announce(this.results.querySelector('[data-search-announce]')?.textContent.trim());
+      } catch (error) {
+        if (error.name === 'AbortError') return; // replaced by a newer search, or the popup closed
+        const message = document.createElement('p');
+        message.className = 'search-popup__empty';
+        message.textContent = this.dataset.labelError;
+        this.results.replaceChildren(message);
+        this.showResults();
+        this.announce(this.dataset.labelError);
+      } finally {
+        this.results.removeAttribute('aria-busy');
+      }
+    }
+
+    showResults() {
+      this.start.hidden = true;
+      this.results.hidden = false;
+    }
+
+    showStart() {
+      this.results.hidden = true;
+      this.results.replaceChildren();
+      this.start.hidden = false;
+      this.announce('');
+    }
+
+    announce(message) {
+      if (this.status) this.status.textContent = message || '';
+    }
+
+    /** Recent searches: newest first, no duplicates (ignoring capitals), at most 5 */
+    readRecent() {
+      try {
+        const list = JSON.parse(localStorage.getItem(SearchPopup.storageKey));
+        return Array.isArray(list) ? list.filter((term) => typeof term === 'string') : [];
+      } catch {
+        return []; // storage blocked (private mode, cookies off) or broken: just show none
+      }
+    }
+
+    remember(term) {
+      const clean = term?.trim();
+      if (!clean || !this.recent) return;
+      const list = [clean, ...this.readRecent().filter((old) => old.toLowerCase() !== clean.toLowerCase())];
+      try {
+        localStorage.setItem(SearchPopup.storageKey, JSON.stringify(list.slice(0, SearchPopup.maxRecent)));
+      } catch {
+        // storage blocked: the search still works, it just isn't remembered
+      }
+    }
+
+    /** Draws the recent chips. textContent, never innerHTML: these are words a visitor typed */
+    renderRecent() {
+      if (!this.recent) return;
+      const list = this.readRecent();
+      const chips = list.map((term) => {
+        const item = document.createElement('li');
+        const link = document.createElement('a');
+        link.className = 'search-popup__chip';
+        link.href = `${this.dataset.searchUrl}?q=${encodeURIComponent(term)}&options%5Bprefix%5D=last`;
+        link.dataset.searchTerm = term;
+        link.textContent = term;
+        item.append(link);
+        return item;
+      });
+      this.recent.querySelector('ul').replaceChildren(...chips);
+      this.recent.hidden = list.length === 0;
+    }
+  }
+
+  if (!customElements.get('search-popup')) customElements.define('search-popup', SearchPopup);
+{% endjavascript %}

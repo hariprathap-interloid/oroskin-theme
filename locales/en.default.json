@@ -86,7 +86,32 @@
     "placeholder": "Search articles, pages, or products",
     "submit": "Search",
     "no_results_html": "No results found for {{ terms }}",
-    "results_for_html": "{{ count }} results found for {{ terms }}"
+    "results_for_html": "{{ count }} results found for {{ terms }}",
+    "popup": {
+      "label": "Search the store",
+      "placeholder": "Search for skincare, fragrances, makeup products…",
+      "close": "Close search",
+      "recent": "Recent searches",
+      "trending": "Trending searches",
+      "top_picks": "Top pick products",
+      "suggestions": "Suggestions",
+      "products": "Products",
+      "collections": "Collections",
+      "pages": "Pages",
+      "articles": "Articles",
+      "search_for": "Search for “{{ terms }}”",
+      "no_results": "No results for “{{ terms }}”. Try another word, or search the whole store.",
+      "results_count": {
+        "zero": "No results",
+        "one": "{{ count }} result",
+        "other": "{{ count }} results"
+      },
+      "error": "Search isn’t available right now. Press Enter to search the whole store.",
+      "products_count": {
+        "one": "{{ count }} product",
+        "other": "{{ count }} products"
+      }
+    }
   },
   "accessibility": {
     "main_menu": "Main menu",

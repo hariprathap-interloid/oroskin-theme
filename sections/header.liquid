@@ -78,10 +78,13 @@
     </nav>
 
     <div class="header__actions">
-      <a class="header__icon-button" href="{{ routes.search_url }}">
-        {{ 'icon-search.svg' | inline_asset_content }}
-        <span class="visually-hidden">{{ 'header.search' | t }}</span>
-      </a>
+      {%- comment -%}
+        The search button + its popup (a link to the search page when JavaScript is off). All its settings
+        are global (Theme settings → Search), so the snippet reads them itself.
+      {%- endcomment -%}
+      {%- if settings.search_show_in_header -%}
+        {% render 'search-popup' %}
+      {%- endif -%}
 
       <a class="header__icon-button" href="{{ routes.cart_url }}">
         {{ 'icon-cart.svg' | inline_asset_content }}
@@ -513,6 +516,14 @@
       "label": "t:labels.shop_all_link",
       "info": "t:labels.shop_all_link_info",
       "visible_if": "{{ section.settings.mega_menu_shop_all_show }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.search_popup"
+    },
+    {
+      "type": "paragraph",
+      "content": "t:labels.header_search_info"
     }
   ]
 }

@@ -1,0 +1,43 @@
+{% doc %}
+  A small product card for the search popup (Figma "Top Pick products"): a square photo, then a glass
+  panel with the category (the product's type), the title and the price. The whole card is one link.
+
+  Shared by the popup's "Top pick products" (snippets/search-popup.liquid) and the product results
+  while typing (sections/predictive-search.liquid), so both always look the same. Its styles live in
+  search-popup.liquid, which is on every page; the results section is fetched later and can't bring
+  its own CSS.
+
+  @param {product} product - The product to show
+
+  @example
+  {% render 'search-product-card', product: product %}
+{% enddoc %}
+
+<a class="search-card" href="{{ product.url }}">
+  <div class="search-card__media">
+    {%- if product.featured_media != blank -%}
+      {%- comment -%}
+        Lazy: the popup is a closed <dialog> (display: none) until opened, so the browser only downloads
+        these photos when the visitor opens search. alt is empty: the title right next to it names the link.
+      {%- endcomment -%}
+      {{
+        product.featured_media.preview_image
+        | image_url: width: 164, height: 164, crop: 'center'
+        | image_tag: widths: '82, 164', sizes: '82px', alt: '', loading: 'lazy'
+      }}
+    {%- else -%}
+      {{ 'product-1' | placeholder_svg_tag }}
+    {%- endif -%}
+  </div>
+  {%- comment -%} divs, not spans: the price snippet outputs a <div>, and a link may hold divs {%- endcomment -%}
+  <div class="search-card__text">
+    {%- comment -%} Both switches: Theme settings → Search → Product details {%- endcomment -%}
+    {%- if settings.search_show_product_type and product.type != blank -%}
+      <span class="search-card__category">{{ product.type | escape }}</span>
+    {%- endif -%}
+    <span class="search-card__title">{{ product.title | escape }}</span>
+    {%- if settings.search_show_price -%}
+      <div class="search-card__price">{% render 'price', product: product %}</div>
+    {%- endif -%}
+  </div>
+</a>

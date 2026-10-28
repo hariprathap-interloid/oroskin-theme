@@ -1,0 +1,139 @@
+{%- comment -%}
+  Predictive search results, shown in the header's search popup while the visitor types.
+
+  This section is never placed on a page. The popup's script asks Shopify for it through the Predictive
+  Search API: /search/suggest?q=rose&section_id=predictive-search. Shopify runs the search, fills the
+  `predictive_search` object, renders this file and sends back only its HTML. On a normal page load
+  `predictive_search.performed` is false, so the file renders nothing.
+
+  Groups, in order: suggested searches (chips), products (the same cards as "Top pick products"),
+  collections / pages / articles (picture + title rows), then "Search for “…”" (the full search page).
+  The styles are in snippets/search-popup.liquid, which is on every page.
+  Which groups appear is set in Theme settings → Search: the popup only asks Shopify for the types
+  that are switched on (resources[type]), so a switched-off group simply comes back empty.
+{%- endcomment -%}
+{% # The classes below are styled in snippets/search-popup.liquid (see above), which Theme Check can't see %}
+{% # theme-check-disable ValidScopedCSSClass %}
+
+{%- if predictive_search.performed -%}
+  {%- liquid
+    assign resources = predictive_search.resources
+    assign result_count = resources.products.size | plus: resources.collections.size | plus: resources.pages.size | plus: resources.articles.size
+    # Careful: predictive_search.terms is already HTML-escaped ("cr&m" arrives as "cr&amp;m"). Fine to print,
+    # wrong to put in a link, so "Search for" submits the popup's own form instead (it holds the raw words).
+    assign terms = predictive_search.terms
+  -%}
+  <div class="search-popup__matches">
+    {%- comment -%} Copied into the popup's live region by the script, so screen readers hear the count {%- endcomment -%}
+    <p class="visually-hidden" data-search-announce>
+      {{- 'search.popup.results_count' | t: count: result_count -}}
+    </p>
+
+    {%- if resources.queries.size > 0 -%}
+      <div class="search-popup__group">
+        <h2 class="search-popup__heading" id="SearchSuggestionsHeading">{{ 'search.popup.suggestions' | t }}</h2>
+        <ul class="search-popup__chips" role="list" aria-labelledby="SearchSuggestionsHeading">
+          {%- for query in resources.queries -%}
+            <li>
+              {%- comment -%}
+                styled_text is Shopify's own HTML: the suggestion with the part the visitor hasn't typed yet
+                wrapped in <mark>, e.g. "rose <mark>perfume</mark>". It's already escaped, so it's printed as is.
+              {%- endcomment -%}
+              <a class="search-popup__chip" href="{{ query.url }}" data-search-term="{{ query.text | escape_once }}">
+                {{- query.styled_text -}}
+              </a>
+            </li>
+          {%- endfor -%}
+        </ul>
+      </div>
+    {%- endif -%}
+
+    {%- if resources.products.size > 0 -%}
+      <div class="search-popup__group">
+        <h2 class="search-popup__heading" id="SearchProductsHeading">{{ 'search.popup.products' | t }}</h2>
+        <ul class="search-popup__products" role="list" aria-labelledby="SearchProductsHeading">
+          {%- for product in resources.products -%}
+            <li>{% render 'search-product-card', product: product %}</li>
+          {%- endfor -%}
+        </ul>
+      </div>
+    {%- endif -%}
+
+    {%- liquid
+      assign has_links = false
+      if resources.collections.size > 0 or resources.pages.size > 0
+        assign has_links = true
+      elsif resources.articles.size > 0
+        assign has_links = true
+      endif
+    -%}
+    {%- if has_links -%}
+      <div class="search-popup__link-groups">
+        {%- if resources.collections.size > 0 -%}
+          <div class="search-popup__group">
+            <h2 class="search-popup__heading" id="SearchCollectionsHeading">{{ 'search.popup.collections' | t }}</h2>
+            <ul class="search-popup__links" role="list" aria-labelledby="SearchCollectionsHeading">
+              {%- for collection in resources.collections -%}
+                {%- assign count_label = 'search.popup.products_count' | t: count: collection.products_count -%}
+                <li>
+                  {% render 'search-link-card',
+                    url: collection.url,
+                    title: collection.title,
+                    image: collection.featured_image,
+                    meta: count_label
+                  %}
+                </li>
+              {%- endfor -%}
+            </ul>
+          </div>
+        {%- endif -%}
+        {%- if resources.pages.size > 0 -%}
+          <div class="search-popup__group">
+            <h2 class="search-popup__heading" id="SearchPagesHeading">{{ 'search.popup.pages' | t }}</h2>
+            <ul class="search-popup__links" role="list" aria-labelledby="SearchPagesHeading">
+              {%- for page in resources.pages -%}
+                <li>{% render 'search-link-card', url: page.url, title: page.title %}</li>
+              {%- endfor -%}
+            </ul>
+          </div>
+        {%- endif -%}
+        {%- if resources.articles.size > 0 -%}
+          <div class="search-popup__group">
+            <h2 class="search-popup__heading" id="SearchArticlesHeading">{{ 'search.popup.articles' | t }}</h2>
+            <ul class="search-popup__links" role="list" aria-labelledby="SearchArticlesHeading">
+              {%- for article in resources.articles -%}
+                {%- assign published = article.published_at | date: format: 'date' -%}
+                <li>
+                  {% render 'search-link-card',
+                    url: article.url,
+                    title: article.title,
+                    image: article.image,
+                    meta: published
+                  %}
+                </li>
+              {%- endfor -%}
+            </ul>
+          </div>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+
+    {%- if result_count == 0 and resources.queries.size == 0 -%}
+      <p class="search-popup__empty">{{ 'search.popup.no_results' | t: terms: terms }}</p>
+    {%- endif -%}
+
+    {%- comment -%}
+      form="SearchPopupForm": this button sits outside the form (in the results area) but still submits it,
+      so the full search page opens with exactly what was typed, and the popup's submit handler remembers it.
+    {%- endcomment -%}
+    <button type="submit" form="SearchPopupForm" class="button search-popup__all">
+      {{- 'search.popup.search_for' | t: terms: terms -}}
+    </button>
+  </div>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "t:general.predictive_search"
+}
+{% endschema %}

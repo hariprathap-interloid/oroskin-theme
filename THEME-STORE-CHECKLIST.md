@@ -53,7 +53,7 @@ Why first: every later section reads these settings, CSS variables and base styl
 - [x] ❌ Logo, falling back to `shop.name` *Done M2.1: image / text logo / shop name.*
 - [x] ❌ **Multi-level dropdown menu**, fully keyboard accessible. *§4, §12* *Done M2.2: `<details>` mega menu, Escape/outside click; keyboard-tested M2.11.*
 - [ ] ❌ Mobile menu *Parked: M2.6, waiting on the mobile design (decision 7).*
-- [ ] 🟡 Search link and **predictive search**. *§4* *Search link done (M2.3); predictive search moved to M8.*
+- [ ] 🟡 Search link and **predictive search**. *§4* *Search link done (M2.3); predictive search popup drafted in M7.7 (2026-10-27): products, suggestions, collections, pages, articles via the Predictive Search API, no-JS fallback = /search. Tick after browser testing.*
 - [ ] 🟡 `<shopify-account>` in the **desktop and mobile** header. Skeleton has desktop only. *§4* *Desktop done (M2.3, LOGIN pill); mobile comes with the mobile header (decision 7).*
 - [x] ❌ **Country/currency selector** and **language selector**. *§4* *Done M2.7 (`localization-form` snippet, footer).*
 - [x] ❌ Menu defaults: `main-menu` for the header, `footer` for the footer. *§14*

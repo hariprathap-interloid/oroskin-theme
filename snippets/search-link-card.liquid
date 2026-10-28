@@ -1,0 +1,35 @@
+{% doc %}
+  A result row for collections, pages and articles in the search popup: a small square picture, then a
+  glass panel with the title and a short line under it ("12 products", a date). Pages have no picture,
+  so they show the title's first letter instead. The whole row is one link.
+
+  Its styles live in snippets/search-popup.liquid, which is on every page; the results section is
+  fetched later and can't bring its own CSS.
+
+  @param {string} url - Where the row links to
+  @param {string} title - The collection, page or article title (not escaped yet)
+  @param {image} [image] - The picture; without it the first letter of the title is shown
+  @param {string} [meta] - Plain text under the title, e.g. "12 products"
+
+  @example
+  {% render 'search-link-card', url: collection.url, title: collection.title, image: collection.featured_image %}
+{% enddoc %}
+{% # The classes below are styled in snippets/search-popup.liquid (see above), which Theme Check can't see %}
+{% # theme-check-disable ValidScopedCSSClass %}
+
+<a class="search-link" href="{{ url }}">
+  {%- comment -%} The picture only decorates: the title next to it names the link, so alt is empty {%- endcomment -%}
+  <span class="search-link__media" aria-hidden="true">
+    {%- if image != blank -%}
+      {{ image | image_url: width: 112, height: 112, crop: 'center' | image_tag: widths: '56, 112', sizes: '56px', alt: '', loading: 'lazy' }}
+    {%- else -%}
+      {{- title | strip | slice: 0 | upcase | escape -}}
+    {%- endif -%}
+  </span>
+  <span class="search-link__text">
+    <span class="search-link__title">{{ title | escape }}</span>
+    {%- if meta != blank -%}
+      <span class="search-link__meta">{{ meta | escape }}</span>
+    {%- endif -%}
+  </span>
+</a>

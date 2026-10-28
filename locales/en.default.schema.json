@@ -62,7 +62,8 @@
     "review": "Review",
     "product_deck": "Product deck",
     "new_arrivals": "New arrivals",
-    "wrap_style": "Wrap style"
+    "wrap_style": "Wrap style",
+    "predictive_search": "Predictive search"
   },
   "labels": {
     "alignment": "Alignment",
@@ -407,7 +408,33 @@
     "show_gift_wrap_info": "Add one \"Wrap style\" block per wrap (a product, e.g. a gift box). The card only shows when at least one style is set. The message is saved on the order as \"Gift message\".",
     "wrap_style_product_info": "The wrap product: its photo, name and price are shown. Keep it published to the Online Store, or it can't be added to the cart.",
     "gift_saved_heading": "Heading once a wrap is added",
-    "gift_saved_heading_info": "Shown with the chosen wrap, its price and the message."
+    "gift_saved_heading_info": "Shown with the chosen wrap, its price and the message.",
+    "search_popup": "Search popup",
+    "search_show_recent": "Show recent searches",
+    "search_show_recent_info": "The visitor's last 5 searches, saved only in their own browser.",
+    "search_trending": "Trending searches",
+    "search_trending_info": "Separate the terms with commas, e.g. Rose perfume, Cloud cleanser. Each one opens the search results.",
+    "search_products": "Top pick products",
+    "search_products_info": "Up to 3, shown before the visitor types.",
+    "search_highlight_color_info": "The search field border, the trending chips and the product categories. Gold in the design.",
+    "predictive_search_enabled": "Show results while typing",
+    "predictive_search_enabled_info": "Off: the popup keeps its recent, trending and top picks, and Enter opens the search page.",
+    "search_results_group": "Results while typing",
+    "search_results_limit": "Results per group",
+    "search_show_suggestions": "Show search suggestions",
+    "search_show_products": "Show products",
+    "search_show_collections": "Show collections",
+    "search_show_pages": "Show pages",
+    "search_show_articles": "Show blog articles",
+    "search_card_group": "Product details",
+    "search_card_info": "Used by the product cards in the popup: top picks and results.",
+    "search_show_product_type": "Show product type",
+    "search_show_price": "Show price",
+    "search_show_in_header": "Show search in the header",
+    "search_show_in_header_info": "The magnifier button and its popup. Off: no search button in the header.",
+    "search_start_group": "Before typing",
+    "search_style_group": "Popup style",
+    "header_search_info": "Search button and popup: Theme settings → Search."
   },
   "options": {
     "alignment": {
