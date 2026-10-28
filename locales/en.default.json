@@ -179,6 +179,10 @@
       "rating": "Rated {{ rating }} out of 5",
       "pause": "Pause reviews",
       "play": "Play reviews"
+    },
+    "collection_tiles": {
+      "shop": "Shop",
+      "placeholder": "Choose a collection"
     }
   },
   "products": {
@@ -218,6 +222,10 @@
     },
     "deck": {
       "show": "Show {{ title }}"
-    }
+    },
+    "tab_fallback": "Tab {{ number }}",
+    "previous": "Previous products",
+    "next": "Next products",
+    "placeholder_title": "Product title"
   }
 }

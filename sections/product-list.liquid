@@ -1,17 +1,39 @@
 {%- comment -%}
-  Product list: a heading area (any theme blocks: Heading, Text, Buttons...) above a grid of product
-  cards from one collection. The homepage "Featured products" / "New arrivals" rows are built from this
-  section (M4); with an automatic collection such as "Badges contains New" it fills itself.
+  Product list: a heading area (any theme blocks: Heading, Text, Buttons...) above products from a
+  collection, in one of four layouts (setting "Layout"):
+  - Grid: the big product cards in columns (homepage "Featured products" / "New arrivals", M4)
+  - Compact rows: small glass rows with a quick add button ("You might love" under the empty cart)
+  - Scrolling strip: one row of big cards that scrolls sideways, with arrows
+  - Tabs: one tab per "Tab" block (label + collection), e.g. New / Bestsellers / Under $50
+  One file, four presets: the theme editor's "Add section" list shows each layout by name.
 
-  Without a collection (e.g. just added in the editor) it shows placeholder cards, so the layout can be
-  judged before choosing products.
+  "Only when the cart is empty": for the cart page. The section then renders nothing while the cart
+  has items, and the cart's script renders it again (data-cart-refresh) when the cart changes, so it
+  appears when the last item is removed and disappears when something is added.
+
+  Without a collection (e.g. just added in the editor) it shows placeholder cards.
 {%- endcomment -%}
 
 {%- liquid
+  assign layout = section.settings.layout | default: 'grid'
   assign product_collection = section.settings.collection
   assign limit = section.settings.products_to_show
   assign columns_desktop = section.settings.columns_desktop
   assign columns_mobile = section.settings.columns_mobile | plus: 0
+  assign tabs = section.blocks | where: 'type', '_product-tab'
+
+  # The heading area holds every block except the tabs (they draw nothing there)
+  assign heading_block_count = section.blocks.size | minus: tabs.size
+
+  # Tabs without any Tab block: show the section's own collection, like the grid
+  if layout == 'tabs' and tabs.size == 0
+    assign layout = 'grid'
+  endif
+
+  assign hidden_by_cart = false
+  if section.settings.show_only_empty_cart and cart.item_count > 0
+    assign hidden_by_cart = true
+  endif
 
   # sizes: each card is about (content width / columns) wide, content width at most 1650px.
   # Lets the browser download a small enough image per card (see the image snippet).
@@ -23,6 +45,9 @@
   capture card_sizes
     echo '(min-width: 1650px) ' | append: desktop_card | append: 'px, (min-width: 750px) ' | append: desktop_vw | append: 'vw, ' | append: mobile_vw | append: 'vw'
   endcapture
+  if layout == 'strip'
+    assign card_sizes = '(min-width: 750px) 20rem, 70vw'
+  endif
 
   # Never animate the first section on the page (hero / LCP must paint immediately)
   assign animation = section.settings.animation
@@ -31,98 +56,347 @@
   endif
 -%}
 
-<div
-  class="product-list full-width color-{{ section.settings.color_scheme.id }}"
-  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --columns-desktop: {{ columns_desktop }}; --columns-mobile: {{ columns_mobile }};"
->
-  <div class="product-list__inner">
-    {%- if section.blocks.size > 0 -%}
-      <div class="product-list__header">
-        {% content_for 'blocks' %}
-      </div>
-    {%- endif -%}
+{%- if hidden_by_cart -%}
+  {%- comment -%} Kept so the cart's script knows to render this section again when the cart changes {%- endcomment -%}
+  <div data-cart-refresh hidden></div>
+{%- else -%}
+  <div
+    class="product-list product-list--{{ layout }} full-width section-width--{{ section.settings.section_width | default: 'wide' }} color-{{ section.settings.color_scheme.id }}"
+    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --columns-desktop: {{ columns_desktop }}; --columns-mobile: {{ columns_mobile }};"
+    {% if section.settings.show_only_empty_cart %}
+      data-cart-refresh
+    {% endif %}
+  >
+    <product-list-ui class="product-list__inner">
+      {%- if heading_block_count > 0 or layout == 'tabs' or layout == 'strip' -%}
+        <div class="product-list__top">
+          {%- if heading_block_count > 0 -%}
+            <div class="product-list__header">
+              {% content_for 'blocks' %}
+            </div>
+          {%- endif -%}
 
-    <animate-on-scroll>
-      <ul class="product-list__grid" role="list">
-        {%- if product_collection != blank and product_collection.products_count > 0 -%}
-          {%- for product in product_collection.products limit: limit -%}
-            {%- liquid
-              # Cards appear one after another: 80ms apart, capped so the last ones don't wait too long
-              assign delay = forloop.index0 | times: 80 | at_most: 480
-            -%}
-            <li
-              class="product-list__item"
-              {% if animation != 'none' %}
-                data-animate="{{ animation }}"
-                style="--animate-delay: {{ delay }}ms;"
-              {% endif %}
+          {%- if layout == 'tabs' -%}
+            {%- comment -%}
+              Real buttons with the ARIA tab pattern: ← / → move between tabs (script below). Without
+              JavaScript the buttons are hidden and every panel shows, one under the other.
+            {%- endcomment -%}
+            <div class="product-list__tablist" role="tablist">
+              {%- for block in tabs -%}
+                {%- liquid
+                  assign tab_label = block.settings.label
+                  if tab_label == blank
+                    assign tab_label = block.settings.collection.title
+                  endif
+                  if tab_label == blank
+                    assign tab_label = 'products.tab_fallback' | t: number: forloop.index
+                  endif
+                -%}
+                <button
+                  type="button"
+                  class="product-list__tab"
+                  role="tab"
+                  id="Tab-{{ block.id }}"
+                  aria-controls="Panel-{{ block.id }}"
+                  aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"
+                  {% unless forloop.first %}
+                    tabindex="-1"
+                  {% endunless %}
+                  data-tab
+                  {{ block.shopify_attributes }}
+                >
+                  {{- tab_label | escape -}}
+                </button>
+              {%- endfor -%}
+            </div>
+          {%- elsif layout == 'strip' -%}
+            <div class="product-list__arrows">
+              <button type="button" class="product-list__arrow" data-strip-prev disabled>
+                <span class="visually-hidden">{{ 'products.previous' | t }}</span>
+                {{- 'icon-arrow.svg' | inline_asset_content -}}
+              </button>
+              <button type="button" class="product-list__arrow" data-strip-next>
+                <span class="visually-hidden">{{ 'products.next' | t }}</span>
+                {{- 'icon-arrow.svg' | inline_asset_content -}}
+              </button>
+            </div>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+
+      <animate-on-scroll>
+        {%- if layout == 'tabs' -%}
+          {%- for block in tabs -%}
+            <div
+              class="product-list__panel{% if forloop.first %} is-active{% endif %}"
+              role="tabpanel"
+              id="Panel-{{ block.id }}"
+              aria-labelledby="Tab-{{ block.id }}"
+              data-tab-panel
             >
-              {% render 'product-card',
-                product: product,
+              {% render 'product-list-items',
+                collection: block.settings.collection,
+                limit: limit,
+                layout: 'grid',
                 image_ratio: section.settings.image_ratio,
                 show_secondary_image: section.settings.show_secondary_image,
-                sizes: card_sizes
+                sizes: card_sizes,
+                animation: animation
               %}
-            </li>
+            </div>
           {%- endfor -%}
         {%- else -%}
-          {%- comment -%} No collection yet: placeholder cards (at most 4) {%- endcomment -%}
-          {%- assign placeholder_count = limit | at_most: 4 -%}
-          {%- for i in (1..placeholder_count) -%}
-            <li class="product-list__item">
-              {% render 'product-card', image_ratio: section.settings.image_ratio %}
-            </li>
-          {%- endfor -%}
+          {% render 'product-list-items',
+            collection: product_collection,
+            limit: limit,
+            layout: layout,
+            image_ratio: section.settings.image_ratio,
+            show_secondary_image: section.settings.show_secondary_image,
+            sizes: card_sizes,
+            animation: animation
+          %}
         {%- endif -%}
-      </ul>
-    </animate-on-scroll>
+      </animate-on-scroll>
+    </product-list-ui>
   </div>
-</div>
+{%- endif -%}
 
 {% stylesheet %}
   .product-list {
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
   }
 
-  /* Same width rule as Skeleton's section grid: page width minus the page margins */
+  /* The "Section width" setting (critical.css: --section-width), minus the page margins */
   .product-list__inner {
+    display: block;
     inline-size: min(
-      calc(var(--page-width) - var(--page-margin) * 2),
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
       calc(100% - var(--page-margin) * 2)
     );
     margin-inline: auto;
   }
 
-  /* Heading area: blocks stack with space between, then the grid */
-  .product-list__header {
+  /* Top bar: the heading area on the left, the tabs or the strip's arrows on the right */
+  .product-list__top {
     display: flex;
-    flex-direction: column;
-    gap: var(--space-md);
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-md) var(--space-lg);
     margin-block-end: var(--space-2xl);
   }
 
-  .product-list__grid {
-    display: grid;
-    grid-template-columns: repeat(var(--columns-mobile), minmax(0, 1fr));
-    gap: var(--space-lg) var(--space-md);
+  /* Heading area: blocks stack with space between */
+  .product-list__header {
+    display: flex;
+    flex: 1 1 20rem;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .product-list__items {
     margin: 0;
     padding: 0;
     list-style: none;
   }
 
+  /* Grid and tabs: the big cards in columns */
+  .product-list__items--grid {
+    display: grid;
+    grid-template-columns: repeat(var(--columns-mobile), minmax(0, 1fr));
+    gap: var(--space-lg) var(--space-md);
+  }
+
   @media (min-width: 750px) {
-    .product-list__grid {
+    .product-list__items--grid {
       grid-template-columns: repeat(var(--columns-desktop), minmax(0, 1fr));
       gap: var(--space-xl);
     }
   }
 
   /* Each card fills its grid cell, so cards in a row are equal height */
-  .product-list__item,
-  .product-list__item > .product-card {
+  .product-list__items--grid .product-list__item,
+  .product-list__items--grid .product-list__item > .product-card {
     block-size: 100%;
   }
+
+  /* Compact rows: two per row on wide screens (at least 22rem each), one on phones */
+  .product-list__items--rows {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(22rem, 100%), 1fr));
+    gap: var(--space-md);
+  }
+
+  /*
+    Scrolling strip: one row that scrolls sideways; each card snaps to the left edge. The scrollbar is
+    hidden (the arrows and touch swipes move it), padding keeps the cards' shadows from being cut off.
+  */
+  .product-list__items--strip {
+    display: flex;
+    gap: var(--space-md);
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    padding-block: var(--space-xs) var(--space-md);
+    scroll-snap-type: inline mandatory;
+    scrollbar-width: none;
+  }
+
+  .product-list__items--strip::-webkit-scrollbar {
+    display: none;
+  }
+
+  .product-list__items--strip .product-list__item {
+    flex: none;
+    inline-size: clamp(14rem, 22vw, 20rem);
+    scroll-snap-align: start;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .product-list__items--strip {
+      scroll-behavior: smooth;
+    }
+  }
+
+  /* Round outline arrows; the left one is the right arrow turned around */
+  .product-list__arrows {
+    display: flex;
+    gap: var(--space-sm);
+  }
+
+  .product-list .product-list__arrow {
+    display: grid;
+    place-items: center;
+    inline-size: 2.75rem;
+    min-block-size: 0;
+    block-size: 2.75rem;
+    padding: 0;
+    border: 1px solid var(--color-text);
+    border-radius: var(--radius-pill);
+    background: none;
+    box-shadow: none;
+    color: var(--color-text);
+    cursor: pointer;
+  }
+
+  .product-list .product-list__arrow:hover:not(:disabled) {
+    background-color: var(--color-text);
+    color: var(--color-background);
+  }
+
+  .product-list .product-list__arrow:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  .product-list__arrow svg {
+    inline-size: 1rem;
+    block-size: 1rem;
+  }
+
+  .product-list__arrow[data-strip-prev] svg {
+    rotate: 180deg;
+  }
+
+  /* Tabs: a glass pill holding the tab buttons; the chosen tab is the solid button colour */
+  .product-list__tablist {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    padding: 0.25rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-glass-strong);
+    box-shadow: var(--glass-shadow), var(--glass-rim);
+  }
+
+  .product-list .product-list__tab {
+    min-block-size: 2.5rem;
+    padding-block: 0;
+    padding-inline: 1.25rem;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: none;
+    box-shadow: none;
+    color: var(--color-text);
+    font-size: var(--font-size-small);
+    letter-spacing: var(--letter-spacing-nav);
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  .product-list .product-list__tab[aria-selected='true'] {
+    background-color: var(--color-button);
+    color: var(--color-button-text);
+  }
+
+  /* With JavaScript only the chosen tab's panel shows; without it, every panel shows (no tab buttons) */
+  .js .product-list__panel:not(.is-active),
+  .no-js .product-list__tablist {
+    display: none;
+  }
+
+  .no-js .product-list__panel + .product-list__panel {
+    margin-block-start: var(--space-2xl);
+  }
 {% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <product-list-ui>: the Product list's two interactive layouts.
+   * - Tabs: clicking a tab (or ← / → / Home / End on the tab row) shows its panel.
+   * - Scrolling strip: the arrows scroll by about one screen of cards and turn off at either end.
+   */
+  class ProductListUI extends HTMLElement {
+    connectedCallback() {
+      this.tabs = [...this.querySelectorAll('[data-tab]')];
+      this.tabs.forEach((tab) => {
+        tab.addEventListener('click', () => this.select(tab));
+        tab.addEventListener('keydown', (event) => this.onTabKey(event, tab));
+      });
+
+      this.track = this.querySelector('[data-strip-track]');
+      this.prev = this.querySelector('[data-strip-prev]');
+      this.next = this.querySelector('[data-strip-next]');
+      if (this.track && this.prev && this.next) {
+        this.prev.addEventListener('click', () => this.scrollStrip(-1));
+        this.next.addEventListener('click', () => this.scrollStrip(1));
+        this.track.addEventListener('scroll', () => this.updateArrows(), { passive: true });
+        this.updateArrows();
+      }
+    }
+
+    select(tab, focus = false) {
+      this.tabs.forEach((other) => {
+        const selected = other === tab;
+        other.setAttribute('aria-selected', String(selected));
+        other.tabIndex = selected ? 0 : -1; // one tab stop for the whole tab row
+        document.getElementById(other.getAttribute('aria-controls'))?.classList.toggle('is-active', selected);
+      });
+      if (focus) tab.focus();
+    }
+
+    onTabKey(event, tab) {
+      const index = this.tabs.indexOf(tab);
+      const last = this.tabs.length - 1;
+      const moves = { ArrowRight: index === last ? 0 : index + 1, ArrowLeft: index === 0 ? last : index - 1, Home: 0, End: last };
+      if (!(event.key in moves)) return;
+      event.preventDefault();
+      this.select(this.tabs[moves[event.key]], true);
+    }
+
+    scrollStrip(direction) {
+      this.track.scrollBy({ left: direction * this.track.clientWidth * 0.8 });
+    }
+
+    /** Arrows turn off at either end (1px slack for rounding) */
+    updateArrows() {
+      const { scrollLeft, scrollWidth, clientWidth } = this.track;
+      this.prev.disabled = scrollLeft <= 1;
+      this.next.disabled = scrollLeft + clientWidth >= scrollWidth - 1;
+    }
+  }
+
+  if (!customElements.get('product-list-ui')) customElements.define('product-list-ui', ProductListUI);
+{% endjavascript %}
 
 {% schema %}
 {
@@ -130,9 +404,25 @@
   "blocks": [
     {
       "type": "@theme"
+    },
+    {
+      "type": "_product-tab"
     }
   ],
   "settings": [
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "t:labels.product_list_layout",
+      "info": "t:labels.product_list_layout_info",
+      "options": [
+        { "value": "grid", "label": "t:options.product_list_layout.grid" },
+        { "value": "rows", "label": "t:options.product_list_layout.rows" },
+        { "value": "strip", "label": "t:options.product_list_layout.strip" },
+        { "value": "tabs", "label": "t:options.product_list_layout.tabs" }
+      ],
+      "default": "grid"
+    },
     {
       "type": "header",
       "content": "t:labels.products"
@@ -153,6 +443,13 @@
       "default": 8
     },
     {
+      "type": "checkbox",
+      "id": "show_only_empty_cart",
+      "label": "t:labels.product_list_only_empty_cart",
+      "info": "t:labels.product_list_only_empty_cart_info",
+      "default": false
+    },
+    {
       "type": "header",
       "content": "t:labels.layout"
     },
@@ -163,7 +460,8 @@
       "min": 2,
       "max": 5,
       "step": 1,
-      "default": 4
+      "default": 4,
+      "visible_if": "{{ section.settings.layout == 'grid' or section.settings.layout == 'tabs' }}"
     },
     {
       "type": "select",
@@ -179,7 +477,8 @@
           "label": "t:options.columns.two"
         }
       ],
-      "default": "2"
+      "default": "2",
+      "visible_if": "{{ section.settings.layout == 'grid' or section.settings.layout == 'tabs' }}"
     },
     {
       "type": "select",
@@ -203,17 +502,44 @@
           "label": "t:options.image_shape.original"
         }
       ],
-      "default": "portrait"
+      "default": "portrait",
+      "visible_if": "{{ section.settings.layout != 'rows' }}"
     },
     {
       "type": "checkbox",
       "id": "show_secondary_image",
       "label": "t:labels.show_secondary_image",
-      "default": true
+      "default": true,
+      "visible_if": "{{ section.settings.layout != 'rows' }}"
     },
     {
       "type": "header",
       "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "wide"
     },
     {
       "type": "color_scheme",
@@ -289,6 +615,74 @@
             "heading": "Featured <em>products</em>",
             "size": "h2",
             "tag": "h2"
+          }
+        }
+      ]
+    },
+    {
+      "name": "t:general.product_rows",
+      "settings": {
+        "layout": "rows",
+        "products_to_show": 4
+      },
+      "blocks": [
+        {
+          "type": "heading",
+          "settings": {
+            "heading": "You might <em>love</em>",
+            "size": "h2",
+            "tag": "h2"
+          }
+        }
+      ]
+    },
+    {
+      "name": "t:general.product_strip",
+      "settings": {
+        "layout": "strip"
+      },
+      "blocks": [
+        {
+          "type": "heading",
+          "settings": {
+            "heading": "You might <em>love</em>",
+            "size": "h2",
+            "tag": "h2"
+          }
+        }
+      ]
+    },
+    {
+      "name": "t:general.product_tabs",
+      "settings": {
+        "layout": "tabs",
+        "products_to_show": 4
+      },
+      "blocks": [
+        {
+          "type": "heading",
+          "settings": {
+            "heading": "You might <em>love</em>",
+            "size": "h2",
+            "tag": "h2"
+          }
+        },
+        {
+          "type": "_product-tab",
+          "settings": {
+            "label": "New"
+          }
+        },
+        {
+          "type": "_product-tab",
+          "settings": {
+            "label": "Bestsellers"
+          }
+        },
+        {
+          "type": "_product-tab",
+          "settings": {
+            "label": "Under $50"
           }
         }
       ]

@@ -63,7 +63,13 @@
     "product_deck": "Product deck",
     "new_arrivals": "New arrivals",
     "wrap_style": "Wrap style",
-    "predictive_search": "Predictive search"
+    "predictive_search": "Predictive search",
+    "product_tab": "Tab",
+    "product_rows": "Product rows",
+    "product_strip": "Product slider",
+    "product_tabs": "Product tabs",
+    "collection_tiles": "Collection tiles",
+    "tile": "Tile"
   },
   "labels": {
     "alignment": "Alignment",
@@ -188,7 +194,7 @@
     "sale_badge_color_scheme": "Sale badge colour scheme",
     "sold_out_badge_color_scheme": "Sold out badge colour scheme",
     "products": "Products",
-    "product_list_collection_info": "Tip: an automatic collection such as \"Badges contains New\" keeps this list up to date by itself.",
+    "product_list_collection_info": "Tip: an automatic collection such as \"Badges contains New\" keeps this list up to date by itself. Not used by the Tabs layout (each Tab block has its own).",
     "products_to_show": "Number of products",
     "layout": "Layout",
     "columns_desktop": "Columns on desktop",
@@ -434,7 +440,27 @@
     "search_show_in_header_info": "The magnifier button and its popup. Off: no search button in the header.",
     "search_start_group": "Before typing",
     "search_style_group": "Popup style",
-    "header_search_info": "Search button and popup: Theme settings → Search."
+    "header_search_info": "Search button and popup: Theme settings → Search.",
+    "cart_empty_group": "Empty bag",
+    "cart_empty_title": "Message heading",
+    "cart_empty_text": "Message text",
+    "cart_empty_button_label": "Button label",
+    "cart_empty_link_label": "Text link label",
+    "cart_empty_buttons_direction": "Buttons",
+    "cart_empty_info": "Shown when the bag is empty. To add more under it, add sections below this one with \"Only when the cart is empty\" on: a Product list (\"You might love\") or Collection tiles (\"Where would you like to start?\").",
+    "cart_empty_link": "Text link",
+    "product_list_layout": "Layout",
+    "product_list_layout_info": "Tabs: add a Tab block per tab, each with its own collection.",
+    "product_list_only_empty_cart": "Only when the cart is empty",
+    "product_list_only_empty_cart_info": "For the cart page: shown only while the cart is empty.",
+    "product_tab_label": "Tab label",
+    "product_tab_label_info": "Leave empty to use the collection name.",
+    "cart_empty_button_label_info": "Links to the Continue shopping link above.",
+    "tile_info": "Pick a collection or a product. When both are picked, the product is used.",
+    "tile_image_info": "Optional. Leave empty to use the collection or product image.",
+    "tile_label": "Label",
+    "tile_label_info": "Optional. Leave empty to use the collection or product name.",
+    "tile_shape": "Tile shape"
   },
   "options": {
     "alignment": {
@@ -708,6 +734,12 @@
     "deck_fan_style": {
       "scroll": "Follow the scroll",
       "auto": "Play once when the section appears"
+    },
+    "product_list_layout": {
+      "grid": "Grid",
+      "rows": "Compact rows",
+      "strip": "Scrolling strip",
+      "tabs": "Tabs"
     }
   },
   "color_scheme": {

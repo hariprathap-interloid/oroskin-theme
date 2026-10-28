@@ -88,10 +88,45 @@
     </header>
 
     {%- if cart.empty? -%}
-      <div class="cart-page__empty">
-        <p class="cart-page__empty-title h3">{{ 'cart.empty_title' | t }}</p>
-        <p class="cart-page__empty-text">{{ 'cart.empty_text' | t }}</p>
-        <a class="button" href="{{ continue_url }}">{{ 'cart.continue_shopping' | t }}</a>
+      {%- comment -%}
+        Empty bag (design C): a slim glass strip with the message and the buttons. Complete on its own.
+        Anything else on the empty page is a separate section the merchant places under this one, set to
+        "Only when the cart is empty": the Product list ("You might love", in templates/cart.json by
+        default) and, if wanted, Collection tiles ("Where would you like to start?").
+        Settings: Cart → Empty bag.
+      {%- endcomment -%}
+      {%- liquid
+        # The texts are section settings; an empty setting falls back to the translated default
+        assign empty_title = section.settings.empty_title
+        if empty_title == blank
+          assign empty_title = 'cart.empty_title' | t
+        endif
+        assign empty_button = section.settings.empty_button_label
+        if empty_button == blank
+          assign empty_button = 'cart.continue_shopping' | t
+        endif
+      -%}
+      <div class="cart-empty">
+        <div class="cart-empty__strip">
+          <span class="cart-empty__icon" aria-hidden="true">{{ 'icon-cart.svg' | inline_asset_content }}</span>
+          <div class="cart-empty__message">
+            <h2 class="cart-empty__title">{{ empty_title | escape }}</h2>
+            {%- if section.settings.empty_text != blank -%}
+              <div class="cart-empty__text rte">{{ section.settings.empty_text }}</div>
+            {%- else -%}
+              <p class="cart-empty__text">{{ 'cart.empty_text' | t }}</p>
+            {%- endif -%}
+          </div>
+          <div class="cart-empty__actions cart-empty__actions--{{ section.settings.empty_buttons_direction }}">
+            {%- if section.settings.empty_link != blank and section.settings.empty_link_label != blank -%}
+              <a class="button button--text cart-empty__link" href="{{ section.settings.empty_link }}">
+                {{- section.settings.empty_link_label | escape -}}
+                {{- 'icon-arrow.svg' | inline_asset_content -}}
+              </a>
+            {%- endif -%}
+            <a class="button" href="{{ continue_url }}">{{ empty_button | escape }}</a>
+          </div>
+        </div>
       </div>
     {%- else -%}
       <div class="cart-page__layout">
@@ -469,6 +504,16 @@
     display: block;
     min-block-size: 100svh;
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  /*
+    Empty bag with more sections after it (Product list, Collection tiles...): no full-screen height and
+    a small bottom gap, so the next section sits right under the "Your bag is empty" strip. With nothing
+    after it, the empty cart still fills the screen.
+  */
+  .shopify-section:has(.cart-empty):not(:last-child) .cart-page {
+    min-block-size: 0;
+    padding-block-end: var(--space-xl);
   }
 
   .cart-page__inner {
@@ -1219,17 +1264,106 @@
     display: none;
   }
 
-  .cart-page__empty {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--space-md);
-    padding-block: var(--space-2xl);
+  /*
+    Empty bag (design C): a slim glass strip (icon, message, buttons on one line).
+  */
+  .cart-empty {
+    display: grid;
+    gap: var(--space-2xl);
   }
 
-  .cart-page__empty-title,
-  .cart-page__empty-text {
+  .cart-empty__strip {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+    padding-block: var(--space-lg);
+    padding-inline: var(--space-xl);
+    border-radius: var(--radius-lg);
+    background-color: var(--color-glass-strong);
+    box-shadow: var(--glass-shadow), var(--glass-rim);
+    -webkit-backdrop-filter: blur(var(--glass-frost));
+    backdrop-filter: blur(var(--glass-frost));
+  }
+
+  /* The bag icon in a soft highlight circle */
+  .cart-empty__icon {
+    display: grid;
+    flex: none;
+    place-items: center;
+    inline-size: 3.5rem;
+    block-size: 3.5rem;
+    border-radius: var(--radius-pill);
+    background-color: color-mix(in srgb, var(--color-accent) 18%, transparent);
+    color: var(--color-text);
+  }
+
+  .cart-empty__icon svg {
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+  }
+
+  .cart-empty__message {
+    display: grid;
+    flex: 1;
+    gap: var(--space-2xs);
+    min-inline-size: 0;
+  }
+
+  .cart-empty__title,
+  .cart-empty__text,
+  .cart-empty__text > * {
     margin: 0;
+  }
+
+  .cart-empty__title {
+    font-size: var(--font-size-h3);
+  }
+
+  .cart-empty__text {
+    color: color-mix(in srgb, var(--color-text) 80%, var(--color-background));
+  }
+
+  /*
+    Buttons: always a row or always a column (setting), never "whatever fits": flex-wrap would put them
+    side by side for short labels and stacked for long ones.
+  */
+  .cart-empty__actions {
+    display: flex;
+    flex: none;
+    gap: var(--space-sm) var(--space-lg);
+  }
+
+  .cart-empty__actions--row {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+
+  .cart-empty__actions--row > * {
+    white-space: nowrap;
+  }
+
+  .cart-empty__actions--column {
+    flex-direction: column-reverse; /* the main button on top, the text link under it */
+    align-items: flex-end;
+  }
+
+  .cart-empty__link svg {
+    inline-size: 1rem;
+    block-size: 1rem;
+  }
+
+  /* Phones and small tablets: the strip stacks (no mobile design yet, decision 7) */
+  @media (max-width: 749px) {
+    .cart-empty__strip {
+      flex-direction: column;
+      align-items: flex-start;
+      padding: var(--space-lg);
+    }
+
+    .cart-empty__actions--column {
+      align-items: flex-start;
+    }
   }
 
   /* Tablets and phones: one column, the cards under the items (no mobile design yet, decision 7) */
@@ -1253,9 +1387,20 @@
    * buttons are plain links.
    */
   class CartPage extends HTMLElement {
+    disconnectedCallback() {
+      document.removeEventListener('cart:updated', this.onCartUpdated);
+    }
+
     connectedCallback() {
       this.root = window.Shopify?.routes?.root || '/';
       this.status = this.querySelector('[data-cart-status]');
+
+      // The cart was changed elsewhere on this page (quick add in "You might love"): show the new cart.
+      // The cart's own changes say source: 'cart-page' and are already on screen.
+      this.onCartUpdated = (event) => {
+        if (event.detail?.source !== 'cart-page') this.refresh();
+      };
+      document.addEventListener('cart:updated', this.onCartUpdated);
 
       // One set of listeners on the element itself: they keep working after the inner HTML is swapped
       this.addEventListener('click', (event) => this.onClick(event));
@@ -1538,8 +1683,7 @@
       lines.forEach((el) => el?.classList.add('is-loading'));
       this.setAttribute('aria-busy', 'true');
 
-      const header = document.querySelector('sticky-header')?.closest('.shopify-section');
-      const sections = [this.dataset.sectionId, header?.id.replace('shopify-section-', '')].filter(Boolean);
+      const { header, sections } = this.sectionsToRender();
 
       // Number every request. Two quick changes (e.g. on two lines) can come back in the wrong order;
       // only the newest answer is shown, so an older cart never replaces a newer one.
@@ -1556,10 +1700,10 @@
         if (!response.ok) throw new Error(data.description || data.message || '');
         if (requestId !== this.latestRequest) return false; // a newer change is on its way; it will render
 
-        this.render(data.sections, sections, header);
+        this.render(data.sections, header);
         this.setCodes(data); // the fresh card only lists what Liquid sees; add e.g. free-shipping codes
         this.announce(this.dataset.labelUpdated);
-        document.dispatchEvent(new CustomEvent('cart:updated', { detail: { cart: data } }));
+        document.dispatchEvent(new CustomEvent('cart:updated', { detail: { cart: data, source: 'cart-page' } }));
         return data;
       } catch (error) {
         if (requestId !== this.latestRequest) return false;
@@ -1577,16 +1721,54 @@
       }
     }
 
+    /**
+     * The sections Shopify should render again with each change (it accepts up to 5): this cart, the
+     * header (for the count bubble) and every section that depends on the cart, marked
+     * data-cart-refresh (e.g. the Product list set to "Only when the cart is empty").
+     */
+    sectionsToRender() {
+      const header = document.querySelector('sticky-header')?.closest('.shopify-section');
+      const dependents = [...document.querySelectorAll('[data-cart-refresh]')]
+        .map((el) => el.closest('.shopify-section')?.id.replace('shopify-section-', ''))
+        .filter(Boolean);
+      const sections = [this.dataset.sectionId, header?.id.replace('shopify-section-', ''), ...dependents]
+        .filter(Boolean)
+        .slice(0, 5);
+      return { header, sections };
+    }
+
+    /**
+     * Something else changed the cart (a quick add button in "You might love"): ask Shopify for the
+     * same sections again (Section Rendering API: ?sections=a,b) and swap them in.
+     */
+    async refresh() {
+      const { header, sections } = this.sectionsToRender();
+      try {
+        const url = `${window.location.pathname}?sections=${sections.join(',')}`;
+        const html = await fetch(url).then((response) => response.json());
+        this.render(html, header);
+      } catch {
+        // The cart itself is fine; the page just shows it after the next reload
+      }
+    }
+
     /** Swaps in Shopify's freshly rendered cart (and the header's cart count), then restores focus */
-    render(html, sectionIds, header) {
+    render(html, header) {
       const focusKey = document.activeElement?.closest('[data-cart-focus]')?.dataset.cartFocus;
       const parse = (id) => html?.[id] && new DOMParser().parseFromString(html[id], 'text/html');
 
-      const fresh = parse(sectionIds[0])?.querySelector('.cart-page__inner');
+      const fresh = parse(this.dataset.sectionId)?.querySelector('.cart-page__inner');
       if (fresh) this.querySelector('.cart-page__inner').replaceWith(fresh);
 
+      // Sections that depend on the cart: replace their whole content (they may appear or disappear)
+      document.querySelectorAll('[data-cart-refresh]').forEach((el) => {
+        const section = el.closest('.shopify-section');
+        const next = section && parse(section.id.replace('shopify-section-', ''))?.getElementById(section.id);
+        if (next) section.innerHTML = next.innerHTML;
+      });
+
       // Header: only its cart link (the red count bubble and the hidden "Cart, 2 items" label)
-      const freshHeader = parse(sectionIds[1]);
+      const freshHeader = header && parse(header.id.replace('shopify-section-', ''));
       if (header && freshHeader) {
         const link = `.header__icon-button[href="${this.root}cart"]`;
         const next = freshHeader.querySelector(link);
@@ -1641,6 +1823,54 @@
       "id": "continue_link",
       "label": "t:labels.continue_link",
       "info": "t:labels.continue_link_info"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.cart_empty_group"
+    },
+    {
+      "type": "paragraph",
+      "content": "t:labels.cart_empty_info"
+    },
+    {
+      "type": "text",
+      "id": "empty_title",
+      "label": "t:labels.cart_empty_title",
+      "default": "Your bag is empty"
+    },
+    {
+      "type": "richtext",
+      "id": "empty_text",
+      "label": "t:labels.cart_empty_text",
+      "default": "<p>Browse our skincare, fragrance and makeup to find something you love.</p>"
+    },
+    {
+      "type": "text",
+      "id": "empty_button_label",
+      "label": "t:labels.cart_empty_button_label",
+      "info": "t:labels.cart_empty_button_label_info",
+      "default": "Continue shopping"
+    },
+    {
+      "type": "url",
+      "id": "empty_link",
+      "label": "t:labels.cart_empty_link"
+    },
+    {
+      "type": "text",
+      "id": "empty_link_label",
+      "label": "t:labels.cart_empty_link_label",
+      "default": "Shop new arrivals"
+    },
+    {
+      "type": "select",
+      "id": "empty_buttons_direction",
+      "label": "t:labels.cart_empty_buttons_direction",
+      "options": [
+        { "value": "row", "label": "t:options.direction.horizontal" },
+        { "value": "column", "label": "t:options.direction.vertical" }
+      ],
+      "default": "row"
     },
     {
       "type": "header",

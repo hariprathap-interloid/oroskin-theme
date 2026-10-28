@@ -1,0 +1,32 @@
+{% doc %}
+  One tab of the Product list section's "Tabs" layout: a label ("New", "Bestsellers", "Under $50") and
+  the collection whose products the tab shows.
+
+  It draws nothing here: the section reads every Tab block (section.blocks) and draws the tab buttons
+  in its top bar and the product panels under them, so buttons and panels stay together whatever other
+  blocks (heading, text) sit in the heading area.
+{% enddoc %}
+
+{% schema %}
+{
+  "name": "t:general.product_tab",
+  "settings": [
+    {
+      "type": "text",
+      "id": "label",
+      "label": "t:labels.product_tab_label",
+      "info": "t:labels.product_tab_label_info"
+    },
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "t:labels.collection"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.product_tab"
+    }
+  ]
+}
+{% endschema %}

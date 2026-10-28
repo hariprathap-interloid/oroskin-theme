@@ -34,6 +34,12 @@
         "eyebrow": "Your selection",
         "heading": "Shopping bag",
         "continue_link": "",
+        "empty_title": "Your bag is empty",
+        "empty_text": "<p>Browse our skincare, fragrance and makeup to find something you love.</p>",
+        "empty_button_label": "Continue shopping",
+        "empty_link": "shopify://collections/new-arrivals",
+        "empty_link_label": "Shop new arrivals",
+        "empty_buttons_direction": "row",
         "show_express_checkout": true,
         "show_note": true,
         "show_coupons": true,
@@ -49,9 +55,35 @@
         "padding_top": 40,
         "padding_bottom": 96
       }
+    },
+    "you_might_love": {
+      "type": "product-list",
+      "blocks": {
+        "heading_you_might_love": {
+          "type": "heading",
+          "settings": {
+            "heading": "You might <em>love</em>",
+            "size": "h2",
+            "tag": "h2"
+          }
+        }
+      },
+      "block_order": [
+        "heading_you_might_love"
+      ],
+      "settings": {
+        "layout": "rows",
+        "collection": "new-arrivals",
+        "products_to_show": 4,
+        "show_only_empty_cart": true,
+        "section_width": "widest",
+        "padding_top": 48,
+        "padding_bottom": 96
+      }
     }
   },
   "order": [
-    "main"
+    "main",
+    "you_might_love"
   ]
 }

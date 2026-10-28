@@ -1,0 +1,76 @@
+{% doc %}
+  The product list of the Product list section, in one of its layouts. Used once per section, or once
+  per tab in the "Tabs" layout.
+
+  - grid, tabs: the big product cards in a grid (columns from the section settings)
+  - rows: compact glass rows with a quick add button (product-row-card)
+  - strip: the big product cards in one row that scrolls sideways (arrows in the section's top bar)
+
+  Without a collection (or an empty one) it shows placeholder cards, so the layout can be judged in the
+  theme editor before products are chosen.
+
+  @param {collection} [collection] - Where the products come from
+  @param {number} limit - How many products at most
+  @param {string} layout - 'grid', 'rows', 'strip' or 'tabs'
+  @param {string} [image_ratio] - Image shape for the big cards
+  @param {boolean} [show_secondary_image] - Second image on hover (big cards)
+  @param {string} [sizes] - The big cards' image sizes attribute
+  @param {string} [animation] - Scroll animation for each card, or 'none'
+
+  @example
+  {% render 'product-list-items', collection: section.settings.collection, limit: 8, layout: 'rows' %}
+{% enddoc %}
+
+{%- liquid
+  assign item_animation = animation | default: 'none'
+  assign has_products = false
+  if collection != blank and collection.products_count > 0
+    assign has_products = true
+  endif
+  assign placeholder_count = limit | at_most: 4
+-%}
+
+<ul
+  class="product-list__items product-list__items--{{ layout }}"
+  role="list"
+  {% if layout == 'strip' %}
+    data-strip-track
+  {% endif %}
+>
+  {%- if has_products -%}
+    {%- for product in collection.products limit: limit -%}
+      {%- liquid
+        # Cards appear one after another: 80ms apart, capped so the last ones don't wait too long
+        assign delay = forloop.index0 | times: 80 | at_most: 480
+      -%}
+      <li
+        class="product-list__item"
+        {% if item_animation != 'none' %}
+          data-animate="{{ item_animation }}"
+          style="--animate-delay: {{ delay }}ms;"
+        {% endif %}
+      >
+        {%- if layout == 'rows' -%}
+          {% render 'product-row-card', product: product %}
+        {%- else -%}
+          {% render 'product-card',
+            product: product,
+            image_ratio: image_ratio,
+            show_secondary_image: show_secondary_image,
+            sizes: sizes
+          %}
+        {%- endif -%}
+      </li>
+    {%- endfor -%}
+  {%- else -%}
+    {%- for i in (1..placeholder_count) -%}
+      <li class="product-list__item">
+        {%- if layout == 'rows' -%}
+          {% render 'product-row-card' %}
+        {%- else -%}
+          {% render 'product-card', image_ratio: image_ratio %}
+        {%- endif -%}
+      </li>
+    {%- endfor -%}
+  {%- endif -%}
+</ul>
