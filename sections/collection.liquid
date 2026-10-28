@@ -5,17 +5,20 @@
   https://shopify.dev/docs/storefronts/themes/architecture/templates/collection
 {% endcomment %}
 
-<h1>{{ collection.title }}</h1>
+{%- comment -%} The title (H1) is in the Collection banner section (M5.1). The grid is rebuilt in M5.2. {%- endcomment -%}
 
-<div class="collection-products">
-  {% paginate collection.products by 20 %}
-    {%- comment -%} Temporary grid with the M3.7 product card; the real collection page is M5 {%- endcomment -%}
-    {% for product in collection.products %}
-      {% render 'product-card', product: product, show_secondary_image: true %}
-    {% endfor %}
+{%- comment -%} The colour scheme paints the whole width (white on the Figma collection page) {%- endcomment -%}
+<div class="collection-section full-width color-{{ section.settings.color_scheme.id | default: 'scheme-1' }}">
+  <div class="collection-products">
+    {% paginate collection.products by 20 %}
+      {%- comment -%} Temporary grid with the M3.7 product card; the real collection page is M5 {%- endcomment -%}
+      {% for product in collection.products %}
+        {% render 'product-card', product: product, show_secondary_image: true %}
+      {% endfor %}
 
-    {{ paginate | default_pagination }}
-  {% endpaginate %}
+      {{ paginate | default_pagination }}
+    {% endpaginate %}
+  </div>
 </div>
 
 {% stylesheet %}
@@ -23,6 +26,11 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
     gap: var(--space-xl);
+    inline-size: min(
+      calc(var(--page-width) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
     padding-block: var(--space-2xl);
   }
 {% endstylesheet %}
@@ -30,6 +38,13 @@
 {% schema %}
 {
   "name": "t:general.collection",
-  "settings": []
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    }
+  ]
 }
 {% endschema %}

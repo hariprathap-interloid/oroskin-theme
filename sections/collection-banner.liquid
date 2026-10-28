@@ -1,0 +1,662 @@
+{%- comment -%}
+  Collection banner (M5.1, Figma "Collection", top of the page): breadcrumb, the collection title as
+  the page's H1, an optional large sentence with small photos ("Clinical Beauty [photo] Formulations
+  [photo] with Absolute Integrity. [photo]"), the collection description, and a large image top right.
+
+  Its own section, separate from the product grid, so the merchant can reorder or remove it.
+  Only for collection pages (enabled_on), so `collection` always exists here.
+
+  - Title: always the H1, never shortened (Theme Store). With a sentence it's small (eyebrow style)
+    above it; with no sentence it's shown big instead.
+  - Sentence: ONE text setting, so it reads as one sentence. Short codes place the extras:
+    [image_1] [image_2] [image_3] -> the small photos, [break] -> a line break on desktop.
+    Italic text (Ctrl+I) shows in the highlight colour instead of italic (as in Scrolling showcase).
+  - Large image: the collection's own image (admin: Products > Collections > Image) when it has one,
+    otherwise the section's image. Decorative (alt=""): the title already names the page.
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-1'
+
+  # Highlight colour left empty -> the colour scheme's own accent
+  assign highlight = section.settings.highlight_color
+  if highlight == blank
+    assign highlight = 'var(--color-accent)'
+  endif
+
+  # The banner is normally the first section: its images then load straight away (they're on screen)
+  assign image_loading = 'lazy'
+  if section.index <= 2
+    assign image_loading = 'eager'
+  endif
+
+  # Large image: by default the collection's own image wins and the section's image is the fallback.
+  # With "Use the collection's image" off, the section's image is always used (e.g. one cut-out for all).
+  assign banner_image = section.settings.image
+  if section.settings.use_collection_image and collection.image != blank
+    assign banner_image = collection.image
+  endif
+
+  # The sentence's small photos. Sized in em, so they grow and shrink with the text; each has its own
+  # size, tilt and up/down nudge because the Figma ones differ (a wide smear, a tall brush, a small dot).
+  assign sentence = section.settings.sentence
+  if sentence != blank
+    for i in (1..3)
+      assign prefix = 'image_' | append: i
+      assign size_key = prefix | append: '_size'
+      assign rotate_key = prefix | append: '_rotate'
+      assign shift_key = prefix | append: '_shift'
+      assign code = '[' | append: prefix | append: ']'
+      assign small_image = section.settings[prefix]
+
+      capture photo_style
+        echo '--photo-size: ' | append: section.settings[size_key] | append: '; --photo-rotate: ' | append: section.settings[rotate_key] | append: 'deg; --photo-shift: ' | append: section.settings[shift_key] | append: '%;'
+      endcapture
+
+      capture photo
+        if small_image != blank
+          echo '<span class="collection-banner__photo" style="' | append: photo_style | append: '">'
+          echo small_image | image_url: width: 400 | image_tag: widths: '100, 200, 300, 400', sizes: '120px', alt: '', loading: image_loading
+          echo '</span>'
+        elsif request.design_mode
+          echo '<span class="collection-banner__photo collection-banner__photo--placeholder" style="' | append: photo_style | append: '">'
+          echo 'image' | placeholder_svg_tag
+          echo '</span>'
+        endif
+      endcapture
+
+      assign sentence = sentence | replace: code, photo
+    endfor
+
+    # [break] splits the sentence into lines. Each line is its own span, so in the "Staggered" layout
+    # every line can start further in (Line 1-3 indent), like the Figma's stepped lines.
+    assign lines = sentence | split: '[break]'
+    capture sentence
+      for line in lines
+        assign indent_key = 'line_' | append: forloop.index | append: '_indent'
+        assign indent = section.settings[indent_key] | default: 0
+        echo '<span class="collection-banner__line" style="--line-indent: ' | append: indent | append: 'em;">' | append: line | append: '</span> '
+      endfor
+    endcapture
+  endif
+
+  assign title_position = section.settings.title_position | default: 'start'
+-%}
+
+<div
+  class="collection-banner full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.under_header %} collection-banner--under-header{% endif %}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --banner-highlight: {{ highlight }}; --banner-image-width: {{ section.settings.image_width }}%;"
+>
+  <div class="collection-banner__inner">
+    {%- if section.settings.show_breadcrumb -%}
+      <nav class="collection-banner__breadcrumb" aria-label="{{ 'accessibility.breadcrumb' | t }}">
+        <ol>
+          <li><a href="{{ routes.root_url }}">{{ 'accessibility.home' | t }}</a></li>
+          <li aria-current="page">{{ collection.title | escape }}</li>
+        </ol>
+      </nav>
+    {%- endif -%}
+
+    {%- comment -%} Small title lined up with the breadcrumb (left), or centred above the sentence (below) {%- endcomment -%}
+    {%- if sentence != blank and title_position == 'start' -%}
+      <h1 class="eyebrow collection-banner__title">{{ collection.title | escape }}</h1>
+    {%- endif -%}
+
+    <div class="collection-banner__content">
+      {%- if sentence != blank -%}
+        {%- if title_position == 'center' -%}
+          <h1 class="eyebrow eyebrow--center collection-banner__title">{{ collection.title | escape }}</h1>
+        {%- endif -%}
+        <p class="collection-banner__sentence collection-banner__sentence--{{ section.settings.sentence_layout | default: 'staggered' }}">
+          {{- sentence -}}
+        </p>
+      {%- else -%}
+        <h1 class="collection-banner__title collection-banner__title--large">{{ collection.title | escape }}</h1>
+      {%- endif -%}
+
+      {%- if section.settings.show_description and collection.description != blank -%}
+        <div class="rte collection-banner__description">{{ collection.description }}</div>
+      {%- endif -%}
+    </div>
+  </div>
+
+  {%- if banner_image != blank -%}
+    {%- render 'image',
+      image: banner_image,
+      class: 'collection-banner__image',
+      alt: '',
+      sizes: '(min-width: 990px) 40vw, 60vw',
+      widths: '300, 450, 600, 800, 1000, 1200'
+    -%}
+  {%- elsif request.design_mode -%}
+    <div class="collection-banner__image collection-banner__image--placeholder">
+      {{- 'image' | placeholder_svg_tag -}}
+    </div>
+  {%- endif -%}
+</div>
+
+{% stylesheet %}
+  /*
+    The large image sits in the top-right corner of the section (Figma: 521px wide at 1920px, so about
+    27%), behind the text. The text column stays centred and narrow enough not to run into it.
+  */
+  .collection-banner {
+    position: relative;
+    isolation: isolate;
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  /*
+    "Start at the top of the page" (Figma: the jar starts at the page's top edge, behind the header pill).
+    The banner moves up under the sticky header by the header's height (20px gap + 77px pill, the same
+    value header.liquid uses for the transparent header) and adds it back as padding, so its colour fills
+    the strip behind the pill and the large image starts at the very top. The breadcrumb stays where it was.
+  */
+  .collection-banner--under-header {
+    --header-space: 6.0625rem;
+
+    margin-block-start: calc(var(--header-space) * -1);
+    padding-block-start: calc(var(--header-space) + var(--section-padding-top));
+  }
+
+  /* A transparent header already pulls the first section up under it: don't move it twice */
+  body:has(.header--transparent) .collection-banner--under-header {
+    margin-block-start: 0;
+  }
+
+  .collection-banner__inner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  /* "HOME › SKINCARE": small capitals, the current page in the highlight colour (as on the cart page) */
+  .collection-banner__breadcrumb ol {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  .collection-banner__breadcrumb li + li::before {
+    content: "›";
+    margin-inline-end: var(--space-xs);
+    color: var(--color-text);
+  }
+
+  .collection-banner__breadcrumb a {
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  .collection-banner__breadcrumb a:hover {
+    text-decoration: underline;
+  }
+
+  .collection-banner__breadcrumb [aria-current] {
+    color: var(--banner-highlight);
+  }
+
+  .collection-banner__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+    max-inline-size: min(64rem, calc(100% - var(--banner-image-width) * 2));
+    margin-inline: auto;
+    text-align: center;
+  }
+
+  .collection-banner__title {
+    margin: 0;
+    color: var(--banner-highlight);
+  }
+
+  /* No sentence: the title itself is the big heading */
+  .collection-banner__title--large {
+    color: var(--color-text);
+    font-size: var(--font-size-h1);
+  }
+
+  /*
+    The sentence: 28px -> 40px (h2 size; the Figma's lines are ~48px at 1920px). Heading font, tall
+    line height so the photos fit between the lines.
+  */
+  .collection-banner__sentence {
+    margin: 0;
+    font-family: var(--font-heading--family);
+    font-style: var(--font-heading--style);
+    font-weight: var(--font-heading--weight);
+    font-size: var(--font-size-h2);
+    line-height: 1.5;
+    text-wrap: balance;
+  }
+
+  .collection-banner__sentence em {
+    font-style: normal;
+    color: var(--banner-highlight);
+  }
+
+  /*
+    Lines (split at [break]): on phones and tablets they run on and wrap freely. From 990px each line
+    is its own row: "Centred" centres every row; "Staggered" lines the rows up on the left of a block
+    that is itself centred, and pushes each row in by its Line indent (Figma: the second line starts a
+    little in, the third under "with").
+  */
+  @media (min-width: 990px) {
+    .collection-banner__line {
+      display: block;
+    }
+
+    .collection-banner__sentence--staggered {
+      inline-size: fit-content;
+      max-inline-size: 100%;
+      text-align: start;
+    }
+
+    .collection-banner__sentence--staggered .collection-banner__line {
+      margin-inline-start: var(--line-indent, 0);
+    }
+  }
+
+  /*
+    A small photo inside the sentence: --photo-size is a % of the text size (100 = as tall as the
+    letters). The negative margins cancel the extra height, so a big photo overlaps the lines above and
+    below instead of pushing them apart (as in the Figma, where the brush is taller than the text).
+  */
+  .collection-banner__photo {
+    --photo-height: calc(1em * var(--photo-size, 100) / 100);
+
+    display: inline-block;
+    block-size: var(--photo-height);
+    margin-block: calc((1em - var(--photo-height)) / 2);
+    margin-inline: 0.15em;
+    vertical-align: middle;
+    /* Tilt and nudge (% of the photo's own height). transform doesn't move the text around it. */
+    transform: translateY(var(--photo-shift, 0%)) rotate(var(--photo-rotate, 0deg));
+  }
+
+  .collection-banner__photo > :is(img, svg) {
+    display: block;
+    inline-size: auto;
+    block-size: 100%;
+  }
+
+  .collection-banner__photo--placeholder > svg {
+    aspect-ratio: 1;
+    border-radius: 4px;
+    background-color: var(--color-tint);
+  }
+
+  .collection-banner__description {
+    max-inline-size: 40rem;
+  }
+
+  /*
+    Large image: top-right corner, behind the text, never stretched. Two classes: the image snippet's
+    own `.image` rule (position: relative; width: 100%) loads later and would win against one class.
+  */
+  .collection-banner .collection-banner__image {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-end: 0;
+    z-index: -1;
+    inline-size: var(--banner-image-width);
+    block-size: 100%;
+  }
+
+  .collection-banner .collection-banner__image img,
+  .collection-banner .collection-banner__image svg {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: contain;
+    object-position: top right;
+  }
+
+  .collection-banner__image--placeholder svg {
+    background-color: var(--color-tint);
+  }
+
+  /*
+    Below 990px there's no room beside the text: the image moves under it, smaller and centred.
+    (No mobile design yet: this is a sensible default, to revisit when the mobile designs arrive.)
+  */
+  @media (max-width: 989px) {
+    .collection-banner__content {
+      max-inline-size: 100%;
+    }
+
+    .collection-banner .collection-banner__image {
+      position: static;
+      inline-size: min(60%, 20rem);
+      block-size: auto;
+      margin: var(--space-xl) auto 0;
+    }
+
+    .collection-banner .collection-banner__image img,
+    .collection-banner .collection-banner__image svg {
+      block-size: auto;
+      object-position: center;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.collection_banner",
+  "enabled_on": {
+    "templates": ["collection"]
+  },
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_breadcrumb",
+      "label": "t:labels.show_breadcrumb",
+      "default": true
+    },
+    {
+      "type": "inline_richtext",
+      "id": "sentence",
+      "label": "t:labels.banner_sentence",
+      "info": "t:labels.banner_sentence_info",
+      "default": "<em>Clinical Beauty</em> [image_1] [break]<em>Formulations</em> [image_2] with [break]Absolute Integrity. [image_3]"
+    },
+    {
+      "type": "select",
+      "id": "title_position",
+      "label": "t:labels.banner_title_position",
+      "info": "t:labels.banner_title_position_info",
+      "options": [
+        {
+          "value": "start",
+          "label": "t:options.banner_title_position.start"
+        },
+        {
+          "value": "center",
+          "label": "t:options.banner_title_position.center"
+        }
+      ],
+      "default": "start"
+    },
+    {
+      "type": "select",
+      "id": "sentence_layout",
+      "label": "t:labels.banner_sentence_layout",
+      "options": [
+        {
+          "value": "staggered",
+          "label": "t:options.banner_sentence_layout.staggered"
+        },
+        {
+          "value": "center",
+          "label": "t:options.banner_sentence_layout.center"
+        }
+      ],
+      "default": "staggered"
+    },
+    {
+      "type": "range",
+      "id": "line_1_indent",
+      "label": "t:labels.banner_line_1_indent",
+      "info": "t:labels.banner_line_indent_info",
+      "min": 0,
+      "max": 16,
+      "step": 0.5,
+      "unit": "em",
+      "default": 0,
+      "visible_if": "{{ section.settings.sentence_layout == 'staggered' }}"
+    },
+    {
+      "type": "range",
+      "id": "line_2_indent",
+      "label": "t:labels.banner_line_2_indent",
+      "min": 0,
+      "max": 16,
+      "step": 0.5,
+      "unit": "em",
+      "default": 1.5,
+      "visible_if": "{{ section.settings.sentence_layout == 'staggered' }}"
+    },
+    {
+      "type": "range",
+      "id": "line_3_indent",
+      "label": "t:labels.banner_line_3_indent",
+      "min": 0,
+      "max": 16,
+      "step": 0.5,
+      "unit": "em",
+      "default": 11,
+      "visible_if": "{{ section.settings.sentence_layout == 'staggered' }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_description",
+      "label": "t:labels.show_collection_description",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.banner_photos_group"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_1",
+      "label": "t:labels.image_1"
+    },
+    {
+      "type": "range",
+      "id": "image_1_size",
+      "label": "t:labels.banner_photo_size",
+      "min": 50,
+      "max": 400,
+      "step": 10,
+      "unit": "%",
+      "default": 100
+    },
+    {
+      "type": "range",
+      "id": "image_1_rotate",
+      "label": "t:labels.banner_photo_rotate",
+      "min": -180,
+      "max": 180,
+      "step": 5,
+      "unit": "°",
+      "default": 0
+    },
+    {
+      "type": "range",
+      "id": "image_1_shift",
+      "label": "t:labels.banner_photo_shift",
+      "info": "t:labels.banner_photo_shift_info",
+      "min": -100,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 0
+    },
+    {
+      "type": "image_picker",
+      "id": "image_2",
+      "label": "t:labels.image_2"
+    },
+    {
+      "type": "range",
+      "id": "image_2_size",
+      "label": "t:labels.banner_photo_size",
+      "min": 50,
+      "max": 400,
+      "step": 10,
+      "unit": "%",
+      "default": 300
+    },
+    {
+      "type": "range",
+      "id": "image_2_rotate",
+      "label": "t:labels.banner_photo_rotate",
+      "min": -180,
+      "max": 180,
+      "step": 5,
+      "unit": "°",
+      "default": 0
+    },
+    {
+      "type": "range",
+      "id": "image_2_shift",
+      "label": "t:labels.banner_photo_shift",
+      "info": "t:labels.banner_photo_shift_info",
+      "min": -100,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 0
+    },
+    {
+      "type": "image_picker",
+      "id": "image_3",
+      "label": "t:labels.image_3"
+    },
+    {
+      "type": "range",
+      "id": "image_3_size",
+      "label": "t:labels.banner_photo_size",
+      "min": 50,
+      "max": 400,
+      "step": 10,
+      "unit": "%",
+      "default": 100
+    },
+    {
+      "type": "range",
+      "id": "image_3_rotate",
+      "label": "t:labels.banner_photo_rotate",
+      "min": -180,
+      "max": 180,
+      "step": 5,
+      "unit": "°",
+      "default": 0
+    },
+    {
+      "type": "range",
+      "id": "image_3_shift",
+      "label": "t:labels.banner_photo_shift",
+      "info": "t:labels.banner_photo_shift_info",
+      "min": -100,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 0
+    },
+    {
+      "type": "header",
+      "content": "t:labels.banner_image_group"
+    },
+    {
+      "type": "checkbox",
+      "id": "under_header",
+      "label": "t:labels.banner_under_header",
+      "info": "t:labels.banner_under_header_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "use_collection_image",
+      "label": "t:labels.banner_use_collection_image",
+      "info": "t:labels.banner_use_collection_image_info",
+      "default": true
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.image",
+      "info": "t:labels.banner_image_info"
+    },
+    {
+      "type": "range",
+      "id": "image_width",
+      "label": "t:labels.banner_image_width",
+      "min": 15,
+      "max": 40,
+      "step": 1,
+      "unit": "%",
+      "default": 27
+    },
+    {
+      "type": "header",
+      "content": "t:labels.layout"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "color",
+      "id": "highlight_color",
+      "label": "t:labels.highlight_color",
+      "info": "t:labels.banner_highlight_info"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 32
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.collection_banner"
+    }
+  ]
+}
+{% endschema %}

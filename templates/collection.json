@@ -9,12 +9,49 @@
  */
 {
   "sections": {
+    "banner": {
+      "type": "collection-banner",
+      "settings": {
+        "show_breadcrumb": true,
+        "sentence": "<em>Clinical Beauty</em> [image_1] [break]<em>Formulations</em> [image_2] with [break]Absolute Integrity. [image_3]",
+        "title_position": "start",
+        "sentence_layout": "staggered",
+        "line_1_indent": 0,
+        "line_2_indent": 1.5,
+        "line_3_indent": 11,
+        "show_description": false,
+        "image_1": "shopify://shop_images/bfcc8debd300a8262da8efa53b4808b1c1cf36cf.png",
+        "image_1_size": 100,
+        "image_1_rotate": 0,
+        "image_1_shift": 0,
+        "image_2": "shopify://shop_images/2b76eaf47616def43288061d35ae2cad3d200a7c.png",
+        "image_2_size": 300,
+        "image_2_rotate": 50,
+        "image_2_shift": 15,
+        "image_3": "shopify://shop_images/image_635.png",
+        "image_3_size": 100,
+        "image_3_rotate": 0,
+        "image_3_shift": 0,
+        "under_header": true,
+        "use_collection_image": false,
+        "image": "shopify://shop_images/image_639.png",
+        "image_width": 24,
+        "section_width": "widest",
+        "color_scheme": "scheme-2",
+        "highlight_color": "",
+        "padding_top": 40,
+        "padding_bottom": 32
+      }
+    },
     "main": {
       "type": "collection",
-      "settings": {}
+      "settings": {
+        "color_scheme": "scheme-2"
+      }
     }
   },
   "order": [
+    "banner",
     "main"
   ]
 }

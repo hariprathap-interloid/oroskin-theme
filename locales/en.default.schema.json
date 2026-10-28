@@ -69,6 +69,7 @@
     "product_strip": "Product slider",
     "product_tabs": "Product tabs",
     "collection_tiles": "Collection tiles",
+    "collection_banner": "Collection banner",
     "tile": "Tile"
   },
   "labels": {
@@ -458,11 +459,42 @@
     "cart_empty_button_label_info": "Links to the Continue shopping link above.",
     "tile_info": "Pick a collection or a product. When both are picked, the product is used.",
     "tile_image_info": "Optional. Leave empty to use the collection or product image.",
+    "banner_sentence": "Big sentence under the title",
+    "banner_sentence_info": "Optional. Type [image_1], [image_2] or [image_3] where a small photo goes, and [break] for a new line (desktop only). Make words italic to show them in the highlight colour. Empty = the collection title is shown big instead.",
+    "show_collection_description": "Show the collection description",
+    "banner_photos_group": "Small photos in the sentence",
+    "banner_photo_size": "Photo size (100% = as tall as the text)",
+    "banner_image_group": "Large image (top right)",
+    "banner_image_info": "Shown on every collection, unless \"Use the collection's own image\" is on and the collection has one (Products > Collections > the collection > Image).",
+    "banner_title_position": "Collection title position",
+    "banner_title_position_info": "The title is the page's main heading. It's shown small when there is a sentence, big when there isn't.",
+    "banner_sentence_layout": "Sentence lines",
+    "banner_line_1_indent": "Line 1 indent",
+    "banner_line_2_indent": "Line 2 indent",
+    "banner_line_3_indent": "Line 3 indent",
+    "banner_line_indent_info": "How far each line starts in from the left (1em = the width of one letter M). Lines are made with [break]. Desktop only: on smaller screens the text wraps on its own.",
+    "banner_photo_rotate": "Photo angle",
+    "banner_photo_shift": "Move photo up or down",
+    "banner_photo_shift_info": "Negative = up, positive = down (% of the photo's height). The text doesn't move.",
+    "banner_under_header": "Start at the top of the page",
+    "banner_under_header_info": "The banner's colour and the large image go up behind the header, as in the design.",
+    "banner_use_collection_image": "Use the collection's own image",
+    "banner_use_collection_image_info": "When the collection has an image, show it instead of the image below. Turn off to show the image below on every collection (e.g. one cut-out photo).",
+    "banner_image_width": "Large image width (% of the screen)",
+    "banner_highlight_info": "Breadcrumb, small title and italic words. Leave empty to use the colour scheme's accent.",
     "tile_label": "Label",
     "tile_label_info": "Optional. Leave empty to use the collection or product name.",
     "tile_shape": "Tile shape"
   },
   "options": {
+    "banner_title_position": {
+      "start": "Left, under the breadcrumb",
+      "center": "Centred above the sentence"
+    },
+    "banner_sentence_layout": {
+      "staggered": "Staggered (each line starts further in)",
+      "center": "Centred"
+    },
     "alignment": {
       "left": "Left",
       "center": "Center",
