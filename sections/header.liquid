@@ -27,6 +27,9 @@
   style="--logo-width: {{ settings.logo_width }}px; --logo-text-size: {{ settings.logo_text_size }}px; --nav-underline: url('{{ 'nav-underline.svg' | asset_url }}'); --mega-columns: {{ section.settings.mega_menu_columns }};"
 >
   <div class="header__bar color-{{ section.settings.color_scheme.id }}">
+    {%- comment -%} Phones and tablets: the menu button + drawer (hidden from 1200px) {%- endcomment -%}
+    {% render 'header-drawer', links: section.settings.menu.links %}
+
     <a class="header__logo" href="{{ routes.root_url }}">
       {%- liquid
         # Logo = optional image (e.g. the flame mark) + optional text ("Oro" + italic accent "Skin").
@@ -332,6 +335,97 @@
   .header__login svg {
     inline-size: var(--icon-size);
     block-size: var(--icon-size);
+  }
+
+  /* The menu button stays clickable while a transparent header is "at rest" (like the actions) */
+  .header--transparent .header-drawer__toggle {
+    pointer-events: auto;
+  }
+
+  /*
+    Phones, tablets and small laptops (below 1200px; the full menu and LOGIN need ~1200px): no Figma yet, so a smaller version of the same pill.
+    Menu button | logo (centred) | search + bag. The full menu and the LOGIN pill move into the drawer
+    (snippets/header-drawer.liquid). A 3-column grid keeps the logo centred whatever the sides hold.
+  */
+  @media (max-width: 1199px) {
+    .header {
+      --icon-size: 1.125rem;
+
+      /* A 12px gap all round: the page margins would leave the logo too little room on a phone */
+      padding-block-start: var(--space-sm);
+      padding-inline: var(--space-sm);
+    }
+
+    /*
+      The section's content grid adds the page margins; the pill spans the whole width instead.
+      (Section class + element: beats critical.css's ".shopify-section > *" column rule.)
+    */
+    .shopify-section-group-header-group > sticky-header {
+      grid-column: 1 / -1;
+    }
+
+    .header__bar {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: var(--space-xs);
+      block-size: 3.75rem; /* 60px */
+      padding-inline: var(--space-xs);
+    }
+
+    .header__menu,
+    .header__account {
+      display: none;
+    }
+
+    .header__logo {
+      grid-column: 2;
+      justify-self: center;
+    }
+
+    /* 20px on a 320px phone up to 28px on tablets */
+    .header__logo-text {
+      font-size: clamp(1.25rem, 6vw, 1.75rem);
+    }
+
+    /* Sized by height in the small pill (2rem), never wider than the Logo width setting */
+    .header__logo {
+      gap: var(--space-xs);
+    }
+
+    .header__logo-image {
+      inline-size: auto;
+      max-inline-size: var(--logo-width);
+      block-size: 2rem;
+    }
+
+    .header__actions {
+      grid-column: 3;
+      justify-self: end;
+      gap: var(--space-2xs);
+      margin-inline-start: 0;
+    }
+
+    .header__icon-button {
+      inline-size: 2.75rem; /* 44px tap target */
+      block-size: 2.75rem;
+    }
+
+    .header-drawer__toggle {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    /* Very small phones (under 360px): no room to centre the logo between the sides, so it takes the space left */
+    @media (max-width: 359px) {
+      .header__bar {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+      }
+    }
+
+    /* The page sits 72px lower than the full pill's 97px: transparent header pull-up to match */
+    .shopify-section-group-header-group:has(.header--transparent) {
+      margin-block-end: calc(-3.75rem - var(--space-sm));
+    }
   }
 {% endstylesheet %}
 

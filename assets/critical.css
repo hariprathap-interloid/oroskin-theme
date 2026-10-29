@@ -650,6 +650,13 @@ animate-on-scroll {
   --section-width: 100vw;
 }
 
+/* Phones: "widest" keeps no extra side space (at least 32px a side is too much on a 390px screen) */
+@media (max-width: 749px) {
+  .section-width--widest {
+    --section-width: 100vw;
+  }
+}
+
 /* Child elements, by default, are constrained to the central column of the grid. */
 .shopify-section > * {
   grid-column: 2;

@@ -1,0 +1,321 @@
+{% doc %}
+  Renders the phone / tablet / small laptop menu (below 1200px): a menu button for the header pill, and the drawer it opens.
+
+  The drawer is a modal <dialog> that slides in from the left. showModal() gives it the browser's own
+  modal behaviour: focus moves into it, Tab stays inside it, Escape closes it and the page behind can't be
+  clicked or read by screen readers. Links with child links become accordions (<details>/<summary>, so they
+  open with a tap, Enter or Space). The account link sits at the bottom, because the LOGIN pill is hidden
+  on small screens to make room in the pill.
+
+  @param {link[]} links - The menu's top-level links, e.g. section.settings.menu.links
+
+  @example
+  {% render 'header-drawer', links: section.settings.menu.links %}
+{% enddoc %}
+
+<header-drawer class="header-drawer">
+  <button
+    type="button"
+    class="header__icon-button header-drawer__toggle"
+    aria-haspopup="dialog"
+    aria-controls="HeaderDrawer"
+    aria-expanded="false"
+  >
+    {{ 'icon-menu.svg' | inline_asset_content }}
+    <span class="visually-hidden">{{ 'header.open_menu' | t }}</span>
+  </button>
+
+  <dialog id="HeaderDrawer" class="header-drawer__dialog" aria-label="{{ 'accessibility.main_menu' | t }}">
+    <div class="header-drawer__panel">
+      <button type="button" class="header__icon-button header-drawer__close" data-drawer-close>
+        {{ 'icon-close.svg' | inline_asset_content }}
+        <span class="visually-hidden">{{ 'header.close_menu' | t }}</span>
+      </button>
+
+      <nav class="header-drawer__nav" aria-label="{{ 'accessibility.main_menu' | t }}">
+        <ul class="header-drawer__list" role="list">
+          {%- for link in links -%}
+            <li>
+              {%- if link.links != blank -%}
+                {%- comment -%} Opened when the visitor is already on one of its pages {%- endcomment -%}
+                <details class="header-drawer__group" {% if link.child_active %}open{% endif %}>
+                  <summary class="header-drawer__link{% if link.active or link.child_active %} header-drawer__link--active{% endif %}">
+                    {{- link.title | escape -}}
+                    {{ 'icon-chevron.svg' | inline_asset_content }}
+                  </summary>
+                  <ul class="header-drawer__sublist" role="list">
+                    <li>
+                      <a class="header-drawer__sublink" href="{{ link.url }}">
+                        {{- 'header.shop_all' | t -}}
+                      </a>
+                    </li>
+                    {%- for child in link.links -%}
+                      <li>
+                        <a
+                          class="header-drawer__sublink"
+                          href="{{ child.url }}"
+                          {% if child.current %}
+                            aria-current="page"
+                          {% endif %}
+                        >
+                          {{- child.title | escape -}}
+                        </a>
+                        {%- if child.links != blank -%}
+                          <ul class="header-drawer__sublist header-drawer__sublist--nested" role="list">
+                            {%- for grandchild in child.links -%}
+                              <li>
+                                <a
+                                  class="header-drawer__sublink"
+                                  href="{{ grandchild.url }}"
+                                  {% if grandchild.current %}
+                                    aria-current="page"
+                                  {% endif %}
+                                >
+                                  {{- grandchild.title | escape -}}
+                                </a>
+                              </li>
+                            {%- endfor -%}
+                          </ul>
+                        {%- endif -%}
+                      </li>
+                    {%- endfor -%}
+                  </ul>
+                </details>
+              {%- else -%}
+                <a
+                  class="header-drawer__link{% if link.active %} header-drawer__link--active{% endif %}"
+                  href="{{ link.url }}"
+                  {% if link.current %}
+                    aria-current="page"
+                  {% endif %}
+                >
+                  {{- link.title | escape -}}
+                </a>
+              {%- endif -%}
+            </li>
+          {%- endfor -%}
+        </ul>
+      </nav>
+
+      {%- comment -%}
+        Customer accounts are Shopify's own pages (decision 6). routes.account_url opens the account when
+        signed in and Shopify's login page when not, so one link covers both.
+      {%- endcomment -%}
+      {%- if shop.customer_accounts_enabled -%}
+        <a class="button header-drawer__account" href="{{ routes.account_url }}">
+          {{ 'icon-account.svg' | inline_asset_content | remove: 'slot="signed-out-avatar"' }}
+          {%- if customer -%}
+            {{- 'header.account' | t -}}
+          {%- else -%}
+            {{- 'header.login' | t -}}
+          {%- endif -%}
+        </a>
+      {%- endif -%}
+    </div>
+  </dialog>
+</header-drawer>
+
+{% stylesheet %}
+  /* Desktop: the full menu is in the pill, so the drawer isn't needed */
+  .header-drawer {
+    display: contents;
+  }
+
+  @media (min-width: 1200px) {
+    .header-drawer {
+      display: none;
+    }
+  }
+
+  /*
+    The drawer: full height on the left, glass like the header pill. The header's sticky wrapper turns off
+    clicks (pointer-events: none) and the dialog would inherit that even in the top layer, so turn them back on.
+  */
+  .header-drawer__dialog {
+    inset-block: 0;
+    inset-inline: 0 auto;
+    inline-size: min(22rem, calc(100vw - 3rem));
+    max-inline-size: none;
+    block-size: 100dvh;
+    max-block-size: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-start-end-radius: var(--radius-lg);
+    border-end-end-radius: var(--radius-lg);
+    background-color: var(--color-glass-strong);
+    box-shadow: var(--shadow-header);
+    color: var(--color-text);
+    pointer-events: auto;
+    -webkit-backdrop-filter: blur(var(--glass-frost)) saturate(1.4);
+    backdrop-filter: blur(var(--glass-frost)) saturate(1.4);
+  }
+
+  .header-drawer__dialog::backdrop {
+    background-color: #00000040;
+  }
+
+  /* The page behind doesn't scroll while the drawer is open */
+  html:has(.header-drawer__dialog[open]) {
+    overflow: hidden;
+  }
+
+  /* Slide in from the left (only when the "Enable animations" setting is on) */
+  .animations-on .header-drawer__dialog {
+    transition:
+      translate var(--duration-base) var(--ease-out),
+      display var(--duration-base) allow-discrete,
+      overlay var(--duration-base) allow-discrete;
+    translate: -100% 0;
+  }
+
+  .animations-on .header-drawer__dialog[open] {
+    translate: 0 0;
+  }
+
+  @starting-style {
+    .animations-on .header-drawer__dialog[open] {
+      translate: -100% 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animations-on .header-drawer__dialog {
+      transition: none;
+    }
+  }
+
+  .header-drawer__panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    min-block-size: 100%;
+    padding: var(--space-lg) var(--space-lg) var(--space-xl);
+  }
+
+  .header-drawer__close {
+    align-self: flex-end;
+  }
+
+  .header-drawer__nav {
+    flex: 1;
+  }
+
+  .header-drawer__list,
+  .header-drawer__sublist {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* Top-level links: the desktop menu's uppercase style, one per row with a hairline between */
+  .header-drawer__list > li + li {
+    border-block-start: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+  }
+
+  .header-drawer__link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-block-size: 3.25rem;
+    color: var(--color-text);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: 0.08em;
+    text-decoration: none;
+    text-transform: uppercase;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .header-drawer__link::-webkit-details-marker {
+    display: none;
+  }
+
+  .header-drawer__link--active {
+    color: var(--color-primary);
+  }
+
+  .header-drawer__link svg {
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
+    transition: rotate var(--duration-fast) var(--ease-out);
+  }
+
+  .header-drawer__group[open] > .header-drawer__link svg {
+    rotate: 180deg;
+  }
+
+  .header-drawer__sublist {
+    display: grid;
+    gap: var(--space-2xs);
+    padding-block-end: var(--space-md);
+    padding-inline-start: var(--space-md);
+  }
+
+  .header-drawer__sublist--nested {
+    padding-block: var(--space-2xs) 0;
+  }
+
+  .header-drawer__sublink {
+    display: flex;
+    align-items: center;
+    min-block-size: 2.75rem; /* 44px tap target */
+    color: color-mix(in srgb, var(--color-text) 80%, var(--color-background));
+    font-size: var(--font-size-body);
+    text-decoration: none;
+  }
+
+  .header-drawer__sublink:hover,
+  .header-drawer__sublink[aria-current='page'] {
+    color: var(--color-primary);
+  }
+
+  .header-drawer__account {
+    gap: var(--space-xs);
+    align-self: stretch;
+  }
+
+  .header-drawer__account svg {
+    inline-size: var(--icon-size);
+    block-size: var(--icon-size);
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <header-drawer>: opens the phone menu <dialog> with showModal() and keeps the button's aria-expanded in
+   * step. Closes on the close button, a click on the dimmed backdrop, Escape (built into <dialog>), and when
+   * the screen grows to desktop width (the drawer button is gone there).
+   */
+  class HeaderDrawer extends HTMLElement {
+    connectedCallback() {
+      this.toggle = this.querySelector('.header-drawer__toggle');
+      this.dialog = this.querySelector('dialog');
+
+      this.toggle.addEventListener('click', () => {
+        this.dialog.showModal();
+        this.toggle.setAttribute('aria-expanded', 'true');
+      });
+
+      this.dialog.addEventListener('click', (event) => {
+        // The panel fills the dialog, so the dialog itself is only the target for a backdrop click
+        if (event.target === this.dialog || event.target.closest('[data-drawer-close]')) this.dialog.close();
+      });
+
+      this.dialog.addEventListener('close', () => this.toggle.setAttribute('aria-expanded', 'false'));
+
+      this.desktop = window.matchMedia('(min-width: 1200px)');
+      this.onResize = (event) => {
+        if (event.matches && this.dialog.open) this.dialog.close();
+      };
+      this.desktop.addEventListener('change', this.onResize);
+    }
+
+    disconnectedCallback() {
+      this.desktop?.removeEventListener('change', this.onResize);
+    }
+  }
+
+  if (!customElements.get('header-drawer')) customElements.define('header-drawer', HeaderDrawer);
+{% endjavascript %}

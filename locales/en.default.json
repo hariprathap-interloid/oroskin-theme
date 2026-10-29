@@ -67,7 +67,11 @@
     "gift_message": "Message:"
   },
   "collections": {
-    "title": "Collections"
+    "title": "Collections",
+    "empty_title": "Nothing here yet",
+    "empty_text": "This collection doesn't have any products yet. Take a look at the rest of the shop.",
+    "continue_shopping": "Continue shopping",
+    "back_home": "Back to home"
   },
   "gift_card": {
     "add_to_apple_wallet": "Add to Apple Wallet",
@@ -120,6 +124,7 @@
     "skip_to_content": "Skip to content",
     "new_window": "opens in a new window",
     "breadcrumb": "Breadcrumb",
+    "pagination": "Pages",
     "home": "Home"
   },
   "header": {
@@ -127,6 +132,9 @@
     "shop_all": "Shop all",
     "search": "Search",
     "login": "Login",
+    "account": "Account",
+    "open_menu": "Open menu",
+    "close_menu": "Close menu",
     "cart_count": {
       "zero": "Cart",
       "one": "Cart, {{ count }} item",
@@ -202,7 +210,13 @@
       "sale": "Sale"
     },
     "card": {
-      "placeholder_title": "Product title"
+      "placeholder_title": "Product title",
+      "rating": "Rated {{ rating }} out of {{ max }}",
+      "reviews_count": {
+        "one": "{{ count }} review",
+        "other": "{{ count }} reviews"
+      },
+      "view_details": "View details"
     },
     "variant": "Variant",
     "quantity": "Quantity",

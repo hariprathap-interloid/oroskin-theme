@@ -466,6 +466,20 @@
     "banner_photo_size": "Photo size (100% = as tall as the text)",
     "banner_image_group": "Large image (top right)",
     "banner_image_info": "Shown on every collection, unless \"Use the collection's own image\" is on and the collection has one (Products > Collections > the collection > Image).",
+    "show_collection_title": "Show the collection title",
+    "show_collection_title_info": "Only needed when the page has no Collection banner: every collection page needs its title once.",
+    "collection_layout_info": "Bento = the design's mix of large and small tiles (desktop). Phones always show 2 per row.",
+    "products_per_page": "Products per page",
+    "products_per_page_info": "Bento repeats every 22 products, so 22 or 44 fill the pattern exactly.",
+    "card_details_group": "Product card details",
+    "show_card_details": "Show details on hover",
+    "show_card_details_info": "On desktop, pointing at a card (or tabbing to it) slides up the rating, a short description and the cart button.",
+    "show_card_rating": "Show the review rating",
+    "show_card_rating_info": "Needs a product review app (e.g. Judge.me). Shopify has no ratings of its own; the rating stays hidden until an app adds one.",
+    "show_card_description": "Show a short description",
+    "collection_empty_group": "Empty collection",
+    "collection_empty_products": "Suggested products",
+    "collection_empty_products_info": "Shown under the message when a collection has no products yet (first 4). Leave empty to show only the message.",
     "banner_title_position": "Collection title position",
     "banner_title_position_info": "The title is the page's main heading. It's shown small when there is a sentence, big when there isn't.",
     "banner_sentence_layout": "Sentence lines",
@@ -487,6 +501,10 @@
     "tile_shape": "Tile shape"
   },
   "options": {
+    "collection_layout": {
+      "bento": "Bento (large and small tiles)",
+      "grid": "Even grid"
+    },
     "banner_title_position": {
       "start": "Left, under the breadcrumb",
       "center": "Centred above the sentence"

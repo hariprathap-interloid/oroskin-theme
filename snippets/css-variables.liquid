@@ -150,6 +150,13 @@
     --style-border-radius-inputs: {{ settings.input_corner_radius }}px;
   }
 
+  /* Phones: at most 16px at the sides (a desktop margin like 45px leaves too little room on a 390px screen) */
+  @media (max-width: 749px) {
+    :root {
+      --page-margin: min({{ settings.min_page_margin }}px, 1rem);
+    }
+  }
+
   {% comment %}
     Colour schemes: one CSS class per scheme. It sets that scheme's colours as variables
     and paints its own background and text, so one class is all a section needs.
