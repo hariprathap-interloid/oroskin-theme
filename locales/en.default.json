@@ -79,7 +79,21 @@
       "other": "{{ count }} products"
     },
     "sort_by": "Sort",
-    "apply": "Apply"
+    "apply": "Apply",
+    "filters": "Filters",
+    "filters_applied": {
+      "one": "{{ count }} filter applied",
+      "other": "{{ count }} filters applied"
+    },
+    "close_filters": "Close filters",
+    "show_results": "Show results",
+    "clear_filters": "Clear all",
+    "active_filters": "Active filters",
+    "remove_filter": "Remove filter: {{ label }}",
+    "price_min": "From",
+    "price_max": "To",
+    "no_match_title": "No products match these filters",
+    "no_match_text": "Try removing a filter, or clear them all to see everything in this collection."
   },
   "gift_card": {
     "add_to_apple_wallet": "Add to Apple Wallet",
@@ -215,7 +229,8 @@
     "add_to_cart": "Add to cart",
     "sold_out": "Sold out",
     "badge": {
-      "sale": "Sale"
+      "sale": "Sale",
+      "partly_sold_out": "Some options sold out"
     },
     "card": {
       "placeholder_title": "Product title",

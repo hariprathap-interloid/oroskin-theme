@@ -98,6 +98,20 @@
           <span class="product-card__badge color-{{ settings.sale_badge_color_scheme.id }}">{{ 'products.badge.sale' | t }}</span>
         {%- endif -%}
         {%- comment -%}
+          In stock overall, but one of its variants (a size, a shade) is sold out. Shopify's Availability filter
+          works per variant, so "Out of stock" also finds these products; the badge says why they're there.
+        {%- endcomment -%}
+        {%- if product.available -%}
+          {%- for variant in product.variants -%}
+            {%- unless variant.available -%}
+              <span class="product-card__badge color-{{ settings.sold_out_badge_color_scheme.id }}">
+                {{- 'products.badge.partly_sold_out' | t -}}
+              </span>
+              {%- break -%}
+            {%- endunless -%}
+          {%- endfor -%}
+        {%- endif -%}
+        {%- comment -%}
           The product's "Badges" field (custom.badges). Usually a list (.value is an array), but a single
           value (one metaobject or one text) is handled too, so a badge never silently disappears.
           snippets/product-badge.liquid draws one badge: own colours for a Badge metaobject entry,

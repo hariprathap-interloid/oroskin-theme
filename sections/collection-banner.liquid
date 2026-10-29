@@ -41,8 +41,9 @@
   # size, tilt and up/down nudge because the Figma ones differ (a wide smear, a tall brush, a small dot).
   # Empty collection: only the breadcrumb and the big title. The sentence and large image sell products
   # the visitor can't see; the grid section below shows the "Nothing here yet" message instead.
+  # all_products_count, not products_count: a filter that matches nothing doesn't make the collection empty.
   assign is_empty = false
-  if collection.products_count == 0
+  if collection.all_products_count == 0
     assign is_empty = true
   endif
 

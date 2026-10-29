@@ -25,10 +25,11 @@
   # The Figma bands only close into a clean rectangle when every tile is there (8, 8 and 6 tiles). The
   # 1-7 products left over after the last full band get a small "tail" pattern that always closes:
   # entry N (separated by |) is the layout for N leftover tiles, on 1 row (1-4 tiles) or 2 rows (5-7).
-  #   1: one full-width tile    2: two wide tiles         3: wide + 2 small         4: 4 small
+  #   1: one small tile (a lone full-width tile looked stretched)
+  #   2: two wide tiles         3: wide + 2 small         4: 4 small
   #   5: tall, wide, tall + 2 small under the wide      6: wide + 2 small, then 2 small + wide
   #   7: tall + 3 small, then 3 small
-  assign tail_patterns = '|1-4-1-1|1-2-1-1;3-2-1-1|1-2-1-1;3-1-1-1;4-1-1-1|1-1-1-1;2-1-1-1;3-1-1-1;4-1-1-1|1-1-1-2;2-2-1-1;4-1-1-2;2-1-2-1;3-1-2-1|1-2-1-1;3-1-1-1;4-1-1-1;1-1-2-1;2-1-2-1;3-2-2-1|1-1-1-2;2-1-1-1;3-1-1-1;4-1-1-1;2-1-2-1;3-1-2-1;4-1-2-1' | split: '|'
+  assign tail_patterns = '|1-1-1-1|1-2-1-1;3-2-1-1|1-2-1-1;3-1-1-1;4-1-1-1|1-1-1-1;2-1-1-1;3-1-1-1;4-1-1-1|1-1-1-2;2-2-1-1;4-1-1-2;2-1-2-1;3-1-2-1|1-2-1-1;3-1-1-1;4-1-1-1;1-1-2-1;2-1-2-1;3-2-2-1|1-1-1-2;2-1-1-1;3-1-1-1;4-1-1-1;2-1-2-1;3-1-2-1;4-1-2-1' | split: '|'
 
   # Row heights in Figma pixels: one full cycle (12 rows), the first band alone (5 rows), the first two
   # bands (9 rows). Tail rows are 400px, so a tail tile is about the Figma's wide-tile height.
@@ -41,7 +42,11 @@
   class="collection-section full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
   style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --grid-columns: {{ section.settings.columns_desktop }};"
 >
-  <div class="collection-section__inner">
+  {%- comment -%}
+    <results-view> (script below) reloads the results in place when the sort or the filters change, or an
+    active-filter pill is removed: Section Rendering API, then it swaps every [data-results-part] by id.
+  {%- endcomment -%}
+  <results-view class="collection-section__inner" data-section-id="{{ section.id }}">
     {%- if section.settings.show_title -%}
       <h1 class="collection-section__title">{{ collection.title | escape }}</h1>
     {%- endif -%}
@@ -60,15 +65,51 @@
         assign show_pills = true
       endif
 
+      # all_products_count ignores filters: a filter that matches nothing must keep the toolbar
+      # (the count says "0 products" and the Filters button lets the visitor undo it).
       assign show_tools = false
-      if collection.products_count > 0
+      if collection.all_products_count > 0
         if section.settings.show_count or section.settings.show_sort
           assign show_tools = true
         endif
       endif
+
+      # Filters (M5.4): the list comes from the Search & Discovery app (empty if the merchant turned them all off)
+      assign show_filters = false
+      if section.settings.show_filters and collection.filters.size > 0
+        if collection.all_products_count > 0
+          assign show_filters = true
+        endif
+      endif
+
+      # Is any filter applied? (Decides the chips and which empty message to show.)
+      assign filters_active = false
+      for filter in collection.filters
+        if filter.active_values.size > 0
+          assign filters_active = true
+        elsif filter.min_value.value != nil or filter.max_value.value != nil
+          assign filters_active = true
+        endif
+      endfor
+
+      # "Clear all": the collection with no filters, keeping the visitor's sort
+      assign clear_url = collection.url
+      if collection.sort_by != blank
+        assign clear_url = clear_url | append: '?sort_by=' | append: collection.sort_by
+      endif
     -%}
-    {%- if show_pills or show_tools -%}
+    {%- if show_pills or show_tools or show_filters -%}
       <div class="collection-toolbar">
+        <div class="collection-toolbar__start">
+        {%- if show_filters -%}
+          {%- render 'filter-drawer',
+            filters: collection.filters,
+            results_url: collection.url,
+            section_id: section.id,
+            clear_url: clear_url
+          -%}
+        {%- endif -%}
+
         {%- if show_pills -%}
           <nav
             class="collection-pills {{ section.settings.pill_image_animation }}"
@@ -159,20 +200,30 @@
             </ul>
           </nav>
         {%- endif -%}
+        </div>
 
         {%- if show_tools -%}
           <div class="collection-toolbar__end">
             {%- if section.settings.show_count -%}
               {%- comment -%} products_count = what the visitor sees now (after filters, M5.4) {%- endcomment -%}
-              <p class="collection-toolbar__count" id="CollectionCount-{{ section.id }}" aria-live="polite">
+              <p
+                class="collection-toolbar__count"
+                id="CollectionCount-{{ section.id }}"
+                aria-live="polite"
+                data-results-text
+              >
                 {{- 'collections.products_count' | t: count: collection.products_count -}}
               </p>
             {%- endif -%}
 
             {%- if section.settings.show_sort -%}
               {%- assign current_sort = collection.sort_by | default: collection.default_sort_by -%}
-              <collection-sort class="collection-sort" data-section-id="{{ section.id }}">
-                <form action="{{ collection.url }}" method="get">
+              {%- comment -%}
+                data-results-form: <results-view> reads this form (with the filter form) to build the URL.
+                data-results-autoload: a change here loads the results straight away.
+              {%- endcomment -%}
+              <div class="collection-sort">
+                <form action="{{ collection.url }}" method="get" data-results-form data-results-autoload>
                   <label class="collection-sort__label" for="SortBy-{{ section.id }}">{{ 'collections.sort_by' | t }}</label>
                   <span class="collection-sort__field">
                     <select
@@ -195,16 +246,42 @@
                     </button>
                   </noscript>
                 </form>
-              </collection-sort>
+              </div>
             {%- endif -%}
           </div>
         {%- endif -%}
       </div>
     {%- endif -%}
 
-    {%- comment -%} The part the sort (and M5.4 filters) swap in place {%- endcomment -%}
-    <div class="collection-results" id="CollectionResults-{{ section.id }}">
-    {%- if collection.products_count == 0 -%}
+    {%- comment -%}
+      The part the sort and the filters swap in place. tabindex -1: after a pill is removed (its link is
+      gone), focus moves here so keyboard users aren't dropped at the top of the page.
+    {%- endcomment -%}
+    <div
+      class="collection-results"
+      id="CollectionResults-{{ section.id }}"
+      tabindex="-1"
+      data-results-part
+    >
+    {%- if filters_active -%}
+      {%- render 'active-filters', filters: collection.filters, clear_url: clear_url -%}
+    {%- endif -%}
+
+    {%- if collection.products_count == 0 and filters_active -%}
+      {%- comment -%} Filters that match nothing: say so and offer the way back (not the "empty collection" message) {%- endcomment -%}
+      <div class="collection-empty">
+        <div class="collection-empty__strip">
+          <span class="collection-empty__icon" aria-hidden="true">{{ 'icon-filter.svg' | inline_asset_content }}</span>
+          <div class="collection-empty__message">
+            <h2 class="collection-empty__title">{{ 'collections.no_match_title' | t }}</h2>
+            <p class="collection-empty__text">{{ 'collections.no_match_text' | t }}</p>
+          </div>
+          <div class="collection-empty__actions">
+            <a class="button" href="{{ clear_url }}" data-results-link>{{ 'collections.clear_filters' | t }}</a>
+          </div>
+        </div>
+      </div>
+    {%- elsif collection.products_count == 0 -%}
       {%- comment -%}
         Empty collection, the same pattern as the empty bag (cart, design C): a slim glass strip with the
         message and the way out, then a few suggestions from the "Suggested products" collection.
@@ -370,7 +447,7 @@
       {%- endpaginate -%}
     {%- endif -%}
     </div>
-  </div>
+  </results-view>
 </div>
 
 {% stylesheet %}
@@ -407,9 +484,29 @@
     gap: var(--space-md) var(--space-xl);
   }
 
+  /* Left side: Filters, then the pills (Figma gap 44px) */
+  .collection-toolbar__start {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xl);
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+
   .collection-pills {
     min-inline-size: 0;
     max-inline-size: 100%;
+  }
+
+  /* Results and active-filter pills, stacked; the focus target after a pill is removed shows no ring */
+  .collection-results {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+  }
+
+  .collection-results:focus {
+    outline: none;
   }
 
   .collection-pills__list {
@@ -455,6 +552,7 @@
     border-radius: var(--radius-pill);
     color: var(--color-text);
     font-size: var(--font-size-body);
+    font-weight: var(--font-weight-medium);
     line-height: 1.2;
     text-decoration: none;
     transition: color var(--duration-fast) var(--ease-out);
@@ -489,7 +587,6 @@
   /* The page you're on: red text (the Figma frame shows no active style; aria-current tells screen readers) */
   .collection-pill--active {
     color: var(--color-primary);
-    font-weight: var(--font-weight-medium);
   }
 
   .collection-pill__count {
@@ -668,8 +765,14 @@
   }
 
   @media (max-width: 749px) {
-    .collection-pills {
+    /* Phones: Filters + the scrolling pills share the first row, count and sort the second */
+    .collection-toolbar__start {
       flex: 1 1 100%;
+      gap: var(--space-md);
+    }
+
+    .collection-pills {
+      flex: 1 1 auto;
     }
 
     .collection-toolbar__end {
@@ -857,25 +960,43 @@
 
 {% javascript %}
   /**
-   * <collection-sort>: changing the sort reloads only this section's results, not the whole page.
-   * Section Rendering API: the same collection URL + ?section_id=<id> returns just this section's HTML,
-   * already sorted by Shopify. We swap the results and the count into the page and put ?sort_by= in the
-   * address bar, so the page can be shared, reloaded and pagination keeps the order.
-   * If anything fails, it falls back to a normal page load of the sorted URL.
+   * <results-view>: reloads only this section's results, not the whole page, when the visitor
+   * - changes the sort (a form with data-results-autoload),
+   * - applies filters (<filter-drawer> sends a 'results:load' event),
+   * - removes an active filter or clears them all (links with data-results-link),
+   * - goes Back / Forward.
+   *
+   * The URL is built from every form with data-results-form (sort + filters), so the two always combine:
+   * /collections/skincare?filter.p.vendor=Oroskin&sort_by=price-ascending
+   * Section Rendering API: that URL + &section_id=<id> returns just this section's HTML, already filtered and
+   * sorted by Shopify. Every [data-results-part] is replaced by the new one with the same id; a
+   * [data-results-text] only gets its text changed (the count, so its aria-live announces it).
+   * The URL goes in the address bar, so the page can be shared and reloaded, and pagination keeps the choices.
+   * If anything fails, it falls back to a normal page load of the URL.
    */
-  class CollectionSort extends HTMLElement {
+  class ResultsView extends HTMLElement {
     connectedCallback() {
-      this.form = this.querySelector('form');
-      this.select = this.querySelector('select');
       this.sectionId = this.dataset.sectionId;
 
-      this.form.addEventListener('change', () => this.sort());
-      this.form.addEventListener('submit', (event) => {
-        event.preventDefault();
-        this.sort();
+      this.addEventListener('results:load', () => this.load(this.buildUrl(), true));
+
+      this.addEventListener('change', (event) => {
+        if (event.target.form?.hasAttribute('data-results-autoload')) this.load(this.buildUrl(), true);
       });
 
-      // Back / forward between sorts: show the results for the URL we land on
+      this.addEventListener('submit', (event) => {
+        if (!event.target.hasAttribute('data-results-autoload')) return;
+        event.preventDefault();
+        this.load(this.buildUrl(), true);
+      });
+
+      this.addEventListener('click', (event) => {
+        const link = event.target.closest('a[data-results-link]');
+        if (!link) return;
+        event.preventDefault();
+        this.load(link.href, true);
+      });
+
       this.onPopState = () => this.load(window.location.href, false);
       window.addEventListener('popstate', this.onPopState);
     }
@@ -885,10 +1006,21 @@
       this.controller?.abort();
     }
 
-    sort() {
-      // FormData = { sort_by: 'price-ascending' }; a new sort always starts again at page 1
-      const params = new URLSearchParams(new FormData(this.form));
-      this.load(`${this.form.action}?${params}`, true);
+    // Every non-empty field of the sort and filter forms (an empty price box means "no limit"; the
+    // collection's own default sort needs no parameter); a new choice always starts again at page 1,
+    // so the page number is left out
+    buildUrl() {
+      const forms = this.querySelectorAll('form[data-results-form]');
+      const defaultSort = this.querySelector('select[name="sort_by"]')?.dataset.default;
+      const params = new URLSearchParams();
+      forms.forEach((form) => {
+        for (const [key, value] of new FormData(form)) {
+          if (value === '' || (key === 'sort_by' && value === defaultSort)) continue;
+          params.append(key, value);
+        }
+      });
+      const action = forms[0]?.action || window.location.pathname;
+      return `${action}?${params}`;
     }
 
     async load(url, addToHistory) {
@@ -896,6 +1028,7 @@
       this.controller = new AbortController();
 
       const results = document.getElementById(`CollectionResults-${this.sectionId}`);
+      const hadFocus = results?.contains(document.activeElement);
       results?.setAttribute('aria-busy', 'true');
 
       try {
@@ -905,20 +1038,26 @@
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const html = new DOMParser().parseFromString(await response.text(), 'text/html');
 
-        const newResults = html.getElementById(`CollectionResults-${this.sectionId}`);
-        if (results && newResults) results.replaceWith(newResults);
+        this.querySelectorAll('[data-results-part]').forEach((part) => {
+          const fresh = html.getElementById(part.id);
+          if (fresh) part.replaceWith(fresh);
+        });
 
-        // Change only the text of the count, so its aria-live announces "8 products"
-        const count = document.getElementById(`CollectionCount-${this.sectionId}`);
-        const newCount = html.getElementById(`CollectionCount-${this.sectionId}`);
-        if (count && newCount) count.textContent = newCount.textContent;
+        this.querySelectorAll('[data-results-text]').forEach((part) => {
+          const fresh = html.getElementById(part.id);
+          if (fresh) part.textContent = fresh.textContent;
+        });
 
-        if (addToHistory) {
-          window.history.pushState({}, '', url);
-        } else {
-          const sortBy = new URL(url).searchParams.get('sort_by');
-          this.select.value = sortBy || this.select.dataset.default;
+        if (addToHistory) window.history.pushState({}, '', url);
+
+        // Back / Forward: the sort select isn't replaced, so set it to match the URL
+        const select = this.querySelector('select[name="sort_by"]');
+        if (select && !addToHistory) {
+          select.value = new URL(url, window.location.origin).searchParams.get('sort_by') || select.dataset.default;
         }
+
+        // The clicked pill or "Clear all" was inside the old results: put focus on the new ones
+        if (hadFocus) document.getElementById(`CollectionResults-${this.sectionId}`)?.focus();
       } catch (error) {
         if (error.name === 'AbortError') return;
         window.location.href = url;
@@ -928,7 +1067,7 @@
     }
   }
 
-  if (!customElements.get('collection-sort')) customElements.define('collection-sort', CollectionSort);
+  if (!customElements.get('results-view')) customElements.define('results-view', ResultsView);
 {% endjavascript %}
 
 {% schema %}
@@ -1006,6 +1145,13 @@
       "type": "checkbox",
       "id": "show_sort",
       "label": "t:labels.show_sort",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_filters",
+      "label": "t:labels.show_filters",
+      "info": "t:labels.show_filters_info",
       "default": true
     },
     {

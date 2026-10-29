@@ -1,0 +1,555 @@
+{% doc %}
+  Renders the Filters button and the drawer it opens (collection page now, search page in M5.6).
+
+  The filters themselves (which ones, in what order) are set by the merchant in the Search & Discovery
+  app; the theme only shows what `collection.filters` / `search.filters` returns. Every choice is a URL
+  parameter (filter.v.availability=1, filter.p.vendor=Oroskin, filter.v.price.gte=10), so the form is a
+  plain GET form: Shopify reads the URL and returns the filtered products.
+
+  The drawer is a modal <dialog> from the left, like the header drawer. Ticking boxes changes nothing yet;
+  "Show results" applies them. The section's <results-view> builds the URL from this form and the sort,
+  loads the results with the Section Rendering API and swaps them in. Closing without applying puts the
+  boxes back as they were (form.reset()).
+
+  The form and the count in the button have data-results-part: after each load they are replaced with the
+  fresh ones, so the counts per value and the checked boxes always match the results.
+
+  @param {filter[]} filters - collection.filters or search.filters
+  @param {string} results_url - Where the form sends to, e.g. collection.url
+  @param {string} section_id - The section's id, for unique ids and Section Rendering
+  @param {string} clear_url - The URL with every filter removed (keeps the sort and search terms)
+  @param {string} [terms] - The search terms on the search page, sent again as q
+
+  @example
+  {% render 'filter-drawer', filters: collection.filters, results_url: collection.url, section_id: section.id, clear_url: clear_url %}
+{% enddoc %}
+
+{%- liquid
+  # How many choices are applied: each ticked value, plus 1 for a price range
+  assign active_count = 0
+  for filter in filters
+    if filter.type == 'price_range'
+      if filter.min_value.value != nil or filter.max_value.value != nil
+        assign active_count = active_count | plus: 1
+      endif
+    else
+      assign active_count = active_count | plus: filter.active_values.size
+    endif
+  endfor
+-%}
+
+<filter-drawer class="filter-drawer">
+  <button
+    type="button"
+    class="filter-drawer__toggle"
+    aria-haspopup="dialog"
+    aria-controls="FilterDrawer-{{ section_id }}"
+    aria-expanded="false"
+  >
+    {{- 'icon-filter.svg' | inline_asset_content -}}
+    {{- 'collections.filters' | t -}}
+    <span id="FilterCount-{{ section_id }}" data-results-part>
+      {%- if active_count > 0 -%}
+        <span class="filter-drawer__count" aria-hidden="true">{{ active_count }}</span>
+        <span class="visually-hidden">{{ 'collections.filters_applied' | t: count: active_count }}</span>
+      {%- endif -%}
+    </span>
+  </button>
+
+  <dialog
+    id="FilterDrawer-{{ section_id }}"
+    class="filter-drawer__dialog"
+    aria-labelledby="FilterDrawerTitle-{{ section_id }}"
+  >
+    <form
+      id="FilterForm-{{ section_id }}"
+      class="filter-drawer__form"
+      action="{{ results_url }}"
+      method="get"
+      data-results-form
+      data-results-part
+    >
+      <div class="filter-drawer__head">
+        <h2 class="filter-drawer__title" id="FilterDrawerTitle-{{ section_id }}">{{ 'collections.filters' | t }}</h2>
+        <button type="button" class="filter-drawer__close" data-drawer-close>
+          {{- 'icon-close.svg' | inline_asset_content -}}
+          <span class="visually-hidden">{{ 'collections.close_filters' | t }}</span>
+        </button>
+      </div>
+
+      <div class="filter-drawer__body">
+        {%- if terms != blank -%}
+          <input type="hidden" name="q" value="{{ terms | escape }}">
+        {%- endif -%}
+
+        {%- for filter in filters -%}
+          {%- liquid
+            # A group starts open when it has a choice applied, and the first three always do
+            assign group_active = false
+            if filter.type == 'price_range'
+              if filter.min_value.value != nil or filter.max_value.value != nil
+                assign group_active = true
+              endif
+            elsif filter.active_values.size > 0
+              assign group_active = true
+            endif
+
+            assign group_open = group_active
+            if forloop.index <= 3
+              assign group_open = true
+            endif
+          -%}
+          <details class="filter-drawer__group" {% if group_open %}open{% endif %}>
+            <summary class="filter-drawer__summary">
+              {{- filter.label | escape -}}
+              {{- 'icon-chevron.svg' | inline_asset_content -}}
+            </summary>
+
+            <fieldset class="filter-drawer__fieldset">
+              <legend class="visually-hidden">{{ filter.label | escape }}</legend>
+
+              {%- if filter.type == 'price_range' -%}
+                {%- liquid
+                  # Liquid gives prices in cents (2500 = 25.00); the URL wants the amount (25), so divide by 100.
+                  # Whole amounts divide by 100 (→ 40), others by 100.0 (→ 40.5), so the box never shows "40.0".
+                  assign range_max = filter.range_max | divided_by: 100.0 | ceil
+                  assign min_amount = ''
+                  if filter.min_value.value != nil
+                    assign cents = filter.min_value.value | modulo: 100
+                    if cents == 0
+                      assign min_amount = filter.min_value.value | divided_by: 100
+                    else
+                      assign min_amount = filter.min_value.value | divided_by: 100.0
+                    endif
+                  endif
+                  assign max_amount = ''
+                  if filter.max_value.value != nil
+                    assign cents = filter.max_value.value | modulo: 100
+                    if cents == 0
+                      assign max_amount = filter.max_value.value | divided_by: 100
+                    else
+                      assign max_amount = filter.max_value.value | divided_by: 100.0
+                    endif
+                  endif
+                -%}
+                <div class="filter-drawer__price">
+                  <label class="filter-drawer__price-field">
+                    <span class="filter-drawer__price-label">{{ 'collections.price_min' | t }}</span>
+                    <span class="filter-drawer__price-input">
+                      <span aria-hidden="true">{{ cart.currency.symbol }}</span>
+                      <input
+                        type="number"
+                        name="{{ filter.min_value.param_name }}"
+                        value="{{ min_amount }}"
+                        min="0"
+                        max="{{ range_max }}"
+                        step="any"
+                        inputmode="decimal"
+                        placeholder="0"
+                      >
+                    </span>
+                  </label>
+                  <label class="filter-drawer__price-field">
+                    <span class="filter-drawer__price-label">{{ 'collections.price_max' | t }}</span>
+                    <span class="filter-drawer__price-input">
+                      <span aria-hidden="true">{{ cart.currency.symbol }}</span>
+                      <input
+                        type="number"
+                        name="{{ filter.max_value.param_name }}"
+                        value="{{ max_amount }}"
+                        min="0"
+                        max="{{ range_max }}"
+                        step="any"
+                        inputmode="decimal"
+                        placeholder="{{ range_max }}"
+                      >
+                    </span>
+                  </label>
+                </div>
+              {%- else -%}
+                {%- comment -%} list and boolean filters: one checkbox per value, with its product count {%- endcomment -%}
+                <ul class="filter-drawer__options" role="list">
+                  {%- for value in filter.values -%}
+                    {%- liquid
+                      # A value with no products left can't be picked (unless it's the one already picked)
+                      assign value_disabled = false
+                      if value.count == 0 and value.active == false
+                        assign value_disabled = true
+                      endif
+                    -%}
+                    <li>
+                      <label class="filter-drawer__option{% if value_disabled %} filter-drawer__option--disabled{% endif %}">
+                        <input
+                          type="checkbox"
+                          name="{{ value.param_name }}"
+                          value="{{ value.value | escape }}"
+                          {% if value.active %}
+                            checked
+                          {% endif %}
+                          {% if value_disabled %}
+                            disabled
+                          {% endif %}
+                        >
+                        {%- if value.swatch.color != blank -%}
+                          <span class="filter-drawer__swatch" style="--swatch: {{ value.swatch.color }};" aria-hidden="true"></span>
+                        {%- endif -%}
+                        <span class="filter-drawer__option-label">{{ value.label | escape }}</span>
+                        <span class="filter-drawer__option-count">({{ value.count }})</span>
+                      </label>
+                    </li>
+                  {%- endfor -%}
+                </ul>
+              {%- endif -%}
+            </fieldset>
+          </details>
+        {%- endfor -%}
+      </div>
+
+      <div class="filter-drawer__foot">
+        {%- if active_count > 0 -%}
+          <a class="button button--text" href="{{ clear_url }}" data-results-link>{{ 'collections.clear_filters' | t }}</a>
+        {%- endif -%}
+        <button type="submit" class="button filter-drawer__apply">{{ 'collections.show_results' | t }}</button>
+      </div>
+    </form>
+  </dialog>
+</filter-drawer>
+
+{% stylesheet %}
+  /* The button and the dialog sit in the toolbar's flow as if the wrapper weren't there */
+  .filter-drawer {
+    display: contents;
+  }
+
+  /* Without JavaScript the drawer can't open, so the button is hidden until the element is defined */
+  filter-drawer:not(:defined) .filter-drawer__toggle {
+    display: none;
+  }
+
+  /* Figma "Filters": a 50px outlined pill (same rose border as SORT), red icon, then the label */
+  .filter-drawer__toggle {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: var(--space-xs);
+    min-block-size: 3.125rem;
+    padding-inline: var(--space-lg);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-glass);
+    color: var(--color-text);
+    font: inherit;
+    font-size: var(--font-size-body-sm);
+    cursor: pointer;
+    transition: background-color var(--duration-fast) var(--ease-out);
+    -webkit-backdrop-filter: blur(var(--glass-frost));
+    backdrop-filter: blur(var(--glass-frost));
+  }
+
+  .filter-drawer__toggle:hover {
+    background-color: var(--color-glass-strong);
+  }
+
+  .filter-drawer__toggle svg {
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    color: var(--color-primary);
+  }
+
+  /*
+    The number of applied choices: the small raised red number, like the pill counts. It sits in a
+    wrapper span (swapped after each load), so it's lifted with translate rather than flex alignment.
+  */
+  .filter-drawer__count {
+    display: inline-block;
+    translate: 0 -0.6em;
+    color: var(--color-primary);
+    font-size: 0.65em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The drawer: full height on the left, glass, like the header drawer */
+  .filter-drawer__dialog {
+    inset-block: 0;
+    inset-inline: 0 auto;
+    inline-size: min(26rem, calc(100vw - 3rem));
+    max-inline-size: none;
+    block-size: 100dvh;
+    max-block-size: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-start-end-radius: var(--radius-lg);
+    border-end-end-radius: var(--radius-lg);
+    background-color: var(--color-glass-strong);
+    box-shadow: var(--shadow-header);
+    color: var(--color-text);
+    -webkit-backdrop-filter: blur(var(--glass-frost)) saturate(1.4);
+    backdrop-filter: blur(var(--glass-frost)) saturate(1.4);
+  }
+
+  .filter-drawer__dialog::backdrop {
+    background-color: #00000040;
+  }
+
+  html:has(.filter-drawer__dialog[open]) {
+    overflow: hidden;
+  }
+
+  .animations-on .filter-drawer__dialog {
+    transition:
+      translate var(--duration-base) var(--ease-out),
+      display var(--duration-base) allow-discrete,
+      overlay var(--duration-base) allow-discrete;
+    translate: -100% 0;
+  }
+
+  .animations-on .filter-drawer__dialog[open] {
+    translate: 0 0;
+  }
+
+  @starting-style {
+    .animations-on .filter-drawer__dialog[open] {
+      translate: -100% 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animations-on .filter-drawer__dialog {
+      transition: none;
+    }
+  }
+
+  /* Head and foot stay put, the filters in between scroll */
+  .filter-drawer__form {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    block-size: 100%;
+    margin: 0;
+  }
+
+  .filter-drawer__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-lg) var(--space-lg) var(--space-md) var(--space-xl);
+  }
+
+  .filter-drawer__title {
+    margin: 0;
+    font-size: var(--font-size-h3);
+  }
+
+  .filter-drawer__close {
+    display: inline-grid;
+    place-items: center;
+    inline-size: 2.75rem;
+    block-size: 2.75rem;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-glass);
+    box-shadow: var(--shadow-header);
+    color: var(--color-text);
+    cursor: pointer;
+  }
+
+  .filter-drawer__close svg {
+    inline-size: 1rem;
+    block-size: 1rem;
+  }
+
+  .filter-drawer__body {
+    overflow-y: auto;
+    padding-inline: var(--space-xl) var(--space-lg);
+    overscroll-behavior: contain;
+  }
+
+  .filter-drawer__group + .filter-drawer__group {
+    border-block-start: 1px solid color-mix(in srgb, var(--color-primary) 15%, transparent);
+  }
+
+  .filter-drawer__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-block-size: 3.25rem;
+    font-size: var(--font-size-label);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-nav);
+    text-transform: uppercase;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .filter-drawer__summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .filter-drawer__summary svg {
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
+    transition: rotate var(--duration-fast) var(--ease-out);
+  }
+
+  .filter-drawer__group[open] > .filter-drawer__summary svg {
+    rotate: 180deg;
+  }
+
+  .filter-drawer__fieldset {
+    margin: 0;
+    padding: 0 0 var(--space-md);
+    border: 0;
+  }
+
+  .filter-drawer__options {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .filter-drawer__option {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    min-block-size: 2.75rem; /* 44px tap target */
+    margin: 0;
+    font-size: var(--font-size-body-sm);
+    cursor: pointer;
+  }
+
+  /* margin 0: critical.css spaces a control that follows a label */
+  .filter-drawer__option input {
+    flex: none;
+    inline-size: 1.125rem;
+    block-size: 1.125rem;
+    margin: 0;
+    accent-color: var(--color-primary);
+  }
+
+  .filter-drawer__option--disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .filter-drawer__swatch {
+    flex: none;
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+    border: 1px solid color-mix(in srgb, var(--color-text) 15%, transparent);
+    border-radius: var(--radius-pill);
+    background: var(--swatch);
+  }
+
+  .filter-drawer__option-count {
+    margin-inline-start: auto;
+    color: color-mix(in srgb, var(--color-text) 75%, var(--color-background));
+    font-size: var(--font-size-small);
+  }
+
+  .filter-drawer__price {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+  }
+
+  .filter-drawer__price-field {
+    display: grid;
+    gap: var(--space-2xs);
+    margin: 0;
+  }
+
+  .filter-drawer__price-label {
+    font-size: var(--font-size-small);
+  }
+
+  .filter-drawer__price-input {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    padding-inline: var(--space-md);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-glass-strong);
+  }
+
+  .filter-drawer__price-input:focus-within {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  .filter-drawer__price-input input {
+    inline-size: 100%;
+    min-block-size: 2.75rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+  }
+
+  .filter-drawer__price-input input:focus-visible {
+    outline: none;
+  }
+
+  .filter-drawer__foot {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-lg) var(--space-xl) var(--space-xl);
+    border-block-start: 1px solid color-mix(in srgb, var(--color-primary) 15%, transparent);
+  }
+
+  .filter-drawer__apply {
+    flex: 1;
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <filter-drawer>: opens the filter <dialog> with showModal() (focus moves in, Tab stays inside, Escape
+   * closes, the page behind is inert). "Show results" asks the section's <results-view> to load the results
+   * (a bubbling 'results:load' event; it reads this form and the sort to build the URL), then closes.
+   * Closing any other way resets the boxes to what's applied.
+   */
+  class FilterDrawer extends HTMLElement {
+    connectedCallback() {
+      this.toggle = this.querySelector('.filter-drawer__toggle');
+      this.dialog = this.querySelector('dialog');
+
+      this.toggle.addEventListener('click', () => {
+        this.applied = false;
+        this.dialog.showModal();
+        this.toggle.setAttribute('aria-expanded', 'true');
+      });
+
+      this.dialog.addEventListener('click', (event) => {
+        // The form fills the dialog, so the dialog itself is only the target for a backdrop click
+        if (event.target === this.dialog || event.target.closest('[data-drawer-close]')) {
+          this.dialog.close();
+        } else if (event.target.closest('[data-results-link]')) {
+          // "Clear all": <results-view> loads the link; the drawer just gets out of the way
+          this.applied = true;
+          this.dialog.close();
+        }
+      });
+
+      this.dialog.addEventListener('submit', (event) => {
+        event.preventDefault();
+        this.dispatchEvent(new CustomEvent('results:load', { bubbles: true }));
+        this.applied = true;
+        this.dialog.close();
+      });
+
+      this.dialog.addEventListener('close', () => {
+        this.toggle.setAttribute('aria-expanded', 'false');
+        if (!this.applied) this.dialog.querySelector('form')?.reset();
+      });
+    }
+  }
+
+  if (!customElements.get('filter-drawer')) customElements.define('filter-drawer', FilterDrawer);
+{% endjavascript %}

@@ -1,0 +1,100 @@
+{% doc %}
+  Renders the applied filters as removable pills ("Rose ×", "$10.00 – $50.00 ×") and a "Clear all" link.
+
+  Each pill is a link to the same page without that one choice: Shopify gives the URL ready-made
+  (value.url_to_remove for a ticked value, filter.url_to_remove for the price range), with the other
+  filters and the sort kept. The links have data-results-link, so the section's <results-view> loads
+  them in place; without JavaScript they are ordinary links.
+
+  @param {filter[]} filters - collection.filters or search.filters
+  @param {string} clear_url - The URL with every filter removed (keeps the sort and search terms)
+
+  @example
+  {% render 'active-filters', filters: collection.filters, clear_url: clear_url %}
+{% enddoc %}
+
+<ul class="active-filters" role="list" aria-label="{{ 'collections.active_filters' | t }}">
+  {%- for filter in filters -%}
+    {%- if filter.type == 'price_range' -%}
+      {%- if filter.min_value.value != nil or filter.max_value.value != nil -%}
+        {%- liquid
+          assign price_from = filter.min_value.value | default: 0 | money
+          assign price_to = filter.max_value.value | default: filter.range_max | money
+          assign chip_label = price_from | append: ' – ' | append: price_to
+        -%}
+        <li>
+          <a
+            class="active-filters__pill"
+            href="{{ filter.url_to_remove }}"
+            aria-label="{{ 'collections.remove_filter' | t: label: chip_label | escape }}"
+            data-results-link
+          >
+            {{- chip_label -}}
+            {{- 'icon-close.svg' | inline_asset_content -}}
+          </a>
+        </li>
+      {%- endif -%}
+    {%- else -%}
+      {%- for value in filter.active_values -%}
+        <li>
+          <a
+            class="active-filters__pill"
+            href="{{ value.url_to_remove }}"
+            aria-label="{{ 'collections.remove_filter' | t: label: value.label | escape }}"
+            data-results-link
+          >
+            {{- value.label | escape -}}
+            {{- 'icon-close.svg' | inline_asset_content -}}
+          </a>
+        </li>
+      {%- endfor -%}
+    {%- endif -%}
+  {%- endfor -%}
+  <li>
+    <a class="active-filters__clear" href="{{ clear_url }}" data-results-link>{{ 'collections.clear_filters' | t }}</a>
+  </li>
+</ul>
+
+{% stylesheet %}
+  .active-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-xs) var(--space-sm);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* A small outlined pill, the same rose border as the Filters and SORT pills */
+  .active-filters__pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    min-block-size: 2.25rem;
+    padding-inline: var(--space-md) var(--space-sm);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-glass);
+    color: var(--color-text);
+    font-size: var(--font-size-small);
+    text-decoration: none;
+    transition: border-color var(--duration-fast) var(--ease-out);
+  }
+
+  .active-filters__pill:hover {
+    border-color: var(--color-primary);
+  }
+
+  .active-filters__pill svg {
+    inline-size: 0.625rem;
+    block-size: 0.625rem;
+    color: var(--color-primary);
+  }
+
+  .active-filters__clear {
+    color: var(--color-primary);
+    font-size: var(--font-size-small);
+    text-underline-offset: 0.2em;
+  }
+{% endstylesheet %}

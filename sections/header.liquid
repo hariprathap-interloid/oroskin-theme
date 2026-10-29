@@ -187,6 +187,17 @@
   }
 
   /*
+    While a side drawer (filters, phone menu) is open, the header sits under the dimmed backdrop and can't be
+    used, so its glass blur is switched off. Chrome otherwise composites the blurred page behind the pill
+    differently from the rest of the dimmed page: a lighter/darker block showed where the banner photo starts.
+  */
+  html:has(.filter-drawer__dialog[open], .header-drawer__dialog[open]) .header .header__bar,
+  html:has(.filter-drawer__dialog[open], .header-drawer__dialog[open]) .header__icon-button:not(.header-drawer__close) {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  /*
     "At rest" = transparent header, page at the top, nobody using the header with the keyboard and no menu open.
     Then: no pill surface, the bar spans the page, and the logo and menu fade out (still focusable,
     so a keyboard user who tabs into the header brings the full pill back; :focus-visible means keyboard

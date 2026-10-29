@@ -46,10 +46,29 @@
     "main": {
       "type": "collection",
       "settings": {
-        "color_scheme": "scheme-2",
+        "show_title": false,
+        "show_pills": true,
         "pills_menu": "collection-pills",
+        "show_all_pill": true,
+        "all_pill_image": "shopify://shop_images/Group_1000003356.png",
+        "pill_image_animation": "collection-pills--image-scale",
+        "pill_image_size": 200,
+        "show_count": true,
+        "show_sort": true,
+        "layout": "bento",
+        "products_per_page": 22,
+        "columns_desktop": 4,
+        "image_ratio": "portrait",
+        "show_details": true,
+        "show_rating": true,
+        "show_description": true,
+        "cart_options": "add_first",
         "empty_collection": "new-arrivals",
-        "empty_heading": "You might <em>love</em>"
+        "empty_heading": "You might <em>love</em>",
+        "section_width": "widest",
+        "color_scheme": "scheme-2",
+        "padding_top": 32,
+        "padding_bottom": 96
       }
     }
   },

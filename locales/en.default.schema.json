@@ -488,6 +488,8 @@
     "pill_image_size": "Pill image size",
     "show_product_count": "Show the product count",
     "show_sort": "Show sorting",
+    "show_filters": "Show filters",
+    "show_filters_info": "Choose which filters appear, and their order, in the Search & Discovery app.",
     "collection_empty_group": "Empty collection",
     "collection_empty_products": "Suggested products",
     "collection_empty_products_info": "Shown under the message when a collection has no products yet (first 4). Leave empty to show only the message.",
