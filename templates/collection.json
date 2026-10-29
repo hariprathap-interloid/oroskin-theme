@@ -46,7 +46,9 @@
     "main": {
       "type": "collection",
       "settings": {
-        "color_scheme": "scheme-2"
+        "color_scheme": "scheme-2",
+        "empty_collection": "new-arrivals",
+        "empty_heading": "You might <em>love</em>"
       }
     }
   },

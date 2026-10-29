@@ -1,37 +1,412 @@
-{% comment %}
-  This section is used in the collection template to render collection page
-  listing all products within a collection.
+{%- comment -%}
+  Collection product grid (M5.2, Figma "Collection"). The page title is in the Collection banner section
+  (M5.1); "Show the collection title" here is the fallback for a template without the banner.
 
-  https://shopify.dev/docs/storefronts/themes/architecture/templates/collection
-{% endcomment %}
+  Two layouts:
+  - Bento (Figma): a 4-column grid of tiles in different sizes. The Figma page is 22 tiles in a fixed
+    pattern over 12 grid rows; the pattern repeats every 22 products. Each tile's place is worked out
+    here in Liquid (grid column + row) and handed to CSS as variables. The rows are sized in "Figma
+    pixels" (the Figma grid is 1831px wide), so the whole pattern scales with the page width.
+  - Even grid: equal tiles, 2-5 per row, in the chosen shape.
+  Phones and tablets (below 990px) always get the even grid, 2 per row.
 
-{%- comment -%} The title (H1) is in the Collection banner section (M5.1). The grid is rebuilt in M5.2. {%- endcomment -%}
+  Both use the product card's tile style (snippets/product-card.liquid, style: 'tile').
+  An empty collection shows a short message and a link to the whole shop.
+{%- endcomment -%}
 
-{%- comment -%} The colour scheme paints the whole width (white on the Figma collection page) {%- endcomment -%}
-<div class="collection-section full-width color-{{ section.settings.color_scheme.id | default: 'scheme-1' }}">
-  <div class="collection-products">
-    {% paginate collection.products by 20 %}
-      {%- comment -%} Temporary grid with the M3.7 product card; the real collection page is M5 {%- endcomment -%}
-      {% for product in collection.products %}
-        {% render 'product-card', product: product, show_secondary_image: true %}
-      {% endfor %}
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-1'
+  assign layout = section.settings.layout | default: 'bento'
 
-      {{ paginate | default_pagination }}
-    {% endpaginate %}
+  # The Figma pattern, one entry per tile: column-column span-row-row span (rows 1-12 of a cycle).
+  # Rows 1-5 = the first band (8 tiles), 6-9 = the second (8), 10-12 = the third (6).
+  assign bento_pattern = '1-2-1-1,3-1-1-2,4-1-1-2,1-1-2-2,2-1-2-3,3-2-3-3,1-1-4-2,2-1-5-1,1-1-6-3,2-2-6-1,4-1-6-2,2-1-7-2,3-1-7-2,4-1-8-2,1-2-9-1,3-1-9-1,1-1-10-2,2-1-10-1,3-2-10-2,2-1-11-2,3-2-12-1,1-1-12-1' | split: ','
+
+  # The Figma bands only close into a clean rectangle when every tile is there (8, 8 and 6 tiles). The
+  # 1-7 products left over after the last full band get a small "tail" pattern that always closes:
+  # entry N (separated by |) is the layout for N leftover tiles, on 1 row (1-4 tiles) or 2 rows (5-7).
+  #   1: one full-width tile    2: two wide tiles         3: wide + 2 small         4: 4 small
+  #   5: tall, wide, tall + 2 small under the wide      6: wide + 2 small, then 2 small + wide
+  #   7: tall + 3 small, then 3 small
+  assign tail_patterns = '|1-4-1-1|1-2-1-1;3-2-1-1|1-2-1-1;3-1-1-1;4-1-1-1|1-1-1-1;2-1-1-1;3-1-1-1;4-1-1-1|1-1-1-2;2-2-1-1;4-1-1-2;2-1-2-1;3-1-2-1|1-2-1-1;3-1-1-1;4-1-1-1;1-1-2-1;2-1-2-1;3-2-2-1|1-1-1-2;2-1-1-1;3-1-1-1;4-1-1-1;2-1-2-1;3-1-2-1;4-1-2-1' | split: '|'
+
+  # Row heights in Figma pixels: one full cycle (12 rows), the first band alone (5 rows), the first two
+  # bands (9 rows). Tail rows are 400px, so a tail tile is about the Figma's wide-tile height.
+  assign cycle_rows = '399,220,54,221,382,399,204,70,728,309,204,399'
+  assign band_a_rows = '399,220,54,221,382'
+  assign band_ab_rows = '399,220,54,221,382,399,204,70,728'
+-%}
+
+<div
+  class="collection-section full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --grid-columns: {{ section.settings.columns_desktop }};"
+>
+  <div class="collection-section__inner">
+    {%- if section.settings.show_title -%}
+      <h1 class="collection-section__title">{{ collection.title | escape }}</h1>
+    {%- endif -%}
+
+    {%- if collection.products_count == 0 -%}
+      {%- comment -%}
+        Empty collection, the same pattern as the empty bag (cart, design C): a slim glass strip with the
+        message and the way out, then a few suggestions from the "Suggested products" collection.
+        The banner above drops its sentence and large image on an empty collection (collection-banner.liquid).
+      {%- endcomment -%}
+      <div class="collection-empty">
+        <div class="collection-empty__strip">
+          <span class="collection-empty__icon" aria-hidden="true">{{ 'icon-sparkle.svg' | inline_asset_content }}</span>
+          <div class="collection-empty__message">
+            <h2 class="collection-empty__title">{{ 'collections.empty_title' | t }}</h2>
+            <p class="collection-empty__text">{{ 'collections.empty_text' | t }}</p>
+          </div>
+          <div class="collection-empty__actions">
+            <a class="button button--text" href="{{ routes.root_url }}">{{ 'collections.back_home' | t }}</a>
+            <a class="button" href="{{ routes.all_products_collection_url }}">{{ 'collections.continue_shopping' | t }}</a>
+          </div>
+        </div>
+
+        {%- assign suggestions = section.settings.empty_collection -%}
+        {%- if suggestions != blank and suggestions.products_count > 0 -%}
+          <div class="collection-empty__picks">
+            <h2 class="collection-empty__picks-title">{{ section.settings.empty_heading }}</h2>
+            <ul class="collection-grid collection-grid--grid" role="list" style="--grid-columns: 4;">
+              {%- for product in suggestions.products limit: 4 -%}
+                <li class="collection-grid__item">
+                  {%- render 'product-card',
+                    product: product,
+                    style: 'tile',
+                    sizes: '(min-width: 990px) 25vw, (min-width: 750px) 50vw, 100vw',
+                    heading_tag: 'h3',
+                    show_details: section.settings.show_details,
+                    show_rating: section.settings.show_rating,
+                    show_description: section.settings.show_description,
+                    cart_options: section.settings.cart_options
+                  -%}
+                </li>
+              {%- endfor -%}
+            </ul>
+          </div>
+        {%- endif -%}
+      </div>
+    {%- else -%}
+      {%- paginate collection.products by section.settings.products_per_page -%}
+        {%- liquid
+          # Bento plan for THIS page (inside paginate, collection.products is only this page's products).
+          # Example, 30 per page: 1 full cycle (22) + band A (8) = 30, no tail.
+          # Example, 7 products: no full band, so all 7 use tail pattern 7.
+          # Example, 13 products: band A (8) + tail pattern 5.
+          assign page_count = collection.products.size
+          assign full_cycles = page_count | divided_by: 22
+          assign rest = page_count | modulo: 22
+
+          assign band_tiles = 0
+          assign band_rows = 0
+          if rest >= 16
+            assign band_tiles = 16
+            assign band_rows = 9
+          elsif rest >= 8
+            assign band_tiles = 8
+            assign band_rows = 5
+          endif
+
+          assign tail_count = rest | minus: band_tiles
+          assign figma_count = full_cycles | times: 22 | plus: band_tiles
+          assign tail_start_row = full_cycles | times: 12 | plus: band_rows
+          assign tail = tail_patterns[tail_count] | split: ';'
+
+          # The grid's row list, e.g. "399,220,...,400" -> calc(var(--u) * 399) calc(var(--u) * 220) ...
+          assign row_list = ''
+          if full_cycles > 0
+            for i in (1..full_cycles)
+              assign row_list = row_list | append: cycle_rows | append: ','
+            endfor
+          endif
+          if band_tiles == 8
+            assign row_list = row_list | append: band_a_rows | append: ','
+          elsif band_tiles == 16
+            assign row_list = row_list | append: band_ab_rows | append: ','
+          endif
+          if tail_count > 0
+            assign row_list = row_list | append: '400,'
+          endif
+          if tail_count > 4
+            assign row_list = row_list | append: '400,'
+          endif
+
+          assign row_heights = row_list | split: ','
+          capture bento_rows
+            for height in row_heights
+              echo 'calc(var(--u) * ' | append: height | append: ') '
+            endfor
+          endcapture
+        -%}
+        <div class="collection-grid-wrap">
+          <ul
+            class="collection-grid collection-grid--{{ layout }} collection-grid--{{ section.settings.image_ratio | default: 'portrait' }}"
+            role="list"
+            {% if layout == 'bento' %}
+              style="--bento-rows: {{ bento_rows | strip }};"
+            {% endif %}
+          >
+            {%- for product in collection.products -%}
+              {%- liquid
+                # Only the first row's photos load straight away; the rest load as they scroll near
+                assign loading = 'lazy'
+                if forloop.index <= 4
+                  assign loading = 'eager'
+                endif
+
+                # Bento: this tile's place.
+                # - Figma tiles: pos = where it falls in the 22-tile pattern, cycle = which repeat of
+                #   the pattern (each repeat starts 12 rows lower).
+                # - Tail tiles (the leftovers): t = which leftover, placed below the last full band.
+                assign tile_style = ''
+                # Photo width: 1 per row on phones (100vw), 2 on tablets (50vw), bento / grid on desktop
+                assign sizes = '(min-width: 990px) 25vw, (min-width: 750px) 50vw, 100vw'
+                if layout == 'bento'
+                  if forloop.index0 < figma_count
+                    assign pos = forloop.index0 | modulo: 22
+                    assign cycle = forloop.index0 | divided_by: 22
+                    assign place = bento_pattern[pos] | split: '-'
+                    assign row_offset = cycle | times: 12
+                  else
+                    assign t = forloop.index0 | minus: figma_count
+                    assign place = tail[t] | split: '-'
+                    assign row_offset = tail_start_row
+                  endif
+                  assign row = place[2] | plus: row_offset
+                  assign tile_style = '--col: ' | append: place[0] | append: ' / span ' | append: place[1] | append: '; --row: ' | append: row | append: ' / span ' | append: place[3] | append: ';'
+                  # The bento starts at 1200px (3 even columns from 990px). Wider tiles need a bigger
+                  # photo: 2 of 4 columns = half the screen, 4 = all of it
+                  assign sizes = '(min-width: 1200px) 25vw, (min-width: 990px) 33vw, (min-width: 750px) 50vw, 100vw'
+                  if place[1] == '2'
+                    assign sizes = '(min-width: 1200px) 50vw, (min-width: 990px) 33vw, (min-width: 750px) 50vw, 100vw'
+                  elsif place[1] == '4'
+                    assign sizes = '(min-width: 1200px) 100vw, (min-width: 990px) 33vw, (min-width: 750px) 50vw, 100vw'
+                  endif
+                endif
+              -%}
+              <li class="collection-grid__item" {% if tile_style != blank %}style="{{ tile_style }}"{% endif %}>
+                {%- render 'product-card',
+                  product: product,
+                  style: 'tile',
+                  sizes: sizes,
+                  loading: loading,
+                  heading_tag: 'h2',
+                  show_details: section.settings.show_details,
+                  show_rating: section.settings.show_rating,
+                  show_description: section.settings.show_description,
+                  cart_options: section.settings.cart_options
+                -%}
+              </li>
+            {%- endfor -%}
+          </ul>
+        </div>
+
+        {%- comment -%} Restyled in M5.5 (Figma pill + "Page X of Y") {%- endcomment -%}
+        {%- if paginate.pages > 1 -%}
+          <nav class="collection-pagination" aria-label="{{ 'accessibility.pagination' | t }}">
+            {{ paginate | default_pagination }}
+          </nav>
+        {%- endif -%}
+      {%- endpaginate -%}
+    {%- endif -%}
   </div>
 </div>
 
 {% stylesheet %}
-  .collection-products {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  .collection-section {
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  .collection-section__inner {
+    display: flex;
+    flex-direction: column;
     gap: var(--space-xl);
     inline-size: min(
-      calc(var(--page-width) - var(--page-margin) * 2),
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
       calc(100% - var(--page-margin) * 2)
     );
     margin-inline: auto;
-    padding-block: var(--space-2xl);
+  }
+
+  .collection-section__title {
+    margin: 0;
+  }
+
+  /* The wrapper is the size container: the bento rows below are measured against its width (cqi) */
+  .collection-grid-wrap {
+    container-type: inline-size;
+  }
+
+  /* Phones: one tile per row; tablets (750px+): 2 per row. Every tile 4:5 */
+  .collection-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-md);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .collection-grid__item {
+    aspect-ratio: 4 / 5;
+    min-inline-size: 0;
+  }
+
+  @media (min-width: 750px) {
+    .collection-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 990px) {
+    /* Even grid: the chosen number of columns and tile shape */
+    .collection-grid--grid {
+      grid-template-columns: repeat(var(--grid-columns, 4), minmax(0, 1fr));
+      gap: var(--space-xl);
+    }
+
+    .collection-grid--grid.collection-grid--square .collection-grid__item {
+      aspect-ratio: 1;
+    }
+
+    .collection-grid--grid.collection-grid--landscape .collection-grid__item {
+      aspect-ratio: 4 / 3;
+    }
+  }
+
+  /*
+    Small laptops (990-1199px): the bento's rows scale with the width, so its short tiles got too low for
+    the info strip. Here it's an even 3-column grid instead; the bento starts at 1200px.
+  */
+  @media (min-width: 990px) and (max-width: 1199px) {
+    .collection-grid--bento {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--space-xl);
+    }
+  }
+
+  @media (min-width: 1200px) {
+    /*
+      Bento. --u = one Figma pixel at the current width (Figma grid: 1831px wide, 4 columns, 35px gaps).
+      --bento-rows (built in the Liquid above) lists the height of every row on this page: the Figma
+      bands that are full, then the tail rows. Every tile is placed by its own --col / --row, so the
+      tiles get their height from the rows they span, not from a shape.
+    */
+    .collection-grid--bento {
+      --u: calc(100cqi / 1831);
+
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-rows: var(--bento-rows);
+      gap: calc(var(--u) * 35);
+    }
+
+    .collection-grid--bento .collection-grid__item {
+      grid-column: var(--col);
+      grid-row: var(--row);
+      aspect-ratio: auto;
+    }
+  }
+
+  /*
+    Empty collection: the empty bag's glass strip (icon, message, buttons on one line), then suggestions.
+  */
+  .collection-empty {
+    display: grid;
+    gap: var(--space-3xl);
+  }
+
+  .collection-empty__strip {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+    padding-block: var(--space-lg);
+    padding-inline: var(--space-xl);
+    border-radius: var(--radius-lg);
+    background-color: var(--color-glass-strong);
+    box-shadow: var(--glass-shadow), var(--glass-rim);
+    -webkit-backdrop-filter: blur(var(--glass-frost));
+    backdrop-filter: blur(var(--glass-frost));
+  }
+
+  .collection-empty__icon {
+    display: grid;
+    flex: none;
+    place-items: center;
+    inline-size: 3.5rem;
+    block-size: 3.5rem;
+    border-radius: var(--radius-pill);
+    background-color: color-mix(in srgb, var(--color-accent) 18%, transparent);
+    color: var(--color-primary);
+  }
+
+  .collection-empty__icon svg {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+  }
+
+  .collection-empty__message {
+    display: grid;
+    flex: 1;
+    gap: var(--space-2xs);
+    min-inline-size: 0;
+  }
+
+  .collection-empty__title,
+  .collection-empty__text,
+  .collection-empty__picks-title {
+    margin: 0;
+  }
+
+  .collection-empty__title {
+    font-size: var(--font-size-h3);
+  }
+
+  .collection-empty__text {
+    color: color-mix(in srgb, var(--color-text) 80%, var(--color-background));
+  }
+
+  .collection-empty__actions {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--space-sm) var(--space-lg);
+  }
+
+  .collection-empty__actions > * {
+    white-space: nowrap;
+  }
+
+  .collection-empty__picks {
+    display: grid;
+    gap: var(--space-xl);
+  }
+
+  .collection-empty__picks-title {
+    font-size: var(--font-size-h2);
+  }
+
+  .collection-empty__picks-title em {
+    color: var(--color-primary);
+  }
+
+  /* Phones: the strip stacks, like the empty bag */
+  @media (max-width: 749px) {
+    .collection-empty__strip {
+      flex-direction: column;
+      align-items: flex-start;
+      padding: var(--space-lg);
+    }
+
+    .collection-empty__actions {
+      flex-wrap: wrap;
+    }
+  }
+
+  .collection-pagination {
+    display: flex;
+    justify-content: center;
   }
 {% endstylesheet %}
 
@@ -40,10 +415,184 @@
   "name": "t:general.collection",
   "settings": [
     {
+      "type": "checkbox",
+      "id": "show_title",
+      "label": "t:labels.show_collection_title",
+      "info": "t:labels.show_collection_title_info",
+      "default": false
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "t:labels.layout",
+      "info": "t:labels.collection_layout_info",
+      "options": [
+        {
+          "value": "bento",
+          "label": "t:options.collection_layout.bento"
+        },
+        {
+          "value": "grid",
+          "label": "t:options.collection_layout.grid"
+        }
+      ],
+      "default": "bento"
+    },
+    {
+      "type": "range",
+      "id": "products_per_page",
+      "label": "t:labels.products_per_page",
+      "info": "t:labels.products_per_page_info",
+      "min": 4,
+      "max": 48,
+      "step": 1,
+      "default": 22
+    },
+    {
+      "type": "range",
+      "id": "columns_desktop",
+      "label": "t:labels.columns_desktop",
+      "min": 2,
+      "max": 5,
+      "step": 1,
+      "default": 4,
+      "visible_if": "{{ section.settings.layout == 'grid' }}"
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "t:labels.image_ratio",
+      "options": [
+        {
+          "value": "portrait",
+          "label": "t:options.image_shape.portrait"
+        },
+        {
+          "value": "square",
+          "label": "t:options.image_shape.square"
+        },
+        {
+          "value": "landscape",
+          "label": "t:options.image_shape.landscape"
+        }
+      ],
+      "default": "portrait",
+      "visible_if": "{{ section.settings.layout == 'grid' }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.card_details_group"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_details",
+      "label": "t:labels.show_card_details",
+      "info": "t:labels.show_card_details_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_rating",
+      "label": "t:labels.show_card_rating",
+      "info": "t:labels.show_card_rating_info",
+      "default": true,
+      "visible_if": "{{ section.settings.show_details }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_description",
+      "label": "t:labels.show_card_description",
+      "default": true,
+      "visible_if": "{{ section.settings.show_details }}"
+    },
+    {
+      "type": "select",
+      "id": "cart_options",
+      "label": "t:labels.cart_options",
+      "info": "t:labels.cart_options_info",
+      "options": [
+        {
+          "value": "add_first",
+          "label": "t:options.cart_options.add_first"
+        },
+        {
+          "value": "link",
+          "label": "t:options.cart_options.link"
+        }
+      ],
+      "default": "add_first",
+      "visible_if": "{{ section.settings.show_details }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.collection_empty_group"
+    },
+    {
+      "type": "collection",
+      "id": "empty_collection",
+      "label": "t:labels.collection_empty_products",
+      "info": "t:labels.collection_empty_products_info"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "empty_heading",
+      "label": "t:labels.heading",
+      "default": "You might <em>love</em>"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
+    },
+    {
       "type": "color_scheme",
       "id": "color_scheme",
       "label": "t:labels.color_scheme",
       "default": "scheme-1"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 32
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 96
     }
   ]
 }

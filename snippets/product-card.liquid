@@ -20,18 +20,36 @@
   Without a product (e.g. a section in the theme editor with no collection chosen yet) it renders a
   placeholder card, so the layout still looks right.
 
+  Tile style (style: 'tile', Figma collection page, M5.2): the photo fills the whole card and the info
+  sits on a white strip over its bottom edge. The tile takes the size its parent gives it (a bento grid
+  area, or an aspect ratio set by the parent), so it has no image ratio of its own. With show_details,
+  hovering the tile (or tabbing into it) slides the strip up to show more:
+  - the rating, from Shopify's standard review fields reviews.rating / reviews.rating_count. Review apps
+    (Judge.me, Okendo...) fill these; Shopify has no ratings of its own. Hidden when empty.
+  - the first words of the product description
+  - the quick add button (snippets/quick-add.liquid) and a "View details" label
+  Phones and tablets (no hover) keep the short strip: a tap opens the product.
+
   @param {product} [product] - The product. Leave empty for a placeholder card
-  @param {string} [image_ratio] - 'portrait' (4:5, default), 'square', 'landscape' (4:3) or 'original'
+  @param {string} [style] - 'card' (default: image on top, info below) or 'tile' (see above)
+  @param {string} [image_ratio] - Card style: 'portrait' (4:5, default), 'square', 'landscape' (4:3) or 'original'
   @param {string} [sizes] - The image's sizes attribute. Default: 4 per row on desktop, 2 on phones
+  @param {string} [loading] - 'eager' or 'lazy' to override the image snippet's automatic choice
   @param {boolean} [show_secondary_image] - Show the second product image on hover (default false)
   @param {string} [heading_tag] - Tag for the title, default 'h3'
+  @param {boolean} [show_details] - Tile style: reveal the details panel on hover / keyboard focus
+  @param {boolean} [show_rating] - Details panel: show the review rating when an app provides one
+  @param {boolean} [show_description] - Details panel: show the start of the description
+  @param {string} [cart_options] - Details panel quick add, products with several variants: 'add_first' or 'link'
 
   @example
   {% render 'product-card', product: product %}
   {% render 'product-card', product: product, image_ratio: 'square', show_secondary_image: true %}
+  {% render 'product-card', product: product, style: 'tile', show_details: true, show_rating: true, show_description: true %}
 {% enddoc %}
 
 {%- liquid
+  assign card_style = style | default: 'card'
   assign ratio = image_ratio | default: 'portrait'
   assign image_sizes = sizes | default: '(min-width: 990px) 25vw, 50vw'
   assign title_tag = heading_tag | default: 'h3'
@@ -39,6 +57,13 @@
   assign image_class = ''
   if ratio != 'original'
     assign image_class = 'image--cover'
+  endif
+
+  # A tile always fills its box: the photo is cropped to the tile's shape
+  assign media_class = 'product-card__media--' | append: ratio
+  if card_style == 'tile'
+    assign image_class = 'image--cover'
+    assign media_class = 'product-card__media--fill'
   endif
 -%}
 
@@ -55,12 +80,12 @@
       assign on_sale = true
     endif
   -%}
-  <div class="product-card{% if secondary_image %} product-card--has-secondary{% endif %}">
-    <div class="product-card__media product-card__media--{{ ratio }}">
+  <div class="product-card product-card--{{ card_style }}{% if secondary_image %} product-card--has-secondary{% endif %}">
+    <div class="product-card__media {{ media_class }}">
       {%- liquid
         # The image is decorative here (alt=""): the title link right below names the product, so a
         # screen reader would otherwise hear the name twice.
-        render 'image', image: product.featured_media.preview_image, class: image_class, sizes: image_sizes, alt: ''
+        render 'image', image: product.featured_media.preview_image, class: image_class, sizes: image_sizes, alt: '', loading: loading
         if secondary_image
           render 'image', image: secondary_image, class: 'image--cover product-card__secondary', sizes: image_sizes, alt: '', loading: 'lazy'
         endif
@@ -92,30 +117,86 @@
       </div>
     </div>
 
-    <div class="product-card__info">
-      <div class="product-card__text">
-        <{{ title_tag }} class="product-card__title">
-          <a class="product-card__link" href="{{ product.url }}">{{ product.title | escape }}</a>
-        </{{ title_tag }}>
-        {%- assign subtitle = product.metafields.custom.subtitle.value -%}
-        {%- if subtitle != blank -%}
-          <p class="product-card__subtitle">{{ subtitle | escape }}</p>
-        {%- endif -%}
+    <div class="product-card__panel">
+      <div class="product-card__info">
+        <div class="product-card__text">
+          <{{ title_tag }} class="product-card__title">
+            <a class="product-card__link" href="{{ product.url }}">{{ product.title | escape }}</a>
+          </{{ title_tag }}>
+          {%- assign subtitle = product.metafields.custom.subtitle.value -%}
+          {%- if subtitle != blank -%}
+            <p class="product-card__subtitle">{{ subtitle | escape }}</p>
+          {%- endif -%}
+        </div>
+        {% render 'price', product: product %}
       </div>
-      {% render 'price', product: product %}
+
+      {%- if card_style == 'tile' and show_details -%}
+        {%- liquid
+          # Rating: Shopify's standard review fields, filled by a review app. .value of a rating field
+          # is a rating object: .rating (e.g. 4.9) and .scale_max (e.g. 5).
+          assign rating = nil
+          if show_rating
+            assign rating = product.metafields.reviews.rating.value
+            assign rating_count = product.metafields.reviews.rating_count.value | default: 0
+            # scale_max is stored as "5.0": round it so screen readers hear "out of 5"
+            assign rating_max = rating.scale_max | round
+          endif
+
+          assign description = ''
+          if show_description
+            assign description = product.description | strip_html | strip_newlines | truncatewords: 16
+          endif
+        -%}
+        <div class="product-card__details">
+          <div class="product-card__details-inner">
+            {%- if rating != blank -%}
+              <p class="product-card__rating">
+                <span class="product-card__stars" aria-hidden="true">
+                  {{- rating.rating | round: 1 }} <span class="product-card__star">★</span>
+                </span>
+                <span class="visually-hidden">
+                  {{- 'products.card.rating' | t: rating: rating.rating, max: rating_max -}}
+                </span>
+                {%- if rating_count > 0 -%}
+                  <span class="product-card__reviews">{{ 'products.card.reviews_count' | t: count: rating_count }}</span>
+                {%- endif -%}
+              </p>
+            {%- endif -%}
+
+            {%- if description != blank -%}
+              <p class="product-card__description">{{ description }}</p>
+            {%- endif -%}
+
+            {%- comment -%}
+              Above the stretched link (z-index), so the cart button gets the click. "View details" is a
+              label only: the whole tile is already the link to the product.
+            {%- endcomment -%}
+            <div class="product-card__actions">
+              {% render 'quick-add', product: product, size: 44, icon_color: '#7d0000', options: cart_options %}
+              <span class="product-card__more" aria-hidden="true">
+                <span class="product-card__more-label">{{ 'products.card.view_details' | t }}</span>
+                {{- 'icon-arrow.svg' | inline_asset_content -}}
+              </span>
+            </div>
+          </div>
+        </div>
+      {%- endif -%}
     </div>
   </div>
 {%- else -%}
   {%- comment -%} Placeholder card: same layout, sample content, no link {%- endcomment -%}
-  <div class="product-card product-card--placeholder">
-    <div class="product-card__media product-card__media--{{ ratio }}">
+  <div class="product-card product-card--{{ card_style }} product-card--placeholder">
+    <div class="product-card__media {{ media_class }}">
       {{ 'product-1' | placeholder_svg_tag: 'product-card__placeholder' }}
     </div>
-    <div class="product-card__info">
-      <div class="product-card__text">
-        <{{ title_tag }} class="product-card__title">{{ 'products.card.placeholder_title' | t }}</{{ title_tag }}>
+    <div class="product-card__panel">
+      <div class="product-card__info">
+        <div class="product-card__text">
+          <{{ title_tag }} class="product-card__title">{{ 'products.card.placeholder_title' | t }}</{{ title_tag }}>
+        </div>
+        <div class="price"><span class="price__current">{{ 2100 | money }}</span></div>
       </div>
-      <div class="price"><span class="price__current">{{ 2100 | money }}</span></div>
     </div>
   </div>
 {%- endif -%}
@@ -288,5 +369,347 @@
 
   .product-card .price {
     font-size: var(--font-size-body-sm);
+  }
+
+  /*
+    ---------- Tile style (Figma collection page) ----------
+    A white tile with a 4px frame; the photo fills it and the white info strip sits over the photo's
+    bottom edge. The tile fills the box its parent gives it (block-size: 100%).
+    Layers: isolation makes the tile its own stacking context, so the photo can sit at z-index -1
+    (under the strip) while the stretched title link (z-index 1) still covers the whole tile, and the
+    cart button (z-index 2) sits above that.
+    container-type: size lets short tiles drop the description (container query below).
+  */
+  .product-card--tile {
+    isolation: isolate;
+    justify-content: flex-end;
+    block-size: 100%;
+    padding: 0.25rem;
+    border: 0;
+    background-color: #ffffff;
+    box-shadow: 0 5px 25px 0 #0000000d; /* Figma collection-card shadow */
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    container-type: size;
+  }
+
+  .product-card__media--fill {
+    position: absolute;
+    inset: 0.25rem;
+    z-index: -1;
+    border-radius: calc(var(--radius-sm) - 0.25rem);
+  }
+
+  .product-card__media--fill > .image {
+    block-size: 100%;
+  }
+
+  /* Badges a little further in, like the Figma ("Trending" sits ~24px from the corner) */
+  .product-card--tile .product-card__badges {
+    inset-block-start: var(--space-lg);
+    inset-inline-start: var(--space-lg);
+  }
+
+  /*
+    The details strip is glass over the photo (Figma Glass: Light -45deg 80%, Frost 157.25; drop shadow
+    0 0 14.77px #000000 5%).
+    - Light -45deg = the light comes from the top LEFT: a bright 1px rim on the top and left edges (80%
+      white) and a weaker one bottom-right.
+    - Frost: the theme maps Frost 100 to a 35px blur, so 157.25 = 35px x 1.5725 = 55px.
+    - The fill is the theme's strong glass (50% white), so the text stays readable on any photo.
+    Figma's Refraction, Depth, Dispersion and Splay bend light through the glass; CSS has no equivalent,
+    so the blur, rim and shadow carry the effect.
+  */
+  .product-card--tile .product-card__panel {
+    border-radius: calc(var(--radius-sm) - 0.25rem);
+    background-color: var(--color-glass-strong);
+    box-shadow:
+      0 0 14.77px 0 #0000000d,
+      inset 1px 1px 0 #ffffffcc,
+      inset -1px -1px 0 #ffffff80;
+    -webkit-backdrop-filter: blur(55px);
+    backdrop-filter: blur(55px);
+  }
+
+  /* Strip: title + subtitle left, price right and vertically centred (Figma: ~103px tall at 1920px) */
+  .product-card--tile .product-card__info {
+    flex-wrap: nowrap;
+    align-items: center;
+    padding: var(--space-md) var(--space-lg);
+  }
+
+  /*
+    The glass blur (backdrop-filter) makes the strip the box that absolutely positioned children measure
+    from, so the title link's click area (::after, inset: 0) would only cover the strip. The tile is a
+    size container, so 100cqh = the tile's full height: the click area hangs from the strip's bottom
+    edge and reaches the top of the tile again (-0.25rem = the tile's white frame).
+  */
+  .product-card--tile .product-card__link::after {
+    inset: auto -0.25rem -0.25rem;
+    block-size: 100cqh;
+  }
+
+  .product-card--tile .product-card__title {
+    font-size: var(--font-size-body);
+    font-weight: 400;
+  }
+
+  /*
+    Price on the right edge. The price lines are stacked in a column, right-aligned: as a wrapping row,
+    the unit price line (flex-basis 100%) made the box as wide as both lines side by side, so the price
+    started mid-card and squeezed the title.
+  */
+  .product-card--tile .price {
+    flex: 0 1 auto;
+    flex-direction: column;
+    align-items: flex-end;
+    margin-inline-start: auto;
+    font-size: var(--font-size-body-lg);
+    text-align: end;
+  }
+
+  .product-card--tile .price__unit {
+    flex-basis: auto;
+  }
+
+  .product-card--tile .price__current {
+    font-weight: 700;
+  }
+
+  /*
+    Details panel: folded away (0fr) until the tile is hovered or something inside has keyboard focus,
+    then it grows to its natural height (1fr) and the strip slides up over the photo. visibility keeps
+    the folded content away from screen readers and the Tab key; tabbing onto the title link opens the
+    panel first (focus-within), so the cart button is visible before it gets focus.
+  */
+  .product-card__details {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows var(--duration-base) var(--ease-out);
+  }
+
+  .product-card__details-inner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    min-block-size: 0;
+    overflow: hidden;
+    padding-inline: var(--space-lg);
+    visibility: hidden;
+    transition: visibility 0s linear var(--duration-base);
+  }
+
+  .product-card--tile:focus-within .product-card__details {
+    grid-template-rows: 1fr;
+  }
+
+  .product-card--tile:focus-within .product-card__details-inner {
+    visibility: visible;
+    transition-delay: 0s;
+  }
+
+  /* Hover only where there is a real pointer: on touch screens a tap goes straight to the product */
+  @media (hover: hover) {
+    .product-card--tile:hover .product-card__details {
+      grid-template-rows: 1fr;
+    }
+
+    .product-card--tile:hover .product-card__details-inner {
+      visibility: visible;
+      transition-delay: 0s;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .product-card__details {
+      transition: none;
+    }
+  }
+
+  /* "4.9 ★  213 reviews": number + gold star, then the count in a soft pill */
+  .product-card__rating {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin: 0;
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .product-card__star {
+    color: #c8a24b;
+  }
+
+  .product-card__reviews {
+    padding: 0.15em 0.6em;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-tint-subtle);
+    font-weight: 400;
+  }
+
+  .product-card__description {
+    display: -webkit-box;
+    margin: 0;
+    overflow: hidden;
+    color: color-mix(in srgb, var(--color-text) 70%, var(--color-background));
+    font-size: var(--font-size-caption);
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .product-card__actions {
+    position: relative;
+    z-index: 2; /* above the stretched title link */
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding-block-end: var(--space-md);
+  }
+
+  /*
+    The glass cart button needs something behind it to show; on the white strip it gets a soft tint
+    instead (three classes beat quick-add's own two-class rule).
+  */
+  .product-card__actions .quick-add .quick-add__button {
+    background-color: var(--color-tint);
+  }
+
+  /* "View details": a label in the Figma pill style; the whole tile is the link */
+  .product-card__more {
+    display: inline-flex;
+    align-items: center;
+    block-size: 2.5rem;
+    padding-inline: var(--space-lg);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-accent);
+    color: var(--color-background);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    pointer-events: none; /* clicks fall through to the stretched link */
+  }
+
+  .product-card__more svg {
+    display: none;
+    inline-size: 1rem;
+    block-size: 1rem;
+  }
+
+  /* Tiles: the subtitle is always one line ("…"), so the strip keeps the same height */
+  .product-card--tile .product-card__subtitle {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Short tiles (e.g. 1280px screens, the shortest bento tiles): no description, so the panel fits */
+  @container (max-height: 24rem) {
+    .product-card__description {
+      display: none;
+    }
+  }
+
+  /*
+    Very short tiles (the bento's 1-column tiles on 1200-1440px screens are ~190-220px tall): a compact
+    strip, one line each for title and price, no subtitle, so the photo still shows (~1/3 strip, as in the
+    Figma at 1920px).
+  */
+  @container (max-height: 16rem) {
+    .product-card--tile .product-card__info {
+      padding: var(--space-xs) var(--space-md);
+    }
+
+    .product-card--tile .product-card__title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .product-card--tile .product-card__subtitle {
+      display: none;
+    }
+
+    .product-card--tile .price {
+      font-size: var(--font-size-body);
+    }
+
+    .product-card--tile .price__unit {
+      display: none;
+    }
+  }
+
+  /*
+    Narrow tiles, measured on the tile itself (a size container), so it works wherever the card sits.
+    - Up to 24rem (phones, small bento tiles): "View details" becomes a round arrow button; the label
+      wrapped onto two lines here.
+    - Up to 20rem (the 1-column bento tiles on small laptops): the price goes under the title instead of
+      beside it, so the title gets the full width and words never break letter by letter.
+  */
+  @container (max-width: 24rem) {
+    .product-card__more {
+      justify-content: center;
+      inline-size: 2.75rem;
+      block-size: 2.75rem;
+      padding: 0;
+    }
+
+    .product-card__more-label {
+      display: none;
+    }
+
+    .product-card__more svg {
+      display: block;
+    }
+  }
+
+  @container (max-width: 20rem) {
+    .product-card--tile .product-card__info {
+      flex-wrap: wrap;
+      align-items: flex-start;
+      row-gap: var(--space-2xs);
+    }
+
+    .product-card--tile .product-card__text {
+      flex: 1 1 100%;
+    }
+
+    .product-card--tile .price {
+      flex-direction: row;
+      align-items: baseline;
+      gap: var(--space-xs);
+      margin-inline-start: 0;
+      font-size: var(--font-size-body);
+      text-align: start;
+    }
+  }
+
+  /*
+    Phones (one tile per row): a slimmer strip, so the photo keeps most of the tile. Title up to 2 lines,
+    price at body size; the text column gets the room and never breaks mid-word.
+  */
+  @media (max-width: 749px) {
+    .product-card--tile .product-card__info {
+      gap: var(--space-sm);
+      padding: var(--space-sm) var(--space-md);
+    }
+
+    .product-card--tile .product-card__text {
+      flex: 1 1 auto;
+    }
+
+    .product-card--tile .product-card__title {
+      display: -webkit-box;
+      overflow: hidden;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+    }
+
+    .product-card--tile .price {
+      flex: none;
+      font-size: var(--font-size-body);
+    }
   }
 {% endstylesheet %}

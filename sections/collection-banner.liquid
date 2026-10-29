@@ -39,7 +39,17 @@
 
   # The sentence's small photos. Sized in em, so they grow and shrink with the text; each has its own
   # size, tilt and up/down nudge because the Figma ones differ (a wide smear, a tall brush, a small dot).
+  # Empty collection: only the breadcrumb and the big title. The sentence and large image sell products
+  # the visitor can't see; the grid section below shows the "Nothing here yet" message instead.
+  assign is_empty = false
+  if collection.products_count == 0
+    assign is_empty = true
+  endif
+
   assign sentence = section.settings.sentence
+  if is_empty
+    assign sentence = ''
+  endif
   if sentence != blank
     for i in (1..3)
       assign prefix = 'image_' | append: i
@@ -120,7 +130,9 @@
     </div>
   </div>
 
-  {%- if banner_image != blank -%}
+  {%- if is_empty -%}
+    {%- comment -%} No large image on an empty collection (see above) {%- endcomment -%}
+  {%- elsif banner_image != blank -%}
     {%- render 'image',
       image: banner_image,
       class: 'collection-banner__image',
@@ -157,6 +169,13 @@
 
     margin-block-start: calc(var(--header-space) * -1);
     padding-block-start: calc(var(--header-space) + var(--section-padding-top));
+  }
+
+  /* Below 1200px the header is the smaller pill (12px gap + 60px), see header.liquid */
+  @media (max-width: 1199px) {
+    .collection-banner--under-header {
+      --header-space: calc(3.75rem + var(--space-sm));
+    }
   }
 
   /* A transparent header already pulls the first section up under it: don't move it twice */
@@ -213,7 +232,12 @@
     flex-direction: column;
     align-items: center;
     gap: var(--space-md);
-    max-inline-size: min(64rem, calc(100% - var(--banner-image-width) * 2));
+    /*
+      Centred, so it keeps half an image width clear on each side. The large image is pinned to the top
+      right and drawn behind the text, so the text may run a little over the left of its (mostly empty) box.
+      (Two full image widths left the sentence ~600px wide at 1280px, and the staggered lines wrapped.)
+    */
+    max-inline-size: min(80rem, calc(100% - var(--banner-image-width)));
     margin-inline: auto;
     text-align: center;
   }
