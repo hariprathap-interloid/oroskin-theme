@@ -438,11 +438,9 @@
           </ul>
         </div>
 
-        {%- comment -%} Restyled in M5.5 (Figma pill + "Page X of Y") {%- endcomment -%}
+        {%- comment -%} Figma pill + "Page X of Y" (M5.5); only when there is more than one page {%- endcomment -%}
         {%- if paginate.pages > 1 -%}
-          <nav class="collection-pagination" aria-label="{{ 'accessibility.pagination' | t }}">
-            {{ paginate | default_pagination }}
-          </nav>
+          {%- render 'pagination', paginate: paginate -%}
         {%- endif -%}
       {%- endpaginate -%}
     {%- endif -%}
@@ -464,6 +462,7 @@
       calc(100% - var(--page-margin) * 2)
     );
     margin-inline: auto;
+    scroll-margin-block-start: 7.5rem; /* after a page change it scrolls here: leave room for the sticky header pill */
   }
 
   .collection-section__title {
@@ -951,11 +950,6 @@
       flex-wrap: wrap;
     }
   }
-
-  .collection-pagination {
-    display: flex;
-    justify-content: center;
-  }
 {% endstylesheet %}
 
 {% javascript %}
@@ -994,7 +988,8 @@
         const link = event.target.closest('a[data-results-link]');
         if (!link) return;
         event.preventDefault();
-        this.load(link.href, true);
+        // Page links (data-results-scroll): the new page starts at the top of the results, not at the pagination
+        this.load(link.href, true, link.hasAttribute('data-results-scroll'));
       });
 
       this.onPopState = () => this.load(window.location.href, false);
@@ -1023,7 +1018,7 @@
       return `${action}?${params}`;
     }
 
-    async load(url, addToHistory) {
+    async load(url, addToHistory, scrollToTop = false) {
       this.controller?.abort();
       this.controller = new AbortController();
 
@@ -1056,8 +1051,12 @@
           select.value = new URL(url, window.location.origin).searchParams.get('sort_by') || select.dataset.default;
         }
 
-        // The clicked pill or "Clear all" was inside the old results: put focus on the new ones
-        if (hadFocus) document.getElementById(`CollectionResults-${this.sectionId}`)?.focus();
+        // The clicked pill, "Clear all" or page link was inside the old results: put focus on the new ones
+        if (hadFocus) document.getElementById(`CollectionResults-${this.sectionId}`)?.focus({ preventScroll: true });
+        if (scrollToTop) {
+          const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          this.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' });
+        }
       } catch (error) {
         if (error.name === 'AbortError') return;
         window.location.href = url;

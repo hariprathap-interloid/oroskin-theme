@@ -102,6 +102,10 @@
     "expires_on": "Expires on {{ expires_on }}",
     "use_at_checkout": "Use this gift card at checkout"
   },
+  "pagination": {
+    "page_of": "Page {{ current }} of {{ total }}",
+    "page": "Page"
+  },
   "password": {
     "title": "This shop is private",
     "password": "Password",
