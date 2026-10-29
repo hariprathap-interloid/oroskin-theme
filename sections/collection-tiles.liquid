@@ -179,7 +179,8 @@
     padding-block: var(--space-md);
     padding-inline: 1.25rem;
     border-radius: 1rem;
-    background-color: #ffffffbf;
+    /* Frosted glass in the scheme's own background, so its text (the scheme's text colour) stays readable */
+    background-color: color-mix(in srgb, var(--color-background) 75%, transparent);
     box-shadow: var(--glass-rim);
     -webkit-backdrop-filter: blur(var(--glass-frost));
     backdrop-filter: blur(var(--glass-frost));
@@ -195,7 +196,7 @@
     flex: none;
     align-items: center;
     gap: var(--space-xs);
-    color: var(--color-button);
+    color: var(--color-accent);
     font-size: var(--font-size-small);
     letter-spacing: var(--letter-spacing-nav);
     text-transform: uppercase;

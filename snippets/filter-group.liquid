@@ -214,7 +214,7 @@
 
 {% stylesheet %}
   .filter-group {
-    border-block-end: 1px solid color-mix(in srgb, var(--color-primary) 12%, transparent);
+    border-block-end: 1px solid color-mix(in srgb, var(--color-accent) 12%, transparent);
   }
 
   /* Figma: red uppercase spaced label, + / − on the right, 48px rows */
@@ -223,7 +223,7 @@
     align-items: center;
     justify-content: space-between;
     min-block-size: 3rem;
-    color: var(--color-primary);
+    color: var(--color-accent);
     font-size: var(--font-size-small);
     font-weight: var(--font-weight-medium);
     letter-spacing: var(--letter-spacing-label);
@@ -294,7 +294,7 @@
     gap: var(--space-xs);
     margin: 0;
     padding-inline: var(--space-md);
-    border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-accent) 25%, transparent);
     border-radius: var(--radius-pill);
     background-color: var(--color-background);
   }
@@ -360,7 +360,7 @@
     inline-size: 1.0625rem;
     block-size: 1.0625rem;
     margin: 0;
-    accent-color: var(--color-primary);
+    accent-color: var(--color-accent);
   }
 
   .filter-option:has(input:disabled) {
@@ -374,7 +374,7 @@
   }
 
   .filter-option__count {
-    color: var(--color-primary);
+    color: var(--color-accent);
     font-size: var(--font-size-small);
     font-variant-numeric: tabular-nums;
   }
@@ -429,7 +429,7 @@
     position: relative;
     gap: var(--space-xs);
     padding: var(--space-xs) var(--space-md);
-    border: 1px solid color-mix(in srgb, var(--color-primary) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-accent) 12%, transparent);
     border-radius: var(--radius-xs);
     background-color: color-mix(in srgb, var(--color-text) 3%, var(--color-background));
     transition:
@@ -456,8 +456,8 @@
 
   .filter-option--chips:has(input:checked),
   .filter-option--tiles:has(input:checked) {
-    border-color: var(--color-primary);
-    background-color: color-mix(in srgb, var(--color-primary) 8%, var(--color-background));
+    border-color: var(--color-accent);
+    background-color: color-mix(in srgb, var(--color-accent) 8%, var(--color-background));
   }
 
   .filter-option--chips:has(input:focus-visible),
@@ -502,9 +502,9 @@
     border-radius: var(--radius-pill);
     background: linear-gradient(
       to right,
-      color-mix(in srgb, var(--color-primary) 12%, var(--color-background)) var(--from),
-      var(--color-primary) var(--from) var(--to),
-      color-mix(in srgb, var(--color-primary) 12%, var(--color-background)) var(--to)
+      color-mix(in srgb, var(--color-accent) 12%, var(--color-background)) var(--from),
+      var(--color-accent) var(--from) var(--to),
+      color-mix(in srgb, var(--color-accent) 12%, var(--color-background)) var(--to)
     );
     translate: 0 -50%;
   }
@@ -530,7 +530,7 @@
     block-size: 0.875rem;
     border: 2px solid var(--color-background);
     border-radius: var(--radius-pill);
-    background: var(--color-primary);
+    background: var(--color-accent);
     box-shadow: 0 1px 3px #00000033;
     cursor: pointer;
     pointer-events: auto;
@@ -543,7 +543,7 @@
     block-size: 0.875rem;
     border: 2px solid var(--color-background);
     border-radius: var(--radius-pill);
-    background: var(--color-primary);
+    background: var(--color-accent);
     box-shadow: 0 1px 3px #00000033;
     cursor: pointer;
     pointer-events: auto;
@@ -571,7 +571,7 @@
     gap: var(--space-2xs);
     margin: 0;
     padding-inline: var(--space-sm);
-    border: 1px solid color-mix(in srgb, var(--color-primary) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-accent) 12%, transparent);
     border-radius: var(--radius-pill);
     background-color: var(--color-background);
     font-size: var(--font-size-small);

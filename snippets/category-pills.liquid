@@ -106,7 +106,7 @@
     position: absolute;
     inset-block: 20%;
     inset-inline-start: 0;
-    border-inline-start: 1px solid color-mix(in srgb, var(--color-primary) 15%, transparent);
+    border-inline-start: 1px solid color-mix(in srgb, var(--color-accent) 15%, transparent);
   }
 
   /*
@@ -136,7 +136,7 @@
     position: absolute;
     inset: 0;
     z-index: -1;
-    border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-accent) 25%, transparent);
     border-radius: inherit;
     background-color: var(--color-glass);
     box-shadow: var(--shadow-header);
@@ -159,11 +159,11 @@
 
   /* The page you're on: red text (the Figma frame shows no active style; aria-current tells screen readers) */
   .collection-pill--active {
-    color: var(--color-primary);
+    color: var(--color-accent);
   }
 
   .collection-pill__count {
-    color: var(--color-primary);
+    color: var(--color-accent);
     font-size: 0.65em;
     font-variant-numeric: tabular-nums;
   }

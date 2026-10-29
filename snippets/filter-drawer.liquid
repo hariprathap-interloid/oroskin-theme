@@ -93,6 +93,8 @@
       <div class="filter-drawer__body">
         {%- if terms != blank -%}
           <input type="hidden" name="q" value="{{ terms | escape }}">
+          {%- comment -%} Keep word-start matching ("ros" finds "rose") when filters are applied {%- endcomment -%}
+          <input type="hidden" name="options[prefix]" value="last">
         {%- endif -%}
 
         {%- comment -%} General filters first, in Search & Discovery's order {%- endcomment -%}
@@ -150,7 +152,7 @@
     gap: var(--space-xs);
     min-block-size: 3.125rem;
     padding-inline: var(--space-lg);
-    border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-accent) 25%, transparent);
     border-radius: var(--radius-pill);
     background-color: var(--color-glass);
     color: var(--color-text);
@@ -169,7 +171,7 @@
   .filter-drawer__toggle svg {
     inline-size: 1.5rem;
     block-size: 1.5rem;
-    color: var(--color-primary);
+    color: var(--color-accent);
   }
 
   /*
@@ -179,7 +181,7 @@
   .filter-drawer__count {
     display: inline-block;
     translate: 0 -0.6em;
-    color: var(--color-primary);
+    color: var(--color-accent);
     font-size: 0.65em;
     font-variant-numeric: tabular-nums;
   }
@@ -255,12 +257,12 @@
   .filter-drawer__title {
     flex: 1;
     margin: 0;
-    color: var(--color-primary);
+    color: var(--color-accent);
     font-size: var(--font-size-h3);
   }
 
   .filter-drawer__reset {
-    color: var(--color-primary);
+    color: var(--color-accent);
     font-size: var(--font-size-caption);
     text-decoration: none;
   }
@@ -280,7 +282,7 @@
     padding: 0;
     border: 0;
     border-radius: var(--radius-pill);
-    background-color: #ffffff;
+    background-color: var(--color-background); /* white on the light panel; follows a red or dark scheme */
     box-shadow: var(--shadow-card);
     color: var(--color-text);
     cursor: pointer;
@@ -300,7 +302,7 @@
     padding-inline: var(--space-xl);
     overscroll-behavior: contain;
     scrollbar-width: thin;
-    scrollbar-color: color-mix(in srgb, var(--color-primary) 30%, transparent) transparent;
+    scrollbar-color: color-mix(in srgb, var(--color-accent) 30%, transparent) transparent;
   }
 
   .filter-drawer__body::-webkit-scrollbar {
@@ -313,7 +315,7 @@
 
   .filter-drawer__body::-webkit-scrollbar-thumb {
     border-radius: var(--radius-pill);
-    background-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
+    background-color: color-mix(in srgb, var(--color-accent) 30%, transparent);
   }
 
   /* "Makeup filters": small grey text between two thin rose lines */
@@ -332,7 +334,7 @@
     content: '';
     flex: 1;
     block-size: 1px;
-    background-color: color-mix(in srgb, var(--color-primary) 18%, transparent);
+    background-color: color-mix(in srgb, var(--color-accent) 18%, transparent);
   }
 
   .filter-drawer__foot {

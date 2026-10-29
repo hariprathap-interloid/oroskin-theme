@@ -31,7 +31,7 @@
   # "Clear all": the same search with no filters, keeping the sort. The words are url_encoded first
   # (a space becomes +), and only the words: encoding the whole URL would break its ? and =.
   assign encoded_terms = search.terms | url_encode
-  assign clear_url = routes.search_url | append: '?q=' | append: encoded_terms
+  assign clear_url = routes.search_url | append: '?q=' | append: encoded_terms | append: '&options%5Bprefix%5D=last'
   if search.sort_by != blank
     assign clear_url = clear_url | append: '&sort_by=' | append: search.sort_by
   endif
@@ -120,6 +120,11 @@
 
       <form class="search-hero__form" action="{{ routes.search_url }}" method="get" role="search">
         <label class="visually-hidden" for="SearchPageInput-{{ section.id }}">{{ 'search.popup.label' | t }}</label>
+        {%- comment -%}
+          options[prefix]=last: the last word may be unfinished, so "ros" finds "rose" (like the search popup).
+          Without it Shopify matches whole words only, and "a" finds very little.
+        {%- endcomment -%}
+        <input type="hidden" name="options[prefix]" value="last">
         <input
           class="search-hero__input"
           id="SearchPageInput-{{ section.id }}"
@@ -167,6 +172,7 @@
             <div class="collection-sort">
               <form action="{{ routes.search_url }}" method="get" data-results-form data-results-autoload>
                 <input type="hidden" name="q" value="{{ search.terms | escape }}">
+                <input type="hidden" name="options[prefix]" value="last">
                 <label class="collection-sort__label" for="SearchSortBy-{{ section.id }}">{{ 'collections.sort_by' | t }}</label>
                 <span class="collection-sort__field">
                   <select
@@ -413,7 +419,7 @@
     align-items: center;
     gap: var(--space-sm);
     margin: 0;
-    color: var(--color-primary);
+    color: var(--color-accent);
     font-size: var(--font-size-label);
     font-weight: var(--font-weight-medium);
     letter-spacing: var(--letter-spacing-label);
@@ -436,7 +442,7 @@
 
   /* The searched words in red italic, like the highlighted words in the banners */
   .search-hero__title em {
-    color: var(--color-primary);
+    color: var(--color-accent);
   }
 
   .search-hero__form {
@@ -446,7 +452,7 @@
     inline-size: min(40rem, 100%);
     margin-block-start: var(--space-sm);
     padding: var(--space-2xs) var(--space-2xs) var(--space-2xs) var(--space-lg);
-    border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-accent) 25%, transparent);
     border-radius: var(--radius-pill);
     background-color: var(--color-glass-strong);
     box-shadow: var(--shadow-header);
@@ -500,7 +506,7 @@
     padding: 0;
     border: 0;
     border-radius: var(--radius-pill);
-    background-color: var(--color-primary);
+    background-color: var(--color-accent);
     box-shadow: none;
     color: var(--color-background);
     cursor: pointer;
@@ -533,7 +539,7 @@
   }
 
   .search-group__title em {
-    color: var(--color-primary);
+    color: var(--color-accent);
   }
 
   .search-group--centred {
@@ -580,7 +586,7 @@
   .result-card__media {
     aspect-ratio: 16 / 10;
     overflow: hidden;
-    background-color: color-mix(in srgb, var(--color-primary) 6%, var(--color-background));
+    background-color: color-mix(in srgb, var(--color-accent) 6%, var(--color-background));
   }
 
   .result-card__media img {
@@ -604,7 +610,7 @@
   }
 
   .result-card__meta {
-    color: var(--color-primary);
+    color: var(--color-accent);
     font-size: var(--font-size-small);
     font-weight: var(--font-weight-medium);
     letter-spacing: var(--letter-spacing-nav);
@@ -626,7 +632,7 @@
     align-items: center;
     gap: var(--space-xs);
     margin-block-start: var(--space-xs);
-    color: var(--color-primary);
+    color: var(--color-accent);
     font-size: var(--font-size-caption);
     font-weight: var(--font-weight-medium);
   }

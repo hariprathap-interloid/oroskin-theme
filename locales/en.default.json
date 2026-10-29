@@ -68,6 +68,8 @@
   },
   "collections": {
     "title": "Collections",
+    "list_heading": "Shop by category",
+    "list_empty": "There are no collections to show yet.",
     "empty_title": "Nothing here yet",
     "empty_text": "This collection doesn't have any products yet. Take a look at the rest of the shop.",
     "continue_shopping": "Continue shopping",

@@ -96,10 +96,11 @@
     Sizes are about 1.2x the Figma (circles 40 → 48px, current 60 → 72px, bar 50 → 60px), which looked
     too small on screen.
 
-    Figma glass values (fixed like the other glass surfaces, they don't follow the colour scheme):
-    - the bar: 550 x 50, fill #f6f2ec at 50%, 0.94px border #fff4f4, radius 18.78px, shadow 0 0 9.39px 5% black,
-      Frost 100 (= --glass-frost, 35px), Light -45deg 80% (a highlight on the top-left edge, weaker bottom-right)
-    - the circles: 40px, fill white at 10%, Frost 4 (≈ 1.4px), the same light
+    Figma glass values (on white): the bar fill #f6f2ec at 50%, 0.94px border #fff4f4, radius 18.78px, shadow
+    0 0 9.39px 5% black, Frost 100 (= --glass-frost, 35px), Light -45deg 80% (a highlight on the top-left
+    edge, weaker bottom-right). The colours are mixed from the section's colour scheme (a little text colour
+    into the background), so on white they match the Figma and on a red or dark scheme the bar, the pearl
+    buttons and the numbers follow it instead of staying light with invisible text.
     Refraction / Depth / Dispersion need a Chrome-only SVG filter, so they are left out (as in css-variables).
   */
   .pagination {
@@ -114,9 +115,9 @@
     min-block-size: 3.75rem;
     margin: 0;
     padding: 0 var(--space-lg);
-    border: 1px solid #fff4f4;
+    border: 1px solid color-mix(in srgb, var(--color-text) 6%, var(--color-background));
     border-radius: var(--radius-sm); /* 19px, Figma 18.78px */
-    background-color: #f6f2ec80;
+    background-color: color-mix(in srgb, color-mix(in srgb, var(--color-text) 5%, var(--color-background)) 50%, transparent);
     box-shadow: 0 0 9.39px 0 #0000000d, var(--pagination-light);
     list-style: none;
     -webkit-backdrop-filter: blur(var(--glass-frost));
@@ -140,14 +141,20 @@
 
   /*
     Previous / next and the page numbers: soft raised pearl buttons (my reference image). Back to front:
-    - the fill: light grey at the top-left fading to warm white at the bottom-right
+    - the fill: a little darker at the top-left fading to the scheme background at the bottom-right
+      (on white: #eeeeee → #f8f8f8 → white)
     - a bright white rim on the top-left edge (the light), a softer white glow inside the bottom-right
     - a faint shadow outside, so the button lifts off the bar
-    The red current page has its own look.
+    The current page (accent circle) has its own look.
   */
   .pagination__arrow,
   .pagination__page {
-    background-image: linear-gradient(135deg, #eeeeee 0%, #f8f7f4 55%, #fffdf8 100%);
+    background-image: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-text) 7%, var(--color-background)) 0%,
+      color-mix(in srgb, var(--color-text) 3%, var(--color-background)) 55%,
+      var(--color-background) 100%
+    );
     box-shadow:
       inset 1.5px 1.5px 1px #ffffff,
       inset -2px -2px 4px #ffffffb3,
@@ -166,16 +173,19 @@
 
   a.pagination__page:hover,
   a.pagination__arrow:hover {
-    color: var(--color-primary);
+    color: var(--color-accent);
   }
 
-  /* The current page: a 72px red circle with a 1px cream ring, 6px taller than the bar on each side (Figma) */
+  /*
+    The current page: a 72px circle in the scheme's accent (red on light schemes, white on red, gold on dark)
+    with a thin ring, 6px taller than the bar on each side (Figma)
+  */
   .pagination__page--current {
     inline-size: 4.5rem;
     block-size: 4.5rem;
     margin-block: -0.375rem;
-    border: 1px solid #f3eee4;
-    background-color: var(--color-primary);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, var(--color-background));
+    background-color: var(--color-accent);
     background-image: none;
     box-shadow: none;
     color: var(--color-background);

@@ -490,6 +490,13 @@
     "search_placeholder": "Search box placeholder",
     "search_categories_heading": "Categories heading",
     "results_per_page": "Results per page",
+    "collections_per_page": "Collections per page",
+    "collections_per_page_info": "Bento repeats every 12 collections, so 12 or 24 fill its pattern exactly.",
+    "collection_list_header_group": "Header",
+    "card_radius_info": "Rounds the photo of each collection and the banner.",
+    "collection_list_header_style": "Header style",
+    "show_empty_collections": "Show empty collections",
+    "show_empty_collections_info": "Hidden empty collections still take a place when the pages are counted, so a page can show fewer. To keep every page full, remove empty collections from the Online Store sales channel.",
     "search_suggestions_group": "Before searching and no results",
     "search_suggestions_menu": "Popular categories menu",
     "search_suggestions_menu_info": "Shown as pills when nothing has been searched yet and under \"No results\".",
@@ -519,6 +526,16 @@
     "tile_shape": "Tile shape"
   },
   "options": {
+    "collection_list_header": {
+      "simple": "Centred title",
+      "banner": "Banner with image"
+    },
+    "collection_list_layout": {
+      "tiles": "Tiles (glass bar on the photo)",
+      "cards": "Cards (name under the photo)",
+      "overlay": "Overlay (name on the photo)",
+      "bento": "Bento (mixed sizes)"
+    },
     "pill_image_animation": {
       "rise": "Rise and grow",
       "scale": "Scale small to big",

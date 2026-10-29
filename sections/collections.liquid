@@ -1,55 +1,551 @@
-{% comment %}
-  This section is used in the list-collections template to render a list of
-  collections.
+{%- comment -%}
+  Collection list page (/collections), M5.7. No Figma frame. Every collection of the shop is listed
+  automatically (the `collections` object, alphabetical), split into pages (snippets/pagination.liquid).
 
-  https://shopify.dev/docs/storefronts/themes/architecture/templates/collection
-{% endcomment %}
+  Two choices for the merchant:
+  - Header: a centred title (eyebrow + serif title, like the search page) or a banner with a photo, a title,
+    a short text and the breadcrumb (Home › Collections).
+  - Layout of the collections (one card markup, the look comes from the CSS):
+    tiles   = photo with a frosted glass bar on it (the theme's Collection tiles look)
+    cards   = photo, then a separate bar under it with the name and the count
+    overlay = the name centred in white on a darkened photo
+    bento   = tiles in mixed sizes: a big tile, then small ones, the big one on alternating sides
+{%- endcomment -%}
 
-<h1>{{ 'collections.title' | t }}</h1>
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-1'
+  assign layout = section.settings.layout | default: 'tiles'
+  assign heading_default = 'collections.list_heading' | t
+-%}
 
 <div
-  class="collections {{ section.settings.grid_item_width }}"
-  style="--grid-gap: {{ section.settings.grid_gap }}px"
+  class="collections-page full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --tile-ratio: {{ section.settings.tile_ratio }}; --columns: {{ section.settings.columns_desktop }}; --card-radius: {{ section.settings.card_radius }}px;"
 >
-  {% for collection in collections %}
-    <a class="collection-card" href="{{ collection.url }}">
-      {% if collection.featured_image %}
-        {% render 'image',
-          class: 'collection-card__image',
-          image: collection.featured_image,
-          width: 600,
-          height: 600,
-          crop: 'center'
-        %}
-      {% endif %}
+  <div class="collections-page__inner">
+    {%- if section.settings.header_style == 'banner' -%}
+      <header class="collections-hero{% if section.settings.banner_image == blank %} collections-hero--plain{% endif %}">
+        {%- if section.settings.banner_image != blank -%}
+          {%- comment -%} The page's first, largest picture: loaded straight away, decorative (alt empty) {%- endcomment -%}
+          {{
+            section.settings.banner_image
+            | image_url: width: 2400
+            | image_tag:
+              widths: '800, 1200, 1600, 2000, 2400',
+              sizes: '100vw',
+              alt: '',
+              loading: 'eager',
+              fetchpriority: 'high',
+              class: 'collections-hero__image'
+          }}
+        {%- endif -%}
+        <div class="collections-hero__content">
+          <h1 class="collections-hero__title">{{ section.settings.heading | default: heading_default }}</h1>
+          {%- if section.settings.text != blank -%}
+            <p class="collections-hero__text">{{ section.settings.text | escape }}</p>
+          {%- endif -%}
+        </div>
+      </header>
 
-      <div class="collection-card__content">
-        <p>{{ collection.title }}</p>
+      {%- if section.settings.show_breadcrumb -%}
+        <nav class="collections-page__breadcrumb" aria-label="{{ 'accessibility.breadcrumb' | t }}">
+          <ol role="list">
+            <li><a href="{{ routes.root_url }}">{{ 'accessibility.home' | t }}</a></li>
+            <li><span aria-current="page">{{ 'collections.title' | t }}</span></li>
+          </ol>
+        </nav>
+      {%- endif -%}
+    {%- else -%}
+      <header class="collections-page__header">
+        <p class="collections-page__eyebrow">{{ 'collections.title' | t }}</p>
+        <h1 class="collections-page__title">{{ section.settings.heading | default: heading_default }}</h1>
+        {%- if section.settings.text != blank -%}
+          <p class="collections-page__text">{{ section.settings.text | escape }}</p>
+        {%- endif -%}
+      </header>
+    {%- endif -%}
 
-        {% if collection.description %}
-          <p>{{ collection.description | strip_html | truncatewords: 15 }}</p>
-        {% endif %}
-      </div>
-    </a>
-  {% endfor %}
+    {%- comment -%}
+      paginate only takes the collections list as Shopify gives it, and Liquid can't remove the empty ones
+      before the pages are cut. So a hidden empty collection still takes a place: that page shows one card
+      fewer. The real fix is in the admin (the setting's info says so): a collection that isn't on the
+      Online Store sales channel isn't in `collections` at all.
+    {%- endcomment -%}
+    {%- paginate collections by section.settings.per_page -%}
+      {%- liquid
+        # How many collections on this page will show (empty ones are skipped unless the setting says so)
+        assign shown = 0
+        for item in collections
+          if item.all_products_count > 0 or section.settings.show_empty
+            assign shown = shown | plus: 1
+          endif
+        endfor
+      -%}
+
+      {%- if shown > 0 -%}
+        {%- comment -%}
+          position = the card's place among the cards actually drawn (1, 2, 3…). Skipped empty collections
+          don't count, so it matches the CSS :nth-child() that picks the bento's big cards.
+        {%- endcomment -%}
+        {%- assign position = 0 -%}
+        <ul class="collections-grid collections-grid--{{ layout }}" role="list">
+          {%- for item in collections -%}
+            {%- if item.all_products_count > 0 or section.settings.show_empty -%}
+              {%- liquid
+                assign position = position | plus: 1
+
+                # The first row may be above the fold (only without a banner): load those photos straight away
+                assign tile_loading = 'lazy'
+                if position <= section.settings.columns_desktop
+                  unless section.settings.header_style == 'banner'
+                    assign tile_loading = 'eager'
+                  endunless
+                endif
+
+                # Photo width. Bento: only the 1st and 7th of every 12 cards are big (2 of 3 columns from
+                # 990px, both of 2 columns from 750px); the others are small, like the normal grid.
+                assign tile_sizes = '(min-width: 990px) 33vw, (min-width: 750px) 50vw, 100vw'
+                if layout == 'bento'
+                  assign cycle_place = position | modulo: 12
+                  if cycle_place == 1 or cycle_place == 7
+                    assign tile_sizes = '(min-width: 990px) 66vw, 100vw'
+                  endif
+                endif
+              -%}
+              <li class="collections-grid__item">
+                <a class="collections-card" href="{{ item.url }}">
+                  <div class="collections-card__media">
+                    {%- if item.featured_image != blank -%}
+                      {%- comment -%} alt is empty: the name on the card names the link {%- endcomment -%}
+                      {{
+                        item.featured_image
+                        | image_url: width: 1600
+                        | image_tag:
+                          widths: '400, 600, 800, 1200, 1600',
+                          sizes: tile_sizes,
+                          alt: '',
+                          loading: tile_loading,
+                          class: 'collections-card__image'
+                      }}
+                    {%- else -%}
+                      {{ 'collection-1' | placeholder_svg_tag: 'collections-card__image' }}
+                    {%- endif -%}
+                  </div>
+                  <div class="collections-card__bar">
+                    <span class="collections-card__name">{{ item.title | escape }}</span>
+                    <span class="collections-card__count">
+                      {%- if layout == 'cards' -%}
+                        {%- comment -%} Cards: just the number (reference: "Headphones 7"), the words for screen readers {%- endcomment -%}
+                        <span aria-hidden="true">{{ item.all_products_count }}</span>
+                        <span class="visually-hidden">{{ 'collections.products_count' | t: count: item.all_products_count }}</span>
+                      {%- else -%}
+                        {{- 'collections.products_count' | t: count: item.all_products_count -}}
+                        {{- 'icon-arrow.svg' | inline_asset_content -}}
+                      {%- endif -%}
+                    </span>
+                  </div>
+                </a>
+              </li>
+            {%- endif -%}
+          {%- endfor -%}
+        </ul>
+      {%- else -%}
+        <p class="collections-page__empty">{{ 'collections.list_empty' | t }}</p>
+      {%- endif -%}
+
+      {%- if paginate.pages > 1 -%}
+        {%- render 'pagination', paginate: paginate -%}
+      {%- endif -%}
+    {%- endpaginate -%}
+  </div>
 </div>
 
 {% stylesheet %}
-  .collections {
+  .collections-page {
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  .collections-page__inner {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(var(--collection-card-size), 100%), 1fr));
-    gap: var(--grid-gap);
+    gap: var(--space-2xl);
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
   }
-  .collections--compact {
-    --collection-card-size: 160px;
+
+  /* Header "Centred title": a short red rule + uppercase eyebrow, then the serif title (like search) */
+  .collections-page__header {
+    display: grid;
+    justify-items: center;
+    gap: var(--space-md);
+    text-align: center;
   }
-  .collections--full {
-    --collection-card-size: 280px;
+
+  .collections-page__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin: 0;
+    color: var(--color-accent);
+    font-size: var(--font-size-label);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
   }
-  .collection-card {
+
+  .collections-page__eyebrow::before {
+    content: '';
+    inline-size: 4.125rem; /* 66px, the theme's eyebrow rule */
+    block-size: 2px;
+    background-color: currentColor;
+  }
+
+  .collections-page__title {
+    margin: 0;
+    font-size: var(--font-size-h1);
+    line-height: var(--line-height-heading);
+  }
+
+  .collections-page__text {
+    max-inline-size: 40rem;
+    margin: 0;
+    color: color-mix(in srgb, var(--color-text) 80%, var(--color-background));
+    font-size: var(--font-size-body);
+  }
+
+  /*
+    Header "Banner with image": a rounded panel with the photo filling it and the words on the left. The
+    background colour fades in from the left over the photo, so the text stays readable on any picture.
+  */
+  .collections-hero {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-block-size: clamp(16rem, 28vw, 27rem);
+    overflow: hidden;
+    border-radius: var(--card-radius, var(--radius-lg));
+    isolation: isolate;
+  }
+
+  .collections-hero__image {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .collections-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(
+      to right,
+      color-mix(in srgb, var(--color-background) 85%, transparent) 0%,
+      color-mix(in srgb, var(--color-background) 55%, transparent) 45%,
+      transparent 75%
+    );
+  }
+
+  .collections-hero--plain {
+    background-color: color-mix(in srgb, var(--color-accent) 6%, var(--color-background));
+  }
+
+  .collections-hero__content {
+    display: grid;
+    gap: var(--space-md);
+    max-inline-size: 34rem;
+    padding: var(--space-2xl) clamp(var(--space-lg), 5vw, 6rem);
+  }
+
+  .collections-hero__title {
+    margin: 0;
+    color: var(--color-accent);
+    font-size: var(--font-size-display);
+    line-height: var(--line-height-heading);
+  }
+
+  .collections-hero__text {
+    margin: 0;
+    font-size: var(--font-size-body-lg);
+  }
+
+  /* Breadcrumb under the banner: Home | Collections */
+  .collections-page__breadcrumb {
+    margin-block-start: calc(var(--space-lg) * -1); /* closer to the banner than the grid gap */
+    font-size: var(--font-size-small);
+  }
+
+  .collections-page__breadcrumb ol {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .collections-page__breadcrumb li + li::before {
+    content: '|';
+    margin-inline-end: var(--space-sm);
+    color: color-mix(in srgb, var(--color-text) 40%, var(--color-background));
+  }
+
+  .collections-page__breadcrumb a {
+    color: color-mix(in srgb, var(--color-text) 75%, var(--color-background));
+    text-decoration: none;
+  }
+
+  .collections-page__breadcrumb a:hover {
+    color: var(--color-accent);
+  }
+
+  .collections-page__breadcrumb [aria-current] {
+    font-weight: var(--font-weight-medium);
+  }
+
+  /* The grid: auto-fit below 990px, the "Columns on desktop" setting above */
+  .collections-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr));
+    gap: 1.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  @media (min-width: 990px) {
+    .collections-grid {
+      grid-template-columns: repeat(var(--columns, 3), minmax(0, 1fr));
+    }
+  }
+
+  /* One card: the photo, then the bar (where the bar sits depends on the layout) */
+  .collections-card {
+    position: relative;
     display: flex;
     flex-direction: column;
-    width: 100%;
+    block-size: 100%;
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  /* "Corner radius" setting (default 50px = --radius-lg); the banner uses it too */
+  .collections-card__media {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--card-radius, var(--radius-lg));
+    background-color: color-mix(in srgb, var(--color-accent) 6%, var(--color-background));
+  }
+
+  .collections-card__image {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    transition: scale var(--duration-slow) var(--ease-out);
+  }
+
+  .collections-card:hover .collections-card__image {
+    scale: 1.04;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .collections-card:hover .collections-card__image {
+      scale: none;
+    }
+  }
+
+  .collections-card__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+  }
+
+  .collections-card__name {
+    font-family: var(--font-heading--family);
+    font-size: var(--font-size-body-lg);
+  }
+
+  .collections-card__count {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: var(--space-xs);
+    color: var(--color-accent);
+    font-size: var(--font-size-small);
+    letter-spacing: var(--letter-spacing-nav);
+    text-transform: uppercase;
+  }
+
+  .collections-card__count svg {
+    inline-size: 1rem;
+    block-size: 1rem;
+  }
+
+  /* --- Tiles and bento: the bar is frosted glass on the photo --- */
+  .collections-grid--tiles .collections-card__media,
+  .collections-grid--bento .collections-card__media {
+    position: absolute;
+    inset: 0;
+  }
+
+  .collections-grid--tiles .collections-card {
+    aspect-ratio: var(--tile-ratio, 4 / 5);
+  }
+
+  .collections-grid--tiles .collections-card__bar,
+  .collections-grid--bento .collections-card__bar {
+    position: absolute;
+    inset-inline: var(--space-md);
+    inset-block-end: var(--space-md);
+    padding-block: var(--space-md);
+    padding-inline: 1.25rem;
+    border-radius: 1rem;
+    /* Frosted glass in the scheme's own background (white glass on light schemes, red glass on red) */
+    background-color: color-mix(in srgb, var(--color-background) 75%, transparent);
+    box-shadow: var(--glass-rim);
+    -webkit-backdrop-filter: blur(var(--glass-frost));
+    backdrop-filter: blur(var(--glass-frost));
+  }
+
+  /* --- Cards: the photo, then a separate light bar under it (name left, number right) --- */
+  .collections-grid--cards .collections-card {
+    gap: var(--space-sm);
+  }
+
+  .collections-grid--cards .collections-card__media {
+    aspect-ratio: var(--tile-ratio, 1);
+  }
+
+  .collections-grid--cards .collections-card__bar {
+    padding: var(--space-md) 1.25rem;
+    border-radius: var(--radius-sm);
+    background-color: color-mix(in srgb, var(--color-text) 4%, var(--color-background));
+    transition: background-color var(--duration-fast) var(--ease-out);
+  }
+
+  .collections-grid--cards .collections-card:hover .collections-card__bar {
+    background-color: color-mix(in srgb, var(--color-accent) 8%, var(--color-background));
+  }
+
+  .collections-grid--cards .collections-card__name {
+    font-family: var(--font-body--family);
+    font-size: var(--font-size-body);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .collections-grid--cards .collections-card__count {
+    color: color-mix(in srgb, var(--color-text) 75%, var(--color-background));
+    font-size: var(--font-size-body-sm);
+    letter-spacing: 0;
+  }
+
+  /* --- Overlay: the photo darkened, the name centred in white on it --- */
+  .collections-grid--overlay .collections-card {
+    aspect-ratio: var(--tile-ratio, 4 / 3);
+  }
+
+  .collections-grid--overlay .collections-card__media {
+    position: absolute;
+    inset: 0;
+  }
+
+  /*
+    Readable on any photo: 55% black makes even a pure white photo #737373, and white text on that is
+    4.7:1 (WCAG AA for the small count too). A soft shadow under the text separates it a little more.
+  */
+  .collections-grid--overlay .collections-card__media::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-color: #0000008c;
+    transition: background-color var(--duration-fast) var(--ease-out);
+  }
+
+  .collections-grid--overlay .collections-card:hover .collections-card__media::after {
+    background-color: #000000a6;
+  }
+
+  .collections-grid--overlay .collections-card__bar {
+    position: absolute;
+    inset: 0;
+    flex-direction: column;
+    justify-content: center;
+    padding: var(--space-lg);
+    color: #ffffff;
+    text-align: center;
+  }
+
+  .collections-grid--overlay .collections-card__name {
+    font-size: var(--font-size-h2);
+    line-height: var(--line-height-heading);
+  }
+
+  .collections-grid--overlay .collections-card__count {
+    color: #ffffff;
+    font-weight: var(--font-weight-medium);
+  }
+
+  .collections-grid--overlay .collections-card__bar {
+    text-shadow: 0 1px 2px #00000066, 0 0 12px #00000066;
+  }
+
+  /*
+    --- Bento: 3 columns, a repeating group of 12 cards over 6 rows: a big 2x2 card on the left with 2 small
+    ones beside it and 3 under, then the same with the big card on the right. "dense" lets the small cards
+    fill the gaps. 750-989px: 2 columns, big cards 2 wide. Phones: one column like the other layouts.
+  */
+  .collections-grid--bento .collections-card {
+    aspect-ratio: 4 / 3;
+  }
+
+  @media (min-width: 750px) {
+    .collections-grid--bento {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-auto-rows: clamp(12rem, 24vw, 18rem);
+      grid-auto-flow: dense;
+    }
+
+    .collections-grid--bento .collections-card {
+      aspect-ratio: auto;
+    }
+
+    .collections-grid--bento .collections-grid__item:nth-child(12n + 1),
+    .collections-grid--bento .collections-grid__item:nth-child(12n + 7) {
+      grid-column: span 2;
+    }
+  }
+
+  @media (min-width: 990px) {
+    .collections-grid--bento {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-auto-rows: clamp(12rem, 18vw, 21rem);
+    }
+
+    .collections-grid--bento .collections-grid__item:nth-child(12n + 1) {
+      grid-column: 1 / span 2;
+      grid-row: span 2;
+    }
+
+    .collections-grid--bento .collections-grid__item:nth-child(12n + 7) {
+      grid-column: 2 / span 2;
+      grid-row: span 2;
+    }
+
+    .collections-grid--bento .collections-grid__item:is(:nth-child(12n + 1), :nth-child(12n + 7)) .collections-card__name {
+      font-size: var(--font-size-h3);
+    }
+  }
+
+  .collections-page__empty {
+    margin: 0;
+    text-align: center;
+    color: color-mix(in srgb, var(--color-text) 80%, var(--color-background));
   }
 {% endstylesheet %}
 
@@ -58,24 +554,152 @@
   "name": "t:general.collections_grid",
   "settings": [
     {
+      "type": "header",
+      "content": "t:labels.collection_list_header_group"
+    },
+    {
       "type": "select",
-      "id": "grid_item_width",
-      "label": "t:labels.grid_item_width",
+      "id": "header_style",
+      "label": "t:labels.collection_list_header_style",
       "options": [
-        { "value": "collections--compact", "label": "t:options.size.small" },
-        { "value": "collections--full", "label": "t:options.size.large" }
+        { "value": "simple", "label": "t:options.collection_list_header.simple" },
+        { "value": "banner", "label": "t:options.collection_list_header.banner" }
       ],
-      "default": "collections--full"
+      "default": "simple"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "Shop by category"
+    },
+    {
+      "type": "text",
+      "id": "text",
+      "label": "t:labels.text"
+    },
+    {
+      "type": "image_picker",
+      "id": "banner_image",
+      "label": "t:labels.image",
+      "visible_if": "{{ section.settings.header_style == 'banner' }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_breadcrumb",
+      "label": "t:labels.show_breadcrumb",
+      "default": true,
+      "visible_if": "{{ section.settings.header_style == 'banner' }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.layout"
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "t:labels.layout",
+      "options": [
+        { "value": "tiles", "label": "t:options.collection_list_layout.tiles" },
+        { "value": "cards", "label": "t:options.collection_list_layout.cards" },
+        { "value": "overlay", "label": "t:options.collection_list_layout.overlay" },
+        { "value": "bento", "label": "t:options.collection_list_layout.bento" }
+      ],
+      "default": "tiles"
     },
     {
       "type": "range",
-      "id": "grid_gap",
-      "label": "t:labels.grid_gap",
+      "id": "per_page",
+      "label": "t:labels.collections_per_page",
+      "info": "t:labels.collections_per_page_info",
+      "min": 3,
+      "max": 48,
+      "step": 3,
+      "default": 12
+    },
+    {
+      "type": "range",
+      "id": "columns_desktop",
+      "label": "t:labels.columns_desktop",
+      "min": 2,
+      "max": 4,
+      "step": 1,
+      "default": 3,
+      "visible_if": "{{ section.settings.layout != 'bento' }}"
+    },
+    {
+      "type": "select",
+      "id": "tile_ratio",
+      "label": "t:labels.tile_shape",
+      "options": [
+        { "value": "4 / 5", "label": "t:options.image_shape.portrait" },
+        { "value": "1 / 1", "label": "t:options.image_shape.square" },
+        { "value": "4 / 3", "label": "t:options.image_shape.landscape" },
+        { "value": "16 / 9", "label": "t:options.image_shape.wide" }
+      ],
+      "default": "4 / 5",
+      "visible_if": "{{ section.settings.layout != 'bento' }}"
+    },
+    {
+      "type": "range",
+      "id": "card_radius",
+      "label": "t:labels.card_radius",
+      "info": "t:labels.card_radius_info",
       "min": 0,
-      "max": 50,
-      "step": 5,
+      "max": 60,
+      "step": 2,
       "unit": "px",
-      "default": 10
+      "default": 50
+    },
+    {
+      "type": "checkbox",
+      "id": "show_empty",
+      "label": "t:labels.show_empty_collections",
+      "info": "t:labels.show_empty_collections_info",
+      "default": false
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        { "value": "narrow", "label": "t:options.section_width.narrow" },
+        { "value": "wide", "label": "t:options.section_width.wide" },
+        { "value": "widest", "label": "t:options.section_width.widest" },
+        { "value": "full", "label": "t:options.section_width.full" }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 96
     }
   ],
   "presets": [{ "name": "t:general.collections_grid" }]

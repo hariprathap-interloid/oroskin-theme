@@ -11,7 +11,22 @@
   "sections": {
     "main": {
       "type": "collections",
-      "settings": {}
+      "settings": {
+        "header_style": "simple",
+        "heading": "Shop by category",
+        "text": "",
+        "show_breadcrumb": true,
+        "layout": "tiles",
+        "per_page": 12,
+        "columns_desktop": 3,
+        "tile_ratio": "1 / 1",
+        "card_radius": 24,
+        "show_empty": false,
+        "section_width": "widest",
+        "color_scheme": "",
+        "padding_top": 64,
+        "padding_bottom": 96
+      }
     }
   },
   "order": [
