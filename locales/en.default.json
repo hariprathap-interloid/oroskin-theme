@@ -71,7 +71,15 @@
     "empty_title": "Nothing here yet",
     "empty_text": "This collection doesn't have any products yet. Take a look at the rest of the shop.",
     "continue_shopping": "Continue shopping",
-    "back_home": "Back to home"
+    "back_home": "Back to home",
+    "categories": "Categories",
+    "all": "All",
+    "products_count": {
+      "one": "{{ count }} product",
+      "other": "{{ count }} products"
+    },
+    "sort_by": "Sort",
+    "apply": "Apply"
   },
   "gift_card": {
     "add_to_apple_wallet": "Add to Apple Wallet",

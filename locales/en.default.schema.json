@@ -477,6 +477,17 @@
     "show_card_rating": "Show the review rating",
     "show_card_rating_info": "Needs a product review app (e.g. Judge.me). Shopify has no ratings of its own; the rating stays hidden until an app adds one.",
     "show_card_description": "Show a short description",
+    "toolbar_group": "Toolbar",
+    "show_category_pills": "Show category pills",
+    "category_pills_menu": "Category pills menu",
+    "category_pills_menu_info": "Each link in this menu becomes a pill, with its collection's product count. Make one in Content > Menus (e.g. Fragrance, Makeup, Skincare). The pill for the page you're on is highlighted.",
+    "show_all_pill": "Add an \"All\" pill first",
+    "all_pill_image": "\"All\" pill image",
+    "all_pill_image_info": "Rises behind the pill on hover. Use a transparent PNG. For the other pills, set each collection's \"Pill image\" metafield.",
+    "pill_image_animation": "Pill image animation",
+    "pill_image_size": "Pill image size",
+    "show_product_count": "Show the product count",
+    "show_sort": "Show sorting",
     "collection_empty_group": "Empty collection",
     "collection_empty_products": "Suggested products",
     "collection_empty_products_info": "Shown under the message when a collection has no products yet (first 4). Leave empty to show only the message.",
@@ -501,6 +512,11 @@
     "tile_shape": "Tile shape"
   },
   "options": {
+    "pill_image_animation": {
+      "rise": "Rise and grow",
+      "scale": "Scale small to big",
+      "fade": "Fade"
+    },
     "collection_layout": {
       "bento": "Bento (large and small tiles)",
       "grid": "Even grid"

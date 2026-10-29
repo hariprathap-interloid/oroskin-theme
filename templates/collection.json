@@ -47,6 +47,7 @@
       "type": "collection",
       "settings": {
         "color_scheme": "scheme-2",
+        "pills_menu": "collection-pills",
         "empty_collection": "new-arrivals",
         "empty_heading": "You might <em>love</em>"
       }
