@@ -1,0 +1,668 @@
+{% doc %}
+  Renders one filter group inside the filter drawer (snippets/filter-drawer.liquid): a <details> with the
+  label and +/−, then the choices. The look follows the filter's type and presentation (Figma 170:94885):
+  - price_range: a two-thumb slider over the From / To boxes (only the boxes are sent; the slider moves them)
+  - list / boolean, presentation 'swatch': checkbox, colour dot, label, count
+  - list / boolean, presentation 'image': chips with the value's picture (2-column tiles when 4 values or fewer)
+  - other lists: checkbox, label, count; the Brand (vendor) list gets a search box that hides non-matching rows
+  Every count has an id, so the drawer's live count can update it while the visitor ticks boxes.
+
+  @param {filter} filter - One filter from collection.filters or search.filters
+  @param {string} section_id - The section's id, for unique ids
+
+  @example
+  {% render 'filter-group', filter: filter, section_id: section_id %}
+{% enddoc %}
+
+{%- liquid
+  assign group_id = filter.param_name | handleize | prepend: '-' | prepend: section_id | prepend: 'Filter-'
+-%}
+
+<details class="filter-group" open>
+  <summary class="filter-group__summary">
+    {{- filter.label | escape -}}
+    <span class="filter-group__plus">{{- 'icon-plus.svg' | inline_asset_content -}}</span>
+    <span class="filter-group__minus">{{- 'icon-minus.svg' | inline_asset_content -}}</span>
+  </summary>
+
+  <fieldset class="filter-group__fieldset">
+    <legend class="visually-hidden">{{ filter.label | escape }}</legend>
+
+    {%- if filter.type == 'price_range' -%}
+      {%- liquid
+        # Liquid gives prices in cents (2500 = 25.00); the URL wants the amount (25), so divide by 100.
+        # Whole amounts divide by 100 (→ 40), others by 100.0 (→ 40.5), so the box never shows "40.0".
+        assign range_max = filter.range_max | divided_by: 100.0 | ceil
+        assign min_amount = ''
+        if filter.min_value.value != nil
+          assign cents = filter.min_value.value | modulo: 100
+          if cents == 0
+            assign min_amount = filter.min_value.value | divided_by: 100
+          else
+            assign min_amount = filter.min_value.value | divided_by: 100.0
+          endif
+        endif
+        assign max_amount = ''
+        if filter.max_value.value != nil
+          assign cents = filter.max_value.value | modulo: 100
+          if cents == 0
+            assign max_amount = filter.max_value.value | divided_by: 100
+          else
+            assign max_amount = filter.max_value.value | divided_by: 100.0
+          endif
+        endif
+        assign slider_min = min_amount | default: 0
+        assign slider_max = max_amount | default: range_max
+      -%}
+      <price-range class="filter-price" style="--from: 0%; --to: 100%;">
+        {%- comment -%} The slider has no name, so it isn't sent: it only moves the boxes below {%- endcomment -%}
+        <div class="filter-price__slider">
+          <input
+            type="range"
+            min="0"
+            max="{{ range_max }}"
+            step="1"
+            value="{{ slider_min }}"
+            aria-label="{{ 'collections.price_min_label' | t }}"
+            data-price-thumb="min"
+          >
+          <input
+            type="range"
+            min="0"
+            max="{{ range_max }}"
+            step="1"
+            value="{{ slider_max }}"
+            aria-label="{{ 'collections.price_max_label' | t }}"
+            data-price-thumb="max"
+          >
+        </div>
+        <div class="filter-price__boxes">
+          <label class="filter-price__box">
+            <span class="visually-hidden">{{ 'collections.price_min_label' | t }}</span>
+            <span aria-hidden="true">{{ cart.currency.symbol }}</span>
+            <input
+              type="number"
+              name="{{ filter.min_value.param_name }}"
+              value="{{ min_amount }}"
+              min="0"
+              max="{{ range_max }}"
+              step="any"
+              inputmode="decimal"
+              placeholder="0"
+              data-price-box="min"
+            >
+          </label>
+          <span class="filter-price__dash" aria-hidden="true">–</span>
+          <label class="filter-price__box">
+            <span class="visually-hidden">{{ 'collections.price_max_label' | t }}</span>
+            <span aria-hidden="true">{{ cart.currency.symbol }}</span>
+            <input
+              type="number"
+              name="{{ filter.max_value.param_name }}"
+              value="{{ max_amount }}"
+              min="0"
+              max="{{ range_max }}"
+              step="any"
+              inputmode="decimal"
+              placeholder="{{ range_max }}"
+              data-price-box="max"
+            >
+          </label>
+        </div>
+      </price-range>
+    {%- else -%}
+      {%- liquid
+        assign layout = 'list'
+        if filter.presentation == 'swatch'
+          assign layout = 'swatch'
+        elsif filter.presentation == 'image'
+          assign layout = 'chips'
+          if filter.values.size <= 4
+            assign layout = 'tiles'
+          endif
+        endif
+
+        assign is_brand = false
+        if filter.param_name contains 'vendor'
+          assign is_brand = true
+        endif
+
+        # Star rating: a filter named or keyed "rating" whose values are all whole numbers from 1 to 5
+        # (e.g. a custom.star_rating number field). Anything else, like a review count (1, 213), stays a list.
+        assign label_lower = filter.label | downcase
+        assign is_rating = false
+        if filter.param_name contains 'rating' or label_lower contains 'rating'
+          assign is_rating = true
+          for value in filter.values
+            assign stars = value.value | plus: 0
+            assign stars_text = stars | append: ''
+            if stars < 1 or stars > 5
+              assign is_rating = false
+            elsif stars_text != value.value
+              assign is_rating = false
+            endif
+          endfor
+        endif
+        if is_rating
+          assign layout = 'rating'
+        endif
+      -%}
+
+      {%- if is_brand -%}
+        {%- comment -%} No name: typing here only hides rows, it's never sent with the form {%- endcomment -%}
+        <label class="filter-group__search">
+          <span class="visually-hidden">{{ 'collections.search_brands_label' | t }}</span>
+          <input type="search" placeholder="{{ 'collections.search_brands' | t }}" autocomplete="off" data-filter-search>
+          {{- 'icon-search.svg' | inline_asset_content -}}
+        </label>
+      {%- endif -%}
+
+      <ul class="filter-group__options filter-group__options--{{ layout }}" role="list">
+        {%- for value in filter.values -%}
+          {%- liquid
+            # A value with no products left can't be picked (unless it's the one already picked)
+            assign value_disabled = false
+            if value.count == 0 and value.active == false
+              assign value_disabled = true
+            endif
+            assign value_id = value.value | handleize | prepend: '-' | prepend: group_id
+          -%}
+          <li class="filter-group__item">
+            <label class="filter-option filter-option--{{ layout }}" for="{{ value_id }}">
+              <input
+                type="checkbox"
+                id="{{ value_id }}"
+                name="{{ value.param_name }}"
+                value="{{ value.value | escape }}"
+                {% if value.active %}
+                  checked
+                {% endif %}
+                {% if value_disabled %}
+                  disabled
+                {% endif %}
+              >
+              {%- case layout -%}
+                {%- when 'swatch' -%}
+                  <span class="filter-option__swatch" style="--swatch: {{ value.swatch.color | default: 'transparent' }};" aria-hidden="true"></span>
+                {%- when 'chips', 'tiles' -%}
+                  {%- if value.image != blank -%}
+                    {{ value.image | image_url: width: 48 | image_tag: class: 'filter-option__icon', alt: '', loading: 'lazy', width: 24, height: 24 }}
+                  {%- endif -%}
+              {%- endcase -%}
+              {%- if layout == 'rating' -%}
+                {%- comment -%} Five stars, the first N filled; screen readers hear "4 stars" instead {%- endcomment -%}
+                {%- assign stars = value.value | plus: 0 -%}
+                <span class="filter-option__stars" aria-hidden="true">
+                  {%- for i in (1..5) -%}
+                    <span class="filter-option__star{% if i > stars %} filter-option__star--empty{% endif %}">
+                      {{- 'icon-star-rating.svg' | inline_asset_content -}}
+                    </span>
+                  {%- endfor -%}
+                </span>
+                <span class="visually-hidden">{{ 'collections.rating_value' | t: count: stars }}</span>
+              {%- else -%}
+                <span class="filter-option__label">{{ value.label | escape }}</span>
+              {%- endif -%}
+              <span class="filter-option__count" id="{{ value_id }}-count" data-filter-count>{{ value.count }}</span>
+            </label>
+          </li>
+        {%- endfor -%}
+      </ul>
+    {%- endif -%}
+  </fieldset>
+</details>
+
+{% stylesheet %}
+  .filter-group {
+    border-block-end: 1px solid color-mix(in srgb, var(--color-primary) 12%, transparent);
+  }
+
+  /* Figma: red uppercase spaced label, + / − on the right, 48px rows */
+  .filter-group__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-block-size: 3rem;
+    color: var(--color-primary);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .filter-group__summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .filter-group__plus,
+  .filter-group__minus {
+    display: inline-grid;
+    color: var(--color-text);
+  }
+
+  .filter-group__summary svg {
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
+  }
+
+  .filter-group[open] .filter-group__plus,
+  .filter-group:not([open]) .filter-group__minus {
+    display: none;
+  }
+
+  /*
+    Smooth open / close (only with the "Enable animations" setting, and not for reduced motion).
+    ::details-content is the part of a <details> that hides; interpolate-size lets its height animate
+    to and from "auto"; content-visibility (allow-discrete) keeps it visible until the closing slide ends.
+    Browsers without ::details-content simply open and close at once.
+  */
+  @media (prefers-reduced-motion: no-preference) {
+    .animations-on .filter-group {
+      interpolate-size: allow-keywords;
+    }
+
+    .animations-on .filter-group::details-content {
+      block-size: 0;
+      overflow: clip;
+      opacity: 0;
+      transition:
+        block-size var(--duration-base) var(--ease-out),
+        opacity var(--duration-base) var(--ease-out),
+        content-visibility var(--duration-base) allow-discrete;
+    }
+
+    .animations-on .filter-group[open]::details-content {
+      block-size: auto;
+      opacity: 1;
+    }
+  }
+
+  .filter-group__fieldset {
+    display: grid;
+    gap: var(--space-sm);
+    margin: 0;
+    padding: 0 0 var(--space-lg);
+    border: 0;
+  }
+
+  /* Brand search: a pill with the magnifier on the right */
+  .filter-group__search {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin: 0;
+    padding-inline: var(--space-md);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-background);
+  }
+
+  .filter-group__search:focus-within {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  /* Two classes: critical.css styles input[type="search"] (class + element beats one class) */
+  .filter-group__search input[type='search'] {
+    flex: 1;
+    min-inline-size: 0;
+    min-block-size: 2.5rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-size: var(--font-size-caption);
+  }
+
+  .filter-group__search input:focus-visible {
+    outline: none;
+  }
+
+  /* No browser × in the box (not in the design) */
+  .filter-group__search input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .filter-group__search svg {
+    flex: none;
+    inline-size: 1.125rem;
+    block-size: 1.125rem;
+  }
+
+  .filter-group__options {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .filter-group__item[hidden] {
+    display: none;
+  }
+
+  /* A row: checkbox, (swatch), label, count on the right. 40px rows (Figma) */
+  .filter-option {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    min-block-size: 2.5rem;
+    margin: 0;
+    font-size: var(--font-size-caption);
+    font-weight: 400;
+    cursor: pointer;
+  }
+
+  .filter-option input {
+    flex: none;
+    inline-size: 1.0625rem;
+    block-size: 1.0625rem;
+    margin: 0;
+    accent-color: var(--color-primary);
+  }
+
+  .filter-option:has(input:disabled) {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .filter-option__label {
+    flex: 1;
+    min-inline-size: 0;
+  }
+
+  .filter-option__count {
+    color: var(--color-primary);
+    font-size: var(--font-size-small);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Star rows (Figma: ~17px gold stars, the rest pale) */
+  .filter-option__stars {
+    display: flex;
+    flex: 1;
+    gap: var(--space-2xs);
+  }
+
+  .filter-option__star {
+    display: inline-grid;
+    color: var(--color-rating);
+  }
+
+  .filter-option__star--empty {
+    color: color-mix(in srgb, var(--color-rating) 20%, var(--color-background));
+  }
+
+  .filter-option__star svg {
+    inline-size: 1.0625rem;
+    block-size: 1.0625rem;
+  }
+
+  .filter-option__swatch {
+    flex: none;
+    inline-size: 1.1875rem;
+    block-size: 1.1875rem;
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    border-radius: var(--radius-pill);
+    background: var(--swatch);
+  }
+
+  /*
+    Chips and tiles: the whole chip is the label; the checkbox is hidden but still focusable, so a ticked
+    chip is a real checked checkbox for keyboards and screen readers. Selected = red border and tint.
+  */
+  .filter-group__options--chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+  }
+
+  .filter-group__options--tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-xs);
+  }
+
+  .filter-option--chips,
+  .filter-option--tiles {
+    position: relative;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-md);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 12%, transparent);
+    border-radius: var(--radius-xs);
+    background-color: color-mix(in srgb, var(--color-text) 3%, var(--color-background));
+    transition:
+      border-color var(--duration-fast) var(--ease-out),
+      background-color var(--duration-fast) var(--ease-out);
+  }
+
+  .filter-option--tiles {
+    flex-direction: column;
+    justify-content: center;
+    min-block-size: 4.875rem; /* 78px, Figma */
+    text-align: center;
+  }
+
+  .filter-option--chips input,
+  .filter-option--tiles input {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .filter-option--chips:has(input:checked),
+  .filter-option--tiles:has(input:checked) {
+    border-color: var(--color-primary);
+    background-color: color-mix(in srgb, var(--color-primary) 8%, var(--color-background));
+  }
+
+  .filter-option--chips:has(input:focus-visible),
+  .filter-option--tiles:has(input:focus-visible) {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  .filter-option--chips .filter-option__label,
+  .filter-option--tiles .filter-option__label {
+    flex: none;
+  }
+
+  .filter-option--chips .filter-option__count,
+  .filter-option--tiles .filter-option__count {
+    display: none; /* the Figma chips and tiles show no count; it stays in the DOM for the live update */
+  }
+
+  .filter-option__icon {
+    inline-size: 0.875rem;
+    block-size: 0.875rem;
+    object-fit: contain;
+  }
+
+  /* Price: a 5px track, red between the two thumbs, then the From / To pills */
+  .filter-price {
+    display: grid;
+    gap: var(--space-md);
+  }
+
+  .filter-price__slider {
+    position: relative;
+    block-size: 1.125rem;
+  }
+
+  .filter-price__slider::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    inset-block-start: 50%;
+    block-size: 0.3125rem;
+    border-radius: var(--radius-pill);
+    background: linear-gradient(
+      to right,
+      color-mix(in srgb, var(--color-primary) 12%, var(--color-background)) var(--from),
+      var(--color-primary) var(--from) var(--to),
+      color-mix(in srgb, var(--color-primary) 12%, var(--color-background)) var(--to)
+    );
+    translate: 0 -50%;
+  }
+
+  /* Two range inputs on top of each other; only their thumbs take clicks */
+  .filter-price__slider input {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    margin: 0;
+    background: none;
+    pointer-events: none;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .filter-price__slider input::-webkit-slider-runnable-track {
+    background: none;
+  }
+
+  .filter-price__slider input::-webkit-slider-thumb {
+    inline-size: 0.875rem;
+    block-size: 0.875rem;
+    border: 2px solid var(--color-background);
+    border-radius: var(--radius-pill);
+    background: var(--color-primary);
+    box-shadow: 0 1px 3px #00000033;
+    cursor: pointer;
+    pointer-events: auto;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .filter-price__slider input::-moz-range-thumb {
+    inline-size: 0.875rem;
+    block-size: 0.875rem;
+    border: 2px solid var(--color-background);
+    border-radius: var(--radius-pill);
+    background: var(--color-primary);
+    box-shadow: 0 1px 3px #00000033;
+    cursor: pointer;
+    pointer-events: auto;
+  }
+
+  .filter-price__slider input:focus-visible {
+    outline: none;
+  }
+
+  .filter-price__slider input:focus-visible::-webkit-slider-thumb {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  .filter-price__boxes {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .filter-price__box {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: var(--space-2xs);
+    margin: 0;
+    padding-inline: var(--space-sm);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 12%, transparent);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-background);
+    font-size: var(--font-size-small);
+    font-weight: 400;
+  }
+
+  .filter-price__box:focus-within {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  /* Two classes: critical.css styles input[type="number"] */
+  .filter-price__box input[type='number'] {
+    inline-size: 100%;
+    min-block-size: 2rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-size: var(--font-size-small);
+  }
+
+  .filter-price__box input:focus-visible {
+    outline: none;
+  }
+
+  .filter-price__dash {
+    color: color-mix(in srgb, var(--color-text) 60%, var(--color-background));
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <price-range>: keeps the two-thumb slider and the From / To boxes in step. Only the boxes have a name,
+   * so only they go into the URL. A thumb at the very end leaves its box empty (no limit on that side).
+   * The red part of the track is drawn with --from / --to (percentages along the track).
+   */
+  class PriceRange extends HTMLElement {
+    connectedCallback() {
+      this.thumbs = { min: this.querySelector('[data-price-thumb="min"]'), max: this.querySelector('[data-price-thumb="max"]') };
+      this.boxes = { min: this.querySelector('[data-price-box="min"]'), max: this.querySelector('[data-price-box="max"]') };
+      this.top = Number(this.thumbs.max.max) || 0;
+
+      Object.entries(this.thumbs).forEach(([side, thumb]) => {
+        thumb.addEventListener('input', () => this.fromThumb(side));
+      });
+      Object.entries(this.boxes).forEach(([side, box]) => {
+        box.addEventListener('input', () => this.fromBox(side));
+      });
+
+      // Closing the drawer without applying runs form.reset(): the thumbs and boxes jump back, but no input
+      // event fires, so repaint the red part of the track. 'reset' fires before the values change, hence the
+      // next frame.
+      this.form = this.closest('form');
+      this.onReset = () => requestAnimationFrame(() => this.paint());
+      this.form?.addEventListener('reset', this.onReset);
+
+      this.paint();
+    }
+
+    disconnectedCallback() {
+      this.form?.removeEventListener('reset', this.onReset);
+    }
+
+    fromThumb(side) {
+      let min = Number(this.thumbs.min.value);
+      let max = Number(this.thumbs.max.value);
+      // The thumbs can't cross
+      if (min > max) {
+        if (side === 'min') this.thumbs.min.value = min = max;
+        else this.thumbs.max.value = max = min;
+      }
+      this.boxes.min.value = min > 0 ? min : '';
+      this.boxes.max.value = max < this.top ? max : '';
+      this.paint();
+      // The drawer's live count listens for changes on the form
+      this.boxes[side].dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    fromBox(side) {
+      const value = this.boxes[side].value;
+      this.thumbs[side].value = value === '' ? (side === 'min' ? 0 : this.top) : value;
+      this.paint();
+    }
+
+    paint() {
+      const percent = (value) => (this.top ? (Number(value) / this.top) * 100 : 0);
+      this.style.setProperty('--from', `${percent(this.thumbs.min.value)}%`);
+      this.style.setProperty('--to', `${percent(this.thumbs.max.value)}%`);
+    }
+  }
+
+  if (!customElements.get('price-range')) customElements.define('price-range', PriceRange);
+{% endjavascript %}

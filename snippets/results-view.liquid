@@ -1,0 +1,138 @@
+{% doc %}
+  Loads the script for <results-view>, the element that reloads a results section in place (sort, filters,
+  removing a filter, page links, Back / Forward). Outputs no HTML.
+
+  Why a snippet: Shopify only runs a section's own script on pages where that section is used (scripts.js
+  wraps each section's code in "is this section on the page?"). The collection and search sections both
+  need this element, so its script lives here and each of them renders this snippet.
+
+  The section wraps its toolbar and results in <results-view data-section-id="{{ section.id }}"> and marks:
+  - forms to read with data-results-form (data-results-autoload: load on change),
+  - the results box with data-results-main (busy state, focus after a click inside it),
+  - parts to replace after a load with data-results-part (each needs an id),
+  - text to update with data-results-text (the count, so its aria-live announces it),
+  - links to load in place with data-results-link (data-results-scroll: scroll back to the top).
+
+  @example
+  {% render 'results-view' %}
+{% enddoc %}
+
+{% javascript %}
+  /**
+   * <results-view>: reloads only this section's results, not the whole page, when the visitor
+   * - changes the sort (a form with data-results-autoload),
+   * - applies filters (<filter-drawer> sends a 'results:load' event),
+   * - removes an active filter, clears them all or changes page (links with data-results-link),
+   * - goes Back / Forward.
+   *
+   * The URL is built from every form with data-results-form (sort + filters), so the two always combine:
+   * /collections/skincare?filter.p.vendor=Oroskin&sort_by=price-ascending
+   * Section Rendering API: that URL + &section_id=<id> returns just this section's HTML, already filtered and
+   * sorted by Shopify. Every [data-results-part] is replaced by the new one with the same id; a
+   * [data-results-text] only gets its text changed (the count, so its aria-live announces it).
+   * The URL goes in the address bar, so the page can be shared and reloaded, and pagination keeps the choices.
+   * If anything fails, it falls back to a normal page load of the URL.
+   */
+  class ResultsView extends HTMLElement {
+    connectedCallback() {
+      this.sectionId = this.dataset.sectionId;
+
+      this.addEventListener('results:load', () => this.load(this.buildUrl(), true));
+
+      this.addEventListener('change', (event) => {
+        if (event.target.form?.hasAttribute('data-results-autoload')) this.load(this.buildUrl(), true);
+      });
+
+      this.addEventListener('submit', (event) => {
+        if (!event.target.hasAttribute('data-results-autoload')) return;
+        event.preventDefault();
+        this.load(this.buildUrl(), true);
+      });
+
+      this.addEventListener('click', (event) => {
+        const link = event.target.closest('a[data-results-link]');
+        if (!link) return;
+        event.preventDefault();
+        // Page links (data-results-scroll): the new page starts at the top of the results, not at the pagination
+        this.load(link.href, true, link.hasAttribute('data-results-scroll'));
+      });
+
+      this.onPopState = () => this.load(window.location.href, false);
+      window.addEventListener('popstate', this.onPopState);
+    }
+
+    disconnectedCallback() {
+      window.removeEventListener('popstate', this.onPopState);
+      this.controller?.abort();
+    }
+
+    // Every non-empty field of the sort and filter forms (an empty price box means "no limit"; the
+    // default sort needs no parameter); a new choice always starts again at page 1, so the page
+    // number is left out
+    buildUrl() {
+      const forms = this.querySelectorAll('form[data-results-form]');
+      const defaultSort = this.querySelector('select[name="sort_by"]')?.dataset.default;
+      const params = new URLSearchParams();
+      forms.forEach((form) => {
+        for (const [key, value] of new FormData(form)) {
+          if (value === '' || (key === 'sort_by' && value === defaultSort)) continue;
+          // A filter can repeat (two brands ticked); anything else, like the search terms q that both the
+          // sort and the filter form carry on the search page, goes in once
+          if (!key.startsWith('filter.') && params.has(key)) continue;
+          params.append(key, value);
+        }
+      });
+      const action = forms[0]?.action || window.location.pathname;
+      return `${action}?${params}`;
+    }
+
+    async load(url, addToHistory, scrollToTop = false) {
+      this.controller?.abort();
+      this.controller = new AbortController();
+
+      const results = this.querySelector('[data-results-main]');
+      const hadFocus = results?.contains(document.activeElement);
+      results?.setAttribute('aria-busy', 'true');
+
+      try {
+        const sectionUrl = new URL(url, window.location.origin);
+        sectionUrl.searchParams.set('section_id', this.sectionId);
+        const response = await fetch(sectionUrl, { signal: this.controller.signal });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const html = new DOMParser().parseFromString(await response.text(), 'text/html');
+
+        this.querySelectorAll('[data-results-part]').forEach((part) => {
+          const fresh = html.getElementById(part.id);
+          if (fresh) part.replaceWith(fresh);
+        });
+
+        this.querySelectorAll('[data-results-text]').forEach((part) => {
+          const fresh = html.getElementById(part.id);
+          if (fresh) part.textContent = fresh.textContent;
+        });
+
+        if (addToHistory) window.history.pushState({}, '', url);
+
+        // Back / Forward: the sort select isn't replaced, so set it to match the URL
+        const select = this.querySelector('select[name="sort_by"]');
+        if (select && !addToHistory) {
+          select.value = new URL(url, window.location.origin).searchParams.get('sort_by') || select.dataset.default;
+        }
+
+        // The clicked pill, "Clear all" or page link was inside the old results: put focus on the new ones
+        if (hadFocus) this.querySelector('[data-results-main]')?.focus({ preventScroll: true });
+        if (scrollToTop) {
+          const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          this.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' });
+        }
+      } catch (error) {
+        if (error.name === 'AbortError') return;
+        window.location.href = url;
+      } finally {
+        results?.removeAttribute('aria-busy');
+      }
+    }
+  }
+
+  if (!customElements.get('results-view')) customElements.define('results-view', ResultsView);
+{% endjavascript %}

@@ -1,27 +1,32 @@
 {% doc %}
-  Renders the Filters button and the drawer it opens (collection page now, search page in M5.6).
+  Renders the Filters button and the drawer it opens (collection and search pages). Design: Figma 170:94885
+  (design/briefs/filter-drawer.md).
 
   The filters themselves (which ones, in what order) are set by the merchant in the Search & Discovery
-  app; the theme only shows what `collection.filters` / `search.filters` returns. Every choice is a URL
-  parameter (filter.v.availability=1, filter.p.vendor=Oroskin, filter.v.price.gte=10), so the form is a
-  plain GET form: Shopify reads the URL and returns the filtered products.
+  app; the theme only shows what `collection.filters` / `search.filters` returns. Shopify leaves out a
+  filter that has no values in the current collection, so a Makeup collection only gets makeup filters.
+  Every choice is a URL parameter (filter.v.availability=1, filter.p.vendor=Oroskin, filter.v.price.gte=10),
+  so the form is a plain GET form: Shopify reads the URL and returns the filtered products.
 
-  The drawer is a modal <dialog> from the left, like the header drawer. Ticking boxes changes nothing yet;
-  "Show results" applies them. The section's <results-view> builds the URL from this form and the sort,
-  loads the results with the Section Rendering API and swaps them in. Closing without applying puts the
-  boxes back as they were (form.reset()).
+  Layout: Shopify's general filters first (Availability, Price, Brand, Product type), then a divider
+  ("Makeup filters") and every other filter. Each group is snippets/filter-group.liquid.
+  All groups start open; the visitor can close any of them.
 
-  The form and the count in the button have data-results-part: after each load they are replaced with the
-  fresh ones, so the counts per value and the checked boxes always match the results.
+  Ticking boxes doesn't change the page yet. While the drawer is open, the button "View results (N)" and
+  the counts next to each choice update after every change (a background request for the same section with
+  the new choices, ~0.3s after the last change). "View results" asks the section's <results-view> to load
+  the results and closes. Closing any other way puts the boxes back as they were (form.reset()).
 
   @param {filter[]} filters - collection.filters or search.filters
   @param {string} results_url - Where the form sends to, e.g. collection.url
   @param {string} section_id - The section's id, for unique ids and Section Rendering
   @param {string} clear_url - The URL with every filter removed (keeps the sort and search terms)
+  @param {number} results_count - The number of results now (collection.products_count / search.results_count)
+  @param {string} [category_label] - The divider's text, e.g. "Makeup filters"
   @param {string} [terms] - The search terms on the search page, sent again as q
 
   @example
-  {% render 'filter-drawer', filters: collection.filters, results_url: collection.url, section_id: section.id, clear_url: clear_url %}
+  {% render 'filter-drawer', filters: collection.filters, results_url: collection.url, section_id: section.id, clear_url: clear_url, results_count: collection.products_count, category_label: category_label %}
 {% enddoc %}
 
 {%- liquid
@@ -36,9 +41,15 @@
       assign active_count = active_count | plus: filter.active_values.size
     endif
   endfor
+
+  # "General" filters (before the divider) are Shopify's built-in ones, recognised by their URL name:
+  # availability, price, vendor (Brand) and product type. Variant options (Size) and the merchant's own
+  # fields (Scent, Skin type…) are about the category, so they go under the divider.
+  # Commas around each name, so a name matches only whole (",filter.v.price," not a longer one).
+  assign general_csv = ',filter.v.availability,filter.v.price,filter.p.vendor,filter.p.product_type,'
 -%}
 
-<filter-drawer class="filter-drawer">
+<filter-drawer class="filter-drawer" data-section-id="{{ section_id }}">
   <button
     type="button"
     class="filter-drawer__toggle"
@@ -71,7 +82,9 @@
     >
       <div class="filter-drawer__head">
         <h2 class="filter-drawer__title" id="FilterDrawerTitle-{{ section_id }}">{{ 'collections.filters' | t }}</h2>
-        <button type="button" class="filter-drawer__close" data-drawer-close>
+        <a class="filter-drawer__reset" href="{{ clear_url }}" data-results-link>{{ 'collections.reset' | t }}</a>
+        {%- comment -%} autofocus: showModal() puts focus here first (not on Reset) {%- endcomment -%}
+        <button type="button" class="filter-drawer__close" data-drawer-close autofocus>
           {{- 'icon-close.svg' | inline_asset_content -}}
           <span class="visually-hidden">{{ 'collections.close_filters' | t }}</span>
         </button>
@@ -82,134 +95,37 @@
           <input type="hidden" name="q" value="{{ terms | escape }}">
         {%- endif -%}
 
+        {%- comment -%} General filters first, in Search & Discovery's order {%- endcomment -%}
+        {%- assign has_category = false -%}
         {%- for filter in filters -%}
-          {%- liquid
-            # A group starts open when it has a choice applied, and the first three always do
-            assign group_active = false
-            if filter.type == 'price_range'
-              if filter.min_value.value != nil or filter.max_value.value != nil
-                assign group_active = true
-              endif
-            elsif filter.active_values.size > 0
-              assign group_active = true
-            endif
-
-            assign group_open = group_active
-            if forloop.index <= 3
-              assign group_open = true
-            endif
-          -%}
-          <details class="filter-drawer__group" {% if group_open %}open{% endif %}>
-            <summary class="filter-drawer__summary">
-              {{- filter.label | escape -}}
-              {{- 'icon-chevron.svg' | inline_asset_content -}}
-            </summary>
-
-            <fieldset class="filter-drawer__fieldset">
-              <legend class="visually-hidden">{{ filter.label | escape }}</legend>
-
-              {%- if filter.type == 'price_range' -%}
-                {%- liquid
-                  # Liquid gives prices in cents (2500 = 25.00); the URL wants the amount (25), so divide by 100.
-                  # Whole amounts divide by 100 (→ 40), others by 100.0 (→ 40.5), so the box never shows "40.0".
-                  assign range_max = filter.range_max | divided_by: 100.0 | ceil
-                  assign min_amount = ''
-                  if filter.min_value.value != nil
-                    assign cents = filter.min_value.value | modulo: 100
-                    if cents == 0
-                      assign min_amount = filter.min_value.value | divided_by: 100
-                    else
-                      assign min_amount = filter.min_value.value | divided_by: 100.0
-                    endif
-                  endif
-                  assign max_amount = ''
-                  if filter.max_value.value != nil
-                    assign cents = filter.max_value.value | modulo: 100
-                    if cents == 0
-                      assign max_amount = filter.max_value.value | divided_by: 100
-                    else
-                      assign max_amount = filter.max_value.value | divided_by: 100.0
-                    endif
-                  endif
-                -%}
-                <div class="filter-drawer__price">
-                  <label class="filter-drawer__price-field">
-                    <span class="filter-drawer__price-label">{{ 'collections.price_min' | t }}</span>
-                    <span class="filter-drawer__price-input">
-                      <span aria-hidden="true">{{ cart.currency.symbol }}</span>
-                      <input
-                        type="number"
-                        name="{{ filter.min_value.param_name }}"
-                        value="{{ min_amount }}"
-                        min="0"
-                        max="{{ range_max }}"
-                        step="any"
-                        inputmode="decimal"
-                        placeholder="0"
-                      >
-                    </span>
-                  </label>
-                  <label class="filter-drawer__price-field">
-                    <span class="filter-drawer__price-label">{{ 'collections.price_max' | t }}</span>
-                    <span class="filter-drawer__price-input">
-                      <span aria-hidden="true">{{ cart.currency.symbol }}</span>
-                      <input
-                        type="number"
-                        name="{{ filter.max_value.param_name }}"
-                        value="{{ max_amount }}"
-                        min="0"
-                        max="{{ range_max }}"
-                        step="any"
-                        inputmode="decimal"
-                        placeholder="{{ range_max }}"
-                      >
-                    </span>
-                  </label>
-                </div>
-              {%- else -%}
-                {%- comment -%} list and boolean filters: one checkbox per value, with its product count {%- endcomment -%}
-                <ul class="filter-drawer__options" role="list">
-                  {%- for value in filter.values -%}
-                    {%- liquid
-                      # A value with no products left can't be picked (unless it's the one already picked)
-                      assign value_disabled = false
-                      if value.count == 0 and value.active == false
-                        assign value_disabled = true
-                      endif
-                    -%}
-                    <li>
-                      <label class="filter-drawer__option{% if value_disabled %} filter-drawer__option--disabled{% endif %}">
-                        <input
-                          type="checkbox"
-                          name="{{ value.param_name }}"
-                          value="{{ value.value | escape }}"
-                          {% if value.active %}
-                            checked
-                          {% endif %}
-                          {% if value_disabled %}
-                            disabled
-                          {% endif %}
-                        >
-                        {%- if value.swatch.color != blank -%}
-                          <span class="filter-drawer__swatch" style="--swatch: {{ value.swatch.color }};" aria-hidden="true"></span>
-                        {%- endif -%}
-                        <span class="filter-drawer__option-label">{{ value.label | escape }}</span>
-                        <span class="filter-drawer__option-count">({{ value.count }})</span>
-                      </label>
-                    </li>
-                  {%- endfor -%}
-                </ul>
-              {%- endif -%}
-            </fieldset>
-          </details>
+          {%- assign needle = filter.param_name | prepend: ',' | append: ',' -%}
+          {%- if general_csv contains needle -%}
+            {%- render 'filter-group', filter: filter, section_id: section_id -%}
+          {%- else -%}
+            {%- assign has_category = true -%}
+          {%- endif -%}
         {%- endfor -%}
+
+        {%- comment -%} Then the divider and every other filter {%- endcomment -%}
+        {%- if has_category -%}
+          {%- if category_label != blank -%}
+            <p class="filter-drawer__divider"><span>{{ category_label | escape }}</span></p>
+          {%- endif -%}
+          {%- for filter in filters -%}
+            {%- assign needle = filter.param_name | prepend: ',' | append: ',' -%}
+            {%- unless general_csv contains needle -%}
+              {%- render 'filter-group', filter: filter, section_id: section_id -%}
+            {%- endunless -%}
+          {%- endfor -%}
+        {%- endif -%}
       </div>
 
       <div class="filter-drawer__foot">
-        {%- if active_count > 0 -%}
-          <a class="button button--text" href="{{ clear_url }}" data-results-link>{{ 'collections.clear_filters' | t }}</a>
-        {%- endif -%}
-        <button type="submit" class="button filter-drawer__apply">{{ 'collections.show_results' | t }}</button>
+        <button type="submit" class="button filter-drawer__apply">
+          <span id="FilterResults-{{ section_id }}" aria-live="polite">
+            {{- 'collections.view_results' | t: count: results_count -}}
+          </span>
+        </button>
       </div>
     </form>
   </dialog>
@@ -268,11 +184,14 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* The drawer: full height on the left, glass, like the header drawer */
+  /*
+    The panel (Figma 332 x full height): a soft off-white sheet from the left, rounded on the right,
+    34px side padding. The background mixes 2% of the text colour into the scheme background (#faf8f8).
+  */
   .filter-drawer__dialog {
     inset-block: 0;
     inset-inline: 0 auto;
-    inline-size: min(26rem, calc(100vw - 3rem));
+    inline-size: min(20.75rem, calc(100vw - 3rem));
     max-inline-size: none;
     block-size: 100dvh;
     max-block-size: none;
@@ -281,11 +200,9 @@
     border: 0;
     border-start-end-radius: var(--radius-lg);
     border-end-end-radius: var(--radius-lg);
-    background-color: var(--color-glass-strong);
+    background-color: color-mix(in srgb, var(--color-text) 2%, var(--color-background));
     box-shadow: var(--shadow-header);
     color: var(--color-text);
-    -webkit-backdrop-filter: blur(var(--glass-frost)) saturate(1.4);
-    backdrop-filter: blur(var(--glass-frost)) saturate(1.4);
   }
 
   .filter-drawer__dialog::backdrop {
@@ -320,7 +237,7 @@
     }
   }
 
-  /* Head and foot stay put, the filters in between scroll */
+  /* Head and foot stay put, the groups in between scroll */
   .filter-drawer__form {
     display: grid;
     grid-template-rows: auto 1fr auto;
@@ -331,194 +248,122 @@
   .filter-drawer__head {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: var(--space-lg) var(--space-lg) var(--space-md) var(--space-xl);
+    gap: var(--space-md);
+    padding: var(--space-lg) var(--space-xl) var(--space-sm);
   }
 
   .filter-drawer__title {
+    flex: 1;
     margin: 0;
+    color: var(--color-primary);
     font-size: var(--font-size-h3);
   }
 
+  .filter-drawer__reset {
+    color: var(--color-primary);
+    font-size: var(--font-size-caption);
+    text-decoration: none;
+  }
+
+  .filter-drawer__reset:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  /* A 38px white circle with the × */
   .filter-drawer__close {
     display: inline-grid;
+    flex: none;
     place-items: center;
-    inline-size: 2.75rem;
-    block-size: 2.75rem;
+    inline-size: 2.375rem;
+    block-size: 2.375rem;
     padding: 0;
     border: 0;
     border-radius: var(--radius-pill);
-    background-color: var(--color-glass);
-    box-shadow: var(--shadow-header);
+    background-color: #ffffff;
+    box-shadow: var(--shadow-card);
     color: var(--color-text);
     cursor: pointer;
   }
 
   .filter-drawer__close svg {
-    inline-size: 1rem;
-    block-size: 1rem;
+    inline-size: 0.875rem;
+    block-size: 0.875rem;
   }
 
+  /*
+    The scrolling middle. A thin rose scrollbar instead of the grey system one: scrollbar-width / -color
+    for Chrome, Edge and Firefox; the ::-webkit-scrollbar rules for Safari.
+  */
   .filter-drawer__body {
     overflow-y: auto;
-    padding-inline: var(--space-xl) var(--space-lg);
+    padding-inline: var(--space-xl);
     overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--color-primary) 30%, transparent) transparent;
   }
 
-  .filter-drawer__group + .filter-drawer__group {
-    border-block-start: 1px solid color-mix(in srgb, var(--color-primary) 15%, transparent);
+  .filter-drawer__body::-webkit-scrollbar {
+    inline-size: 0.375rem;
   }
 
-  .filter-drawer__summary {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    min-block-size: 3.25rem;
-    font-size: var(--font-size-label);
-    font-weight: var(--font-weight-medium);
-    letter-spacing: var(--letter-spacing-nav);
-    text-transform: uppercase;
-    cursor: pointer;
-    list-style: none;
+  .filter-drawer__body::-webkit-scrollbar-track {
+    background: transparent;
   }
 
-  .filter-drawer__summary::-webkit-details-marker {
-    display: none;
+  .filter-drawer__body::-webkit-scrollbar-thumb {
+    border-radius: var(--radius-pill);
+    background-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
   }
 
-  .filter-drawer__summary svg {
-    inline-size: 0.75rem;
-    block-size: 0.75rem;
-    transition: rotate var(--duration-fast) var(--ease-out);
-  }
-
-  .filter-drawer__group[open] > .filter-drawer__summary svg {
-    rotate: 180deg;
-  }
-
-  .filter-drawer__fieldset {
-    margin: 0;
-    padding: 0 0 var(--space-md);
-    border: 0;
-  }
-
-  .filter-drawer__options {
-    display: grid;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .filter-drawer__option {
+  /* "Makeup filters": small grey text between two thin rose lines */
+  .filter-drawer__divider {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
-    min-block-size: 2.75rem; /* 44px tap target */
-    margin: 0;
-    font-size: var(--font-size-body-sm);
-    cursor: pointer;
-  }
-
-  /* margin 0: critical.css spaces a control that follows a label */
-  .filter-drawer__option input {
-    flex: none;
-    inline-size: 1.125rem;
-    block-size: 1.125rem;
-    margin: 0;
-    accent-color: var(--color-primary);
-  }
-
-  .filter-drawer__option--disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-  }
-
-  .filter-drawer__swatch {
-    flex: none;
-    inline-size: 1.25rem;
-    block-size: 1.25rem;
-    border: 1px solid color-mix(in srgb, var(--color-text) 15%, transparent);
-    border-radius: var(--radius-pill);
-    background: var(--swatch);
-  }
-
-  .filter-drawer__option-count {
-    margin-inline-start: auto;
-    color: color-mix(in srgb, var(--color-text) 75%, var(--color-background));
+    margin: var(--space-md) 0 0;
+    color: color-mix(in srgb, var(--color-text) 60%, var(--color-background));
     font-size: var(--font-size-small);
+    white-space: nowrap;
   }
 
-  .filter-drawer__price {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--space-md);
-  }
-
-  .filter-drawer__price-field {
-    display: grid;
-    gap: var(--space-2xs);
-    margin: 0;
-  }
-
-  .filter-drawer__price-label {
-    font-size: var(--font-size-small);
-  }
-
-  .filter-drawer__price-input {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2xs);
-    padding-inline: var(--space-md);
-    border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
-    border-radius: var(--radius-pill);
-    background-color: var(--color-glass-strong);
-  }
-
-  .filter-drawer__price-input:focus-within {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 2px;
-  }
-
-  .filter-drawer__price-input input {
-    inline-size: 100%;
-    min-block-size: 2.75rem;
-    margin: 0;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: inherit;
-    font: inherit;
-  }
-
-  .filter-drawer__price-input input:focus-visible {
-    outline: none;
+  .filter-drawer__divider::before,
+  .filter-drawer__divider::after {
+    content: '';
+    flex: 1;
+    block-size: 1px;
+    background-color: color-mix(in srgb, var(--color-primary) 18%, transparent);
   }
 
   .filter-drawer__foot {
     display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: var(--space-md);
-    padding: var(--space-md) var(--space-lg) var(--space-xl) var(--space-xl);
-    border-block-start: 1px solid color-mix(in srgb, var(--color-primary) 15%, transparent);
+    justify-content: center;
+    padding: var(--space-md) var(--space-xl) var(--space-lg);
   }
 
+  /* Figma: 274 x 50 red pill, white uppercase, soft shadow */
   .filter-drawer__apply {
-    flex: 1;
+    inline-size: 100%;
   }
 {% endstylesheet %}
 
 {% javascript %}
   /**
    * <filter-drawer>: opens the filter <dialog> with showModal() (focus moves in, Tab stays inside, Escape
-   * closes, the page behind is inert). "Show results" asks the section's <results-view> to load the results
-   * (a bubbling 'results:load' event; it reads this form and the sort to build the URL), then closes.
-   * Closing any other way resets the boxes to what's applied.
+   * closes, the page behind is inert).
+   * - While it's open, every change asks Shopify for the same section with the new choices (~0.3s after the
+   *   last change) and copies the new total into "View results (N)" and the new counts next to each choice.
+   *   Nothing else on the page changes.
+   * - "View results" asks the section's <results-view> to load the results (a bubbling 'results:load' event;
+   *   it reads this form and the sort to build the URL), then closes. "Reset" is a link <results-view> loads.
+   * - The Brand search box hides the rows that don't contain what was typed.
+   * - Closing without applying resets the boxes to what's applied.
    */
   class FilterDrawer extends HTMLElement {
     connectedCallback() {
       this.toggle = this.querySelector('.filter-drawer__toggle');
       this.dialog = this.querySelector('dialog');
+      this.sectionId = this.dataset.sectionId;
 
       this.toggle.addEventListener('click', () => {
         this.applied = false;
@@ -531,7 +376,7 @@
         if (event.target === this.dialog || event.target.closest('[data-drawer-close]')) {
           this.dialog.close();
         } else if (event.target.closest('[data-results-link]')) {
-          // "Clear all": <results-view> loads the link; the drawer just gets out of the way
+          // "Reset": <results-view> loads the link; the drawer just gets out of the way
           this.applied = true;
           this.dialog.close();
         }
@@ -544,10 +389,84 @@
         this.dialog.close();
       });
 
+      this.dialog.addEventListener('change', (event) => {
+        if (event.target.name) this.queueCount();
+      });
+
+      this.dialog.addEventListener('input', (event) => {
+        if (event.target.matches('[data-filter-search]')) this.searchBrands(event.target);
+      });
+
+      // Enter in the brand search shouldn't submit the whole form
+      this.dialog.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' && event.target.matches('[data-filter-search]')) event.preventDefault();
+      });
+
       this.dialog.addEventListener('close', () => {
         this.toggle.setAttribute('aria-expanded', 'false');
-        if (!this.applied) this.dialog.querySelector('form')?.reset();
+        clearTimeout(this.countTimer);
+        this.controller?.abort();
+        if (!this.applied) {
+          this.dialog.querySelector('form')?.reset();
+          this.queueCount();
+        }
       });
+    }
+
+    disconnectedCallback() {
+      clearTimeout(this.countTimer);
+      this.controller?.abort();
+    }
+
+    searchBrands(input) {
+      const term = input.value.trim().toLowerCase();
+      const list = input.closest('fieldset').querySelector('.filter-group__options');
+      list.querySelectorAll('.filter-group__item').forEach((item) => {
+        item.hidden = term !== '' && !item.textContent.toLowerCase().includes(term);
+      });
+    }
+
+    queueCount() {
+      clearTimeout(this.countTimer);
+      this.countTimer = setTimeout(() => this.updateCount(), 300);
+    }
+
+    // The same URL "View results" would load: this form + the sort, empty boxes left out
+    countUrl() {
+      const form = this.dialog.querySelector('form');
+      const params = new URLSearchParams();
+      for (const [key, value] of new FormData(form)) {
+        if (value !== '') params.append(key, value);
+      }
+      const sort = this.closest('results-view')?.querySelector('select[name="sort_by"]')?.value;
+      if (sort) params.set('sort_by', sort);
+      params.set('section_id', this.sectionId);
+      return `${form.action}?${params}`;
+    }
+
+    async updateCount() {
+      this.controller?.abort();
+      this.controller = new AbortController();
+      try {
+        const response = await fetch(this.countUrl(), { signal: this.controller.signal });
+        if (!response.ok) return;
+        const html = new DOMParser().parseFromString(await response.text(), 'text/html');
+
+        const total = html.getElementById(`FilterResults-${this.sectionId}`);
+        const button = this.querySelector(`#FilterResults-${this.sectionId}`);
+        if (total && button) button.textContent = total.textContent;
+
+        // Each choice's count and whether it can still be picked (an id per choice, see filter-group)
+        this.dialog.querySelectorAll('[data-filter-count]').forEach((count) => {
+          const fresh = html.getElementById(count.id);
+          if (fresh) count.textContent = fresh.textContent;
+          const input = count.closest('label')?.querySelector('input');
+          const freshInput = fresh?.closest('label')?.querySelector('input');
+          if (input && freshInput && !input.checked) input.disabled = freshInput.disabled;
+        });
+      } catch (error) {
+        // A failed count is only a hint: the visitor can still press View results
+      }
     }
   }
 

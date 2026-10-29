@@ -1,0 +1,256 @@
+{% doc %}
+  Renders the category pills (Figma collection toolbar): one link per link of a menu, each with its
+  collection's product count as a small raised red number. On hover a picture rises behind the pill: the
+  collection's "Pill image" metafield (custom.pill_image, a cut-out PNG), or else its own image as a small
+  rounded photo. The current page's pill is red (aria-current="page").
+  "All": add Shopify's "All products" link to the menu (first). It uses the collection with the handle
+  "all": Shopify's automatic one, or one the merchant creates with that handle to give it a Pill image.
+  Used by the collection toolbar and by the search page's "Popular categories".
+
+  @param {linklist} menu - The menu whose links become pills
+  @param {string} [animation] - collection-pills--image-rise (default), --image-scale or --image-fade
+  @param {number} [image_size] - The hover picture's height in px (default 180)
+  @param {boolean} [centred] - Centre the pills (search page)
+
+  @example
+  {% render 'category-pills', menu: section.settings.pills_menu %}
+{% enddoc %}
+
+<nav
+  class="collection-pills {{ animation | default: 'collection-pills--image-rise' }}{% if centred %} collection-pills--centred{% endif %}"
+  style="--pill-image-size: {{ image_size | default: 180 }}px;"
+  aria-label="{{ 'collections.categories' | t }}">
+  <ul class="collection-pills__list" role="list">
+    {%- for link in menu.links -%}
+      {%- liquid
+        # The number: the linked collection's total (all_products_count ignores filters, so
+        # it stays the same while the visitor filters this page). Other link types get none.
+        assign pill_count = nil
+        # The hover image: the collection's "Pill image" metafield (a cut-out PNG),
+        # or else its own image (or first product's) shown as a small rounded photo.
+        assign pill_image = nil
+        assign pill_cutout = false
+        # "All products" (catalog_link) uses collections.all, the same as a link to the "all" collection.
+        assign pill_collection = nil
+        case link.type
+          when 'collection_link'
+            assign pill_collection = link.object
+          when 'catalog_link'
+            assign pill_collection = collections.all
+        endcase
+
+        if pill_collection != nil
+          assign pill_count = pill_collection.all_products_count
+          assign pill_image = pill_collection.metafields.custom.pill_image.value
+          if pill_image != blank
+            assign pill_cutout = true
+          else
+            assign pill_image = pill_collection.featured_image
+          endif
+        endif
+      -%}
+      <li>
+        <a
+          class="collection-pill{% if link.current %} collection-pill--active{% endif %}"
+          href="{{ link.url }}"
+          {% if link.current %}
+            aria-current="page"
+          {% endif %}
+        >
+          {%- if pill_image != blank -%}
+            <span
+              class="collection-pill__media{% if pill_cutout %} collection-pill__media--cutout{% endif %}"
+              aria-hidden="true"
+            >
+              {{- pill_image | image_url: width: 300 | image_tag: loading: 'lazy', alt: '', widths: '160, 300', sizes: '160px' -}}
+            </span>
+          {%- endif -%}
+          {{- link.title | escape -}}
+          {%- if pill_count != nil -%}
+            <span class="collection-pill__count" aria-hidden="true">{{ pill_count }}</span>
+            <span class="visually-hidden">{{ 'collections.products_count' | t: count: pill_count }}</span>
+          {%- endif -%}
+        </a>
+      </li>
+    {%- endfor -%}
+  </ul>
+</nav>
+
+{% stylesheet %}
+  .collection-pills {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+
+  .collection-pills__list {
+    display: flex;
+    margin: 0;
+    padding: 0.25rem; /* room for the focus ring and shadow inside the scroll box */
+    overflow-x: auto;
+    list-style: none;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+  }
+
+  /* The side padding is the gap between a divider and the hover glass (Figma ~10px) */
+  .collection-pills__list > li {
+    position: relative;
+    flex: none;
+    padding-inline: var(--space-xs);
+    scroll-snap-align: start;
+  }
+
+  /* Figma: plain text links with a short divider between them */
+  .collection-pills__list > li + li::before {
+    content: '';
+    position: absolute;
+    inset-block: 20%;
+    inset-inline-start: 0;
+    border-inline-start: 1px solid color-mix(in srgb, var(--color-primary) 15%, transparent);
+  }
+
+  /*
+    A text link (Figma ~50px tall) that becomes a glass pill on hover; the count is the small
+    raised red number ("Fragrance 12"). Three layers, back to front: the hover image, the glass
+    (::after), the text. The glass is a pseudo-element rather than the link's own background so
+    it can sit over the image and frost it.
+  */
+  .collection-pill {
+    position: relative;
+    isolation: isolate;
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 0.2em;
+    padding: 0.85rem var(--space-lg);
+    border-radius: var(--radius-pill);
+    color: var(--color-text);
+    font-size: var(--font-size-body);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.2;
+    text-decoration: none;
+    transition: color var(--duration-fast) var(--ease-out);
+  }
+
+  .collection-pill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
+    border-radius: inherit;
+    background-color: var(--color-glass);
+    box-shadow: var(--shadow-header);
+    opacity: 0;
+    transition: opacity var(--duration-fast) var(--ease-out);
+    -webkit-backdrop-filter: blur(var(--glass-frost));
+    backdrop-filter: blur(var(--glass-frost));
+  }
+
+  /* Hovered pill on top of its neighbours (and the dividers), so nothing covers its image */
+  .collection-pill:hover,
+  .collection-pill:focus-visible {
+    z-index: 1;
+  }
+
+  .collection-pill:hover::after,
+  .collection-pill:focus-visible::after {
+    opacity: 1;
+  }
+
+  /* The page you're on: red text (the Figma frame shows no active style; aria-current tells screen readers) */
+  .collection-pill--active {
+    color: var(--color-primary);
+  }
+
+  .collection-pill__count {
+    color: var(--color-primary);
+    font-size: 0.65em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /*
+    The hover image rises from behind the pill and grows (Figma hover frames). Only on
+    devices with a mouse and room for it: on phones the pills scroll, which would clip it,
+    and display: none also stops the lazy image from downloading there.
+  */
+  .collection-pill__media {
+    display: none;
+  }
+
+  @media (hover: hover) and (min-width: 750px) {
+    .collection-pills__list {
+      flex-wrap: wrap;
+      overflow: visible; /* a scroll box would clip the image */
+    }
+
+    .collection-pill__media {
+      position: absolute;
+      inset-block-start: 50%;
+      inset-inline-start: 50%;
+      z-index: -1;
+      display: block;
+      /* "Pill image size" = the cut-out's height; a rounded photo is a bit smaller */
+      inline-size: calc(var(--pill-image-size, 180px) * 0.6);
+      block-size: calc(var(--pill-image-size, 180px) * 0.7);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      opacity: 0;
+      translate: -50% -40%;
+      scale: 0.4;
+      transform-origin: 50% 100%;
+      pointer-events: none;
+      transition:
+        opacity var(--duration-base) var(--ease-out),
+        translate var(--duration-normal) var(--ease-out),
+        scale var(--duration-normal) var(--ease-out);
+    }
+
+    /* A cut-out PNG: bigger, no rounded box, the bottle stands behind the glass */
+    .collection-pill__media--cutout {
+      inline-size: calc(var(--pill-image-size, 180px) * 0.85);
+      block-size: var(--pill-image-size, 180px);
+      border-radius: 0;
+    }
+
+    .collection-pill__media img {
+      inline-size: 100%;
+      block-size: 100%;
+      object-fit: cover;
+    }
+
+    .collection-pill__media--cutout img {
+      object-fit: contain;
+    }
+
+    /* "Pill image animation": the start state differs, the end state (below) is shared */
+    .collection-pills--image-scale .collection-pill__media {
+      translate: -50% -60%; /* already in place, only grows from its centre */
+      transform-origin: 50% 50%;
+    }
+
+    .collection-pills--image-fade .collection-pill__media {
+      translate: -50% -60%;
+      scale: 1;
+    }
+
+    .collection-pill:hover .collection-pill__media,
+    .collection-pill:focus-visible .collection-pill__media {
+      opacity: 1;
+      translate: -50% -60%;
+      scale: 1;
+    }
+  }
+
+  /* Reduced motion: the image fades in where it ends up, without rising or growing */
+  @media (prefers-reduced-motion: reduce) {
+    .collection-pill__media {
+      translate: -50% -60%;
+      scale: 1;
+    }
+  }
+
+
+  .collection-pills--centred .collection-pills__list {
+    justify-content: center;
+  }
+{% endstylesheet %}

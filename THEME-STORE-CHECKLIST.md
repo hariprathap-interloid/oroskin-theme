@@ -92,7 +92,7 @@ Why first: every later section reads these settings, CSS variables and base styl
 
 - [ ] 🟡 Collection title (never truncated), description and image
 - [ ] 🟡 Product grid that handles mixed image ratios, using the product card. Includes unit price, sale badge and price range.
-- [ ] ❌ **Faceted filters**: availability, price, type, vendor and variant options. Also on the search page. *§4*
+- [ ] 🟡 **Faceted filters**: availability, price, type, vendor and variant options. Also on the search page. *§4* *Built M5.4 (collection) + M5.6 (search): `snippets/filter-drawer.liquid` renders whatever Search & Discovery returns (list, boolean, price range, swatches). Tested with availability, price and Size; tick after testing type / vendor on the store.*
 - [ ] ❌ **Sort** dropdown
 - [ ] ❌ Empty-collection message
 - [ ] ✅ Pagination
@@ -131,7 +131,7 @@ Why first: every later section reads these settings, CSS variables and base styl
 
 ## M8 Remaining pages + SEO
 
-- [ ] 🟡 Search: no-results message, products/articles/pages told apart (`object_type`), pagination, filters
+- [ ] 🟡 Search: no-results message, products/articles/pages told apart (`object_type`), pagination, filters *Built M5.6 (2026-10-29): product tiles + "Articles and pages" rows, no-results / no-match messages, pagination snippet, filters + sort. Tick after review.*
 - [ ] 🟡 Blog: title, article image, **`article.excerpt_or_content`** (Skeleton uses `excerpt`), pagination
 - [ ] 🟡 Article: `published_at`, paginated comments, success and error messages
 - [ ] ❌ **`templates/page.contact.json`** with a contact form. *§5*

@@ -49,8 +49,6 @@
         "show_title": false,
         "show_pills": true,
         "pills_menu": "collection-pills",
-        "show_all_pill": true,
-        "all_pill_image": "shopify://shop_images/Group_1000003356.png",
         "pill_image_animation": "collection-pills--image-scale",
         "pill_image_size": 200,
         "show_count": true,

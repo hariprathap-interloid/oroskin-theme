@@ -11,7 +11,11 @@
   "sections": {
     "main": {
       "type": "search",
-      "settings": {}
+      "settings": {
+        "suggestions_menu": "collection-pills",
+        "suggestions_collection": "new-arrivals",
+        "suggestions_heading": "You might <em>love</em>"
+      }
     }
   },
   "order": [

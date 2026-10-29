@@ -86,12 +86,20 @@
       "other": "{{ count }} filters applied"
     },
     "close_filters": "Close filters",
-    "show_results": "Show results",
+    "view_results": "View results ({{ count }})",
+    "reset": "Reset",
     "clear_filters": "Clear all",
     "active_filters": "Active filters",
     "remove_filter": "Remove filter: {{ label }}",
-    "price_min": "From",
-    "price_max": "To",
+    "price_min_label": "Minimum price",
+    "price_max_label": "Maximum price",
+    "search_brands": "Search brands…",
+    "search_brands_label": "Search brands",
+    "category_filters": "{{ title }} filters",
+    "rating_value": {
+      "one": "{{ count }} star",
+      "other": "{{ count }} stars"
+    },
     "no_match_title": "No products match these filters",
     "no_match_text": "Try removing a filter, or clear them all to see everything in this collection."
   },
@@ -116,7 +124,23 @@
     "placeholder": "Search articles, pages, or products",
     "submit": "Search",
     "no_results_html": "No results found for {{ terms }}",
-    "results_for_html": "{{ count }} results found for {{ terms }}",
+    "results_for_html": "Results for <em>“{{ terms }}”</em>",
+    "heading": "What are you looking for?",
+    "results_count": {
+      "one": "{{ count }} result",
+      "other": "{{ count }} results"
+    },
+    "no_results_title": "No results for “{{ terms }}”",
+    "no_results_text": "Check the spelling, try a more general word, or browse the whole shop.",
+    "no_match_text": "Try removing a filter, or clear them all to see every result.",
+    "products": "Products",
+    "collections": "Collections",
+    "articles": "Articles",
+    "pages": "Pages",
+    "popular_categories": "Popular categories",
+    "read_more": "Read more",
+    "type_article": "Article",
+    "type_page": "Page",
     "popup": {
       "label": "Search the store",
       "placeholder": "Search for skincare, fragrances, makeup products…",

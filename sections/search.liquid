@@ -1,70 +1,867 @@
-{% comment %}
-  This section is used in the search template to render search results for
-  products, articles, and pages.
+{%- comment -%}
+  Search results page (/search?q=serum), M5.6. No Figma frame, so it uses the collection page's design:
+  - a heading ("Results for “serum”") and a large glass search box to search again
+  - the collection toolbar: Filters (from search.filters, products only), the result count, SORT
+  - the results in groups, each with its own heading, so the kinds are told apart:
+    Products (tiles, snippets/product-card.liquid 'tile'), Collections (cards; Shopify's search doesn't return
+    collections, so they're matched by name here), Articles (image cards) and Pages (text cards)
+  - the Figma pagination (snippets/pagination.liquid)
+  - before a search and under "No results": popular categories (a menu, as pills) and a few products
+  Sorting, filtering, removing a filter and changing page reload only this section (<results-view>, whose
+  script is in snippets/results-view.liquid, rendered below).
 
-  https://shopify.dev/docs/storefronts/themes/architecture/templates/search
-{% endcomment %}
+  The toolbar, grid and empty-message classes (collection-toolbar, collection-grid, collection-empty...)
+  are styled in sections/collection.liquid, whose CSS Shopify also bundles for every page.
+{%- endcomment -%}
+{% # theme-check-disable ValidScopedCSSClass %}
 
-<h1>{{ 'search.title' | t }}</h1>
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-1'
 
-<form action="{{ routes.search_url }}" method="get" role="search">
-  <input
-    type="search"
-    size="50"
-    name="q"
-    value="{{ search.terms | escape }}"
-    placeholder="{{ 'search.placeholder' | t }}"
-  >
-  <button type="submit">{{ 'search.submit' | t }}</button>
-</form>
+  # Is any filter applied? (Decides the chips and which empty message to show.)
+  assign filters_active = false
+  for filter in search.filters
+    if filter.active_values.size > 0
+      assign filters_active = true
+    elsif filter.min_value.value != nil or filter.max_value.value != nil
+      assign filters_active = true
+    endif
+  endfor
 
-{% if search.performed %}
-  {% if search.results_count == 0 %}
-    <p>{{ 'search.no_results_html' | t: terms: search.terms }}</p>
-  {% else %}
-    <p>{{ 'search.results_for_html' | t: terms: search.terms, count: search.results_count }}</p>
+  # "Clear all": the same search with no filters, keeping the sort. The words are url_encoded first
+  # (a space becomes +), and only the words: encoding the whole URL would break its ? and =.
+  assign encoded_terms = search.terms | url_encode
+  assign clear_url = routes.search_url | append: '?q=' | append: encoded_terms
+  if search.sort_by != blank
+    assign clear_url = clear_url | append: '&sort_by=' | append: search.sort_by
+  endif
 
-    <div class="search-results">
-      {% paginate search.results by 20 %}
-        {% # Search result items may be an article, a page, or a product. %}
-        {% for result in search.results %}
-          <div class="search-result">
-            {% assign featured_image = result.featured_image | default: result.image %}
-            {% if featured_image %}
-              {% render 'image', class: 'search-result__image', image: featured_image, url: result.url, width: 400 %}
-            {% endif %}
-            <div class="search-result__content">
-              <p>
-                {{ result.title | link_to: result.url }}
-                {% if result.price %}
-                  {{ result.price | money_with_currency }}
-                {% endif %}
-              </p>
+  assign show_filters = false
+  if section.settings.show_filters and search.performed and search.filters.size > 0
+    assign show_filters = true
+  endif
+
+  assign show_tools = false
+  if search.performed
+    if search.results_count > 0 or filters_active
+      assign show_tools = true
+    endif
+  endif
+
+  assign suggestions_menu = section.settings.suggestions_menu
+  assign suggestions_collection = section.settings.suggestions_collection
+
+  # Merchant texts (settings), with the theme's own words when a setting is left empty
+  assign heading_default = 'search.heading' | t
+  assign placeholder_default = 'search.popup.placeholder' | t
+  assign popular_default = 'search.popular_categories' | t
+-%}
+
+{%- comment -%}
+  Ideas shown before anyone searches (/search or ?q= empty) and under "No results": the categories from a
+  menu as pills, then a few products. Captured once here, output in both places below.
+{%- endcomment -%}
+{%- capture search_suggestions -%}
+  {%- if suggestions_menu != blank and suggestions_menu.links.size > 0 -%}
+    <section class="search-group search-group--centred" aria-labelledby="SearchCategories-{{ section.id }}">
+      <h2 class="search-group__title" id="SearchCategories-{{ section.id }}">
+        {{- section.settings.categories_heading | default: popular_default -}}
+      </h2>
+      {%- comment -%} The same pills as the collection toolbar (counts, hover pictures), centred {%- endcomment -%}
+      {%- render 'category-pills',
+        menu: suggestions_menu,
+        animation: section.settings.pill_image_animation,
+        image_size: section.settings.pill_image_size,
+        centred: true
+      -%}
+    </section>
+  {%- endif -%}
+
+  {%- if suggestions_collection != blank and suggestions_collection.products_count > 0 -%}
+    <section class="search-group" aria-labelledby="SearchPicks-{{ section.id }}">
+      <h2 class="search-group__title" id="SearchPicks-{{ section.id }}">{{ section.settings.suggestions_heading }}</h2>
+      <ul class="collection-grid collection-grid--grid collection-grid--portrait" role="list" style="--grid-columns: 4;">
+        {%- for product in suggestions_collection.products limit: 4 -%}
+          <li class="collection-grid__item">
+            {%- render 'product-card',
+              product: product,
+              style: 'tile',
+              sizes: '(min-width: 990px) 25vw, (min-width: 750px) 50vw, 100vw',
+              heading_tag: 'h3',
+              show_details: section.settings.show_details,
+              show_rating: section.settings.show_rating,
+              show_description: section.settings.show_description,
+              cart_options: section.settings.cart_options
+            -%}
+          </li>
+        {%- endfor -%}
+      </ul>
+    </section>
+  {%- endif -%}
+{%- endcapture -%}
+
+<div
+  class="search-section full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
+>
+  {%- render 'results-view' -%}
+  <results-view class="search-section__inner" data-section-id="{{ section.id }}">
+    <header class="search-hero">
+      <p class="search-hero__eyebrow">{{ 'search.title' | t }}</p>
+      <h1 class="search-hero__title">
+        {%- if search.performed -%}
+          {%- comment -%} The words come from the URL: escape them before they go into an _html string {%- endcomment -%}
+          {%- assign escaped_terms = search.terms | escape -%}
+          {{- 'search.results_for_html' | t: terms: escaped_terms -}}
+        {%- else -%}
+          {{- section.settings.empty_heading | default: heading_default -}}
+        {%- endif -%}
+      </h1>
+
+      <form class="search-hero__form" action="{{ routes.search_url }}" method="get" role="search">
+        <label class="visually-hidden" for="SearchPageInput-{{ section.id }}">{{ 'search.popup.label' | t }}</label>
+        <input
+          class="search-hero__input"
+          id="SearchPageInput-{{ section.id }}"
+          type="search"
+          name="q"
+          value="{{ search.terms | escape }}"
+          placeholder="{{ section.settings.placeholder | default: placeholder_default | escape }}"
+          autocomplete="off"
+        >
+        <button type="submit" class="search-hero__submit">
+          {{- 'icon-search.svg' | inline_asset_content -}}
+          <span class="visually-hidden">{{ 'search.submit' | t }}</span>
+        </button>
+      </form>
+    </header>
+
+    {%- if show_tools -%}
+      <div class="collection-toolbar">
+        <div class="collection-toolbar__start">
+          {%- if show_filters -%}
+            {%- comment -%} No divider on search: the results mix every category {%- endcomment -%}
+            {%- render 'filter-drawer',
+              filters: search.filters,
+              results_url: routes.search_url,
+              section_id: section.id,
+              clear_url: clear_url,
+              results_count: search.results_count,
+              terms: search.terms
+            -%}
+          {%- endif -%}
+        </div>
+
+        <div class="collection-toolbar__end">
+          <p
+            class="collection-toolbar__count"
+            id="SearchCount-{{ section.id }}"
+            aria-live="polite"
+            data-results-text
+          >
+            {{- 'search.results_count' | t: count: search.results_count -}}
+          </p>
+
+          {%- if section.settings.show_sort -%}
+            {%- assign current_sort = search.sort_by | default: search.default_sort_by -%}
+            <div class="collection-sort">
+              <form action="{{ routes.search_url }}" method="get" data-results-form data-results-autoload>
+                <input type="hidden" name="q" value="{{ search.terms | escape }}">
+                <label class="collection-sort__label" for="SearchSortBy-{{ section.id }}">{{ 'collections.sort_by' | t }}</label>
+                <span class="collection-sort__field">
+                  <select
+                    class="collection-sort__select"
+                    id="SearchSortBy-{{ section.id }}"
+                    name="sort_by"
+                    data-default="{{ search.default_sort_by }}"
+                  >
+                    {%- for option in search.sort_options -%}
+                      <option value="{{ option.value }}"{% if option.value == current_sort %} selected{% endif %}>
+                        {{- option.name | escape -}}
+                      </option>
+                    {%- endfor -%}
+                  </select>
+                  {{ 'icon-chevron.svg' | inline_asset_content }}
+                </span>
+                <noscript>
+                  <button type="submit" class="button button--secondary collection-sort__apply">
+                    {{- 'collections.apply' | t -}}
+                  </button>
+                </noscript>
+              </form>
+            </div>
+          {%- endif -%}
+        </div>
+      </div>
+    {%- endif -%}
+
+    {%- if search.performed -%}
+      <div
+        class="collection-results"
+        id="SearchResults-{{ section.id }}"
+        tabindex="-1"
+        data-results-part
+        data-results-main
+      >
+        {%- if filters_active -%}
+          {%- render 'active-filters', filters: search.filters, clear_url: clear_url -%}
+        {%- endif -%}
+
+        {%- if search.results_count == 0 -%}
+          {%- comment -%} Nothing found: say so (filters or the words), offer the way out, then ideas {%- endcomment -%}
+          <div class="collection-empty">
+            <div class="collection-empty__strip">
+              <span class="collection-empty__icon" aria-hidden="true">{{ 'icon-search.svg' | inline_asset_content }}</span>
+              <div class="collection-empty__message">
+                {%- if filters_active -%}
+                  <h2 class="collection-empty__title">{{ 'collections.no_match_title' | t }}</h2>
+                  <p class="collection-empty__text">{{ 'search.no_match_text' | t }}</p>
+                {%- else -%}
+                  <h2 class="collection-empty__title">{{ 'search.no_results_title' | t: terms: search.terms }}</h2>
+                  <p class="collection-empty__text">{{ 'search.no_results_text' | t }}</p>
+                {%- endif -%}
+              </div>
+              <div class="collection-empty__actions">
+                {%- if filters_active -%}
+                  <a class="button" href="{{ clear_url }}" data-results-link>{{ 'collections.clear_filters' | t }}</a>
+                {%- else -%}
+                  <a class="button" href="{{ routes.all_products_collection_url }}">{{ 'collections.continue_shopping' | t }}</a>
+                {%- endif -%}
+              </div>
             </div>
           </div>
-        {% endfor %}
+          {%- unless filters_active -%}
+            {{ search_suggestions }}
+          {%- endunless -%}
+        {%- else -%}
+          {%- paginate search.results by section.settings.results_per_page -%}
+            {%- liquid
+              # This page's results, split by kind. Shopify's search returns products, articles and pages;
+              # collections are found here by name (below), on the first page only.
+              assign page_products = search.results | where: 'object_type', 'product'
+              assign page_articles = search.results | where: 'object_type', 'article'
+              assign page_pages = search.results | where: 'object_type', 'page'
 
-        {{ paginate | default_pagination }}
-      {% endpaginate %}
-    </div>
-  {% endif %}
-{% endif %}
+              # Collections whose name contains the searched words ("skin" finds Skincare); empty ones left out
+              assign terms_lower = search.terms | downcase | strip
+              assign collection_matches = 0
+              if paginate.current_page == 1
+                unless filters_active
+                  for item in collections
+                    assign item_title = item.title | downcase
+                    if item_title contains terms_lower and item.all_products_count > 0
+                      assign collection_matches = collection_matches | plus: 1
+                    endif
+                  endfor
+                endunless
+              endif
+            -%}
+
+            {%- if page_products.size > 0 -%}
+              <section class="search-group" aria-labelledby="SearchProducts-{{ section.id }}">
+                <h2 class="search-group__title" id="SearchProducts-{{ section.id }}">{{ 'search.products' | t }}</h2>
+                <div class="collection-grid-wrap">
+                  <ul
+                    class="collection-grid collection-grid--grid collection-grid--{{ section.settings.image_ratio | default: 'portrait' }}"
+                    role="list"
+                    style="--grid-columns: {{ section.settings.columns_desktop }};"
+                  >
+                    {%- for product in page_products -%}
+                      {%- liquid
+                        # The first row may be above the fold: load those photos straight away
+                        assign card_loading = 'lazy'
+                        if forloop.index <= section.settings.columns_desktop
+                          assign card_loading = 'eager'
+                        endif
+                      -%}
+                      <li class="collection-grid__item">
+                        {%- render 'product-card',
+                          product: product,
+                          style: 'tile',
+                          sizes: '(min-width: 990px) 25vw, (min-width: 750px) 50vw, 100vw',
+                          heading_tag: 'h3',
+                          loading: card_loading,
+                          show_details: section.settings.show_details,
+                          show_rating: section.settings.show_rating,
+                          show_description: section.settings.show_description,
+                          cart_options: section.settings.cart_options
+                        -%}
+                      </li>
+                    {%- endfor -%}
+                  </ul>
+                </div>
+              </section>
+            {%- endif -%}
+
+            {%- if collection_matches > 0 -%}
+              <section class="search-group" aria-labelledby="SearchCollections-{{ section.id }}">
+                <h2 class="search-group__title" id="SearchCollections-{{ section.id }}">{{ 'search.collections' | t }}</h2>
+                <ul class="result-cards" role="list">
+                  {%- for item in collections -%}
+                    {%- assign item_title = item.title | downcase -%}
+                    {%- if item_title contains terms_lower and item.all_products_count > 0 -%}
+                      <li class="result-card">
+                        <a class="result-card__link" href="{{ item.url }}">
+                          <div class="result-card__media">
+                            {%- if item.featured_image != blank -%}
+                              {{ item.featured_image | image_url: width: 800 | image_tag: widths: '400, 600, 800', sizes: '(min-width: 990px) 33vw, (min-width: 750px) 50vw, 100vw', loading: 'lazy', alt: '' }}
+                            {%- endif -%}
+                          </div>
+                          <div class="result-card__body">
+                            <p class="result-card__meta">{{ 'collections.products_count' | t: count: item.all_products_count }}</p>
+                            <h3 class="result-card__title">{{ item.title | escape }}</h3>
+                          </div>
+                        </a>
+                      </li>
+                    {%- endif -%}
+                  {%- endfor -%}
+                </ul>
+              </section>
+            {%- endif -%}
+
+            {%- if page_articles.size > 0 -%}
+              <section class="search-group" aria-labelledby="SearchArticles-{{ section.id }}">
+                <h2 class="search-group__title" id="SearchArticles-{{ section.id }}">{{ 'search.articles' | t }}</h2>
+                <ul class="result-cards" role="list">
+                  {%- for article in page_articles -%}
+                    <li class="result-card">
+                      <a class="result-card__link" href="{{ article.url }}">
+                        <div class="result-card__media">
+                          {%- if article.image != blank -%}
+                            {{ article.image | image_url: width: 800 | image_tag: widths: '400, 600, 800', sizes: '(min-width: 990px) 33vw, (min-width: 750px) 50vw, 100vw', loading: 'lazy', alt: '' }}
+                          {%- endif -%}
+                        </div>
+                        <div class="result-card__body">
+                          <p class="result-card__meta">
+                            {{- 'search.type_article' | t }} · {{ article.published_at | time_tag: format: 'date' -}}
+                          </p>
+                          <h3 class="result-card__title">{{ article.title | escape }}</h3>
+                          <p class="result-card__excerpt">{{ article.excerpt_or_content | strip_html | truncatewords: 18 }}</p>
+                        </div>
+                      </a>
+                    </li>
+                  {%- endfor -%}
+                </ul>
+              </section>
+            {%- endif -%}
+
+            {%- if page_pages.size > 0 -%}
+              <section class="search-group" aria-labelledby="SearchPages-{{ section.id }}">
+                <h2 class="search-group__title" id="SearchPages-{{ section.id }}">{{ 'search.pages' | t }}</h2>
+                <ul class="result-cards result-cards--text" role="list">
+                  {%- for page_result in page_pages -%}
+                    <li class="result-card">
+                      <a class="result-card__link" href="{{ page_result.url }}">
+                        <div class="result-card__body">
+                          <p class="result-card__meta">{{ 'search.type_page' | t }}</p>
+                          <h3 class="result-card__title">{{ page_result.title | escape }}</h3>
+                          <p class="result-card__excerpt">{{ page_result.content | strip_html | truncatewords: 22 }}</p>
+                          <span class="result-card__more">
+                            {{- 'search.read_more' | t -}}
+                            {{- 'icon-arrow.svg' | inline_asset_content -}}
+                          </span>
+                        </div>
+                      </a>
+                    </li>
+                  {%- endfor -%}
+                </ul>
+              </section>
+            {%- endif -%}
+
+            {%- if paginate.pages > 1 -%}
+              {%- render 'pagination', paginate: paginate -%}
+            {%- endif -%}
+          {%- endpaginate -%}
+        {%- endif -%}
+      </div>
+    {%- else -%}
+      {%- comment -%} No search yet (/search or ?q= empty): ideas to start with {%- endcomment -%}
+      {{ search_suggestions }}
+    {%- endif -%}
+  </results-view>
+</div>
 
 {% stylesheet %}
-  .search-results {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  .search-section {
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
   }
-  .search-results .prev,
-  .search-results .page,
-  .search-results .next {
-    grid-column: 1 / -1;
+
+  .search-section__inner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+    scroll-margin-block-start: 7.5rem; /* after a page change it scrolls here: leave room for the sticky header pill */
+  }
+
+  /* Heading + search box, centred like the collection banner's sentence */
+  .search-hero {
+    display: grid;
+    justify-items: center;
+    gap: var(--space-md);
+    padding-block: var(--space-xl) var(--space-lg);
+    text-align: center;
+  }
+
+  /* The section eyebrow pattern: a short red rule, then the uppercase label */
+  .search-hero__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin: 0;
+    color: var(--color-primary);
+    font-size: var(--font-size-label);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  .search-hero__eyebrow::before {
+    content: '';
+    inline-size: 4.125rem; /* 66px */
+    block-size: 2px;
+    background-color: currentColor;
+  }
+
+  .search-hero__title {
+    max-inline-size: 48rem;
+    margin: 0;
+    font-size: var(--font-size-h1);
+    line-height: var(--line-height-heading);
+  }
+
+  /* The searched words in red italic, like the highlighted words in the banners */
+  .search-hero__title em {
+    color: var(--color-primary);
+  }
+
+  .search-hero__form {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    inline-size: min(40rem, 100%);
+    margin-block-start: var(--space-sm);
+    padding: var(--space-2xs) var(--space-2xs) var(--space-2xs) var(--space-lg);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-glass-strong);
+    box-shadow: var(--shadow-header);
+    -webkit-backdrop-filter: blur(var(--glass-frost));
+    backdrop-filter: blur(var(--glass-frost));
+  }
+
+  .search-hero__form:focus-within {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  /*
+    .search-hero in front: critical.css styles input[type="search"] and button[type="submit"] (a class +
+    an element, which beats a class alone), so these rules need two classes to win.
+    margin 0: critical.css spaces a control that follows a label (the M7.7 magnifier lesson).
+  */
+  .search-hero .search-hero__input {
+    flex: 1;
+    min-inline-size: 0;
+    min-block-size: 3rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--color-text);
+    font: inherit;
+    font-size: var(--font-size-body);
+  }
+
+  .search-hero .search-hero__input:focus-visible {
+    outline: none;
+  }
+
+  /* The browser's own × in search boxes: hidden (it doesn't match the design; clearing the words is easy) */
+  .search-hero__input::-webkit-search-cancel-button,
+  .search-hero__input::-webkit-search-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  /* margin 0: critical.css adds space above a control that follows another (here: the input) */
+  .search-hero .search-hero__submit {
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    inline-size: 3rem;
+    min-block-size: 0;
+    block-size: 3rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-primary);
+    box-shadow: none;
+    color: var(--color-background);
+    cursor: pointer;
+  }
+
+  .search-hero__submit svg {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+  }
+
+  /* SORT: here a hidden q input comes before the label, which gave it critical.css's spacing */
+  .search-section .collection-sort__label {
+    margin: 0;
+  }
+
+  /* Results groups: Products, Collections, Articles, Pages, each with a section-size heading */
+  .search-group {
+    display: grid;
+    gap: var(--space-lg);
+  }
+
+  .search-group + .search-group {
+    margin-block-start: var(--space-2xl);
+  }
+
+  .search-group__title {
+    margin: 0;
+    font-size: var(--font-size-h2);
+    line-height: var(--line-height-heading);
+  }
+
+  .search-group__title em {
+    color: var(--color-primary);
+  }
+
+  .search-group--centred {
+    justify-items: center;
+    text-align: center;
+  }
+
+  /* Collection, article and page cards: 3 per row on desktop, the whole card is one link */
+  .result-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(20rem, 100%), 1fr));
+    gap: var(--space-xl);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .result-card__link {
+    display: flex;
+    flex-direction: column;
+    block-size: 100%;
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    background-color: color-mix(in srgb, var(--color-text) 3%, var(--color-background));
+    box-shadow: var(--shadow-card);
+    color: var(--color-text);
+    text-decoration: none;
+    transition:
+      box-shadow var(--duration-fast) var(--ease-out),
+      translate var(--duration-fast) var(--ease-out);
+  }
+
+  .result-card__link:hover {
+    box-shadow: var(--shadow-card-rose);
+    translate: 0 -2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .result-card__link:hover {
+      translate: none;
+    }
+  }
+
+  .result-card__media {
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    background-color: color-mix(in srgb, var(--color-primary) 6%, var(--color-background));
+  }
+
+  .result-card__media img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .result-card__body {
+    display: grid;
+    flex: 1;
+    align-content: start;
+    gap: var(--space-xs);
+    padding: var(--space-lg);
+  }
+
+  .result-card__meta,
+  .result-card__title,
+  .result-card__excerpt {
+    margin: 0;
+  }
+
+  .result-card__meta {
+    color: var(--color-primary);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-nav);
+    text-transform: uppercase;
+  }
+
+  .result-card__title {
+    font-size: var(--font-size-h3);
+    line-height: var(--line-height-heading);
+  }
+
+  .result-card__excerpt {
+    color: color-mix(in srgb, var(--color-text) 80%, var(--color-background));
+    font-size: var(--font-size-caption);
+  }
+
+  .result-card__more {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin-block-start: var(--space-xs);
+    color: var(--color-primary);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .result-card__more svg {
+    inline-size: 1rem;
+    block-size: 1rem;
   }
 {% endstylesheet %}
 
 {% schema %}
 {
   "name": "t:general.search",
-  "settings": []
+  "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.toolbar_group"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_filters",
+      "label": "t:labels.show_filters",
+      "info": "t:labels.show_filters_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_sort",
+      "label": "t:labels.show_sort",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.search_suggestions_group"
+    },
+    {
+      "type": "text",
+      "id": "empty_heading",
+      "label": "t:labels.search_empty_heading",
+      "default": "What are you looking for?"
+    },
+    {
+      "type": "text",
+      "id": "placeholder",
+      "label": "t:labels.search_placeholder",
+      "default": "Search for skincare, fragrances, makeup products…"
+    },
+    {
+      "type": "text",
+      "id": "categories_heading",
+      "label": "t:labels.search_categories_heading",
+      "default": "Popular categories"
+    },
+    {
+      "type": "link_list",
+      "id": "suggestions_menu",
+      "label": "t:labels.search_suggestions_menu",
+      "info": "t:labels.search_suggestions_menu_info"
+    },
+    {
+      "type": "select",
+      "id": "pill_image_animation",
+      "label": "t:labels.pill_image_animation",
+      "options": [
+        { "value": "collection-pills--image-rise", "label": "t:options.pill_image_animation.rise" },
+        { "value": "collection-pills--image-scale", "label": "t:options.pill_image_animation.scale" },
+        { "value": "collection-pills--image-fade", "label": "t:options.pill_image_animation.fade" }
+      ],
+      "default": "collection-pills--image-rise",
+      "visible_if": "{{ section.settings.suggestions_menu != blank }}"
+    },
+    {
+      "type": "range",
+      "id": "pill_image_size",
+      "label": "t:labels.pill_image_size",
+      "min": 100,
+      "max": 300,
+      "step": 10,
+      "unit": "px",
+      "default": 180,
+      "visible_if": "{{ section.settings.suggestions_menu != blank }}"
+    },
+    {
+      "type": "collection",
+      "id": "suggestions_collection",
+      "label": "t:labels.collection_empty_products",
+      "info": "t:labels.search_suggestions_collection_info"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "suggestions_heading",
+      "label": "t:labels.heading",
+      "default": "You might <em>love</em>"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.layout"
+    },
+    {
+      "type": "range",
+      "id": "results_per_page",
+      "label": "t:labels.results_per_page",
+      "min": 4,
+      "max": 48,
+      "step": 1,
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "columns_desktop",
+      "label": "t:labels.columns_desktop",
+      "min": 2,
+      "max": 5,
+      "step": 1,
+      "default": 4
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "t:labels.image_ratio",
+      "options": [
+        {
+          "value": "portrait",
+          "label": "t:options.image_shape.portrait"
+        },
+        {
+          "value": "square",
+          "label": "t:options.image_shape.square"
+        },
+        {
+          "value": "landscape",
+          "label": "t:options.image_shape.landscape"
+        }
+      ],
+      "default": "portrait"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.card_details_group"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_details",
+      "label": "t:labels.show_card_details",
+      "info": "t:labels.show_card_details_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_rating",
+      "label": "t:labels.show_card_rating",
+      "info": "t:labels.show_card_rating_info",
+      "default": true,
+      "visible_if": "{{ section.settings.show_details }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_description",
+      "label": "t:labels.show_card_description",
+      "default": true,
+      "visible_if": "{{ section.settings.show_details }}"
+    },
+    {
+      "type": "select",
+      "id": "cart_options",
+      "label": "t:labels.cart_options",
+      "info": "t:labels.cart_options_info",
+      "options": [
+        {
+          "value": "add_first",
+          "label": "t:options.cart_options.add_first"
+        },
+        {
+          "value": "link",
+          "label": "t:options.cart_options.link"
+        }
+      ],
+      "default": "add_first",
+      "visible_if": "{{ section.settings.show_details }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 96
+    }
+  ]
 }
 {% endschema %}

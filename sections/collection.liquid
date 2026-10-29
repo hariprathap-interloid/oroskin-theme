@@ -43,9 +43,11 @@
   style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --grid-columns: {{ section.settings.columns_desktop }};"
 >
   {%- comment -%}
-    <results-view> (script below) reloads the results in place when the sort or the filters change, or an
-    active-filter pill is removed: Section Rendering API, then it swaps every [data-results-part] by id.
+    <results-view> (snippets/results-view.liquid) reloads the results in place when the sort or the filters
+    change, a filter pill is removed or the page changes: Section Rendering API, then it swaps every
+    [data-results-part] by id.
   {%- endcomment -%}
+  {%- render 'results-view' -%}
   <results-view class="collection-section__inner" data-section-id="{{ section.id }}">
     {%- if section.settings.show_title -%}
       <h1 class="collection-section__title">{{ collection.title | escape }}</h1>
@@ -102,103 +104,29 @@
       <div class="collection-toolbar">
         <div class="collection-toolbar__start">
         {%- if show_filters -%}
+          {%- liquid
+            # The divider names the category ("Makeup filters"); All products isn't a category, so no divider there
+            assign category_label = ''
+            if collection.handle != 'all'
+              assign category_label = 'collections.category_filters' | t: title: collection.title
+            endif
+          -%}
           {%- render 'filter-drawer',
             filters: collection.filters,
             results_url: collection.url,
             section_id: section.id,
-            clear_url: clear_url
+            clear_url: clear_url,
+            results_count: collection.products_count,
+            category_label: category_label
           -%}
         {%- endif -%}
 
         {%- if show_pills -%}
-          <nav
-            class="collection-pills {{ section.settings.pill_image_animation }}"
-            style="--pill-image-size: {{ section.settings.pill_image_size }}px;"
-            aria-label="{{ 'collections.categories' | t }}">
-            <ul class="collection-pills__list" role="list">
-              {%- if section.settings.show_all_pill -%}
-                {%- liquid
-                  assign all_count = collections.all.all_products_count
-                  # "All" isn't a real collection with a metafield, so its cut-out is a section setting
-                  assign all_image = section.settings.all_pill_image
-                  assign all_cutout = true
-                  if all_image == blank
-                    assign all_image = collections.all.featured_image
-                    assign all_cutout = false
-                  endif
-                -%}
-                <li>
-                  <a
-                    class="collection-pill{% if collection.handle == 'all' %} collection-pill--active{% endif %}"
-                    href="{{ routes.all_products_collection_url }}"
-                    {% if collection.handle == 'all' %}
-                      aria-current="page"
-                    {% endif %}
-                  >
-                    {%- if all_image != blank -%}
-                      <span
-                        class="collection-pill__media{% if all_cutout %} collection-pill__media--cutout{% endif %}"
-                        aria-hidden="true"
-                      >
-                        {{- all_image | image_url: width: 300 | image_tag: loading: 'lazy', alt: '', widths: '160, 300', sizes: '160px' -}}
-                      </span>
-                    {%- endif -%}
-                    {{- 'collections.all' | t -}}
-                    <span class="collection-pill__count" aria-hidden="true">{{ all_count }}</span>
-                    <span class="visually-hidden">{{ 'collections.products_count' | t: count: all_count }}</span>
-                  </a>
-                </li>
-              {%- endif -%}
-
-              {%- for link in pills_menu.links -%}
-                {%- liquid
-                  # The number: the linked collection's total (all_products_count ignores filters, so
-                  # it stays the same while the visitor filters this page). Other link types get none.
-                  assign pill_count = nil
-                  # The hover image: the collection's "Pill image" metafield (a cut-out PNG),
-                  # or else its own image (or first product's) shown as a small rounded photo.
-                  assign pill_image = nil
-                  assign pill_cutout = false
-                  case link.type
-                    when 'collection_link'
-                      assign pill_count = link.object.all_products_count
-                      assign pill_image = link.object.metafields.custom.pill_image.value
-                      if pill_image != blank
-                        assign pill_cutout = true
-                      else
-                        assign pill_image = link.object.featured_image
-                      endif
-                    when 'catalog_link'
-                      assign pill_count = collections.all.all_products_count
-                      assign pill_image = collections.all.featured_image
-                  endcase
-                -%}
-                <li>
-                  <a
-                    class="collection-pill{% if link.current %} collection-pill--active{% endif %}"
-                    href="{{ link.url }}"
-                    {% if link.current %}
-                      aria-current="page"
-                    {% endif %}
-                  >
-                    {%- if pill_image != blank -%}
-                      <span
-                        class="collection-pill__media{% if pill_cutout %} collection-pill__media--cutout{% endif %}"
-                        aria-hidden="true"
-                      >
-                        {{- pill_image | image_url: width: 300 | image_tag: loading: 'lazy', alt: '', widths: '160, 300', sizes: '160px' -}}
-                      </span>
-                    {%- endif -%}
-                    {{- link.title | escape -}}
-                    {%- if pill_count != nil -%}
-                      <span class="collection-pill__count" aria-hidden="true">{{ pill_count }}</span>
-                      <span class="visually-hidden">{{ 'collections.products_count' | t: count: pill_count }}</span>
-                    {%- endif -%}
-                  </a>
-                </li>
-              {%- endfor -%}
-            </ul>
-          </nav>
+          {%- render 'category-pills',
+            menu: pills_menu,
+            animation: section.settings.pill_image_animation,
+            image_size: section.settings.pill_image_size
+          -%}
         {%- endif -%}
         </div>
 
@@ -262,6 +190,7 @@
       id="CollectionResults-{{ section.id }}"
       tabindex="-1"
       data-results-part
+      data-results-main
     >
     {%- if filters_active -%}
       {%- render 'active-filters', filters: collection.filters, clear_url: clear_url -%}
@@ -492,11 +421,6 @@
     max-inline-size: 100%;
   }
 
-  .collection-pills {
-    min-inline-size: 0;
-    max-inline-size: 100%;
-  }
-
   /* Results and active-filter pills, stacked; the focus target after a pill is removed shows no ring */
   .collection-results {
     display: flex;
@@ -506,173 +430,6 @@
 
   .collection-results:focus {
     outline: none;
-  }
-
-  .collection-pills__list {
-    display: flex;
-    margin: 0;
-    padding: 0.25rem; /* room for the focus ring and shadow inside the scroll box */
-    overflow-x: auto;
-    list-style: none;
-    scrollbar-width: none;
-    scroll-snap-type: x proximity;
-  }
-
-  /* The side padding is the gap between a divider and the hover glass (Figma ~10px) */
-  .collection-pills__list > li {
-    position: relative;
-    flex: none;
-    padding-inline: var(--space-xs);
-    scroll-snap-align: start;
-  }
-
-  /* Figma: plain text links with a short divider between them */
-  .collection-pills__list > li + li::before {
-    content: '';
-    position: absolute;
-    inset-block: 20%;
-    inset-inline-start: 0;
-    border-inline-start: 1px solid color-mix(in srgb, var(--color-primary) 15%, transparent);
-  }
-
-  /*
-    A text link (Figma ~50px tall) that becomes a glass pill on hover; the count is the small
-    raised red number ("Fragrance 12"). Three layers, back to front: the hover image, the glass
-    (::after), the text. The glass is a pseudo-element rather than the link's own background so
-    it can sit over the image and frost it.
-  */
-  .collection-pill {
-    position: relative;
-    isolation: isolate;
-    display: inline-flex;
-    align-items: flex-start;
-    gap: 0.2em;
-    padding: 0.85rem var(--space-lg);
-    border-radius: var(--radius-pill);
-    color: var(--color-text);
-    font-size: var(--font-size-body);
-    font-weight: var(--font-weight-medium);
-    line-height: 1.2;
-    text-decoration: none;
-    transition: color var(--duration-fast) var(--ease-out);
-  }
-
-  .collection-pill::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
-    border-radius: inherit;
-    background-color: var(--color-glass);
-    box-shadow: var(--shadow-header);
-    opacity: 0;
-    transition: opacity var(--duration-fast) var(--ease-out);
-    -webkit-backdrop-filter: blur(var(--glass-frost));
-    backdrop-filter: blur(var(--glass-frost));
-  }
-
-  /* Hovered pill on top of its neighbours (and the dividers), so nothing covers its image */
-  .collection-pill:hover,
-  .collection-pill:focus-visible {
-    z-index: 1;
-  }
-
-  .collection-pill:hover::after,
-  .collection-pill:focus-visible::after {
-    opacity: 1;
-  }
-
-  /* The page you're on: red text (the Figma frame shows no active style; aria-current tells screen readers) */
-  .collection-pill--active {
-    color: var(--color-primary);
-  }
-
-  .collection-pill__count {
-    color: var(--color-primary);
-    font-size: 0.65em;
-    font-variant-numeric: tabular-nums;
-  }
-
-  /*
-    The hover image rises from behind the pill and grows (Figma hover frames). Only on
-    devices with a mouse and room for it: on phones the pills scroll, which would clip it,
-    and display: none also stops the lazy image from downloading there.
-  */
-  .collection-pill__media {
-    display: none;
-  }
-
-  @media (hover: hover) and (min-width: 750px) {
-    .collection-pills__list {
-      flex-wrap: wrap;
-      overflow: visible; /* a scroll box would clip the image */
-    }
-
-    .collection-pill__media {
-      position: absolute;
-      inset-block-start: 50%;
-      inset-inline-start: 50%;
-      z-index: -1;
-      display: block;
-      /* "Pill image size" = the cut-out's height; a rounded photo is a bit smaller */
-      inline-size: calc(var(--pill-image-size, 180px) * 0.6);
-      block-size: calc(var(--pill-image-size, 180px) * 0.7);
-      border-radius: var(--radius-sm);
-      overflow: hidden;
-      opacity: 0;
-      translate: -50% -40%;
-      scale: 0.4;
-      transform-origin: 50% 100%;
-      pointer-events: none;
-      transition:
-        opacity var(--duration-base) var(--ease-out),
-        translate var(--duration-normal) var(--ease-out),
-        scale var(--duration-normal) var(--ease-out);
-    }
-
-    /* A cut-out PNG: bigger, no rounded box, the bottle stands behind the glass */
-    .collection-pill__media--cutout {
-      inline-size: calc(var(--pill-image-size, 180px) * 0.85);
-      block-size: var(--pill-image-size, 180px);
-      border-radius: 0;
-    }
-
-    .collection-pill__media img {
-      inline-size: 100%;
-      block-size: 100%;
-      object-fit: cover;
-    }
-
-    .collection-pill__media--cutout img {
-      object-fit: contain;
-    }
-
-    /* "Pill image animation": the start state differs, the end state (below) is shared */
-    .collection-pills--image-scale .collection-pill__media {
-      translate: -50% -60%; /* already in place, only grows from its centre */
-      transform-origin: 50% 50%;
-    }
-
-    .collection-pills--image-fade .collection-pill__media {
-      translate: -50% -60%;
-      scale: 1;
-    }
-
-    .collection-pill:hover .collection-pill__media,
-    .collection-pill:focus-visible .collection-pill__media {
-      opacity: 1;
-      translate: -50% -60%;
-      scale: 1;
-    }
-  }
-
-  /* Reduced motion: the image fades in where it ends up, without rising or growing */
-  @media (prefers-reduced-motion: reduce) {
-    .collection-pill__media {
-      translate: -50% -60%;
-      scale: 1;
-    }
   }
 
   .collection-toolbar__end {
@@ -749,6 +506,92 @@
     inline-size: 0.625rem;
     block-size: 0.625rem;
     pointer-events: none;
+  }
+
+  /*
+    The open list. Browsers that support the customisable <select> (appearance: base-select, Chrome/Edge
+    135+) draw it in the theme's style: a white rounded panel with a soft shadow under the SORT pill, roomy
+    options, the chosen one in red with a light red background (no blue system highlight). Other browsers
+    keep their own list; the select still works the same everywhere.
+  */
+  @supports (appearance: base-select) {
+    .collection-sort .collection-sort__select,
+    .collection-sort .collection-sort__select::picker(select) {
+      appearance: base-select;
+    }
+
+    /* In this mode the select is a flex box that puts its text at the top: centre it beside SORT */
+    .collection-sort .collection-sort__select {
+      align-items: center;
+    }
+
+    /* We draw our own chevron (the svg above), so hide the built-in one */
+    .collection-sort .collection-sort__select::picker-icon {
+      display: none;
+    }
+
+    .collection-sort .collection-sort__select::picker(select) {
+      min-inline-size: 14rem;
+      margin-block-start: var(--space-sm);
+      padding: var(--space-xs);
+      border: 1px solid color-mix(in srgb, var(--color-primary) 15%, transparent);
+      border-radius: var(--radius-sm);
+      background-color: var(--color-background);
+      box-shadow: var(--shadow-panel);
+      opacity: 0;
+      translate: 0 -0.25rem;
+      transition:
+        opacity var(--duration-fast) var(--ease-out),
+        translate var(--duration-fast) var(--ease-out),
+        display var(--duration-fast) allow-discrete,
+        overlay var(--duration-fast) allow-discrete;
+    }
+
+    .collection-sort .collection-sort__select:open::picker(select) {
+      opacity: 1;
+      translate: 0 0;
+    }
+
+    @starting-style {
+      .collection-sort .collection-sort__select:open::picker(select) {
+        opacity: 0;
+        translate: 0 -0.25rem;
+      }
+    }
+
+    .collection-sort .collection-sort__select option {
+      padding: var(--space-xs) var(--space-md);
+      border-radius: var(--radius-xs);
+      color: var(--color-text);
+      font-size: var(--font-size-caption);
+      cursor: pointer;
+    }
+
+    /* The chosen option's tick: hidden, the red text and background say it instead */
+    .collection-sort .collection-sort__select option::checkmark {
+      display: none;
+    }
+
+    /* Hover / keyboard focus: red, medium weight, light tint (like the chosen option, a shade lighter) */
+    .collection-sort .collection-sort__select option:hover,
+    .collection-sort .collection-sort__select option:focus-visible {
+      outline: none;
+      background-color: color-mix(in srgb, var(--color-primary) 6%, var(--color-background));
+      color: var(--color-primary);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .collection-sort .collection-sort__select option:checked {
+      background-color: color-mix(in srgb, var(--color-primary) 10%, var(--color-background));
+      color: var(--color-primary);
+      font-weight: var(--font-weight-medium);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .collection-sort .collection-sort__select::picker(select) {
+      transition: none;
+    }
   }
 
   .collection-sort__apply {
@@ -857,47 +700,44 @@
   }
 
   /*
-    Empty collection: the empty bag's glass strip (icon, message, buttons on one line), then suggestions.
+    Empty states (empty collection, filters that match nothing, and the search page's "No results"):
+    a plain centred message, the usual "nothing found" page. A soft round icon, the heading in the heading
+    font, one line of help, then the buttons. The empty collection's suggestions follow underneath.
+    (The cart keeps its own glass strip.)
   */
   .collection-empty {
     display: grid;
     gap: var(--space-3xl);
+    padding-block: var(--space-2xl) var(--space-xl);
   }
 
   .collection-empty__strip {
-    display: flex;
-    align-items: center;
+    display: grid;
+    justify-items: center;
     gap: var(--space-lg);
-    padding-block: var(--space-lg);
-    padding-inline: var(--space-xl);
-    border-radius: var(--radius-lg);
-    background-color: var(--color-glass-strong);
-    box-shadow: var(--glass-shadow), var(--glass-rim);
-    -webkit-backdrop-filter: blur(var(--glass-frost));
-    backdrop-filter: blur(var(--glass-frost));
+    max-inline-size: 36rem;
+    margin-inline: auto;
+    text-align: center;
   }
 
   .collection-empty__icon {
     display: grid;
-    flex: none;
     place-items: center;
-    inline-size: 3.5rem;
-    block-size: 3.5rem;
+    inline-size: 5.5rem;
+    block-size: 5.5rem;
     border-radius: var(--radius-pill);
-    background-color: color-mix(in srgb, var(--color-accent) 18%, transparent);
+    background-color: color-mix(in srgb, var(--color-primary) 8%, var(--color-background));
     color: var(--color-primary);
   }
 
   .collection-empty__icon svg {
-    inline-size: 1.25rem;
-    block-size: 1.25rem;
+    inline-size: 2rem;
+    block-size: 2rem;
   }
 
   .collection-empty__message {
     display: grid;
-    flex: 1;
-    gap: var(--space-2xs);
-    min-inline-size: 0;
+    gap: var(--space-sm);
   }
 
   .collection-empty__title,
@@ -907,16 +747,19 @@
   }
 
   .collection-empty__title {
-    font-size: var(--font-size-h3);
+    font-size: var(--font-size-h2);
+    line-height: var(--line-height-heading);
   }
 
   .collection-empty__text {
     color: color-mix(in srgb, var(--color-text) 80%, var(--color-background));
+    font-size: var(--font-size-body);
   }
 
   .collection-empty__actions {
     display: flex;
-    flex: none;
+    flex-wrap: wrap;
+    justify-content: center;
     align-items: center;
     gap: var(--space-sm) var(--space-lg);
   }
@@ -937,137 +780,7 @@
   .collection-empty__picks-title em {
     color: var(--color-primary);
   }
-
-  /* Phones: the strip stacks, like the empty bag */
-  @media (max-width: 749px) {
-    .collection-empty__strip {
-      flex-direction: column;
-      align-items: flex-start;
-      padding: var(--space-lg);
-    }
-
-    .collection-empty__actions {
-      flex-wrap: wrap;
-    }
-  }
 {% endstylesheet %}
-
-{% javascript %}
-  /**
-   * <results-view>: reloads only this section's results, not the whole page, when the visitor
-   * - changes the sort (a form with data-results-autoload),
-   * - applies filters (<filter-drawer> sends a 'results:load' event),
-   * - removes an active filter or clears them all (links with data-results-link),
-   * - goes Back / Forward.
-   *
-   * The URL is built from every form with data-results-form (sort + filters), so the two always combine:
-   * /collections/skincare?filter.p.vendor=Oroskin&sort_by=price-ascending
-   * Section Rendering API: that URL + &section_id=<id> returns just this section's HTML, already filtered and
-   * sorted by Shopify. Every [data-results-part] is replaced by the new one with the same id; a
-   * [data-results-text] only gets its text changed (the count, so its aria-live announces it).
-   * The URL goes in the address bar, so the page can be shared and reloaded, and pagination keeps the choices.
-   * If anything fails, it falls back to a normal page load of the URL.
-   */
-  class ResultsView extends HTMLElement {
-    connectedCallback() {
-      this.sectionId = this.dataset.sectionId;
-
-      this.addEventListener('results:load', () => this.load(this.buildUrl(), true));
-
-      this.addEventListener('change', (event) => {
-        if (event.target.form?.hasAttribute('data-results-autoload')) this.load(this.buildUrl(), true);
-      });
-
-      this.addEventListener('submit', (event) => {
-        if (!event.target.hasAttribute('data-results-autoload')) return;
-        event.preventDefault();
-        this.load(this.buildUrl(), true);
-      });
-
-      this.addEventListener('click', (event) => {
-        const link = event.target.closest('a[data-results-link]');
-        if (!link) return;
-        event.preventDefault();
-        // Page links (data-results-scroll): the new page starts at the top of the results, not at the pagination
-        this.load(link.href, true, link.hasAttribute('data-results-scroll'));
-      });
-
-      this.onPopState = () => this.load(window.location.href, false);
-      window.addEventListener('popstate', this.onPopState);
-    }
-
-    disconnectedCallback() {
-      window.removeEventListener('popstate', this.onPopState);
-      this.controller?.abort();
-    }
-
-    // Every non-empty field of the sort and filter forms (an empty price box means "no limit"; the
-    // collection's own default sort needs no parameter); a new choice always starts again at page 1,
-    // so the page number is left out
-    buildUrl() {
-      const forms = this.querySelectorAll('form[data-results-form]');
-      const defaultSort = this.querySelector('select[name="sort_by"]')?.dataset.default;
-      const params = new URLSearchParams();
-      forms.forEach((form) => {
-        for (const [key, value] of new FormData(form)) {
-          if (value === '' || (key === 'sort_by' && value === defaultSort)) continue;
-          params.append(key, value);
-        }
-      });
-      const action = forms[0]?.action || window.location.pathname;
-      return `${action}?${params}`;
-    }
-
-    async load(url, addToHistory, scrollToTop = false) {
-      this.controller?.abort();
-      this.controller = new AbortController();
-
-      const results = document.getElementById(`CollectionResults-${this.sectionId}`);
-      const hadFocus = results?.contains(document.activeElement);
-      results?.setAttribute('aria-busy', 'true');
-
-      try {
-        const sectionUrl = new URL(url, window.location.origin);
-        sectionUrl.searchParams.set('section_id', this.sectionId);
-        const response = await fetch(sectionUrl, { signal: this.controller.signal });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const html = new DOMParser().parseFromString(await response.text(), 'text/html');
-
-        this.querySelectorAll('[data-results-part]').forEach((part) => {
-          const fresh = html.getElementById(part.id);
-          if (fresh) part.replaceWith(fresh);
-        });
-
-        this.querySelectorAll('[data-results-text]').forEach((part) => {
-          const fresh = html.getElementById(part.id);
-          if (fresh) part.textContent = fresh.textContent;
-        });
-
-        if (addToHistory) window.history.pushState({}, '', url);
-
-        // Back / Forward: the sort select isn't replaced, so set it to match the URL
-        const select = this.querySelector('select[name="sort_by"]');
-        if (select && !addToHistory) {
-          select.value = new URL(url, window.location.origin).searchParams.get('sort_by') || select.dataset.default;
-        }
-
-        // The clicked pill, "Clear all" or page link was inside the old results: put focus on the new ones
-        if (hadFocus) document.getElementById(`CollectionResults-${this.sectionId}`)?.focus({ preventScroll: true });
-        if (scrollToTop) {
-          const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-          this.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' });
-        }
-      } catch (error) {
-        if (error.name === 'AbortError') return;
-        window.location.href = url;
-      } finally {
-        results?.removeAttribute('aria-busy');
-      }
-    }
-  }
-
-  if (!customElements.get('results-view')) customElements.define('results-view', ResultsView);
-{% endjavascript %}
 
 {% schema %}
 {
@@ -1096,20 +809,6 @@
       "label": "t:labels.category_pills_menu",
       "info": "t:labels.category_pills_menu_info",
       "visible_if": "{{ section.settings.show_pills }}"
-    },
-    {
-      "type": "checkbox",
-      "id": "show_all_pill",
-      "label": "t:labels.show_all_pill",
-      "default": true,
-      "visible_if": "{{ section.settings.show_pills }}"
-    },
-    {
-      "type": "image_picker",
-      "id": "all_pill_image",
-      "label": "t:labels.all_pill_image",
-      "info": "t:labels.all_pill_image_info",
-      "visible_if": "{{ section.settings.show_pills and section.settings.show_all_pill }}"
     },
     {
       "type": "select",
