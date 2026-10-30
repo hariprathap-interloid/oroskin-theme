@@ -36,6 +36,15 @@
     assign clear_url = clear_url | append: '&sort_by=' | append: search.sort_by
   endif
 
+  # A search limited to one type (the blog's search box sends type=article) stays limited: the
+  # search box, sort, filters and "Clear all" below send that type again. Normal searches ask for
+  # several types, so nothing is added.
+  assign search_type = ''
+  if search.types.size == 1
+    assign search_type = search.types.first
+    assign clear_url = clear_url | append: '&type=' | append: search_type
+  endif
+
   assign show_filters = false
   if section.settings.show_filters and search.performed and search.filters.size > 0
     assign show_filters = true
@@ -125,6 +134,9 @@
           Without it Shopify matches whole words only, and "a" finds very little.
         {%- endcomment -%}
         <input type="hidden" name="options[prefix]" value="last">
+        {%- if search_type != blank -%}
+          <input type="hidden" name="type" value="{{ search_type | escape }}">
+        {%- endif -%}
         <input
           class="search-hero__input"
           id="SearchPageInput-{{ section.id }}"
@@ -152,7 +164,8 @@
               section_id: section.id,
               clear_url: clear_url,
               results_count: search.results_count,
-              terms: search.terms
+              terms: search.terms,
+              search_type: search_type
             -%}
           {%- endif -%}
         </div>
@@ -173,6 +186,9 @@
               <form action="{{ routes.search_url }}" method="get" data-results-form data-results-autoload>
                 <input type="hidden" name="q" value="{{ search.terms | escape }}">
                 <input type="hidden" name="options[prefix]" value="last">
+                {%- if search_type != blank -%}
+                  <input type="hidden" name="type" value="{{ search_type | escape }}">
+                {%- endif -%}
                 <label class="collection-sort__label" for="SearchSortBy-{{ section.id }}">{{ 'collections.sort_by' | t }}</label>
                 <span class="collection-sort__field">
                   <select
@@ -248,10 +264,17 @@
               assign page_articles = search.results | where: 'object_type', 'article'
               assign page_pages = search.results | where: 'object_type', 'page'
 
+              # Articles-only search (the blog's search box sends type=article; search.types lists the
+              # kinds asked for): no Collections group, so the articles come first
+              assign articles_only = false
+              if search_type == 'article'
+                assign articles_only = true
+              endif
+
               # Collections whose name contains the searched words ("skin" finds Skincare); empty ones left out
               assign terms_lower = search.terms | downcase | strip
               assign collection_matches = 0
-              if paginate.current_page == 1
+              if paginate.current_page == 1 and articles_only == false
                 unless filters_active
                   for item in collections
                     assign item_title = item.title | downcase

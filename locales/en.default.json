@@ -11,7 +11,24 @@
     "comment_form_email": "Email",
     "comment_form_name": "Name",
     "comment_form_submit": "Post",
-    "comment_form_title": "Add a comment"
+    "comment_form_title": "Add a comment",
+    "read_time_short": "{{ minutes }} min",
+    "play_video": "Play video: {{ title }}",
+    "trending": {
+      "placeholder_title": "Choose an article for this row",
+      "placeholder_topic": "Topic",
+      "placeholder_meta": "Author • 5 min"
+    },
+    "read_time": "{{ minutes }} min read",
+    "search_label": "Search the blog",
+    "search_placeholder": "Search blogs…",
+    "search_submit": "Search",
+    "topics_label": "Blog topics",
+    "all_topics": "All",
+    "articles_heading": "Articles",
+    "empty": "No articles yet. Check back soon.",
+    "empty_topic": "No articles in this topic yet.",
+    "show_all": "See all articles"
   },
   "cart": {
     "checkout": "Checkout",

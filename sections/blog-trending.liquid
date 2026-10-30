@@ -1,0 +1,729 @@
+{%- comment -%}
+  Blog trending (M8.2, Figma 3007:81455, under the Blog hero): two columns.
+  Left: a tall video card (poster, dark bottom fade, "Video · 12:40" label, title, round glass play
+  button) that plays in place. Right: the "Trending this week" panel with an optional "View all" link and up to
+  five numbered article rows.
+
+  - Video: an uploaded (Shopify-hosted) video first, else a YouTube / Vimeo link. The player is kept
+    in a <template> and only added on click, so nothing loads (and nothing plays) until then.
+  - Rows: hand-picked with Trending article blocks. With no blocks: the blog's 5 newest articles, so
+    the panel is never empty. "Trending" is the merchant's choice; Shopify has no view counts.
+  - Sized to the screen like the hero (snippets/screen-scale.liquid). Video slides in, rows fade up
+    100ms apart (stagger in the CSS, so it follows the row's place).
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+
+  assign animation = section.settings.animation
+  if section.index == 1
+    assign animation = 'none'
+  endif
+  assign rows_animation = 'none'
+  if animation != 'none'
+    assign rows_animation = 'fade-up'
+  endif
+
+  # "View all" only with a link: the blog's own URL would be the page the visitor is already on
+  assign view_all_url = section.settings.link
+  assign show_view_all = false
+  if section.settings.link_label != blank and view_all_url != blank
+    assign show_view_all = true
+  endif
+
+  assign video = section.settings.video
+  assign video_url = section.settings.video_url
+  assign poster = section.settings.poster
+  if poster == blank and video != blank
+    assign poster = video.preview_image
+  endif
+  assign has_video = false
+  if video != blank or video_url != blank
+    assign has_video = true
+  endif
+  assign video_title = section.settings.video_title | default: section.settings.video_label
+
+  # "Show video" on: the card always shows. Nothing uploaded yet = a placeholder picture and play
+  # button, so it's easy to see that the video is still missing (off = the panel uses the full width)
+  assign show_video = section.settings.show_video
+
+  # Video on the right: it comes after the panel in the HTML too (same order for keyboard and screen
+  # readers as on screen), and "Slide in" comes from the right
+  assign video_right = false
+  if section.settings.video_position == 'right'
+    assign video_right = true
+    if animation == 'slide-left'
+      assign animation = 'slide-right'
+    endif
+  endif
+-%}
+
+{% render 'screen-scale' %}
+
+<div
+  class="blog-trending full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.fill_screen %} section--fill-screen{% endif %}{% if section.settings.scale_screen %} section--screen-scale{% endif %}{% if video_right %} blog-trending--video-right{% endif %}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }}; --video-radius: {{ section.settings.video_radius }}px;"
+>
+  <animate-on-scroll class="blog-trending__inner">
+    {%- comment -%} ---------- Video card (captured, printed before or after the panel) ---------- {%- endcomment -%}
+    {%- capture video_card -%}
+    {%- if show_video -%}
+    <div
+      class="blog-trending__video"
+      {% if animation != 'none' %}
+        data-animate="{{ animation }}"
+      {% endif %}
+    >
+      <blog-video class="blog-video">
+        <div class="blog-video__poster">
+          {%- if poster != blank -%}
+            {{
+              poster
+              | image_url: width: 1100
+              | image_tag: widths: '500, 700, 900, 1100', sizes: '(min-width: 1200px) 26vw, 100vw', alt: '', loading: 'lazy'
+            }}
+          {%- else -%}
+            {{ 'lifestyle-1' | placeholder_svg_tag: 'blog-video__placeholder' }}
+          {%- endif -%}
+        </div>
+
+        {%- if section.settings.video_label != blank or section.settings.video_title != blank -%}
+          <div class="blog-video__caption">
+            {%- if section.settings.video_label != blank -%}
+              <p class="blog-video__label">{{ section.settings.video_label | escape }}</p>
+            {%- endif -%}
+            {%- if section.settings.video_title != blank -%}
+              <p class="blog-video__title">{{ section.settings.video_title | escape }}</p>
+            {%- endif -%}
+          </div>
+        {%- endif -%}
+
+        {%- if has_video -%}
+          <button
+            class="blog-video__play"
+            type="button"
+            aria-label="{{ 'blog.play_video' | t: title: video_title | escape }}"
+          >
+            {{- 'icon-play.svg' | inline_asset_content -}}
+          </button>
+
+          <template class="blog-video__template">
+            {%- if video != blank -%}
+              {{ video | video_tag: controls: true, playsinline: true, image_size: '1100x' }}
+            {%- elsif video_url.type == 'youtube' -%}
+              <iframe
+                src="https://www.youtube-nocookie.com/embed/{{ video_url.id }}?autoplay=1&playsinline=1&rel=0"
+                title="{{ video_title | escape }}"
+                allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                allowfullscreen
+              ></iframe>
+            {%- else -%}
+              <iframe
+                src="https://player.vimeo.com/video/{{ video_url.id }}?autoplay=1"
+                title="{{ video_title | escape }}"
+                allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                allowfullscreen
+              ></iframe>
+            {%- endif -%}
+          </template>
+        {%- else -%}
+          {%- comment -%} No video yet: the play button's look only (nothing to play, so not a button) {%- endcomment -%}
+          <span class="blog-video__play blog-video__play--placeholder" aria-hidden="true">
+            {{- 'icon-play.svg' | inline_asset_content -}}
+          </span>
+        {%- endif -%}
+      </blog-video>
+    </div>
+    {%- endif -%}
+    {%- endcapture -%}
+
+    {%- unless video_right -%}
+      {{ video_card }}
+    {%- endunless -%}
+
+    {%- comment -%} ---------- Trending panel ---------- {%- endcomment -%}
+    <div class="blog-trending__panel">
+      {%- if section.settings.heading != blank or show_view_all -%}
+        <div
+          class="blog-trending__header"
+          {% if rows_animation != 'none' %}
+            data-animate="{{ rows_animation }}"
+          {% endif %}
+        >
+          {%- if section.settings.heading != blank -%}
+            <h2 class="blog-trending__heading">{{ section.settings.heading }}</h2>
+          {%- endif -%}
+          {%- if show_view_all -%}
+            <a class="blog-trending__view-all" href="{{ view_all_url }}">
+              {{- section.settings.link_label | escape -}}
+              <span class="blog-trending__view-all-arrow" aria-hidden="true">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+            </a>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+
+      <ol class="blog-trending__rows" role="list">
+        {%- if section.blocks.size > 0 -%}
+          {% content_for 'blocks' %}
+        {%- elsif blog.articles_count > 0 -%}
+          {%- comment -%} No rows added: the blog's newest articles {%- endcomment -%}
+          {%- for article in blog.articles limit: 5 -%}
+            {% render 'trending-article',
+              article: article,
+              show_topic: section.settings.show_meta_topic,
+              speed: section.settings.reading_speed,
+              animation: rows_animation
+            %}
+          {%- endfor -%}
+        {%- elsif request.design_mode -%}
+          {%- for i in (1..5) -%}
+            {% render 'trending-article' %}
+          {%- endfor -%}
+        {%- endif -%}
+      </ol>
+    </div>
+
+    {%- if video_right -%}
+      {{ video_card }}
+    {%- endif -%}
+  </animate-on-scroll>
+</div>
+
+{% stylesheet %}
+  /*
+    Figma 1920 frame: video 489 x 859 at x 49, panel 1276 x 859 at x 594 (56px gap), from y 143.
+    Sizes are tokens or Figma px x --px (screen-scale), with the Figma px in comments.
+  */
+  .blog-trending {
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  /* Phones and tablets: the video above the panel. Two columns from 1200px */
+  .blog-trending__inner {
+    display: grid;
+    gap: var(--space-2xl);
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  @media (min-width: 1200px) {
+    .blog-trending__inner:has(.blog-trending__video) {
+      grid-template-columns: minmax(0, 489fr) minmax(0, 1276fr);
+      column-gap: max(var(--space-xl), calc(56 * var(--px, 0.0625rem)));
+    }
+
+    /* Video on the right: the panel (first in the HTML) gets the wide column */
+    .blog-trending--video-right .blog-trending__inner:has(.blog-trending__video) {
+      grid-template-columns: minmax(0, 1276fr) minmax(0, 489fr);
+    }
+  }
+
+  /* ---------- Video card ---------- */
+  .blog-trending__video {
+    display: grid;
+  }
+
+  .blog-video {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    aspect-ratio: 16 / 10;
+    border-radius: var(--video-radius, var(--radius-lg));
+    background-color: #1a1a1a;
+    color: #ffffff;
+    isolation: isolate;
+  }
+
+  /* Wide screens: as tall as the panel next to it (859px in the Figma) */
+  @media (min-width: 1200px) {
+    .blog-video {
+      aspect-ratio: auto;
+      min-block-size: calc(859 * var(--px, 0.0625rem));
+    }
+  }
+
+  .blog-video__poster,
+  .blog-video__poster img,
+  .blog-video__placeholder,
+  .blog-video > video,
+  .blog-video > iframe {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  .blog-video__poster img {
+    object-fit: cover;
+  }
+
+  .blog-video__placeholder {
+    fill: #ffffff40;
+  }
+
+  /* Dark fade at the bottom, so the white text reads on any photo (black 0 → 80%) */
+  .blog-video__poster::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, transparent 55%, #000000cc);
+  }
+
+  .blog-video__caption {
+    position: absolute;
+    inset: auto 0 0;
+    z-index: 1;
+    padding: 0 calc(37 * var(--px, 0.0625rem)) max(var(--space-xl), calc(42 * var(--px, 0.0625rem)));
+    pointer-events: none;
+  }
+
+  /* "VIDEO · 12:40" */
+  .blog-video__label {
+    margin: 0;
+    font-size: var(--font-size-label);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  .blog-video__title {
+    max-inline-size: 18em;
+    margin: var(--space-lg) 0 0;
+    font-family: var(--font-heading--family);
+    font-style: var(--font-heading--style);
+    font-weight: var(--font-heading--weight);
+    font-size: var(--font-size-h3); /* ~26px */
+    line-height: 1.3;
+  }
+
+  /* 70px round glass button: white rim, frosted, white play icon */
+  .blog-video__play {
+    position: absolute;
+    inset: 50% auto auto 50%;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    inline-size: max(3.5rem, calc(70 * var(--px, 0.0625rem)));
+    aspect-ratio: 1;
+    padding: 0;
+    border: 1px solid #ffffff;
+    border-radius: 50%;
+    background-color: #ffffff1a;
+    color: #ffffff;
+    -webkit-backdrop-filter: blur(var(--glass-frost));
+    backdrop-filter: blur(var(--glass-frost));
+    cursor: pointer;
+    translate: -50% -50%;
+    transition:
+      scale var(--duration-fast) var(--ease-out),
+      background-color var(--duration-fast) var(--ease-out);
+  }
+
+  /* The triangle's middle is drawn at the middle of its 24px box (assets/icon-play.svg), no nudge */
+  .blog-video__play svg {
+    display: block;
+    inline-size: 45%;
+    block-size: auto;
+  }
+
+  /* No video yet: the button's look only, faded, no hover */
+  .blog-video__play--placeholder {
+    cursor: default;
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  .blog-video__play:hover,
+  .blog-video__play:focus-visible {
+    background-color: #ffffff33;
+    scale: 1.08;
+  }
+
+  .blog-video__play:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 4px;
+  }
+
+  /* Playing: the player covers the card; poster, text and button go */
+  .blog-video.is-playing > :not(video, iframe) {
+    display: none;
+  }
+
+  .blog-video > video {
+    object-fit: contain;
+    background-color: #000000;
+  }
+
+  .blog-video > iframe {
+    border: 0;
+  }
+
+  /* ---------- Trending panel ---------- */
+  .blog-trending__panel {
+    padding: max(var(--space-xl), calc(45 * var(--px, 0.0625rem)));
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-md);
+    background-color: var(--color-card);
+  }
+
+  .blog-trending__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-md);
+    padding-inline-end: calc(12 * var(--px, 0.0625rem));
+  }
+
+  .blog-trending__heading {
+    margin: 0;
+    font-size: var(--font-size-h2); /* 44px with the Text size boost */
+  }
+
+  /* "*Trending* this week": the italic word in the accent colour, upright */
+  .blog-trending__heading em {
+    color: var(--color-accent);
+    font-style: normal;
+  }
+
+  /* The Figma grey (developer's choice, under 4.5:1 for small text): change --trending-muted in M9 */
+  .blog-trending {
+    --trending-muted: color-mix(in srgb, var(--color-text) 55%, var(--color-background));
+  }
+
+  .blog-trending__view-all {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    color: var(--trending-muted);
+    font-size: var(--font-size-label);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: color var(--duration-fast) var(--ease-out);
+  }
+
+  .blog-trending__view-all:hover {
+    color: var(--color-accent);
+  }
+
+  .blog-trending__view-all-arrow svg {
+    display: block;
+    inline-size: 1.1em;
+    block-size: auto;
+    transition: translate var(--duration-fast) var(--ease-out);
+  }
+
+  .blog-trending__view-all:hover .blog-trending__view-all-arrow svg {
+    translate: 0.25em 0;
+  }
+
+  /* Rows 24px apart, ~50px under the header; the counter numbers them 01, 02… */
+  .blog-trending__rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    margin: max(var(--space-xl), calc(50 * var(--px, 0.0625rem))) 0 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: trending-row;
+  }
+
+  /* The Figma zig-zag: every second row starts ~45px further in */
+  @media (min-width: 750px) {
+    .blog-trending__rows > :nth-child(even) {
+      margin-inline-start: calc(45 * var(--px, 0.0625rem));
+    }
+  }
+
+  /* Rows fade up one after another, 100ms apart */
+  .blog-trending__rows > :nth-child(2) {
+    --animate-delay: 100ms;
+  }
+
+  .blog-trending__rows > :nth-child(3) {
+    --animate-delay: 200ms;
+  }
+
+  .blog-trending__rows > :nth-child(4) {
+    --animate-delay: 300ms;
+  }
+
+  .blog-trending__rows > :nth-child(5) {
+    --animate-delay: 400ms;
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <blog-video>: plays the Blog trending video in place. The player waits in a <template> (so the
+   * page loads no video and no YouTube / Vimeo frame); a click on the play button puts it in the card,
+   * starts it and moves the focus to it.
+   */
+  class BlogVideo extends HTMLElement {
+    connectedCallback() {
+      this.querySelector('.blog-video__play')?.addEventListener('click', () => this.play(), { once: true });
+    }
+
+    play() {
+      const template = this.querySelector('.blog-video__template');
+      const player = template?.content.firstElementChild?.cloneNode(true);
+      if (!player) return;
+
+      this.append(player);
+      this.classList.add('is-playing');
+      if (player instanceof HTMLVideoElement) player.play().catch(() => {});
+      player.focus();
+    }
+  }
+
+  if (!customElements.get('blog-video')) {
+    customElements.define('blog-video', BlogVideo);
+  }
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.blog_trending",
+  "tag": "section",
+  "class": "blog-trending-section",
+  "enabled_on": {
+    "templates": ["blog"]
+  },
+  "blocks": [
+    {
+      "type": "_trending-article"
+    }
+  ],
+  "max_blocks": 5,
+  "settings": [
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.italic_accent_info",
+      "default": "<em>Trending</em> this week"
+    },
+    {
+      "type": "text",
+      "id": "link_label",
+      "label": "t:labels.link_label",
+      "default": "View all"
+    },
+    {
+      "type": "url",
+      "id": "link",
+      "label": "t:labels.link",
+      "info": "t:labels.trending_blog_link_info"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.trending_rows",
+      "info": "t:labels.trending_rows_info"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_meta_topic",
+      "label": "t:labels.show_meta_topic",
+      "info": "t:labels.show_meta_topic_info",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "reading_speed",
+      "label": "t:labels.reading_speed",
+      "info": "t:labels.reading_speed_info",
+      "min": 150,
+      "max": 300,
+      "step": 10,
+      "unit": "wpm",
+      "default": 200
+    },
+    {
+      "type": "header",
+      "content": "t:labels.trending_video"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_video",
+      "label": "t:labels.show_video",
+      "info": "t:labels.show_video_info",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "video_position",
+      "label": "t:labels.video_position",
+      "options": [
+        {
+          "value": "left",
+          "label": "t:options.alignment.left"
+        },
+        {
+          "value": "right",
+          "label": "t:options.alignment.right"
+        }
+      ],
+      "default": "left",
+      "visible_if": "{{ section.settings.show_video }}"
+    },
+    {
+      "type": "video",
+      "id": "video",
+      "label": "t:labels.video",
+      "visible_if": "{{ section.settings.show_video }}"
+    },
+    {
+      "type": "video_url",
+      "id": "video_url",
+      "label": "t:labels.video_url",
+      "info": "t:labels.video_url_info",
+      "accept": ["youtube", "vimeo"],
+      "visible_if": "{{ section.settings.show_video }}"
+    },
+    {
+      "type": "image_picker",
+      "id": "poster",
+      "label": "t:labels.video_poster",
+      "info": "t:labels.video_poster_info",
+      "visible_if": "{{ section.settings.show_video }}"
+    },
+    {
+      "type": "text",
+      "id": "video_label",
+      "label": "t:labels.video_label",
+      "default": "Video · 12:40",
+      "visible_if": "{{ section.settings.show_video }}"
+    },
+    {
+      "type": "text",
+      "id": "video_title",
+      "label": "t:labels.video_title",
+      "default": "The OroSkin lab: building a winter skincare routine from scratch",
+      "visible_if": "{{ section.settings.show_video }}"
+    },
+    {
+      "type": "range",
+      "id": "video_radius",
+      "label": "t:labels.corner_radius",
+      "min": 0,
+      "max": 60,
+      "step": 2,
+      "unit": "px",
+      "default": 50,
+      "visible_if": "{{ section.settings.show_video }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "checkbox",
+      "id": "fill_screen",
+      "label": "t:labels.fill_screen",
+      "info": "t:labels.fill_screen_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "scale_screen",
+      "label": "t:labels.scale_screen",
+      "info": "t:labels.scale_screen_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "text_scale",
+      "label": "t:labels.text_scale",
+      "info": "t:labels.text_scale_info",
+      "min": 100,
+      "max": 130,
+      "step": 5,
+      "unit": "%",
+      "default": 110,
+      "visible_if": "{{ section.settings.scale_screen }}"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "select",
+      "id": "animation",
+      "label": "t:labels.animation",
+      "info": "t:labels.trending_animation_info",
+      "options": [
+        {
+          "value": "none",
+          "label": "t:options.animation.none"
+        },
+        {
+          "value": "fade-up",
+          "label": "t:options.animation.fade_up"
+        },
+        {
+          "value": "slide-left",
+          "label": "t:options.animation.slide_left"
+        }
+      ],
+      "default": "slide-left"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 40
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.blog_trending"
+    }
+  ]
+}
+{% endschema %}

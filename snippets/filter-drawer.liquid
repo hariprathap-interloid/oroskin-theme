@@ -24,6 +24,7 @@
   @param {number} results_count - The number of results now (collection.products_count / search.results_count)
   @param {string} [category_label] - The divider's text, e.g. "Makeup filters"
   @param {string} [terms] - The search terms on the search page, sent again as q
+  @param {string} [search_type] - The search page's single result type (e.g. 'article' from the blog search), sent again as type
 
   @example
   {% render 'filter-drawer', filters: collection.filters, results_url: collection.url, section_id: section.id, clear_url: clear_url, results_count: collection.products_count, category_label: category_label %}
@@ -95,6 +96,9 @@
           <input type="hidden" name="q" value="{{ terms | escape }}">
           {%- comment -%} Keep word-start matching ("ros" finds "rose") when filters are applied {%- endcomment -%}
           <input type="hidden" name="options[prefix]" value="last">
+        {%- endif -%}
+        {%- if search_type != blank -%}
+          <input type="hidden" name="type" value="{{ search_type | escape }}">
         {%- endif -%}
 
         {%- comment -%} General filters first, in Search & Discovery's order {%- endcomment -%}

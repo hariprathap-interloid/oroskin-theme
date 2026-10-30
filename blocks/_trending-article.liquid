@@ -1,0 +1,53 @@
+{% doc %}
+  One hand-picked row in the Blog trending section's "Trending this week" list: an article and its
+  views text. The row itself is snippets/trending-article.liquid (the section uses the same snippet for
+  its newest-articles fallback). The topic line, reading speed and animation come from the section.
+  Without an article: a placeholder row in the theme editor, nothing on the live store.
+
+  @example
+  {% content_for 'block', type: '_trending-article', id: 'trending-article' %}
+{% enddoc %}
+
+{%- liquid
+  assign row_animation = 'none'
+  if section.settings.animation != 'none'
+    assign row_animation = 'fade-up'
+  endif
+-%}
+
+{%- if block.settings.article != blank or request.design_mode -%}
+  {% render 'trending-article',
+    article: block.settings.article,
+    views: block.settings.views,
+    show_topic: section.settings.show_meta_topic,
+    speed: section.settings.reading_speed,
+    animation: row_animation,
+    attributes: block.shopify_attributes
+  %}
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "t:general.trending_article",
+  "tag": null,
+  "settings": [
+    {
+      "type": "article",
+      "id": "article",
+      "label": "t:labels.article"
+    },
+    {
+      "type": "text",
+      "id": "views",
+      "label": "t:labels.trending_views",
+      "info": "t:labels.trending_views_info",
+      "default": "142k views"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.trending_article"
+    }
+  ]
+}
+{% endschema %}

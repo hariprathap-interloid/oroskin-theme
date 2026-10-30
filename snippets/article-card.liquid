@@ -1,0 +1,412 @@
+{% doc %}
+  One article card of the blog listing (Figma 3007:81456 / 81464). The whole card is one link (the
+  title's link stretches over it).
+  - Default: image (232px tall, cover) with the topic pill on it, the title (2 lines), then the
+    author with their avatar and the read time at the bottom.
+  - Featured: a wide card, image on the left and on the right a "Featured story" pill, the title as an
+    <h2>, a 3-line excerpt, then author, date, read time and a red ↗ button.
+
+  Topic = the article's first tag. Avatar = the staff account's photo (article.user.image), else the
+  author's initials. Read time = snippets/read-time.liquid.
+
+  @param {article} article - The article to show
+  @param {string} [size] - 'featured' or 'default' (default)
+  @param {string} [pill_label] - Featured only: the pill text, e.g. "Featured story"
+  @param {number} [speed] - Reading speed in words per minute, default 200
+  @param {string} [animation] - Scroll reveal ('none' or 'fade-up'), default 'none'
+  @param {string} [topic_scheme] - Colour scheme id for the topic badge (its background + accent text), default 'scheme-2'
+  @param {string} [arrow_scheme] - Colour scheme id for the ↗ button (its button colours), default 'scheme-2'
+
+  @example
+  {% render 'article-card', article: article, size: 'featured', pill_label: 'Featured story' %}
+{% enddoc %}
+
+{%- liquid
+  assign featured = false
+  if size == 'featured'
+    assign featured = true
+  endif
+  assign card_animation = animation | default: 'none'
+  assign topic_class = topic_scheme | default: 'scheme-2' | prepend: 'color-'
+  assign arrow_class = arrow_scheme | default: 'scheme-2' | prepend: 'color-'
+  assign topic = article.tags.first
+
+  capture minutes
+    render 'read-time', article: article, speed: speed
+  endcapture
+  assign minutes = minutes | strip
+
+  # Initials for the avatar fallback: first letter of the first and last word ("Sarah Jenkins" = SJ)
+  assign name_parts = article.author | split: ' '
+  assign initials = name_parts.first | slice: 0
+  if name_parts.size > 1
+    assign last_initial = name_parts.last | slice: 0
+    assign initials = initials | append: last_initial
+  endif
+
+  if featured
+    assign image_sizes = '(min-width: 1200px) 50vw, 100vw'
+  else
+    assign image_sizes = '(min-width: 1200px) 50vw, (min-width: 750px) 50vw, 100vw'
+  endif
+-%}
+
+<article
+  class="article-card{% if featured %} article-card--featured{% endif %}"
+  {% if card_animation != 'none' %}
+    data-animate="{{ card_animation }}"
+  {% endif %}
+>
+  <div class="article-card__media">
+    {%- if article.image != blank -%}
+      {{
+        article.image
+        | image_url: width: 1600
+        | image_tag: widths: '400, 600, 800, 1000, 1200, 1600', sizes: image_sizes, alt: '', loading: 'lazy'
+      }}
+    {%- elsif request.design_mode -%}
+      {{ 'lifestyle-2' | placeholder_svg_tag: 'article-card__placeholder' }}
+    {%- endif -%}
+
+    {%- if topic != blank -%}
+      <span class="article-card__topic {{ topic_class }}">{{ topic | escape }}</span>
+    {%- endif -%}
+
+    {%- unless featured -%}
+      {%- comment -%} Figma hover: a red ↗ badge appears in the image's top-right corner {%- endcomment -%}
+      <span class="article-card__arrow article-card__arrow--badge {{ arrow_class }}" aria-hidden="true">
+        {{- 'icon-arrow-solid.svg' | inline_asset_content -}}
+      </span>
+    {%- endunless -%}
+  </div>
+
+  <div class="article-card__body">
+    {%- if featured and pill_label != blank -%}
+      <span class="article-card__pill">{{ pill_label | escape }}</span>
+    {%- endif -%}
+
+    {%- if featured -%}
+      <h2 class="article-card__title">
+        <a class="article-card__link" href="{{ article.url }}">{{ article.title | escape }}</a>
+      </h2>
+      {%- assign excerpt = article.excerpt_or_content | strip_html | truncatewords: 40 -%}
+      {%- if excerpt != blank -%}
+        <p class="article-card__excerpt">{{ excerpt }}</p>
+      {%- endif -%}
+    {%- else -%}
+      <h3 class="article-card__title">
+        <a class="article-card__link" href="{{ article.url }}">{{ article.title | escape }}</a>
+      </h3>
+    {%- endif -%}
+
+    <div class="article-card__meta">
+      {%- if article.author != blank -%}
+        <span class="article-card__author">
+          <span class="article-card__avatar" aria-hidden="true">
+            {%- if article.user.image != blank -%}
+              {{ article.user.image | image_url: width: 96, height: 96, crop: 'center' | image_tag: alt: '', loading: 'lazy' }}
+            {%- else -%}
+              {{ initials | upcase }}
+            {%- endif -%}
+          </span>
+          {{ article.author | escape }}
+        </span>
+      {%- endif -%}
+
+      <span class="article-card__facts">
+        {%- if featured -%}
+          <span class="article-card__fact">
+            {{- 'icon-calendar.svg' | inline_asset_content -}}
+            {{ article.published_at | time_tag: '%B %-d, %Y' }}
+          </span>
+        {%- endif -%}
+        <span class="article-card__fact">
+          {{- 'icon-clock.svg' | inline_asset_content -}}
+          {{ 'blog.read_time' | t: minutes: minutes }}
+        </span>
+      </span>
+
+      {%- if featured -%}
+        <span class="article-card__arrow {{ arrow_class }}" aria-hidden="true">{{ 'icon-arrow-solid.svg' | inline_asset_content }}</span>
+      {%- endif -%}
+    </div>
+  </div>
+</article>
+
+{% stylesheet %}
+  /*
+    Figma cards: --color-card, 1px border, radius 25px, padding ~23px, image 232px tall (radius 19px),
+    title ~26px in the heading font, meta at the bottom. Featured: 1818 x 373, padding ~27px, image
+    958 x 320 on the left, text column with a ~45px gap.
+  */
+  .article-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    block-size: 100%;
+    padding: var(--space-lg);
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-md);
+    background-color: var(--color-card);
+  }
+
+  .article-card__media {
+    position: relative;
+    overflow: hidden;
+    flex: none;
+    block-size: 14.5rem; /* 232px */
+    border-radius: var(--radius-sm);
+    background-color: var(--color-tint-subtle);
+  }
+
+  .article-card__media img,
+  .article-card__placeholder {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    transition: scale var(--duration-slow) var(--ease-out);
+  }
+
+  /*
+    Topic on the image: a small pill in the chosen colour scheme (section setting "Topic badge
+    colours"): that scheme's background and accent text. Two classes, so these win over the scheme
+    class's own text colour.
+  */
+  .article-card .article-card__topic {
+    position: absolute;
+    inset: var(--space-sm) auto auto var(--space-sm);
+    padding: 0.15em 0.65em;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-background);
+    color: var(--color-accent);
+    font-size: var(--font-size-body-sm);
+    line-height: 1.4;
+  }
+
+  .article-card__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .article-card__title {
+    display: -webkit-box;
+    overflow: hidden;
+    margin: 0;
+    font-size: var(--font-size-h3);
+    line-height: 1.3;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .article-card__link {
+    color: inherit;
+    text-decoration: none;
+    transition: color var(--duration-fast) var(--ease-out);
+  }
+
+  /* Hover / keyboard focus: the title turns to the accent colour (Figma hover frames) */
+  .article-card:hover .article-card__link,
+  .article-card__link:focus-visible {
+    color: var(--color-accent);
+  }
+
+  /* The whole card is the link: the title link's ::after covers the card */
+  .article-card__link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+
+  /* Author on the left, read time on the right, at the bottom of the card */
+  .article-card__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm) var(--space-lg);
+    margin-block-start: auto;
+    font-size: var(--font-size-caption);
+  }
+
+  .article-card__author {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .article-card__avatar {
+    display: grid;
+    flex: none;
+    place-items: center;
+    overflow: hidden;
+    inline-size: 2.25rem; /* 36px */
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background-color: var(--color-tint);
+    color: var(--color-accent);
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-medium);
+  }
+
+  .article-card__avatar img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .article-card__facts {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm) var(--space-lg);
+  }
+
+  .article-card__fact {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: var(--font-size-small);
+  }
+
+  .article-card__fact svg {
+    flex: none;
+    inline-size: 1.25rem;
+    block-size: auto;
+    color: var(--color-accent);
+  }
+
+  /* Hover / keyboard focus: the card stays put; only the photo zooms and the title turns red (Figma) */
+  .article-card__link:focus-visible {
+    outline: none;
+  }
+
+  .article-card:has(.article-card__link:focus-visible) {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .article-card:hover .article-card__media img,
+    .article-card:has(.article-card__link:focus-visible) .article-card__media img {
+      scale: 1.06;
+    }
+  }
+
+  /* ---------- Featured ---------- */
+  .article-card--featured .article-card__pill {
+    align-self: flex-start;
+    padding: 0.3em 1.4em;
+    border: 1px solid color-mix(in srgb, var(--color-accent) 40%, transparent);
+    border-radius: var(--radius-pill);
+    background-color: color-mix(in srgb, var(--color-accent) 15%, var(--color-card));
+    color: var(--color-accent);
+    font-size: var(--font-size-body-lg);
+  }
+
+  .article-card--featured .article-card__title {
+    font-size: var(--font-size-h2);
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .article-card__excerpt {
+    display: -webkit-box;
+    overflow: hidden;
+    margin: 0;
+    font-size: var(--font-size-body-sm);
+    line-height: 1.6;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
+
+  .article-card--featured .article-card__meta {
+    font-size: var(--font-size-body);
+  }
+
+  .article-card--featured .article-card__avatar {
+    inline-size: 2.5rem; /* 40px */
+  }
+
+  /*
+    42px red glass circle, white arrow at ↗ (it stays ↗ on hover, as in the Figma). Glass = the hero's
+    "Liquid Glass Button" look: a see-through red that frosts what's behind it, with the glass
+    shadows (outer drop shadow + a white inner rim). The colours are the button colours of the
+    scheme chosen in "Arrow button colours"; two classes so they win over the scheme class.
+  */
+  .article-card .article-card__arrow {
+    display: grid;
+    flex: none;
+    place-items: center;
+    inline-size: 2.625rem;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--color-button) 85%, transparent);
+    color: var(--color-button-text);
+    box-shadow: var(--shadow-button-glass);
+    -webkit-backdrop-filter: blur(var(--glass-frost));
+    backdrop-filter: blur(var(--glass-frost));
+  }
+
+  .article-card__arrow svg {
+    inline-size: 40%;
+    block-size: auto;
+    transform: rotate(-45deg);
+  }
+
+  /* The badge on a card's image: hidden until hover / keyboard focus, then it pops in */
+  .article-card__arrow--badge {
+    position: absolute;
+    inset: var(--space-sm) var(--space-sm) auto auto;
+    opacity: 0;
+    scale: 0.6;
+    transition:
+      opacity var(--duration-fast) var(--ease-out),
+      scale var(--duration-base) var(--ease-out);
+  }
+
+  .article-card:hover .article-card__arrow--badge,
+  .article-card:has(.article-card__link:focus-visible) .article-card__arrow--badge {
+    opacity: 1;
+    scale: 1;
+  }
+
+  /* Wide screens: image left (958 of the 1818px card), text right */
+  @media (min-width: 1200px) {
+    .article-card--featured {
+      display: grid;
+      grid-template-columns: minmax(0, 958fr) minmax(0, 750fr);
+      gap: var(--space-2xl);
+      padding: calc(27 / 16 * 1rem);
+    }
+
+    /*
+      The image fills the card's full height (at least 320px, the Figma's 958 x 320). A fixed 3:1
+      shape left it short on laptops, where the narrower text column wraps onto more lines and makes
+      the card taller than the image.
+    */
+    .article-card--featured .article-card__media {
+      block-size: auto;
+      min-block-size: 20rem;
+    }
+
+    .article-card--featured .article-card__media img,
+    .article-card--featured .article-card__placeholder {
+      position: absolute;
+      inset: 0;
+    }
+
+    .article-card--featured .article-card__body {
+      padding-block: var(--space-xs);
+    }
+
+    /* Read time and date grouped in the middle, the arrow on the far right (Figma) */
+    .article-card--featured .article-card__facts {
+      margin-inline-start: auto;
+    }
+  }
+{% endstylesheet %}

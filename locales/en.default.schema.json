@@ -80,7 +80,11 @@
     "location_list": "Locations panel",
     "location_card": "Location",
     "social_list": "Social cards",
-    "social_card": "Social account"
+    "social_card": "Social account",
+    "blog_hero": "Blog hero",
+    "blog_stat_card": "Stat card",
+    "blog_trending": "Blog trending",
+    "trending_article": "Trending article"
   },
   "labels": {
     "alignment": "Alignment",
@@ -598,7 +602,63 @@
     "filter_types": "Location types",
     "filter_types_info": "One filter button per type, separated by commas, e.g. Flagship stores, Offices, Pop-ups, Warehouses. Give each pin its types in the pin's own settings.",
     "pin_types": "Location types",
-    "pin_types_info": "One or more names from the section's Location types, separated by commas, e.g. Offices or Offices, Flagship stores."
+    "pin_types_info": "One or more names from the section's Location types, separated by commas, e.g. Offices or Offices, Flagship stores.",
+    "blog_hero_heading_info": "Italic words show in the accent colour, on their own line. Empty: the blog title.",
+    "counters": "Counters",
+    "counters_info": "Each value is counted from your blog automatically. Type a value only to replace the count (e.g. \"100+\").",
+    "articles_label": "Articles label",
+    "articles_value": "Articles value",
+    "articles_value_info": "Empty: the blog's number of articles.",
+    "authors_label": "Authors label",
+    "authors_value": "Authors value",
+    "authors_value_info": "Empty: the number of different authors among your 50 newest articles (Shopify has no author count, and a page can read at most 50 articles).",
+    "topics_label": "Topics label",
+    "topics_value": "Topics value",
+    "topics_value_info": "Empty: the number of tags on the blog's articles (each tag is a topic).",
+    "stat_cards": "Stat cards",
+    "float_cards": "Float the cards",
+    "float_cards_info": "A slow up-and-down movement. Turned off for visitors who ask for reduced motion.",
+    "trending_views": "Views",
+    "trending_views_info": "Your own text, e.g. \"142k views\". Shopify doesn't count article views. Leave empty to hide.",
+    "trending_blog_link_info": "Leave empty to hide \"View all\" (the blog itself is the page the visitor is on).",
+    "trending_rows": "Trending rows",
+    "trending_rows_info": "Add Trending article blocks to choose the rows (up to 5). With no blocks, the blog's 5 newest articles show.",
+    "show_meta_topic": "Show topic in the meta line",
+    "show_meta_topic_info": "Off by default: the topic is already in the pill.",
+    "reading_speed": "Reading speed",
+    "reading_speed_info": "Shopify has no read time, so it's estimated from the article's word count at this many words per minute.",
+    "trending_video": "Video",
+    "video": "Video",
+    "video_url": "YouTube or Vimeo link",
+    "video_url_info": "Used when no video is uploaded.",
+    "video_poster": "Cover image",
+    "video_poster_info": "Shown before the video plays. Empty = the uploaded video's own preview image.",
+    "video_label": "Label",
+    "video_title": "Title",
+    "trending_animation_info": "How the video comes in. The rows fade up one after another. Off on the first section of a page.",
+    "show_video": "Show video",
+    "show_video_info": "Off: the Trending panel uses the full width.",
+    "video_position": "Video position",
+    "blog_toolbar": "Toolbar",
+    "show_blog_search": "Show search",
+    "show_blog_search_info": "Searches articles only, on the search page.",
+    "show_topic_pills": "Show topic pills",
+    "show_topic_pills_info": "One pill per article tag, plus \"All\". Add tags to articles to create topics.",
+    "sticky_toolbar": "Stick under the header",
+    "sticky_toolbar_info": "The search and the pills stay in view while the visitor scrolls the list.",
+    "blog_featured": "Featured story",
+    "show_featured": "Show featured story",
+    "show_featured_info": "Page 1 only, when no topic is chosen.",
+    "featured_article": "Featured article",
+    "featured_article_info": "Leave empty to feature the newest article. The featured article isn't repeated in the cards below.",
+    "blog_cards": "Cards",
+    "blog_layout_info": "Mixed: rows of three with one wide card, as in the design. Even: three equal columns.",
+    "articles_per_page": "Articles per page",
+    "articles_per_page_info": "Not counting the featured story. When the newest article is featured, page 1 shows one card fewer.",
+    "topic_color_scheme": "Topic badge colours",
+    "topic_color_scheme_info": "The badge on each image uses this scheme's background with its accent colour for the text.",
+    "arrow_color_scheme": "Arrow button colours",
+    "arrow_color_scheme_info": "The ↗ buttons use this scheme's button colours."
   },
   "options": {
     "collection_list_header": {
@@ -829,7 +889,11 @@
       "video": "Film",
       "users": "People",
       "sparkle": "Sparkle",
-      "none": "None"
+      "none": "None",
+      "eye": "Eye",
+      "heart": "Heart",
+      "pencil": "Pencil",
+      "award": "Award"
     },
     "slide_in": {
       "none": "No animation",
@@ -940,6 +1004,10 @@
     "social_icon_style": {
       "brand": "Brand colours (Instagram, X, YouTube, Facebook, LinkedIn)",
       "mono": "Single colour (accent)"
+    },
+    "blog_layout": {
+      "mixed": "Mixed",
+      "even": "Even"
     }
   },
   "color_scheme": {

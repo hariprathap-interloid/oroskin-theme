@@ -1,0 +1,131 @@
+{% doc %}
+  One floating stat card in the Blog hero (Figma 3007:81466: "2.4M / Monthly readers across all
+  journal editions" with an eye in a white circle). A big value in the accent colour, a round icon
+  badge in the top-right corner and a short text. The section places up to four of them in its
+  zig-zag collage. Merchant text, not live data.
+
+  @example
+  {% content_for 'block', type: '_blog-stat-card', id: 'blog-stat-card' %}
+{% enddoc %}
+
+{%- assign icon_file = 'icon-' | append: block.settings.icon | append: '.svg' -%}
+
+{%- if block.settings.value != blank or block.settings.text != blank -%}
+  <div class="blog-stat-card" {{ block.shopify_attributes }}>
+    {%- if block.settings.value != blank -%}
+      <p class="blog-stat-card__value">{{ block.settings.value | escape }}</p>
+    {%- endif -%}
+
+    {%- if block.settings.icon != 'none' -%}
+      <span class="blog-stat-card__icon" aria-hidden="true">{{ icon_file | inline_asset_content }}</span>
+    {%- endif -%}
+
+    {%- if block.settings.text != blank -%}
+      <p class="blog-stat-card__text">{{ block.settings.text | escape }}</p>
+    {%- endif -%}
+  </div>
+{%- endif -%}
+
+{% stylesheet %}
+  /*
+    Figma card: 354 x 195, padding ~36px, value ~52px (heading font, accent), 56px white icon circle at
+    the top right, 2-line text 18px. Figma px x --px follow the screen in a scaled section
+    (snippets/screen-scale.liquid) and are exact px elsewhere.
+  */
+  .blog-stat-card {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-content: start;
+    column-gap: var(--space-md);
+    min-block-size: calc(195 * var(--px, 0.0625rem));
+    padding: max(var(--space-md), calc(30 * var(--px, 0.0625rem))) max(var(--space-md), calc(36 * var(--px, 0.0625rem)));
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-md);
+    background-color: var(--color-card);
+    box-shadow: var(--shadow-card-rose);
+    -webkit-backdrop-filter: blur(var(--glass-frost));
+    backdrop-filter: blur(var(--glass-frost));
+  }
+
+  .blog-stat-card__value {
+    grid-column: 1;
+    margin: 0;
+    color: var(--color-accent);
+    font-family: var(--font-heading--family);
+    font-style: var(--font-heading--style);
+    font-weight: var(--font-heading--weight);
+    font-size: max(2.25rem, calc(52 * var(--px, 0.0625rem)));
+    font-variant-numeric: oldstyle-nums;
+    line-height: 1.1;
+  }
+
+  /* No value: the icon still sits in the top-right corner */
+  .blog-stat-card__icon {
+    grid-column: 2;
+    grid-row: 1;
+    display: grid;
+    place-items: center;
+    inline-size: max(2.75rem, calc(56 * var(--px, 0.0625rem)));
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background-color: #ffffff;
+    box-shadow: var(--shadow-card);
+    color: var(--color-accent);
+  }
+
+  .blog-stat-card__icon svg {
+    inline-size: 45%;
+    block-size: auto;
+  }
+
+  .blog-stat-card__text {
+    grid-column: 1 / -1;
+    max-inline-size: 16em;
+    margin: var(--space-lg) 0 0;
+    font-size: var(--font-size-body-sm);
+    line-height: 1.6;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.blog_stat_card",
+  "tag": null,
+  "settings": [
+    {
+      "type": "text",
+      "id": "value",
+      "label": "t:labels.stat_value",
+      "default": "2.4M"
+    },
+    {
+      "type": "text",
+      "id": "text",
+      "label": "t:labels.text",
+      "default": "Monthly readers across all journal editions"
+    },
+    {
+      "type": "select",
+      "id": "icon",
+      "label": "t:labels.icon",
+      "options": [
+        { "value": "eye", "label": "t:options.stat_icon.eye" },
+        { "value": "heart", "label": "t:options.stat_icon.heart" },
+        { "value": "pencil", "label": "t:options.stat_icon.pencil" },
+        { "value": "award", "label": "t:options.stat_icon.award" },
+        { "value": "book", "label": "t:options.stat_icon.book" },
+        { "value": "sparkle", "label": "t:options.stat_icon.sparkle" },
+        { "value": "users", "label": "t:options.stat_icon.users" },
+        { "value": "none", "label": "t:options.stat_icon.none" }
+      ],
+      "default": "eye"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.blog_stat_card"
+    }
+  ]
+}
+{% endschema %}

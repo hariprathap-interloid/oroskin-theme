@@ -29,7 +29,7 @@
   </p>
 
   <ul class="pagination__pill" role="list">
-    <li>
+    <li class="pagination__end pagination__end--previous">
       {%- if paginate.previous.is_link -%}
         <a class="pagination__arrow" href="{{ paginate.previous.url }}" data-results-link data-results-scroll>
           {{- 'icon-chevron-left.svg' | inline_asset_content -}}
@@ -61,7 +61,7 @@
       </li>
     {%- endfor -%}
 
-    <li>
+    <li class="pagination__end pagination__end--next">
       {%- if paginate.next.is_link -%}
         <a class="pagination__arrow" href="{{ paginate.next.url }}" data-results-link data-results-scroll>
           {{- 'icon-chevron-right.svg' | inline_asset_content -}}
@@ -96,18 +96,15 @@
     Sizes are about 1.2x the Figma (circles 40 → 48px, current 60 → 72px, bar 50 → 60px), which looked
     too small on screen.
 
-    Figma glass values (on white): the bar fill #f6f2ec at 50%, 0.94px border #fff4f4, radius 18.78px, shadow
-    0 0 9.39px 5% black, Frost 100 (= --glass-frost, 35px), Light -45deg 80% (a highlight on the top-left
-    edge, weaker bottom-right). The colours are mixed from the section's colour scheme (a little text colour
-    into the background), so on white they match the Figma and on a red or dark scheme the bar, the pearl
-    buttons and the numbers follow it instead of staying light with invisible text.
+    Figma glass values (on white): the bar fill #f6f2ec at 50%, Frost 100 (= --glass-frost, 35px).
+    Border 0.94px #fff4f4 and shadow 0 0 9.39px 5% black exactly as the Figma (developer, 2026-10-30);
+    radius 25px, because the Figma's 18.78px looked too square at our 1.2x size. The fill, the pearl
+    buttons and the numbers are mixed from the section's colour scheme (a little text colour into the
+    background), so on white they match the Figma and on a red or dark scheme they follow it; the
+    border is the Figma's fixed pale pink.
     Refraction / Depth / Dispersion need a Chrome-only SVG filter, so they are left out (as in css-variables).
   */
-  .pagination {
-    --pagination-light: inset 0.7px 0.7px 0 #ffffffcc, inset -0.7px -0.7px 0 #ffffff80;
-  }
-
-  /* Circles 16px apart, 24px from the ends */
+  /* Circles 16px apart, 24px from the ends; prev / next sit 40px from the numbers (see below) */
   .pagination__pill {
     display: flex;
     align-items: center;
@@ -115,13 +112,22 @@
     min-block-size: 3.75rem;
     margin: 0;
     padding: 0 var(--space-lg);
-    border: 1px solid color-mix(in srgb, var(--color-text) 6%, var(--color-background));
-    border-radius: var(--radius-sm); /* 19px, Figma 18.78px */
+    border: 0.94px solid #fff4f4;
+    border-radius: var(--radius-md); /* 25px */
     background-color: color-mix(in srgb, color-mix(in srgb, var(--color-text) 5%, var(--color-background)) 50%, transparent);
-    box-shadow: 0 0 9.39px 0 #0000000d, var(--pagination-light);
+    box-shadow: 0 0 9.39px 0 #0000000d;
     list-style: none;
     -webkit-backdrop-filter: blur(var(--glass-frost));
     backdrop-filter: blur(var(--glass-frost));
+  }
+
+  /* More room between the arrows and the page numbers, so the numbers read as one group */
+  .pagination__end--previous {
+    margin-inline-end: var(--space-lg);
+  }
+
+  .pagination__end--next {
+    margin-inline-start: var(--space-lg);
   }
 
   .pagination__arrow,

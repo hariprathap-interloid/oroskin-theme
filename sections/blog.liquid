@@ -1,35 +1,679 @@
-{% comment %}
-  This section is used in the blog template to render the blog page listing all
-  articles within a blog.
+{%- comment -%}
+  Blog listing (M8.2, Figma 3007:81456 / 81464, under Blog trending): the main section of the blog page.
+  - Toolbar (sticks under the header): a search box that searches articles only
+    (/search?type=article), then topic pills: "All" + one per tag of the blog (blog.all_tags), each a
+    link to /blogs/<blog>/tagged/<tag>. The current one is red (aria-current="page").
+  - Featured story on page 1 without a topic: the chosen article, else the newest. The newest isn't
+    repeated in the grid below.
+  - Cards in rows of three, repeating the Figma's four rows (wide card in the middle / left / right /
+    middle); or "Even": three equal columns.
+  - Pagination. Topic pills and page links load in place (<results-view>, snippets/results-view.liquid)
+    and are plain links without JavaScript.
+{%- endcomment -%}
 
-  https://shopify.dev/docs/storefronts/themes/architecture/templates/blog
-{% endcomment %}
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
 
-<h1>{{ blog.title }}</h1>
+  assign topic_scheme = section.settings.topic_color_scheme.id | default: 'scheme-2'
+  assign arrow_scheme = section.settings.arrow_color_scheme.id | default: 'scheme-2'
 
-{% paginate blog.articles by 5 %}
-  {% for article in blog.articles %}
-    <div>
-      {% if article.image %}
-        {{ article.image | image_url: width: 1000 | image_tag }}
-      {% endif %}
-      <h2>
-        {{ article.title | link_to: article.url }}
-      </h2>
-      {% assign date = article.published_at | time_tag: format: 'date' %}
-      <p>{{ 'blog.article_metadata_html' | t: date: date, author: article.author }}</p>
-      <p>{{ article.excerpt }}</p>
-    </div>
-  {% endfor %}
+  assign card_animation = section.settings.animation
+  if section.index == 1
+    assign card_animation = 'none'
+  endif
+-%}
 
-  {%- if paginate.pages > 1 -%}
-    {{- paginate | default_pagination -}}
-  {%- endif -%}
-{% endpaginate %}
+{% render 'results-view' %}
+
+<div
+  class="blog-list full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
+>
+  <results-view class="blog-list__inner" data-section-id="{{ section.id }}">
+    {%- if blog.articles_count == 0 -%}
+      <div class="blog-list__empty">
+        <p>{{ 'blog.empty' | t }}</p>
+      </div>
+    {%- else -%}
+      {%- if section.settings.show_search or section.settings.show_tags -%}
+        <blog-toolbar class="blog-list__toolbar{% if section.settings.sticky_toolbar %} blog-list__toolbar--sticky{% endif %}">
+          {%- if section.settings.show_search -%}
+            <form class="blog-list__search" action="{{ routes.search_url }}" method="get" role="search">
+              <input type="hidden" name="type" value="article">
+              <input type="hidden" name="options[prefix]" value="last">
+              <label class="visually-hidden" for="BlogSearch-{{ section.id }}">{{ 'blog.search_label' | t }}</label>
+              <input
+                class="blog-list__search-input"
+                id="BlogSearch-{{ section.id }}"
+                type="search"
+                name="q"
+                placeholder="{{ 'blog.search_placeholder' | t }}"
+                autocomplete="off"
+                required
+              >
+              <button class="blog-list__search-button" type="submit">
+                <span class="visually-hidden">{{ 'blog.search_submit' | t }}</span>
+                {{- 'icon-search.svg' | inline_asset_content -}}
+              </button>
+            </form>
+          {%- endif -%}
+
+          {%- if section.settings.show_tags and blog.all_tags.size > 0 -%}
+            <nav
+              class="blog-list__topics"
+              id="BlogTopics-{{ section.id }}"
+              aria-label="{{ 'blog.topics_label' | t }}"
+              data-results-part
+            >
+              <ul class="blog-list__topic-list" role="list">
+                <li>
+                  <a
+                    class="blog-list__topic"
+                    href="{{ blog.url }}"
+                    data-results-link
+                    {% if current_tags == blank %}
+                      aria-current="page"
+                    {% endif %}
+                  >
+                    {{- 'blog.all_topics' | t -}}
+                  </a>
+                </li>
+                {%- for tag in blog.all_tags -%}
+                  {%- assign tag_handle = tag | handleize -%}
+                  {%- assign tag_url = blog.url | append: '/tagged/' | append: tag_handle -%}
+                  <li>
+                    <a
+                      class="blog-list__topic"
+                      href="{{ tag_url }}"
+                      data-results-link
+                      {% if current_tags contains tag %}
+                        aria-current="page"
+                      {% endif %}
+                    >
+                      {{- tag | escape -}}
+                    </a>
+                  </li>
+                {%- endfor -%}
+              </ul>
+            </nav>
+          {%- endif -%}
+        </blog-toolbar>
+      {%- endif -%}
+
+      {%- paginate blog.articles by section.settings.per_page -%}
+        {%- liquid
+          # Featured story: page 1, no topic chosen. The picked article, else the newest one
+          assign featured = nil
+          if section.settings.show_featured and paginate.current_page == 1
+            if current_tags == blank
+              assign featured = section.settings.featured_article
+              if featured == blank
+                assign featured = blog.articles.first
+              endif
+            endif
+          endif
+        -%}
+
+        <div
+          class="blog-list__results"
+          id="BlogResults-{{ section.id }}"
+          tabindex="-1"
+          data-results-part
+          data-results-main
+        >
+          {%- comment -%}
+            <animate-on-scroll> reveals the cards as they scroll in. It sits inside the results part, so
+            after a topic or page change the new one starts watching the new cards.
+          {%- endcomment -%}
+          <animate-on-scroll class="blog-list__reveal">
+          {%- if featured != blank -%}
+            <div class="blog-list__featured">
+              {% render 'article-card',
+                article: featured,
+                size: 'featured',
+                pill_label: section.settings.featured_label,
+                speed: section.settings.reading_speed,
+                animation: card_animation,
+                topic_scheme: topic_scheme,
+                arrow_scheme: arrow_scheme
+              %}
+            </div>
+          {%- endif -%}
+
+          <h2 class="visually-hidden">{{ 'blog.articles_heading' | t }}</h2>
+
+          {%- if blog.articles.size > 0 -%}
+            <ul class="blog-list__grid blog-list__grid--{{ section.settings.layout }}" role="list">
+              {%- for article in blog.articles -%}
+                {%- if featured != blank and article.id == featured.id -%}
+                  {%- continue -%}
+                {%- endif -%}
+                <li class="blog-list__item">
+                  {% render 'article-card',
+                    article: article,
+                    speed: section.settings.reading_speed,
+                    animation: card_animation,
+                topic_scheme: topic_scheme,
+                arrow_scheme: arrow_scheme
+                  %}
+                </li>
+              {%- endfor -%}
+            </ul>
+          {%- else -%}
+            <div class="blog-list__empty">
+              <p>{{ 'blog.empty_topic' | t }}</p>
+              <a class="button button--secondary" href="{{ blog.url }}" data-results-link>{{ 'blog.show_all' | t }}</a>
+            </div>
+          {%- endif -%}
+
+          {%- if paginate.pages > 1 -%}
+            {% render 'pagination', paginate: paginate %}
+          {%- endif -%}
+          </animate-on-scroll>
+        </div>
+      {%- endpaginate -%}
+    {%- endif -%}
+  </results-view>
+</div>
+
+{% stylesheet %}
+  .blog-list {
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  .blog-list__inner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+    /* After a page change it scrolls here: leave room for the header pill and the sticky toolbar */
+    scroll-margin-block-start: calc(var(--header-space, 6.0625rem) + 4rem);
+  }
+
+  /* ---------- Toolbar: search, then the topic pills (Figma y 121-161, 40px tall) ---------- */
+  .blog-list__toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xl); /* search → pills: ~33px */
+  }
+
+  /* Sticks under the header pill; frosted, so cards scrolling underneath don't show through */
+  .blog-list__toolbar--sticky {
+    position: sticky;
+    inset-block-start: calc(var(--header-space, 6.0625rem) + var(--space-xs));
+    z-index: 10;
+    padding-block: var(--space-sm);
+    background-color: var(--color-background);
+  }
+
+  /*
+    Stuck (the script below adds is-stuck): a block of the page colour fills the screen from the very
+    top down to the bar's bottom, edge to edge, so no card shows between the header pill and the
+    toolbar. z-index -1 puts it behind the search and pills (the bar is its own stacking layer); the
+    header pill (z-index 20) stays on top of it.
+  */
+  .blog-list__toolbar--sticky.is-stuck::before {
+    content: "";
+    position: absolute;
+    inset: auto auto 0 50%;
+    z-index: -1;
+    inline-size: 100vw;
+    block-size: calc(100% + var(--toolbar-top, 7rem));
+    background-color: var(--color-background);
+    translate: -50% 0;
+    pointer-events: none;
+  }
+
+  .blog-list__search {
+    position: relative;
+    flex: none;
+    inline-size: min(16.375rem, 100%); /* 262px */
+  }
+
+  /* Two classes: critical.css input[type="search"] (element + attribute) sets 50px and a dark border */
+  .blog-list__search .blog-list__search-input {
+    inline-size: 100%;
+    block-size: 2.5rem;
+    min-block-size: 0;
+    margin: 0;
+    padding-inline: var(--space-lg) 2.75rem;
+    border: 1px solid var(--color-tint-border);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-background);
+    color: var(--color-text);
+    font-size: var(--font-size-caption);
+  }
+
+  /*
+    Two classes on purpose: critical.css styles every button[type="submit"] as the red button, and that
+    selector (element + attribute) beats one class
+  */
+  .blog-list__search .blog-list__search-button,
+  .blog-list__search .blog-list__search-button:hover {
+    /* A 32px circle centred in the 40px box, so the keyboard focus ring is round, not an oval */
+    position: absolute;
+    inset: 50% 0.25rem auto auto;
+    display: grid;
+    place-items: center;
+    inline-size: 2rem;
+    block-size: 2rem;
+    min-block-size: 0;
+    border-radius: 50%;
+    translate: 0 -50%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+    color: var(--color-text);
+    cursor: pointer;
+  }
+
+  .blog-list__search-button svg {
+    inline-size: 1.25rem;
+    block-size: auto;
+  }
+
+  /* Pills in one row; on narrow screens the row scrolls sideways instead of wrapping */
+  .blog-list__topics {
+    min-inline-size: 0;
+  }
+
+  .blog-list__topic-list {
+    display: flex;
+    gap: var(--space-md);
+    margin: 0;
+    padding: 0.25rem;
+    overflow-x: auto;
+    list-style: none;
+    scrollbar-width: none;
+  }
+
+  .blog-list__topic {
+    display: inline-flex;
+    align-items: center;
+    block-size: 2.5rem;
+    padding-inline: var(--space-lg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    color: var(--color-text);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-decoration: none;
+    text-transform: uppercase;
+    white-space: nowrap;
+    transition:
+      border-color var(--duration-fast) var(--ease-out),
+      background-color var(--duration-fast) var(--ease-out),
+      color var(--duration-fast) var(--ease-out);
+  }
+
+  .blog-list__topic:hover {
+    border-color: var(--color-accent);
+  }
+
+  /* The current topic: red fill, white text (the Figma's dark text on red was ~1.5:1) */
+  .blog-list__topic[aria-current="page"] {
+    border-color: var(--color-button);
+    background-color: var(--color-button);
+    color: var(--color-button-text);
+  }
+
+  /* ---------- Results ---------- */
+  .blog-list__results {
+    outline: none;
+  }
+
+  .blog-list__reveal {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl); /* featured → rows ~30px */
+  }
+
+  .blog-list__results[aria-busy="true"] {
+    opacity: 0.5;
+    transition: opacity var(--duration-fast) var(--ease-out);
+  }
+
+  /*
+    Cards: 1 column on phones, 2 from 750px. From 1200px the Figma's rows of three, as 48 thin
+    columns so each row can have its own widths (Figma px → 48ths):
+    row 1  400 / 962 / 400  → 11 / 26 / 11
+    row 2  792 / 482 / 482  → 22 / 13 / 13
+    row 3  400 / 400 / 962  → 11 / 11 / 26
+    row 4  482 / 792 / 482  → 13 / 22 / 13
+    The 48 tracks have no gap (it would repeat 47 times): each card has half the gap on each side.
+  */
+  .blog-list__grid {
+    display: grid;
+    gap: var(--space-xl);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  @media (min-width: 750px) {
+    .blog-list__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1200px) {
+    .blog-list__grid {
+      grid-template-columns: repeat(48, minmax(0, 1fr));
+      column-gap: 0;
+      margin-inline: calc(var(--space-xl) / -2);
+    }
+
+    .blog-list__item {
+      grid-column: span 16;
+      padding-inline: calc(var(--space-xl) / 2);
+    }
+
+    .blog-list__item .article-card {
+      min-block-size: 25.1875rem; /* 403px rows */
+    }
+
+    .blog-list__grid--mixed > :nth-child(12n + 1),
+    .blog-list__grid--mixed > :nth-child(12n + 3),
+    .blog-list__grid--mixed > :nth-child(12n + 7),
+    .blog-list__grid--mixed > :nth-child(12n + 8) {
+      grid-column: span 11;
+    }
+
+    .blog-list__grid--mixed > :nth-child(12n + 2),
+    .blog-list__grid--mixed > :nth-child(12n + 9) {
+      grid-column: span 26;
+    }
+
+    .blog-list__grid--mixed > :nth-child(12n + 4),
+    .blog-list__grid--mixed > :nth-child(12n + 11) {
+      grid-column: span 22;
+    }
+
+    .blog-list__grid--mixed > :nth-child(12n + 5),
+    .blog-list__grid--mixed > :nth-child(12n + 6),
+    .blog-list__grid--mixed > :nth-child(12n + 10),
+    .blog-list__grid--mixed > :nth-child(12n + 12) {
+      grid-column: span 13;
+    }
+
+    /* The Figma's rows after the first start 15px further left (developer's choice, kept on purpose) */
+    .blog-list__grid--mixed > :nth-child(n + 4) {
+      translate: calc(-15 / 16 * 1rem) 0;
+    }
+  }
+
+  /* Cards in a row fade up one after another */
+  .blog-list__item:nth-child(3n + 2) {
+    --animate-delay: 100ms;
+  }
+
+  .blog-list__item:nth-child(3n) {
+    --animate-delay: 200ms;
+  }
+
+  .blog-list__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-lg);
+    padding-block: var(--space-3xl);
+    text-align: center;
+  }
+
+  .blog-list__empty p {
+    margin: 0;
+    font-size: var(--font-size-body-lg);
+  }
+
+  .blog-list .pagination {
+    margin-block-start: var(--space-lg);
+  }
+
+  /* Phones: no design yet (decision 7). The search takes its own row above the pills */
+  @media (max-width: 749px) {
+    .blog-list__toolbar {
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+    }
+
+    .blog-list__search {
+      inline-size: 100%;
+    }
+
+    .blog-list__topics {
+      inline-size: 100%;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <blog-toolbar>: adds "is-stuck" while the sticky toolbar is pinned under the header (the CSS then
+   * covers the gap above it). Pinned = the bar sits exactly at its sticky position (its CSS top),
+   * checked on scroll and resize, at most once per frame. Also passes that position to the CSS as
+   * --toolbar-top, so the cover reaches the top of the screen.
+   */
+  class BlogToolbar extends HTMLElement {
+    connectedCallback() {
+      if (!this.classList.contains('blog-list__toolbar--sticky')) return;
+      this.onScroll = () => {
+        if (this.frame) return;
+        this.frame = requestAnimationFrame(() => {
+          this.frame = null;
+          this.update();
+        });
+      };
+      window.addEventListener('scroll', this.onScroll, { passive: true });
+      window.addEventListener('resize', this.onScroll);
+      this.update();
+    }
+
+    disconnectedCallback() {
+      window.removeEventListener('scroll', this.onScroll);
+      window.removeEventListener('resize', this.onScroll);
+    }
+
+    update() {
+      const top = parseFloat(getComputedStyle(this).top) || 0;
+      const pinned = window.scrollY > 0 && Math.abs(this.getBoundingClientRect().top - top) < 1;
+      this.style.setProperty('--toolbar-top', `${top}px`);
+      this.classList.toggle('is-stuck', pinned);
+    }
+  }
+
+  if (!customElements.get('blog-toolbar')) customElements.define('blog-toolbar', BlogToolbar);
+{% endjavascript %}
 
 {% schema %}
 {
   "name": "t:general.blog",
-  "settings": []
+  "tag": "section",
+  "class": "blog-list-section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.blog_toolbar"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_search",
+      "label": "t:labels.show_blog_search",
+      "info": "t:labels.show_blog_search_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_tags",
+      "label": "t:labels.show_topic_pills",
+      "info": "t:labels.show_topic_pills_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "sticky_toolbar",
+      "label": "t:labels.sticky_toolbar",
+      "info": "t:labels.sticky_toolbar_info",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.blog_featured"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_featured",
+      "label": "t:labels.show_featured",
+      "info": "t:labels.show_featured_info",
+      "default": true
+    },
+    {
+      "type": "article",
+      "id": "featured_article",
+      "label": "t:labels.featured_article",
+      "info": "t:labels.featured_article_info"
+    },
+    {
+      "type": "text",
+      "id": "featured_label",
+      "label": "t:labels.pill_label",
+      "default": "Featured story",
+      "visible_if": "{{ section.settings.show_featured }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.blog_cards"
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "t:labels.layout",
+      "info": "t:labels.blog_layout_info",
+      "options": [
+        {
+          "value": "mixed",
+          "label": "t:options.blog_layout.mixed"
+        },
+        {
+          "value": "even",
+          "label": "t:options.blog_layout.even"
+        }
+      ],
+      "default": "mixed"
+    },
+    {
+      "type": "range",
+      "id": "per_page",
+      "label": "t:labels.articles_per_page",
+      "info": "t:labels.articles_per_page_info",
+      "min": 6,
+      "max": 24,
+      "step": 3,
+      "default": 12
+    },
+    {
+      "type": "color_scheme",
+      "id": "topic_color_scheme",
+      "label": "t:labels.topic_color_scheme",
+      "info": "t:labels.topic_color_scheme_info",
+      "default": "scheme-2"
+    },
+    {
+      "type": "color_scheme",
+      "id": "arrow_color_scheme",
+      "label": "t:labels.arrow_color_scheme",
+      "info": "t:labels.arrow_color_scheme_info",
+      "default": "scheme-2"
+    },
+    {
+      "type": "range",
+      "id": "reading_speed",
+      "label": "t:labels.reading_speed",
+      "info": "t:labels.reading_speed_info",
+      "min": 150,
+      "max": 300,
+      "step": 10,
+      "unit": "wpm",
+      "default": 200
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "select",
+      "id": "animation",
+      "label": "t:labels.animation",
+      "info": "t:labels.animation_info",
+      "options": [
+        {
+          "value": "none",
+          "label": "t:options.animation.none"
+        },
+        {
+          "value": "fade-up",
+          "label": "t:options.animation.fade_up"
+        }
+      ],
+      "default": "fade-up"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 80
+    }
+  ]
 }
 {% endschema %}

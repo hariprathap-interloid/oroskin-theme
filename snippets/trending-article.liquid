@@ -1,0 +1,249 @@
+{% doc %}
+  One row of the blog's "Trending this week" list (Figma 3007:81455): a big pale number, the article's
+  title and a meta line (author · topic · read time), the topic pill, an optional views text and a red
+  ↗ button. The whole row is one link (the title's link stretches over it). Must sit inside the
+  section's <ol>: the number comes from a CSS counter on the list, so it always matches the row's place.
+
+  Used by the Trending article block (hand-picked rows) and by the Blog trending section itself when
+  no rows were added (the blog's newest articles).
+
+  @param {article} [article] - The article. Empty = a placeholder row (theme editor only)
+  @param {string} [views] - Views text, e.g. "142k views". Merchant text: Shopify has no view counts
+  @param {boolean} [show_topic] - Repeat the topic in the meta line (it's already in the pill)
+  @param {number} [speed] - Reading speed in words per minute, default 200
+  @param {string} [animation] - Scroll reveal ('none' or 'fade-up'), default 'none'
+  @param {string} [attributes] - The block's shopify_attributes (theme editor selection)
+
+  @example
+  {% render 'trending-article', article: article, views: '142k views', animation: 'fade-up' %}
+{% enddoc %}
+
+{%- liquid
+  assign row_animation = animation | default: 'none'
+  if article != blank
+    assign topic = article.tags.first
+  else
+    assign topic = 'blog.trending.placeholder_topic' | t
+  endif
+-%}
+
+<li
+  class="trending-article{% if article == blank %} trending-article--placeholder{% endif %}"
+  {% if row_animation != 'none' %}
+    data-animate="{{ row_animation }}"
+  {% endif %}
+  {{ attributes }}
+>
+  <span class="trending-article__number" aria-hidden="true"></span>
+
+  <div class="trending-article__text">
+    <h3 class="trending-article__title">
+      {%- if article != blank -%}
+        <a class="trending-article__link" href="{{ article.url }}">{{ article.title | escape }}</a>
+      {%- else -%}
+        {{ 'blog.trending.placeholder_title' | t }}
+      {%- endif -%}
+    </h3>
+
+    <p class="trending-article__meta">
+      {%- if article != blank -%}
+        {%- capture minutes -%}{% render 'read-time', article: article, speed: speed %}{%- endcapture -%}
+        {%- assign minutes = minutes | strip -%}
+        {%- if article.author != blank -%}
+          <span>{{ article.author | escape }}</span>
+        {%- endif -%}
+        {%- if show_topic and topic != blank -%}
+          <span>{{ topic | escape }}</span>
+        {%- endif -%}
+        <span>{{ 'blog.read_time_short' | t: minutes: minutes }}</span>
+      {%- else -%}
+        <span>{{ 'blog.trending.placeholder_meta' | t }}</span>
+      {%- endif -%}
+    </p>
+  </div>
+
+  {%- if topic != blank -%}
+    <span class="trending-article__tag">{{ topic | escape }}</span>
+  {%- endif -%}
+
+  {%- if views != blank -%}
+    <span class="trending-article__views">{{ views | escape }}</span>
+  {%- endif -%}
+
+  <span class="trending-article__arrow" aria-hidden="true">{{ 'icon-arrow-solid.svg' | inline_asset_content }}</span>
+</li>
+
+{% stylesheet %}
+  /*
+    Figma row: 1185 x 114, padding ~28px, 24px apart. Columns: number (~70px) | title + meta |
+    pill | views (~150px) | 42px button. Figma px x --px follow the screen in a scaled section
+    (snippets/screen-scale.liquid) and are exact px elsewhere.
+  */
+  .trending-article {
+    position: relative;
+    display: grid;
+    grid-template-columns:
+      max(3rem, calc(72 * var(--px, 0.0625rem))) minmax(0, 1fr) auto
+      max(6rem, calc(150 * var(--px, 0.0625rem))) auto;
+    grid-template-areas: "number text tag views arrow";
+    align-items: center;
+    column-gap: var(--space-lg);
+    min-block-size: calc(114 * var(--px, 0.0625rem));
+    padding: var(--space-md) max(var(--space-md), calc(33 * var(--px, 0.0625rem))) var(--space-md) max(var(--space-md), calc(28 * var(--px, 0.0625rem)));
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-md);
+    background-color: var(--color-card);
+    transition:
+      transform var(--duration-fast) var(--ease-out),
+      box-shadow var(--duration-fast) var(--ease-out);
+  }
+
+  /* "01"–"05": the row's place in the list (counter set on the <ol>), very pale, decorative */
+  .trending-article__number {
+    grid-area: number;
+    align-self: end;
+    color: var(--color-tint);
+    font-family: var(--font-heading--family);
+    font-style: var(--font-heading--style);
+    font-weight: var(--font-heading--weight);
+    font-size: max(2.5rem, calc(52 * var(--px, 0.0625rem)));
+    font-variant-numeric: oldstyle-nums;
+    line-height: 1;
+  }
+
+  .trending-article__number::before {
+    counter-increment: trending-row;
+    content: counter(trending-row, decimal-leading-zero);
+  }
+
+  .trending-article__text {
+    grid-area: text;
+  }
+
+  .trending-article__title {
+    margin: 0;
+    font-size: var(--font-size-body-lg); /* 24px in the heading font */
+    line-height: 1.3;
+  }
+
+  .trending-article__link {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* The whole row is the link: the title link's ::after covers the row (position: relative) */
+  .trending-article__link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+
+  /* "Author • Topic • 8 min" */
+  .trending-article__meta {
+    margin: var(--space-xs) 0 0;
+    font-size: var(--font-size-body-sm);
+  }
+
+  .trending-article__meta > * + *::before {
+    content: "•";
+    margin-inline: 0.4em;
+  }
+
+  /* Topic pill: pale accent fill, accent border and text (like "Featured story") */
+  .trending-article__tag {
+    grid-area: tag;
+    justify-self: end;
+    padding: 0.25em 0.75em;
+    border: 1px solid color-mix(in srgb, var(--color-accent) 40%, transparent);
+    border-radius: var(--radius-pill);
+    background-color: color-mix(in srgb, var(--color-accent) 15%, var(--color-card));
+    color: var(--color-accent);
+    font-size: var(--font-size-body);
+    line-height: 1.3;
+    white-space: nowrap;
+  }
+
+  /* The Figma grey (developer's choice, under 4.5:1): one variable, so M9 can darken it */
+  .trending-article__views {
+    grid-area: views;
+    color: var(--trending-muted, color-mix(in srgb, var(--color-text) 55%, var(--color-background)));
+    font-size: var(--font-size-small);
+    white-space: nowrap;
+  }
+
+  /* 42px red circle, white arrow turned to ↗; it turns to → on hover */
+  .trending-article__arrow {
+    grid-area: arrow;
+    display: grid;
+    place-items: center;
+    inline-size: max(2.25rem, calc(42 * var(--px, 0.0625rem)));
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background-color: var(--color-button);
+    color: var(--color-button-text);
+    box-shadow: var(--shadow-card);
+  }
+
+  .trending-article__arrow svg {
+    inline-size: 40%;
+    block-size: auto;
+    transform: rotate(-45deg);
+    transition: transform var(--duration-base) var(--ease-out);
+  }
+
+  .trending-article:has(.trending-article__link) {
+    cursor: pointer;
+  }
+
+  .trending-article:has(.trending-article__link):hover,
+  .trending-article:has(.trending-article__link:focus-visible) {
+    box-shadow: var(--shadow-card-rose);
+  }
+
+  .trending-article:hover .trending-article__arrow svg,
+  .trending-article:has(.trending-article__link:focus-visible) .trending-article__arrow svg {
+    transform: rotate(0deg);
+  }
+
+  /* The keyboard focus ring goes round the whole row, not just the title */
+  .trending-article__link:focus-visible {
+    outline: none;
+  }
+
+  .trending-article:has(.trending-article__link:focus-visible) {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .trending-article:has(.trending-article__link):hover,
+    .trending-article:has(.trending-article__link:focus-visible) {
+      transform: translateY(-0.25rem);
+    }
+  }
+
+  .trending-article--placeholder {
+    opacity: 0.6;
+  }
+
+  /* Phones: no design yet (decision 7). The views column drops; the pill goes under the title */
+  @media (max-width: 749px) {
+    .trending-article {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-areas:
+        "number text arrow"
+        "number tag arrow";
+      row-gap: var(--space-sm);
+      padding: var(--space-md);
+    }
+
+    .trending-article__tag {
+      justify-self: start;
+    }
+
+    .trending-article__views {
+      display: none;
+    }
+  }
+{% endstylesheet %}

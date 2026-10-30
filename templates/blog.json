@@ -9,12 +9,187 @@
  */
 {
   "sections": {
+    "hero": {
+      "type": "blog-hero",
+      "blocks": {
+        "readers": {
+          "type": "_blog-stat-card",
+          "settings": {
+            "value": "2.4M",
+            "text": "Monthly readers across all journal editions",
+            "icon": "eye"
+          },
+          "blocks": {}
+        },
+        "saved": {
+          "type": "_blog-stat-card",
+          "settings": {
+            "value": "48K",
+            "text": "Articles saved by readers this month",
+            "icon": "heart"
+          },
+          "blocks": {}
+        },
+        "authored": {
+          "type": "_blog-stat-card",
+          "settings": {
+            "value": "120",
+            "text": "Expert-authored articles and editorials",
+            "icon": "pencil"
+          },
+          "blocks": {}
+        },
+        "award": {
+          "type": "_blog-stat-card",
+          "settings": {
+            "value": "3x",
+            "text": "Award-nominated beauty publication",
+            "icon": "award"
+          },
+          "blocks": {}
+        }
+      },
+      "block_order": [
+        "readers",
+        "saved",
+        "authored",
+        "award"
+      ],
+      "settings": {
+        "show_breadcrumb": true,
+        "eyebrow": "Beauty intelligence",
+        "heading": "Radiant skin and <em>beauty secrets</em>",
+        "text": "<p>Where beauty meets culture, science meets ritual, and every story is an invitation to discover your most luminous self.</p><p>By blending time-tested subcontinent traditions with modern dermatological science, we decode the secrets to healthy skin while celebrating the rich diversity of South Asian skin tones through expert-backed guides and clean ingredient breakdowns.</p>",
+        "articles_label": "Articles",
+        "articles_value": "",
+        "authors_label": "Authors",
+        "authors_value": "",
+        "topics_label": "Topics",
+        "topics_value": "",
+        "float_cards": true,
+        "section_width": "widest",
+        "fill_screen": true,
+        "scale_screen": true,
+        "text_scale": 110,
+        "color_scheme": "",
+        "animation": "fade-up",
+        "padding_top": 40,
+        "padding_bottom": 64
+      }
+    },
+    "trending": {
+      "type": "blog-trending",
+      "settings": {
+        "heading": "<em>Trending</em> this week",
+        "link_label": "View all",
+        "link": "",
+        "show_meta_topic": false,
+        "reading_speed": 200,
+        "show_video": true,
+        "video_position": "left",
+        "video": "shopify://files/videos/homepage-classic-watches-datejust-video-autoplay.webm",
+        "video_url": "",
+        "poster": "shopify://shop_images/6514468765eb7d5b1a064a890e7e065fdac9f2c3.png",
+        "video_label": "Video · 12:40",
+        "video_title": "The OroSkin lab: building a winter skincare routine from scratch",
+        "video_radius": 50,
+        "section_width": "widest",
+        "fill_screen": true,
+        "scale_screen": true,
+        "text_scale": 110,
+        "color_scheme": "",
+        "animation": "slide-left",
+        "padding_top": 40,
+        "padding_bottom": 40
+      }
+    },
     "main": {
       "type": "blog",
-      "settings": {}
+      "settings": {
+        "show_search": true,
+        "show_tags": true,
+        "sticky_toolbar": true,
+        "show_featured": true,
+        "featured_article": "",
+        "featured_label": "Featured story",
+        "layout": "mixed",
+        "per_page": 12,
+        "topic_color_scheme": "",
+        "arrow_color_scheme": "",
+        "reading_speed": 200,
+        "section_width": "widest",
+        "color_scheme": "",
+        "animation": "fade-up",
+        "padding_top": 24,
+        "padding_bottom": 80
+      }
+    },
+    "icon_features": {
+      "type": "icon-features",
+      "blocks": {
+        "icon_feature_YQqAFG": {
+          "type": "_icon-feature",
+          "settings": {
+            "icon": "truck",
+            "title": "Free shipping",
+            "text": "<p>Orders over $200 qualify for fast, free delivery</p>",
+            "link": ""
+          },
+          "blocks": {}
+        },
+        "icon_feature_yGV9Nt": {
+          "type": "_icon-feature",
+          "settings": {
+            "icon": "shield",
+            "title": "Secure payment",
+            "text": "<p>Trusted payment processing with advanced security</p>",
+            "link": ""
+          },
+          "blocks": {}
+        },
+        "icon_feature_P9atQH": {
+          "type": "_icon-feature",
+          "settings": {
+            "icon": "return",
+            "title": "Easy 30-day return",
+            "text": "<p>Try it for 30 days first, decide when you're ready.</p>",
+            "link": ""
+          },
+          "blocks": {}
+        },
+        "icon_feature_ACV7xp": {
+          "type": "_icon-feature",
+          "settings": {
+            "icon": "headset",
+            "title": "Trusted service",
+            "text": "<p>Our dedicated support staff is always on duty</p>",
+            "link": ""
+          },
+          "blocks": {}
+        }
+      },
+      "block_order": [
+        "icon_feature_YQqAFG",
+        "icon_feature_yGV9Nt",
+        "icon_feature_P9atQH",
+        "icon_feature_ACV7xp"
+      ],
+      "settings": {
+        "columns_desktop": 4,
+        "columns_mobile": "1",
+        "section_width": "widest",
+        "color_scheme": "scheme-2",
+        "icon_color": "#7B0000",
+        "animation": "slide-bottom",
+        "padding_top": 80,
+        "padding_bottom": 80
+      }
     }
   },
   "order": [
-    "main"
+    "hero",
+    "trending",
+    "main",
+    "icon_features"
   ]
 }

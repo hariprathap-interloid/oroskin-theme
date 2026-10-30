@@ -1,0 +1,22 @@
+{% doc %}
+  Outputs an article's estimated reading time in whole minutes (a number, no text), so each place can
+  word it its own way ("8 min", "8 min read"). Shopify has no read time, so it's worked out from the
+  article's word count: words / words-per-minute, rounded up, at least 1.
+
+  @param {article} article - The article to measure
+  @param {number} [speed] - Reading speed in words per minute, default 200
+
+  @example
+  {%- capture minutes -%}{% render 'read-time', article: article, speed: 200 %}{%- endcapture -%}
+  {{ 'blog.read_time_short' | t: minutes: minutes }}
+{% enddoc %}
+
+{%- liquid
+  assign words_per_minute = speed | default: 200 | at_least: 1
+  # A space before every tag first: strip_html only deletes tags, so "<p>skin.</p><p>Next" would
+  # become one word "skin.Next". Then split: ' ' cuts on any run of spaces and line breaks, so the
+  # size is the number of words.
+  assign word_count = article.content | replace: '<', ' <' | strip_html | split: ' ' | size
+  assign minutes = word_count | times: 1.0 | divided_by: words_per_minute | ceil | at_least: 1
+  echo minutes
+-%}
