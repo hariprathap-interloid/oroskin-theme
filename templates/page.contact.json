@@ -1,0 +1,347 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "main": {
+      "type": "contact-form",
+      "settings": {
+        "show_breadcrumb": true,
+        "eyebrow": "Get in touch",
+        "heading": "We're here, <em>always.</em>",
+        "text": "<p>Every luminary deserves a personal touch. Whether it's a question about a ritual, a concern with your order, or simply a desire to connect — we are here, human and present, for you.</p>",
+        "image": "shopify://shop_images/image_715.png",
+        "stat_value": "97%",
+        "stat_label": "Satisfaction rate",
+        "support_title": "Live support available now",
+        "support_hours": "Mon–Fri 9am–9pm · Sat–Sun 10am–6pm CET",
+        "form_heading": "Send a message",
+        "topics": "Order & shipping, Returns, Product query, Press & partnerships, Others",
+        "show_order_number": true,
+        "section_width": "widest",
+        "fill_screen": true,
+        "scale_screen": true,
+        "text_scale": 110,
+        "color_scheme": "",
+        "animation": "fade-up",
+        "padding_top": 40,
+        "padding_bottom": 96
+      }
+    },
+    "channels": {
+      "type": "contact-channels",
+      "blocks": {
+        "chat": {
+          "type": "_contact-channel",
+          "settings": {
+            "icon": "chat",
+            "label": "Fastest response",
+            "title": "Live chat",
+            "value_type": "none",
+            "email": "",
+            "phone": "",
+            "whatsapp_number": "",
+            "whatsapp_message": "",
+            "text": "<p>Speak directly with a beauty concierge. No bots — only humans who love beauty.</p>",
+            "status": "Online now",
+            "link_label": "Start conversation",
+            "link": ""
+          },
+          "blocks": {}
+        },
+        "email": {
+          "type": "_contact-channel",
+          "settings": {
+            "icon": "mail",
+            "label": "Email",
+            "title": "Email us",
+            "value_type": "email",
+            "email": "",
+            "phone": "",
+            "whatsapp_number": "",
+            "whatsapp_message": "",
+            "text": "<p>We reply to every message personally within 4 hours during business days.</p>",
+            "status": "",
+            "link_label": "Send email",
+            "link": ""
+          },
+          "blocks": {}
+        },
+        "phone": {
+          "type": "_contact-channel",
+          "settings": {
+            "icon": "phone",
+            "label": "Phone",
+            "title": "Call us",
+            "value_type": "phone",
+            "email": "",
+            "phone": "+44 20 7946 0958",
+            "whatsapp_number": "",
+            "whatsapp_message": "",
+            "text": "<p>Toll-free from the US, UK and EU. For orders, returns and concierge requests.</p>",
+            "status": "",
+            "link_label": "Call now",
+            "link": ""
+          },
+          "blocks": {}
+        },
+        "whatsapp": {
+          "type": "_contact-channel",
+          "settings": {
+            "icon": "mobile",
+            "label": "WhatsApp",
+            "title": "Message us",
+            "value_type": "whatsapp",
+            "email": "",
+            "phone": "",
+            "whatsapp_number": "+44 20 7946 0958",
+            "whatsapp_message": "Hello Oroskin",
+            "text": "<p>Prefer to message? Our concierge team is on WhatsApp for discreet, personal support.</p>",
+            "status": "",
+            "link_label": "Open WhatsApp",
+            "link": ""
+          },
+          "blocks": {}
+        }
+      },
+      "block_order": [
+        "chat",
+        "email",
+        "phone",
+        "whatsapp"
+      ],
+      "settings": {
+        "eyebrow": "Ways to reach us",
+        "heading": "Choose your <em>channel</em>",
+        "section_width": "widest",
+        "fill_screen": true,
+        "scale_screen": true,
+        "text_scale": 110,
+        "color_scheme": "",
+        "animation": "fade-up",
+        "padding_top": 96,
+        "padding_bottom": 96
+      }
+    },
+    "map": {
+      "type": "locations-map",
+      "blocks": {
+        "new_york": {
+          "type": "_map-pin",
+          "settings": {
+            "name": "New York",
+            "type_label": "Flagship",
+            "x": 29,
+            "y": 36,
+            "types": "Flagship stores"
+          },
+          "blocks": {}
+        },
+        "london": {
+          "type": "_map-pin",
+          "settings": {
+            "name": "London",
+            "type_label": "Studio",
+            "x": 50,
+            "y": 35,
+            "types": "Offices"
+          },
+          "blocks": {}
+        },
+        "dubai": {
+          "type": "_map-pin",
+          "settings": {
+            "name": "Dubai",
+            "type_label": "Pop-up",
+            "x": 61,
+            "y": 45,
+            "types": "Pop-ups"
+          },
+          "blocks": {}
+        },
+        "tokyo": {
+          "type": "_map-pin",
+          "settings": {
+            "name": "Tokyo",
+            "type_label": "Office",
+            "x": 81,
+            "y": 41,
+            "types": "Offices"
+          },
+          "blocks": {}
+        }
+      },
+      "block_order": [
+        "new_york",
+        "london",
+        "dubai",
+        "tokyo"
+      ],
+      "settings": {
+        "eyebrow": "Global presence",
+        "heading": "Find us <em>worldwide</em>",
+        "show_filters": true,
+        "filter_all": "All locations",
+        "ratio": "2.695",
+        "ratio_mobile": "1.5",
+        "focus_x": 50,
+        "focus_y": 32,
+        "section_width": "widest",
+        "fill_screen": true,
+        "scale_screen": true,
+        "text_scale": 110,
+        "color_scheme": "",
+        "animation": "fade-up",
+        "padding_top": 64,
+        "padding_bottom": 96,
+        "filter_types": "Flagship stores, Offices, Pop-ups"
+      }
+    },
+    "locations": {
+      "type": "contact-locations",
+      "blocks": {
+        "locations": {
+          "type": "_location-list",
+          "static": true,
+          "settings": {},
+          "blocks": {
+            "paris": {
+              "type": "_location-card",
+              "settings": {
+                "code": "FR",
+                "title": "Paris — Headquarters",
+                "address": "14 Rue du Faubourg Saint-Honoré\n75008 Paris, France",
+                "hours": "Mon–Fri · 9am – 7pm CET",
+                "map_link": "https://maps.app.goo.gl/815Z2mcYXokrQRrj8"
+              },
+              "blocks": {}
+            },
+            "new_york": {
+              "type": "_location-card",
+              "settings": {
+                "code": "US",
+                "title": "New York",
+                "address": "432 West Broadway, Suite 300\nSoHo, New York NY 10012",
+                "hours": "Mon–Fri · 9am – 6pm EST",
+                "map_link": ""
+              },
+              "blocks": {}
+            },
+            "tokyo": {
+              "type": "_location-card",
+              "settings": {
+                "code": "JP",
+                "title": "Tokyo",
+                "address": "2-11-3 Minami-Aoyama\nMinato-ku, Tokyo 107-0062",
+                "hours": "Mon–Fri · 10am – 7pm JST",
+                "map_link": ""
+              },
+              "blocks": {}
+            }
+          },
+          "block_order": [
+            "paris",
+            "new_york",
+            "tokyo"
+          ]
+        },
+        "social": {
+          "type": "_social-list",
+          "static": true,
+          "settings": {},
+          "blocks": {
+            "instagram": {
+              "type": "_social-card",
+              "settings": {
+                "network": "instagram",
+                "name": "Instagram",
+                "handle": "@oroskin.beauty",
+                "followers": "1.2M followers",
+                "link": ""
+              },
+              "blocks": {}
+            },
+            "x": {
+              "type": "_social-card",
+              "settings": {
+                "network": "x",
+                "name": "Twitter/X",
+                "handle": "@oroskin",
+                "followers": "340k followers",
+                "link": ""
+              },
+              "blocks": {}
+            },
+            "youtube": {
+              "type": "_social-card",
+              "settings": {
+                "network": "youtube",
+                "name": "YouTube",
+                "handle": "OroSkin Beauty",
+                "followers": "215k followers",
+                "link": ""
+              },
+              "blocks": {}
+            },
+            "facebook": {
+              "type": "_social-card",
+              "settings": {
+                "network": "facebook",
+                "name": "Facebook",
+                "handle": "OroSkin Beauty Co.",
+                "followers": "896k followers",
+                "link": ""
+              },
+              "blocks": {}
+            },
+            "linkedin": {
+              "type": "_social-card",
+              "settings": {
+                "network": "linkedin",
+                "name": "LinkedIn",
+                "handle": "OroSkin Beauty Co.",
+                "followers": "58k followers",
+                "link": "https://in.linkedin.com/company/interloid-technologies"
+              },
+              "blocks": {}
+            }
+          },
+          "block_order": [
+            "instagram",
+            "x",
+            "youtube",
+            "facebook",
+            "linkedin"
+          ]
+        }
+      },
+      "settings": {
+        "locations_eyebrow": "Visit our office",
+        "locations_heading": "Our global locations",
+        "social_eyebrow": "Find us online",
+        "social_heading": "Connect on social",
+        "social_icon_style": "brand",
+        "section_width": "widest",
+        "fill_screen": true,
+        "scale_screen": true,
+        "text_scale": 110,
+        "color_scheme": "",
+        "animation": "fade-up",
+        "padding_top": 64,
+        "padding_bottom": 96
+      }
+    }
+  },
+  "order": [
+    "main",
+    "channels",
+    "map",
+    "locations"
+  ]
+}

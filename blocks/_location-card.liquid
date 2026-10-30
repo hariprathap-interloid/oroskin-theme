@@ -1,0 +1,191 @@
+{% doc %}
+  One office in the Locations panel (Figma 170:108823 "Our global locations"): a round badge with a
+  short code ("FR"), the place ("Paris — Headquarters"), a two-line address and the opening hours in
+  the accent colour. With a map link (e.g. Google Maps) the whole card is clickable: the place is the
+  link and a layer stretches it over the card; the hand cursor shows anywhere on it and the card lifts
+  on hover. No underline on the name.
+
+  @example
+  {% content_for 'block', type: '_location-card', id: 'location-card' %}
+{% enddoc %}
+
+{%- if block.settings.title != blank or block.settings.address != blank -%}
+  <div class="location-card{% if block.settings.map_link != blank %} location-card--link{% endif %}" {{ block.shopify_attributes }}>
+
+    {%- if block.settings.code != blank -%}
+      <span class="location-card__badge" aria-hidden="true">{{ block.settings.code | escape }}</span>
+    {%- endif -%}
+
+    <div class="location-card__body">
+      {%- if block.settings.title != blank -%}
+        <h3 class="location-card__title">
+          {%- if block.settings.map_link != blank -%}
+            <a class="location-card__link" href="{{ block.settings.map_link }}" target="_blank" rel="noopener">
+              {{- block.settings.title | escape -}}
+              <span class="visually-hidden"> ({{ 'accessibility.new_window' | t }})</span>
+            </a>
+          {%- else -%}
+            {{ block.settings.title | escape }}
+          {%- endif -%}
+        </h3>
+      {%- endif -%}
+
+      {%- if block.settings.address != blank -%}
+        <p class="location-card__address">{{ block.settings.address | escape | newline_to_br }}</p>
+      {%- endif -%}
+
+      {%- if block.settings.hours != blank -%}
+        <p class="location-card__hours">{{ block.settings.hours | escape }}</p>
+      {%- endif -%}
+    </div>
+  </div>
+{%- endif -%}
+
+{% stylesheet %}
+  /*
+    Figma card: 492 x 210, badge 56px at 31px from the left, text 21px after it. Made roomier on
+    purpose (developer, 2026-10-30): 68px badge, bigger title and text, more padding. Figma px x --px
+    follow the screen in a scaled section (snippets/screen-scale.liquid).
+  */
+  .location-card {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    column-gap: var(--space-lg);
+    padding: var(--space-xl) var(--space-xl);
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-sm);
+    background-color: var(--color-card);
+  }
+
+  .location-card__badge {
+    display: grid;
+    place-items: center;
+    inline-size: max(3.5rem, calc(68 * var(--px, 0.0625rem)));
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background-color: var(--color-border);
+    color: var(--color-accent);
+    font-size: var(--font-size-h3);
+    text-transform: uppercase;
+  }
+
+  /* No code: the text uses the whole width */
+  .location-card:not(:has(.location-card__badge)) .location-card__body {
+    grid-column: 1 / -1;
+  }
+
+  .location-card__title {
+    margin: 0;
+    font-family: var(--font-body--family);
+    font-style: var(--font-body--style);
+    font-weight: var(--font-weight-medium);
+    font-size: var(--font-size-h3);
+    line-height: var(--line-height-body);
+  }
+
+  /*
+    Whole card clickable: the place name stays the real link (screen readers read it as the link
+    name), and its ::after covers the card (the card is position: relative). No underline; the hand
+    cursor and the lift show it's clickable.
+  */
+  .location-card__link {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .location-card__link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+
+  .location-card--link {
+    position: relative;
+    cursor: pointer;
+    transition:
+      transform var(--duration-fast) var(--ease-out),
+      box-shadow var(--duration-fast) var(--ease-out);
+  }
+
+  /* The keyboard focus ring goes round the whole card, not just the name */
+  .location-card__link:focus-visible {
+    outline: none;
+  }
+
+  .location-card--link:has(.location-card__link:focus-visible) {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+  }
+
+  .location-card--link:hover,
+  .location-card--link:has(.location-card__link:focus-visible) {
+    box-shadow: var(--shadow-card-rose);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .location-card--link:hover,
+    .location-card--link:has(.location-card__link:focus-visible) {
+      transform: translateY(-0.25rem);
+    }
+  }
+
+
+  .location-card__address {
+    margin: var(--space-sm) 0 0;
+    font-size: var(--font-size-body-lg);
+    line-height: var(--line-height-body);
+  }
+
+  .location-card__hours {
+    margin: var(--space-xs) 0 0;
+    color: var(--color-accent);
+    font-size: var(--font-size-body-lg);
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.location_card",
+  "tag": null,
+  "settings": [
+    {
+      "type": "text",
+      "id": "code",
+      "label": "t:labels.location_code",
+      "info": "t:labels.location_code_info",
+      "default": "FR"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "t:labels.pin_name",
+      "default": "Paris — Headquarters"
+    },
+    {
+      "type": "textarea",
+      "id": "address",
+      "label": "t:labels.address",
+      "default": "14 Rue du Faubourg Saint-Honoré\n75008 Paris, France"
+    },
+    {
+      "type": "text",
+      "id": "hours",
+      "label": "t:labels.opening_hours",
+      "default": "Mon–Fri · 9am – 7pm CET"
+    },
+    {
+      "type": "url",
+      "id": "map_link",
+      "label": "t:labels.map_link",
+      "info": "t:labels.map_link_info"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.location_card"
+    }
+  ]
+}
+{% endschema %}

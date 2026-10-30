@@ -1,0 +1,56 @@
+{% doc %}
+  Screen-sized sections, the hero's way (Figma frames are 1920 x 1031 screens). Outputs nothing: it
+  only loads the CSS below, and a snippet's stylesheet loads only on pages that render it, so this
+  never affects other pages or the header and footer. Used by the contact page sections.
+
+  The section adds the classes itself:
+  - section--fill-screen: at least one screen tall, content centred vertically
+  - section--screen-scale: cards, badges, icons and fields follow the screen like the hero (--px is
+    one Figma pixel on this screen: the smaller of width / 1920 and height / 1031). Text keeps the
+    theme's normal sizes, made a little bigger by the section's Text size setting (--text-boost).
+
+  @example
+  {% render 'screen-scale' %}
+{% enddoc %}
+
+{% stylesheet %}
+  .section--fill-screen {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-block-size: 100svh;
+  }
+
+  /* The page's first section shares the screen with the header (20px gap + 77px pill = 6.0625rem) */
+  #MainContent > .shopify-section:first-child .section--fill-screen {
+    min-block-size: calc(100svh - 6.0625rem);
+  }
+
+  /*
+    --px (one Figma pixel on this screen) sizes the cards, badges, icons and fields. Text and spacing
+    are NOT tied to it (that made the text far bigger than normal on big screens): text uses the
+    theme's normal sizes x --text-boost (the section's Text size setting, e.g. 1.1 = 10% bigger), and
+    spacing stays normal, so extra room on a big screen stays as space.
+  */
+  .section--screen-scale {
+    --px: min(calc(100vw / 1920), calc(100svh / 1031));
+    --text-boost: 1.1;
+
+    --font-size-display: calc(clamp(3rem, 2.235rem + 3.14vw, 6rem) * var(--text-boost));
+    --font-size-h1: calc(clamp(2.25rem, 1.868rem + 1.57vw, 3.75rem) * var(--text-boost));
+    --font-size-h2: calc(clamp(1.75rem, 1.559rem + 0.784vw, 2.5rem) * var(--text-boost));
+    --font-size-h3: calc(clamp(1.375rem, 1.311rem + 0.261vw, 1.625rem) * var(--text-boost));
+    --font-size-body-lg: calc(clamp(1.125rem, 1.061rem + 0.261vw, 1.375rem) * var(--text-boost));
+    --font-size-body: calc(clamp(1rem, 0.9363rem + 0.261vw, 1.25rem) * var(--text-boost));
+    --font-size-body-sm: calc(clamp(0.9375rem, 0.8897rem + 0.196vw, 1.125rem) * var(--text-boost));
+    --font-size-caption: calc(clamp(0.875rem, 0.8431rem + 0.131vw, 1rem) * var(--text-boost));
+    --font-size-small: calc(clamp(0.8125rem, 0.7966rem + 0.0654vw, 0.875rem) * var(--text-boost));
+    --font-size-label: calc(clamp(0.875rem, 0.8113rem + 0.261vw, 1.125rem) * var(--text-boost));
+  }
+
+  /*
+    Outside a scaled section --px isn't set, so components fall back to 1px per Figma pixel
+    (written as 0.0625rem): e.g. calc(66 * var(--px, 0.0625rem)) is 66px at the browser's
+    default font size.
+  */
+{% endstylesheet %}

@@ -3,22 +3,35 @@
   plane. On hover it turns pale for a moment, the colour fills it again from the left, and the plane
   flies off to the right while a second plane parks in from the bottom left.
 
-  Used by the New Arrivals deck (Explore all) and by the Button block's "Explore (animated)" style, so
-  both always look and move the same. The colour is the section's accent (--color-accent).
+  Used by the New Arrivals deck (Explore all), by the Button block's "Explore (animated)" style and,
+  as a submit button, by the contact form, so all of them look and move the same. The colour is the
+  section's accent (--color-accent).
 
   @param {string} label - Button text
   @param {string} [url] - Link. Without one the button shows but is marked disabled (theme editor)
   @param {boolean} [new_tab] - Open the link in a new tab
+  @param {string} [tag] - 'button' renders a <button type="submit"> for a form instead of a link
   @param {string} [class] - Extra classes on the link (e.g. the Button block's alignment)
   @param {string} [attributes] - Extra attributes, e.g. block.shopify_attributes
 
   @example
   {% render 'explore-button', label: section.settings.link_label, url: explore_url %}
+  {% render 'explore-button', label: 'Send', tag: 'button' %}
 {% enddoc %}
 
-<a
+{%- liquid
+  # A submit button shares the label, planes and styles; only the element and its attributes change
+  assign element = 'a'
+  if tag == 'button'
+    assign element = 'button'
+  endif
+-%}
+
+<{{ element }}
   class="button explore-button {{ class }}"
-  {% if url != blank %}
+  {% if element == 'button' %}
+    type="submit"
+  {% elsif url != blank %}
     href="{{ url }}"
     {% if new_tab %}
       target="_blank" rel="noopener"
@@ -38,7 +51,7 @@
     {{- 'icon-send.svg' | inline_asset_content -}}
     {{- 'icon-send.svg' | inline_asset_content -}}
   </span>
-</a>
+</{{ element }}>
 
 {% stylesheet %}
   /*
@@ -48,8 +61,13 @@
     and the text goes back to white. Meanwhile the paper plane turns to point straight right, flies off,
     then parks: in from outside the bottom left of the button. The animations end on the rest look, so
     mouse-out changes nothing.
+
+    Two classes (.button.explore-button) on purpose: as a submit button (contact form) the element
+    also matches critical.css's button[type="submit"] and button[type="submit"]:hover (element +
+    attribute), which beat one class. Their hover forced the solid red background, so the pale state
+    never showed and the accent-coloured text vanished on red.
   */
-  .explore-button {
+  .button.explore-button {
     position: relative;
     isolation: isolate;
     overflow: hidden;
@@ -75,8 +93,8 @@
     transform: translate(-50%, -50%) scale(1);
   }
 
-  .explore-button:hover,
-  .explore-button:focus-visible {
+  .button.explore-button:hover,
+  .button.explore-button:focus-visible {
     background-color: color-mix(in srgb, var(--color-accent) 14%, var(--color-background));
     box-shadow: var(--glass-shadow), var(--glass-rim);
     animation: explore-button-text 0.8s var(--ease-out) 0.25s backwards;
@@ -124,7 +142,9 @@
 
   /*
     Plane 1 (0 - 0.6s): turns 35deg (the icon points up-right, so it now points straight right) in
-    0.24s, then flies right until the button's edge has cut it off (4em clears the padding); no fade.
+    0.24s, then flies right until the button's edge has cut it off; no fade. The distance is
+    --explore-fly: 4em clears the padding of a normal pill; a wide button (the contact form's
+    full-width submit) sets a longer one, or plane 1 would stay visible next to plane 2.
     Plane 2 (0.45 - 0.95s): starts parking just before plane 1 is gone, flies in diagonally, overshoots
     a little and settles. Both end where the rest state puts the other one, so mouse-out is invisible.
   */
@@ -144,7 +164,7 @@
     }
 
     100% {
-      transform: translateX(4em) rotate(35deg);
+      transform: translateX(var(--explore-fly, 4em)) rotate(35deg);
     }
   }
 

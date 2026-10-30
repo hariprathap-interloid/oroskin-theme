@@ -1,0 +1,46 @@
+{% doc %}
+  A small accent dot with a ring that grows and fades, for "online now" style lines (Figma contact page:
+  the live support box and the Live chat card). Decorative: the text next to it says the status.
+  The ring only pulses when the visitor hasn't asked for reduced motion.
+
+  @param {string} [class] - Extra class, for spacing inside a component
+
+  @example
+  {% render 'status-dot' %}
+{% enddoc %}
+
+<span class="status-dot {{ class }}" aria-hidden="true"></span>
+
+{% stylesheet %}
+  .status-dot {
+    position: relative;
+    flex: none;
+    inline-size: 0.375rem;
+    block-size: 0.375rem;
+    border-radius: 50%;
+    background-color: var(--color-accent);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .status-dot::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background-color: var(--color-accent);
+      animation: status-dot-pulse 2s var(--ease-out) infinite;
+    }
+  }
+
+  @keyframes status-dot-pulse {
+    from {
+      opacity: 0.6;
+      transform: scale(1);
+    }
+
+    to {
+      opacity: 0;
+      transform: scale(4);
+    }
+  }
+{% endstylesheet %}

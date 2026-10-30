@@ -1,0 +1,896 @@
+{%- comment -%}
+  Contact (M8.1, Figma 170:108449 "Contact us", top of the page): breadcrumb, then two columns.
+  Left: eyebrow, H1 with red words, intro text, a round photo with a glass stat circle ("97%
+  Satisfaction rate") over its edge and a "Live support" box with a pulsing dot. Right: the "Send a
+  message" panel with Shopify's contact form.
+
+  - Contact form: {% form 'contact' %} sends every field named contact[...] to the store's email
+    (Settings > Notifications > Staff notifications > Contact form). contact[email] is required by
+    Shopify; contact[body] is the message. The other names (First name, Topic...) are the headings
+    the merchant sees in that email, so they come from the locale file and follow the shop language.
+  - Topics: one comma-separated text setting, shown as pill-shaped radio buttons (none pre-selected).
+  - Heading and text left empty: the page's own title and content (Admin > Online Store > Pages).
+  - Section 1 of the page, so no scroll animation (project rule: never on the first section).
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+
+  assign animation = section.settings.animation
+  if section.index == 1
+    assign animation = 'none'
+  endif
+
+  assign heading = section.settings.heading
+  if heading == blank
+    assign heading = page.title | escape
+  endif
+
+  assign intro = section.settings.text
+  if intro == blank
+    assign intro = page.content
+  endif
+
+  assign breadcrumb_title = page.title | default: heading | strip_html
+
+  assign topics = section.settings.topics | split: ','
+
+  # ids: unique per section, so the page could hold two forms
+  assign form_id = 'ContactForm-' | append: section.id
+  assign error_id = form_id | append: '-error'
+  assign success_id = form_id | append: '-success'
+
+  # Field names = the headings in the merchant's email (assigned first: no filters inside attributes)
+  assign name_first = 'contact.form.first_name' | t
+  assign name_last = 'contact.form.last_name' | t
+  assign name_topic = 'contact.form.topic' | t
+  assign name_order = 'contact.form.order_number' | t
+  # Not 'Subject': Shopify's staff email treats a field called Subject specially and printed its own
+  # template text ("New customer message on %{creation_date}") as that field's heading
+  assign name_subject = 'contact.form.subject_field' | t
+
+  # Logged-in customers get their name filled in (the email is set inside the form, where `form` exists)
+  assign value_first = customer.first_name
+  assign value_last = customer.last_name
+
+  assign has_stat = false
+  if section.settings.stat_value != blank or section.settings.stat_label != blank
+    assign has_stat = true
+  endif
+
+  assign has_support = false
+  if section.settings.support_title != blank or section.settings.support_hours != blank
+    assign has_support = true
+  endif
+
+  # The photo shows a placeholder in the theme editor only; on the live store an empty photo is left out
+  assign show_photo = false
+  if section.settings.image != blank or request.design_mode
+    assign show_photo = true
+  endif
+-%}
+
+{% render 'screen-scale' %}
+
+<div
+  class="contact full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.fill_screen %} section--fill-screen{% endif %}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};"
+>
+  <animate-on-scroll class="contact__inner">
+    {%- if section.settings.show_breadcrumb -%}
+      {% render 'breadcrumb', current: breadcrumb_title, class: 'contact__breadcrumb' %}
+    {%- endif -%}
+
+    <div class="contact__grid">
+      <div
+        class="contact__intro"
+        {% if animation != 'none' %}
+          data-animate="{{ animation }}"
+        {% endif %}
+      >
+        {%- if section.settings.eyebrow != blank -%}
+          <p class="eyebrow contact__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+        {%- endif -%}
+
+        <h1 class="contact__heading">{{ heading }}</h1>
+
+        {%- if intro != blank -%}
+          <div class="contact__text rte">{{ intro }}</div>
+        {%- endif -%}
+
+        {%- if show_photo or has_stat or has_support -%}
+          <div class="contact__media{% unless show_photo %} contact__media--no-photo{% endunless %}">
+            {%- if show_photo -%}
+              {%- comment -%} Decorative: the heading and text say what the page is. Not the LCP (the H1 is), so no high priority {%- endcomment -%}
+              {% render 'image',
+                image: section.settings.image,
+                class: 'contact__photo image--cover',
+                alt: '',
+                width: 960,
+                height: 960,
+                crop: 'center',
+                sizes: '(min-width: 990px) 30rem, 12rem',
+                widths: '200, 320, 480, 640, 960',
+                loading: 'eager'
+              %}
+            {%- endif -%}
+
+            {%- if has_stat -%}
+              <p class="contact__stat">
+                {%- if section.settings.stat_value != blank -%}
+                  <span class="contact__stat-value">{{ section.settings.stat_value | escape }}</span>
+                {%- endif -%}
+                {%- if section.settings.stat_label != blank -%}
+                  <span class="contact__stat-label">{{ section.settings.stat_label | escape }}</span>
+                {%- endif -%}
+              </p>
+            {%- endif -%}
+
+            {%- if has_support -%}
+              <div class="contact__support">
+                {% render 'status-dot' %}
+                <p class="contact__support-text">
+                  {%- if section.settings.support_title != blank -%}
+                    <span class="contact__support-title">{{ section.settings.support_title | escape }}</span>
+                  {%- endif -%}
+                  {%- if section.settings.support_hours != blank -%}
+                    <span class="contact__support-hours">{{ section.settings.support_hours | escape }}</span>
+                  {%- endif -%}
+                </p>
+              </div>
+            {%- endif -%}
+          </div>
+        {%- endif -%}
+      </div>
+
+      <div
+        class="contact-form"
+        {% if animation != 'none' %}
+          data-animate="{{ animation }}"
+          style="--animate-delay: 150ms;"
+        {% endif %}
+      >
+        {%- if section.settings.form_heading != blank -%}
+          <h2 class="h3 contact-form__title">{{ section.settings.form_heading | escape }}</h2>
+        {%- endif -%}
+
+        {%- form 'contact', id: form_id, class: 'contact-form__form' -%}
+          {%- comment -%} After an error, keep what the visitor typed; otherwise a logged-in customer's email {%- endcomment -%}
+          {%- assign value_email = form.email | default: customer.email -%}
+          {%- comment -%}
+            After sending, Shopify reloads the page at this form (#id) with a success or error message.
+            The script below moves focus to that message, so screen readers announce it.
+          {%- endcomment -%}
+          {%- if form.posted_successfully? -%}
+            <p
+              class="form-message form-message--success contact-form__message"
+              id="{{ success_id }}"
+              tabindex="-1"
+              data-focus-after-submit
+            >
+              {{- 'contact.form.success' | t -}}
+            </p>
+          {%- elsif form.errors -%}
+            <div
+              class="form-message form-message--error contact-form__message"
+              id="{{ error_id }}"
+              tabindex="-1"
+              data-focus-after-submit
+            >
+              {{- form.errors | default_errors -}}
+            </div>
+          {%- endif -%}
+
+          {%- if topics.size > 0 -%}
+            <fieldset class="contact-form__topics">
+              <legend class="contact-form__label">{{ 'contact.form.topic' | t }}</legend>
+              <div class="contact-form__pills">
+                {%- for topic in topics -%}
+                  {%- assign topic_label = topic | strip -%}
+                  {%- if topic_label != blank -%}
+                    {%- assign topic_id = form_id | append: '-topic-' | append: forloop.index -%}
+                    <input
+                      class="visually-hidden contact-form__pill-input"
+                      type="radio"
+                      id="{{ topic_id }}"
+                      name="contact[{{ name_topic }}]"
+                      value="{{ topic_label | escape }}"
+                    >
+                    <label class="contact-form__pill" for="{{ topic_id }}">{{ topic_label | escape }}</label>
+                  {%- endif -%}
+                {%- endfor -%}
+              </div>
+            </fieldset>
+          {%- endif -%}
+
+          <div class="contact-form__fields">
+            <div class="contact-form__field">
+              <label class="contact-form__label" for="{{ form_id }}-first-name">{{ 'contact.form.first_name' | t }}</label>
+              <input
+                class="contact-form__input"
+                type="text"
+                id="{{ form_id }}-first-name"
+                name="contact[{{ name_first }}]"
+                value="{{ value_first | escape }}"
+                placeholder="{{ 'contact.form.first_name_placeholder' | t }}"
+                autocomplete="given-name"
+                required
+              >
+            </div>
+
+            <div class="contact-form__field">
+              <label class="contact-form__label" for="{{ form_id }}-last-name">{{ 'contact.form.last_name' | t }}</label>
+              <input
+                class="contact-form__input"
+                type="text"
+                id="{{ form_id }}-last-name"
+                name="contact[{{ name_last }}]"
+                value="{{ value_last | escape }}"
+                placeholder="{{ 'contact.form.last_name_placeholder' | t }}"
+                autocomplete="family-name"
+                required
+              >
+            </div>
+
+            <div class="contact-form__field">
+              <label class="contact-form__label" for="{{ form_id }}-email">{{ 'contact.form.email' | t }}</label>
+              <input
+                class="contact-form__input"
+                type="email"
+                id="{{ form_id }}-email"
+                name="contact[email]"
+                value="{{ value_email | escape }}"
+                placeholder="{{ 'contact.form.email_placeholder' | t }}"
+                autocomplete="email"
+                autocapitalize="off"
+                spellcheck="false"
+                required
+                {% if form.errors contains 'email' %}
+                  aria-invalid="true"
+                  aria-describedby="{{ error_id }}"
+                {% endif %}
+              >
+            </div>
+
+            {%- if section.settings.show_order_number -%}
+              <div class="contact-form__field">
+                <label class="contact-form__label" for="{{ form_id }}-order">{{ 'contact.form.order_number_label' | t }}</label>
+                <input
+                  class="contact-form__input"
+                  type="text"
+                  id="{{ form_id }}-order"
+                  name="contact[{{ name_order }}]"
+                  placeholder="{{ 'contact.form.order_number_placeholder' | t }}"
+                  autocomplete="off"
+                >
+              </div>
+            {%- endif -%}
+
+            <div class="contact-form__field contact-form__field--full">
+              <label class="contact-form__label" for="{{ form_id }}-subject">{{ 'contact.form.subject' | t }}</label>
+              <input
+                class="contact-form__input"
+                type="text"
+                id="{{ form_id }}-subject"
+                name="contact[{{ name_subject }}]"
+                placeholder="{{ 'contact.form.subject_placeholder' | t }}"
+                required
+              >
+            </div>
+
+            <div class="contact-form__field contact-form__field--full">
+              <label class="contact-form__label" for="{{ form_id }}-message">{{ 'contact.form.message' | t }}</label>
+              <textarea
+                class="contact-form__input contact-form__textarea"
+                id="{{ form_id }}-message"
+                name="contact[body]"
+                rows="4"
+                placeholder="{{ 'contact.form.message_placeholder' | t }}"
+                required
+              >
+                {{- form.body | escape -}}
+              </textarea>
+            </div>
+          </div>
+
+          {%- assign submit_label = 'contact.form.send' | t -%}
+          {% render 'explore-button', label: submit_label, tag: 'button', class: 'contact-form__submit' %}
+        {%- endform -%}
+      </div>
+    </div>
+  </animate-on-scroll>
+</div>
+
+{% stylesheet %}
+  /*
+    Figma 1920 frame: content from x 49 to 1870, the intro column 886px and the form panel 899px with
+    a 36px gap, both starting at the eyebrow (y 212). Sizes below are tokens with the Figma px next to them.
+  */
+  .contact {
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  .contact__inner {
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  .contact__breadcrumb {
+    margin-block-end: var(--space-2xl); /* breadcrumb → eyebrow: 45px */
+  }
+
+  /* Phones and tablets: intro, then the form. Two columns from 990px */
+  .contact__grid {
+    display: grid;
+    gap: var(--space-2xl);
+    align-items: start;
+  }
+
+  @media (min-width: 990px) {
+    .contact__grid {
+      grid-template-columns: minmax(0, 886fr) minmax(0, 899fr);
+      gap: var(--space-xl); /* 36px */
+    }
+  }
+
+  /* ---------- Intro ---------- */
+  .contact__heading {
+    margin-block-start: var(--space-2xl); /* eyebrow → H1: 42px */
+  }
+
+  /* Red words: made italic in the editor, shown upright in the accent colour (Figma "Always.") */
+  .contact__heading em {
+    font-style: normal;
+    color: var(--color-accent);
+  }
+
+  .contact__text {
+    max-inline-size: calc(857 * var(--px, 0.0625rem)); /* 857px */
+    margin-block-start: var(--space-xl); /* 33px */
+    font-size: var(--font-size-body-lg); /* 22px, 35px lines */
+    line-height: var(--line-height-body);
+  }
+
+  /*
+    Photo, stat circle and support box. Two columns: the photo and the rest, 30px apart.
+    The stat circle starts back inside the photo column, so it covers the photo's right edge by 15.7%
+    of the photo (Figma: photo 44-362, circle 312-518 = 50px of 318), and sits a little higher than
+    the photo. The support box is under the circle.
+    Sizes follow the intro column, not the screen: .contact__intro is a container, and the photo is
+    42cqi = 42% of the column's width (a little bigger than the Figma's 318 of 886px, developer's
+    choice 2026-10-30). On wide screens the group grows with the column, on narrow ones it shrinks;
+    11rem and 36rem keep it sensible at both ends.
+    The support box fills the rest of the column and its bottom lines up with the photo's bottom.
+  */
+  .contact__intro {
+    container-type: inline-size;
+  }
+
+  .contact__media {
+    --contact-photo: clamp(11rem, 42cqi, max(36rem, calc(560 * var(--px, 0.0625rem))));
+    --contact-stat: calc(var(--contact-photo) * 0.648); /* 206px */
+    display: grid;
+    grid-template-columns: var(--contact-photo) minmax(0, 1fr);
+    column-gap: var(--space-xl); /* 30px */
+    margin-block-start: var(--space-2xl); /* 41px */
+  }
+
+  /* Two classes: the image snippet's .image / .image--cover set a height and load after this file */
+  .contact__media .contact__photo {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    align-self: start;
+    margin-block-start: calc(var(--contact-stat) * 0.136); /* 28px below the circle's top */
+    /* A fixed square, not aspect-ratio: the image inside would otherwise stretch it taller */
+    inline-size: var(--contact-photo);
+    block-size: var(--contact-photo);
+    border-radius: 50%;
+    overflow: hidden;
+  }
+
+  .contact__photo img,
+  .contact__photo svg {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  /* Frosted circle: the photo shows through it, blurred. Text sizes follow the circle (cqi). */
+  .contact__stat {
+    position: relative;
+    z-index: 1;
+    grid-column: 2;
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--contact-stat);
+    aspect-ratio: 1;
+    margin: 0;
+    margin-inline-start: calc(var(--contact-photo) * -0.157 - var(--space-xl)); /* over the photo's last 15.7% */
+    border: 1px solid color-mix(in srgb, var(--color-border) 80%, #ffffff);
+    border-radius: 50%;
+    background-color: var(--color-glass-strong);
+    -webkit-backdrop-filter: blur(var(--glass-frost));
+    backdrop-filter: blur(var(--glass-frost));
+    color: var(--color-accent);
+    text-align: center;
+    container-type: inline-size;
+  }
+
+  .contact__stat-value {
+    font-family: var(--font-heading--family);
+    font-style: var(--font-heading--style);
+    font-weight: var(--font-heading--weight);
+    /*
+      36% of the circle (74px in a 206px one). The Figma's 96px is Canela's narrow old-style digits;
+      Newsreader's are wider, so at 96px "97%" ran past the circle's edges.
+    */
+    font-size: 36cqi;
+    font-variant-numeric: oldstyle-nums;
+    line-height: 1;
+    /*
+      Exact centring: the full width of the circle, centred; text-box trims the empty space the font
+      keeps above and below the letters (old-style "97" is short, so it looked low in its line box).
+      Browsers without text-box just keep the normal line box.
+    */
+    display: block;
+    inline-size: 100%;
+    text-align: center;
+    text-box: trim-both cap alphabetic;
+  }
+
+  /* Whole words only: "SATISFACTION" is long, so the label may use most of the circle's width */
+  .contact__stat-label {
+    max-inline-size: 88%;
+    overflow-wrap: normal;
+    text-wrap: balance;
+    margin-block-start: 4cqi;
+    font-size: max(0.6875rem, 8.7cqi); /* 18px in the 206px circle */
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+    letter-spacing: var(--letter-spacing-nav);
+    text-transform: uppercase;
+    /* Letter spacing also adds space after the last letter; the same space on the left re-centres it */
+    padding-inline-start: var(--letter-spacing-nav);
+  }
+
+  .contact__support {
+    grid-column: 2;
+    grid-row: 2;
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+    /*
+      Fills the column to its right edge and sits at the bottom of the group, so its bottom lines up
+      with the photo's (the photo spans both rows, so the second row ends where the photo ends).
+      The margin keeps at least 32px under the circle.
+    */
+    align-self: end;
+    margin-block-start: var(--space-xl);
+    padding: var(--space-lg) var(--space-2xl) var(--space-lg) var(--space-lg);
+    border: 1px solid var(--color-tint-border);
+    border-radius: var(--radius-md);
+    background-color: var(--color-tint-subtle);
+  }
+
+  .contact__support-text {
+    display: grid;
+    gap: var(--space-2xs);
+    margin: 0;
+    font-size: var(--font-size-body-lg); /* 22px, 35px lines */
+    line-height: var(--line-height-body);
+  }
+
+  .contact__support-title {
+    font-weight: var(--font-weight-medium);
+  }
+
+  /* Phones: photo and circle on one row, the support box full width under them */
+  @media (max-width: 749px) {
+    .contact__media .contact__photo {
+      grid-row: 1;
+    }
+
+    .contact__support {
+      grid-column: 1 / -1;
+      justify-self: stretch;
+    }
+  }
+
+  /* No photo: the circle and the box stack in one column, starting at the left */
+  .contact__media--no-photo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .contact__media--no-photo .contact__stat {
+    grid-column: 1;
+    margin-inline-start: 0;
+  }
+
+  .contact__media--no-photo .contact__support {
+    grid-column: 1;
+  }
+
+  /* ---------- Form panel ---------- */
+  .contact-form {
+    padding: var(--space-xl) var(--space-3xl); /* 34px top, 66px sides */
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-md);
+    background-color: var(--color-card);
+    box-shadow: var(--shadow-card);
+    container-type: inline-size;
+  }
+
+  @media (max-width: 749px) {
+    .contact-form {
+      padding: var(--space-lg);
+    }
+  }
+
+  /*
+    Spacing with margins on our own elements, not gap on the form: Shopify's bot protection can inject
+    an empty <div class="h-captcha"> into the form, and gap would add space around it too.
+  */
+  .contact-form__form > * {
+    margin-block: 0;
+  }
+
+  .contact-form__message,
+  .contact-form__topics {
+    margin-block-end: var(--space-xl); /* 37px */
+  }
+
+  .contact-form__title {
+    margin-block-end: var(--space-xl);
+  }
+
+  /* Small uppercase field captions (Figma "FIRST NAME", "TOPIC") */
+  .contact-form__label {
+    padding: 0;
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-nav);
+    text-transform: uppercase;
+  }
+
+  .contact-form__topics {
+    margin-inline: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .contact-form__pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md); /* 17px */
+    margin-block-start: var(--space-sm); /* 13px */
+  }
+
+  /* critical.css spaces neighbouring form controls (input + label); the pills set their own gap */
+  .contact-form__pills > * {
+    margin: 0;
+  }
+
+  .contact-form__pill {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: max(2.5625rem, calc(41 * var(--px, 0.0625rem))); /* 41px */
+    padding-inline: var(--space-sm);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xs);
+    font-size: var(--font-size-body-sm);
+    font-weight: inherit;
+    cursor: pointer;
+    transition:
+      border-color var(--duration-fast) var(--ease-out),
+      color var(--duration-fast) var(--ease-out);
+  }
+
+  .contact-form__pill:hover,
+  .contact-form__pill-input:checked + .contact-form__pill {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  /* The radio itself is hidden, so its keyboard focus ring is drawn on the pill */
+  .contact-form__pill-input:focus-visible + .contact-form__pill {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+  }
+
+  /*
+    One column in a narrow panel, two from 28rem (448px) of panel width (Figma 340 + 64 + 340 at
+    1920). 28rem, not 34rem: on a laptop with display scaling the panel is ~530px and two fields
+    still fit comfortably; one per row made the form almost two screens tall.
+  */
+  .contact-form__fields {
+    display: grid;
+    gap: var(--space-lg) var(--space-3xl);
+  }
+
+  @container (min-width: 28rem) {
+    .contact-form__fields {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .contact-form__field--full {
+      grid-column: 1 / -1;
+    }
+  }
+
+  .contact-form__field {
+    display: grid;
+    gap: var(--space-2xs); /* label → field: 5px */
+  }
+
+  .contact-form__field > * {
+    margin: 0;
+  }
+
+  /*
+    Two classes on purpose: critical.css styles input[type='text'] (0,1,1), which beats one class.
+    The pale Figma border is kept in one place (--contact-field-border) for the M9 contrast decision.
+  */
+  .contact-form .contact-form__input {
+    --contact-field-border: var(--color-border);
+    min-block-size: max(3.125rem, calc(50 * var(--px, 0.0625rem))); /* 50px */
+    padding-inline: var(--space-lg);
+    border-color: var(--contact-field-border);
+    border-radius: var(--radius-sm);
+    background-color: var(--color-card);
+    font-size: var(--font-size-caption);
+  }
+
+  .contact-form .contact-form__input:hover {
+    border-color: color-mix(in srgb, var(--color-text) 40%, var(--color-background));
+  }
+
+  .contact-form .contact-form__input:focus-visible {
+    border-color: var(--color-accent);
+  }
+
+  .contact-form .contact-form__input[aria-invalid='true'] {
+    border-color: var(--color-error);
+  }
+
+  .contact-form .contact-form__textarea {
+    min-block-size: max(6.625rem, calc(106 * var(--px, 0.0625rem))); /* 106px */
+    padding-block: var(--space-md);
+  }
+
+  /*
+    Full width, so the paper plane must fly further than on a small pill to leave the button: the
+    button is its own size container and the plane flies half its width (it starts near the middle).
+  */
+  .contact-form .contact-form__submit {
+    --explore-fly: 55cqi;
+    container-type: inline-size;
+    inline-size: 100%;
+    min-block-size: max(3.125rem, calc(56 * var(--px, 0.0625rem)));
+    margin-block-start: var(--space-xl); /* 38px */
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /*
+    After sending, Shopify reloads the page with a success or error message marked
+    data-focus-after-submit. It only exists right after the visitor's own submit, so focus moves
+    only then, never on a normal page load (and without the autofocus attribute: Theme Store rule).
+  */
+  function focusContactResult() {
+    document.querySelector('.contact-form [data-focus-after-submit]')?.focus({ preventScroll: true });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', focusContactResult);
+  } else {
+    focusContactResult();
+  }
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.contact_form",
+  "tag": "section",
+  "class": "contact-section",
+  "enabled_on": {
+    "templates": ["page"]
+  },
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_breadcrumb",
+      "label": "t:labels.show_breadcrumb",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "Get in touch"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.contact_heading_info",
+      "default": "We're here, <em>always.</em>"
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "t:labels.text",
+      "info": "t:labels.contact_text_info",
+      "default": "<p>Every luminary deserves a personal touch. Whether it's a question about a ritual, a concern with your order, or simply a desire to connect — we are here, human and present, for you.</p>"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.contact_media"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.image"
+    },
+    {
+      "type": "text",
+      "id": "stat_value",
+      "label": "t:labels.stat_value",
+      "default": "97%"
+    },
+    {
+      "type": "text",
+      "id": "stat_label",
+      "label": "t:labels.stat_label",
+      "default": "Satisfaction rate"
+    },
+    {
+      "type": "text",
+      "id": "support_title",
+      "label": "t:labels.support_title",
+      "default": "Live support available now"
+    },
+    {
+      "type": "text",
+      "id": "support_hours",
+      "label": "t:labels.support_hours",
+      "default": "Mon–Fri 9am–9pm · Sat–Sun 10am–6pm CET"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.contact_form"
+    },
+    {
+      "type": "text",
+      "id": "form_heading",
+      "label": "t:labels.form_heading",
+      "default": "Send a message"
+    },
+    {
+      "type": "text",
+      "id": "topics",
+      "label": "t:labels.contact_topics",
+      "info": "t:labels.contact_topics_info",
+      "default": "Order & shipping, Returns, Product query, Press & partnerships, Others"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_order_number",
+      "label": "t:labels.show_order_number",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "checkbox",
+      "id": "fill_screen",
+      "label": "t:labels.fill_screen",
+      "info": "t:labels.fill_screen_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "scale_screen",
+      "label": "t:labels.scale_screen",
+      "info": "t:labels.scale_screen_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "text_scale",
+      "label": "t:labels.text_scale",
+      "info": "t:labels.text_scale_info",
+      "min": 100,
+      "max": 130,
+      "step": 5,
+      "unit": "%",
+      "default": 110,
+      "visible_if": "{{ section.settings.scale_screen }}"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "select",
+      "id": "animation",
+      "label": "t:labels.animation",
+      "info": "t:labels.animation_info",
+      "options": [
+        {
+          "value": "none",
+          "label": "t:options.animation.none"
+        },
+        {
+          "value": "fade-up",
+          "label": "t:options.animation.fade_up"
+        },
+        {
+          "value": "slide-left",
+          "label": "t:options.animation.slide_left"
+        }
+      ],
+      "default": "fade-up"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 96
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.contact_form"
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,80 @@
+{% doc %}
+  The Social cards grid (static block, right column of Contact locations): one Social card per
+  account. Wide: rows of 3 + 2, the second row centred between the first (Figma). Narrow: a plain
+  grid of 2 (or 1 on small phones). Only the Contact locations section uses it.
+
+  @example
+  {% content_for 'block', type: '_social-list', id: 'social' %}
+{% enddoc %}
+
+{%- comment -%}
+  Two elements on purpose: a container query styles what's INSIDE the container, never the container
+  itself, so the outer div is the container and the inner one is the grid it changes.
+{%- endcomment -%}
+<div class="social-list" {{ block.shopify_attributes }}>
+  <div class="social-list__grid">
+    {% content_for 'blocks' %}
+  </div>
+</div>
+
+{% stylesheet %}
+  .social-list {
+    container-type: inline-size;
+  }
+
+  .social-list__grid {
+    /* 300 Figma px (Figma 262, enlarged), following the screen in a scaled section */
+    --social-card-w: max(16.375rem, calc(300 * var(--px, 0.0625rem)));
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(13rem, 100%), 1fr));
+    gap: var(--space-lg);
+  }
+
+  .social-list__grid:empty {
+    display: none;
+  }
+
+  /*
+    Figma 3 + 2: three cards spread edge to edge (space-between), then two cards that sit centred
+    under the gaps. With space-between, each gap is (width - 3 cards) / 2, so the second row moves
+    right by half a card plus half a gap = (width - one card) / 4. position: relative (not transform)
+    so the reveal animation and the hover lift keep their own transforms.
+  */
+  /* Three cards of 300px plus gaps need ~62rem */
+  @container (min-width: 62rem) {
+    .social-list__grid {
+      grid-template-columns: repeat(3, var(--social-card-w));
+      justify-content: space-between;
+      row-gap: var(--space-2xl); /* 42px */
+    }
+
+    .social-list__grid > :nth-child(5n + 4),
+    .social-list__grid > :nth-child(5n + 5) {
+      position: relative;
+      inset-inline-start: calc((100cqi - var(--social-card-w)) / 4);
+    }
+
+    .social-list__grid > :nth-child(5n + 4) {
+      grid-column: 1;
+    }
+
+    .social-list__grid > :nth-child(5n + 5) {
+      grid-column: 2;
+    }
+  }
+
+  /* Reveal one after the other: row 1, then row 2 */
+  .social-list__grid > :nth-child(5n + 2) { --animate-delay: 100ms; }
+  .social-list__grid > :nth-child(5n + 3) { --animate-delay: 200ms; }
+  .social-list__grid > :nth-child(5n + 4) { --animate-delay: 300ms; }
+  .social-list__grid > :nth-child(5n + 5) { --animate-delay: 400ms; }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.social_list",
+  "tag": null,
+  "blocks": [{ "type": "_social-card" }],
+  "settings": []
+}
+{% endschema %}

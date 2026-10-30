@@ -1,0 +1,580 @@
+{%- comment -%}
+  Locations map (M8.1, Figma 170:108673 "Global presence / Find us worldwide"): an eyebrow and heading
+  with filter buttons on the right (All locations, Flagship stores, Offices, Pop-ups), then a dark
+  world map with one pin per Pin block.
+
+  How the pins stay on their cities: the box crops the map to the chosen shape (Figma 2.7:1, taller
+  on phones), like object-fit: cover. Instead of cropping the <img> itself, a "stage" with the IMAGE's
+  own shape is made big enough to cover the box and positioned by the Map position settings; the image
+  and the pins both live on that stage, so a pin's % is always a % of the image.
+
+  Filters: only the types that have pins get a button, and only with 2+ types. Without JavaScript the
+  buttons stay hidden and every pin shows.
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+
+  assign animation = section.settings.animation
+  if section.index == 1
+    assign animation = 'none'
+  endif
+
+  # No image chosen: the theme's own night map (assets/world-map-night.webp, 1536 x 1024)
+  assign map_image = section.settings.image
+  if map_image != blank
+    assign image_ratio = map_image.aspect_ratio
+  else
+    assign image_ratio = 1.5
+  endif
+
+  assign map_ratio = section.settings.ratio
+  if map_ratio == 'original'
+    assign map_ratio = image_ratio
+  endif
+  assign map_ratio_mobile = section.settings.ratio_mobile
+  if map_ratio_mobile == 'original'
+    assign map_ratio_mobile = image_ratio
+  endif
+
+  assign focus_x = section.settings.focus_x | divided_by: 100.0
+  assign focus_y = section.settings.focus_y | divided_by: 100.0
+
+  # The merchant's own location types ("Flagship stores, Offices, Pop-ups"), one filter button each,
+  # in this order. Each pin lists the types it belongs to; both sides are compared as handles
+  # ("Pop-ups" → "pop-ups"), so capitals and spaces don't matter. Which buttons show is decided by
+  # the script below: a section can count its theme blocks but can't read their settings.
+  assign type_names = section.settings.filter_types | split: ','
+-%}
+
+{% render 'screen-scale' %}
+
+<div
+  class="locations-map full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.fill_screen %} section--fill-screen{% endif %}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};"
+>
+  <animate-on-scroll class="locations-map__inner">
+    <location-map>
+      <div class="locations-map__header">
+        {%- if section.settings.eyebrow != blank or section.settings.heading != blank -%}
+          <div
+            class="locations-map__titles"
+            {% if animation != 'none' %}
+              data-animate="slide-left"
+            {% endif %}
+          >
+            {%- if section.settings.eyebrow != blank -%}
+              <p class="eyebrow">{{ section.settings.eyebrow | escape }}</p>
+            {%- endif -%}
+            {%- if section.settings.heading != blank -%}
+              <h2 class="h1 locations-map__heading">{{ section.settings.heading }}</h2>
+            {%- endif -%}
+          </div>
+        {%- endif -%}
+
+        {%- if section.settings.show_filters and section.blocks.size > 1 -%}
+          <div
+            class="locations-map__filters"
+            role="group"
+            aria-label="{{ 'contact.map.filters' | t }}"
+            data-map-filters
+            hidden
+            {% if animation != 'none' %}
+              data-animate="fade-up"
+            {% endif %}
+          >
+            {%- comment -%} Button texts: the section's own text when filled in, otherwise the theme's default {%- endcomment -%}
+            {%- assign all_label = section.settings.filter_all -%}
+            {%- if all_label == blank -%}
+              {%- assign all_label = 'contact.map.all' | t -%}
+            {%- endif -%}
+            <button type="button" class="locations-map__filter" data-filter="all" aria-pressed="true">
+              {{- all_label | escape -}}
+            </button>
+            {%- for type_name in type_names -%}
+              {%- assign filter_label = type_name | strip -%}
+              {%- if filter_label != blank -%}
+                {%- assign filter_handle = filter_label | handleize -%}
+                <button type="button" class="locations-map__filter" data-filter="{{ filter_handle }}" aria-pressed="false" hidden>
+                  {{- filter_label | escape -}}
+                </button>
+              {%- endif -%}
+            {%- endfor -%}
+          </div>
+        {%- endif -%}
+      </div>
+
+      <div
+        class="locations-map__map"
+        style="--map-ratio: {{ map_ratio }}; --map-ratio-mobile: {{ map_ratio_mobile }}; --image-ratio: {{ image_ratio }}; --focus-x: {{ focus_x }}; --focus-y: {{ focus_y }};"
+        {% if animation != 'none' %}
+          data-animate="fade-up"
+        {% endif %}
+      >
+        <div class="locations-map__stage">
+          {%- if map_image != blank -%}
+            {%- assign map_alt = map_image.alt | escape -%}
+            {{
+              map_image
+              | image_url: width: 3000
+              | image_tag:
+                class: 'locations-map__image',
+                widths: '750, 1100, 1500, 2000, 3000',
+                sizes: '100vw',
+                loading: 'lazy',
+                alt: map_alt
+            }}
+          {%- else -%}
+            <img
+              class="locations-map__image"
+              src="{{ 'world-map-night.webp' | asset_url }}"
+              width="1536"
+              height="1024"
+              alt=""
+              loading="lazy"
+            >
+          {%- endif -%}
+
+          <div class="locations-map__pins">
+            {% content_for 'blocks' %}
+          </div>
+        </div>
+      </div>
+    </location-map>
+  </animate-on-scroll>
+</div>
+
+{% stylesheet %}
+  .locations-map {
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  .locations-map__inner {
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  location-map {
+    display: block;
+  }
+
+  /* Heading on the left, filter buttons on the right, both sitting on the same bottom line (Figma) */
+  .locations-map__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-lg) var(--space-xl);
+  }
+
+  .locations-map__heading {
+    margin-block-start: var(--space-2xl); /* eyebrow → heading: 42px */
+  }
+
+  .locations-map__heading em {
+    font-style: normal;
+    color: var(--color-accent);
+  }
+
+  /* Figma: 50px buttons, 38px apart */
+  .locations-map__filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm) var(--space-xl);
+  }
+
+  .locations-map__filters[hidden] {
+    display: none;
+  }
+
+  /*
+    critical.css gives a button that follows another button a 12px top margin (for stacked form
+    buttons). In this row it pushed every button after the first down and made it shorter, so the
+    heights looked uneven. The row sets its own gap instead.
+  */
+  .locations-map__filters > * {
+    margin: 0;
+  }
+
+  .locations-map__filter {
+    min-block-size: max(3.125rem, calc(50 * var(--px, 0.0625rem)));
+    padding-inline: var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xs);
+    background-color: var(--color-background);
+    color: var(--color-text);
+    font-size: var(--font-size-body-sm);
+    cursor: pointer;
+    transition:
+      border-color var(--duration-fast) var(--ease-out),
+      color var(--duration-fast) var(--ease-out);
+  }
+
+  .locations-map__filter:hover,
+  .locations-map__filter[aria-pressed='true'] {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  /*
+    The box: the chosen shape (Figma 1787 x 663 = 2.7:1), cropping the map. container-type: size lets
+    the stage below measure the box with cqw / cqh. The background is the map's own night blue, shown
+    while the image loads.
+  */
+  .locations-map__map {
+    position: relative;
+    aspect-ratio: var(--map-ratio);
+    margin-block-start: var(--space-xl); /* 34px */
+    overflow: hidden;
+    background-color: #091d29;
+    container-type: size;
+  }
+
+  @media (max-width: 749px) {
+    .locations-map__map {
+      aspect-ratio: var(--map-ratio-mobile);
+    }
+  }
+
+  /*
+    The stage has the image's own shape and is just big enough to cover the box: the full box width
+    (then the height is width / image ratio) or the full box height, whichever is larger. The spare
+    part is pushed off-screen by the Map position (0 = keep the left/top edge, 1 = the right/bottom),
+    exactly like object-position.
+  */
+  .locations-map__stage {
+    --stage-w: max(100cqw, 100cqh * var(--image-ratio));
+    --stage-h: max(100cqh, 100cqw / var(--image-ratio));
+    position: absolute;
+    inset-inline-start: calc((100cqw - var(--stage-w)) * var(--focus-x));
+    inset-block-start: calc((100cqh - var(--stage-h)) * var(--focus-y));
+    inline-size: var(--stage-w);
+    block-size: var(--stage-h);
+  }
+
+  .locations-map__image {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  .locations-map__pins {
+    position: absolute;
+    inset: 0;
+  }
+
+  /* Order of appearance: titles, buttons, map, then the pins one by one */
+  .locations-map__map {
+    --animate-delay: 150ms;
+  }
+
+  .locations-map__pins > :nth-child(1) .map-pin__inner { --animate-delay: 450ms; }
+  .locations-map__pins > :nth-child(2) .map-pin__inner { --animate-delay: 550ms; }
+  .locations-map__pins > :nth-child(3) .map-pin__inner { --animate-delay: 650ms; }
+  .locations-map__pins > :nth-child(4) .map-pin__inner { --animate-delay: 750ms; }
+  .locations-map__pins > :nth-child(5) .map-pin__inner { --animate-delay: 850ms; }
+  .locations-map__pins > :nth-child(n + 6) .map-pin__inner { --animate-delay: 950ms; }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <location-map>: shows the filter buttons (hidden without JavaScript) and, on click, keeps only
+   * the pins of that type. aria-pressed tells screen readers which button is on.
+   * Only types that have pins get a button, and the buttons only show with two types or more.
+   */
+  class LocationMap extends HTMLElement {
+    connectedCallback() {
+      this.filters = this.querySelector('[data-map-filters]');
+      if (!this.filters) return;
+
+      // A pin can belong to several types: data-pin-type is a space-separated list of handles
+      const usedTypes = new Set(
+        [...this.querySelectorAll('[data-pin-type]')].flatMap((pin) => pin.dataset.pinType.split(' ').filter(Boolean))
+      );
+      if (usedTypes.size < 2) return;
+
+      for (const button of this.filters.querySelectorAll('[data-filter]')) {
+        const type = button.dataset.filter;
+        button.hidden = type !== 'all' && !usedTypes.has(type);
+      }
+      this.filters.hidden = false;
+      this.filters.addEventListener('click', this);
+    }
+
+    disconnectedCallback() {
+      this.filters?.removeEventListener('click', this);
+    }
+
+    handleEvent(event) {
+      const button = event.target.closest('[data-filter]');
+      if (!button) return;
+
+      const type = button.dataset.filter;
+      for (const other of this.filters.querySelectorAll('[data-filter]')) {
+        other.setAttribute('aria-pressed', String(other === button));
+      }
+      for (const pin of this.querySelectorAll('[data-pin-type]')) {
+        pin.hidden = type !== 'all' && !pin.dataset.pinType.split(' ').includes(type);
+      }
+    }
+  }
+
+  if (!customElements.get('location-map')) customElements.define('location-map', LocationMap);
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.locations_map",
+  "tag": "section",
+  "class": "locations-map-section",
+  "blocks": [
+    {
+      "type": "_map-pin"
+    }
+  ],
+  "max_blocks": 12,
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "Global presence"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.italic_accent_info",
+      "default": "Find us <em>worldwide</em>"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_filters",
+      "label": "t:labels.show_map_filters",
+      "info": "t:labels.show_map_filters_info",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.filter_labels",
+      "info": "t:labels.filter_labels_info"
+    },
+    {
+      "type": "text",
+      "id": "filter_all",
+      "label": "t:labels.filter_all",
+      "default": "All locations"
+    },
+    {
+      "type": "text",
+      "id": "filter_types",
+      "label": "t:labels.filter_types",
+      "info": "t:labels.filter_types_info",
+      "default": "Flagship stores, Offices, Pop-ups"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.map"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.map_image",
+      "info": "t:labels.map_image_info"
+    },
+    {
+      "type": "select",
+      "id": "ratio",
+      "label": "t:labels.map_ratio",
+      "options": [
+        {
+          "value": "2.695",
+          "label": "t:options.map_ratio.wide"
+        },
+        {
+          "value": "2",
+          "label": "t:options.map_ratio.landscape"
+        },
+        {
+          "value": "1.5",
+          "label": "t:options.map_ratio.classic"
+        },
+        {
+          "value": "original",
+          "label": "t:options.map_ratio.original"
+        }
+      ],
+      "default": "2.695"
+    },
+    {
+      "type": "select",
+      "id": "ratio_mobile",
+      "label": "t:labels.map_ratio_mobile",
+      "options": [
+        {
+          "value": "2",
+          "label": "t:options.map_ratio.landscape"
+        },
+        {
+          "value": "1.5",
+          "label": "t:options.map_ratio.classic"
+        },
+        {
+          "value": "1",
+          "label": "t:options.map_ratio.square"
+        },
+        {
+          "value": "original",
+          "label": "t:options.map_ratio.original"
+        }
+      ],
+      "default": "1.5"
+    },
+    {
+      "type": "range",
+      "id": "focus_x",
+      "label": "t:labels.map_focus_x",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "%",
+      "default": 50
+    },
+    {
+      "type": "range",
+      "id": "focus_y",
+      "label": "t:labels.map_focus_y",
+      "info": "t:labels.map_focus_info",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "%",
+      "default": 32
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "checkbox",
+      "id": "fill_screen",
+      "label": "t:labels.fill_screen",
+      "info": "t:labels.fill_screen_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "scale_screen",
+      "label": "t:labels.scale_screen",
+      "info": "t:labels.scale_screen_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "text_scale",
+      "label": "t:labels.text_scale",
+      "info": "t:labels.text_scale_info",
+      "min": 100,
+      "max": 130,
+      "step": 5,
+      "unit": "%",
+      "default": 110,
+      "visible_if": "{{ section.settings.scale_screen }}"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "select",
+      "id": "animation",
+      "label": "t:labels.animation",
+      "info": "t:labels.animation_info",
+      "options": [
+        {
+          "value": "none",
+          "label": "t:options.animation.none"
+        },
+        {
+          "value": "fade-up",
+          "label": "t:options.animation.fade_up"
+        }
+      ],
+      "default": "fade-up"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 96
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.locations_map",
+      "blocks": [
+        {
+          "type": "_map-pin",
+          "settings": { "name": "New York", "type_label": "Flagship", "types": "Flagship stores", "x": 29, "y": 36 }
+        },
+        {
+          "type": "_map-pin",
+          "settings": { "name": "London", "type_label": "Studio", "types": "Offices", "x": 50, "y": 35 }
+        },
+        {
+          "type": "_map-pin",
+          "settings": { "name": "Dubai", "type_label": "Pop-up", "types": "Pop-ups", "x": 61, "y": 45 }
+        },
+        {
+          "type": "_map-pin",
+          "settings": { "name": "Tokyo", "type_label": "Office", "types": "Offices", "x": 81, "y": 41 }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

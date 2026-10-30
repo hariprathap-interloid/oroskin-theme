@@ -1,0 +1,254 @@
+{% doc %}
+  One social account card (Figma 170:108823 "Connect on social"): a round white badge with the
+  network's icon, an arrow in the top-right corner, the network name, the handle in the accent colour
+  and the follower count. The whole card is one link that opens in a new tab.
+
+  Link: the card's own link, otherwise the one in Theme settings > Social media. With neither, the
+  card still shows but isn't a link (and has no arrow). Icons are single-colour (accent) for now.
+
+  @example
+  {% content_for 'block', type: '_social-card', id: 'social-card' %}
+{% enddoc %}
+
+{%- liquid
+  assign network = block.settings.network
+  assign setting_id = 'social_' | append: network | append: '_link'
+  assign card_url = block.settings.link | default: settings[setting_id]
+
+  assign card_tag = 'div'
+  if card_url != blank
+    assign card_tag = 'a'
+  endif
+
+  # Brand-colour logos (assets/social-brand-*.svg) exist for these five; the others, or the
+  # "Single colour" icon style, use the theme's one-colour icons (accent colour)
+  assign brand_networks = 'instagram,x,youtube,facebook,linkedin' | split: ','
+  assign icon_file = 'icon-' | append: network | append: '.svg'
+  assign brand_icon = false
+  if section.settings.social_icon_style == 'brand' and brand_networks contains network
+    assign icon_file = 'social-brand-' | append: network | append: '.svg'
+    assign brand_icon = true
+  endif
+
+  assign name = block.settings.name
+  if name == blank
+    assign name_key = 'social.' | append: network
+    assign name = name_key | t
+  endif
+
+  # The wrapper animates (the section staggers the cards); the card inside keeps its own hover motion
+  assign animation = section.settings.animation
+  if section.index == 1
+    assign animation = 'none'
+  endif
+-%}
+
+<div
+  class="social-card-item"
+  {% if animation != 'none' %}
+    data-animate="{{ animation }}"
+  {% endif %}
+  {{ block.shopify_attributes }}
+>
+  <{{ card_tag }}
+    class="social-card{% if card_tag == 'a' %} social-card--link{% endif %}"
+    {% if card_tag == 'a' %}
+      href="{{ card_url }}" target="_blank" rel="noopener"
+    {% endif %}
+  >
+    <span class="social-card__badge{% if brand_icon %} social-card__badge--brand{% endif %}" aria-hidden="true">
+      {{- icon_file | inline_asset_content -}}
+    </span>
+
+    {%- if card_tag == 'a' -%}
+      <span class="social-card__arrow" aria-hidden="true">{{ 'icon-arrow-solid.svg' | inline_asset_content }}</span>
+    {%- endif -%}
+
+    <h3 class="social-card__name">{{ name | escape }}</h3>
+
+    {%- if block.settings.handle != blank -%}
+      <span class="social-card__handle">{{ block.settings.handle | escape }}</span>
+    {%- endif -%}
+
+    {%- if block.settings.followers != blank -%}
+      <span class="social-card__followers">{{ block.settings.followers | escape }}</span>
+    {%- endif -%}
+
+    {%- if card_tag == 'a' -%}
+      <span class="visually-hidden"> ({{ 'accessibility.new_window' | t }})</span>
+    {%- endif -%}
+  </{{ card_tag }}>
+</div>
+
+{% stylesheet %}
+  /*
+    Figma card: 262 x 267, white, padding 28px top / 37px left. Made roomier on purpose (developer,
+    2026-10-30): 300 x 310 Figma px, 64px badge, bigger text. Figma px x --px follow the screen in a
+    scaled section (snippets/screen-scale.liquid).
+  */
+  .social-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-block-size: max(16.6875rem, calc(310 * var(--px, 0.0625rem)));
+    padding: var(--space-xl) var(--space-xl);
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-sm);
+    background-color: var(--color-background);
+    box-shadow: var(--shadow-card);
+    color: var(--color-text);
+    text-decoration: none;
+    transition:
+      transform var(--duration-fast) var(--ease-out),
+      box-shadow var(--duration-fast) var(--ease-out);
+  }
+
+  /* 64px white circle with a soft shadow, 30px logo (Figma 50 / 24, enlarged) */
+  .social-card__badge {
+    display: grid;
+    place-items: center;
+    inline-size: max(3.125rem, calc(64 * var(--px, 0.0625rem)));
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background-color: #ffffff;
+    box-shadow: var(--shadow-card);
+    color: var(--color-accent);
+  }
+
+  .social-card__badge svg {
+    inline-size: max(1.5rem, calc(30 * var(--px, 0.0625rem)));
+    block-size: auto;
+  }
+
+  /* Brand logos keep their own colours (Instagram gradient, YouTube red…) */
+  .social-card__badge--brand {
+    color: inherit;
+  }
+
+  /*
+    Arrow in the corner: a solid right arrow (assets/icon-arrow-solid.svg, drawn centred in its
+    16px box, so it turns around its own middle and stays a straight line). At rest it's turned
+    -45deg to point up-right (↗); on hover it turns back to point right (→) while the card lifts
+    (Figma hover state). It takes the scheme's accent colour (currentColor).
+  */
+  .social-card__arrow {
+    position: absolute;
+    inset-block-start: var(--space-lg);
+    inset-inline-end: var(--space-lg);
+    color: var(--color-accent);
+  }
+
+  .social-card__arrow svg {
+    display: block;
+    inline-size: max(1rem, calc(18 * var(--px, 0.0625rem)));
+    block-size: auto;
+    transform: rotate(-45deg);
+    transition: transform var(--duration-base) var(--ease-out);
+  }
+
+  /* The whole card is the link, so the whole card shows the hand cursor */
+  .social-card--link {
+    cursor: pointer;
+  }
+
+  .social-card--link:hover .social-card__arrow svg,
+  .social-card--link:focus-visible .social-card__arrow svg {
+    transform: rotate(0deg);
+  }
+
+  .social-card__name {
+    margin: var(--space-lg) 0 0;
+    font-family: var(--font-body--family);
+    font-style: var(--font-body--style);
+    font-weight: var(--font-weight-medium);
+    font-size: var(--font-size-h3);
+    line-height: var(--line-height-body);
+  }
+
+  .social-card__handle {
+    margin-block-start: var(--space-sm);
+    color: var(--color-accent);
+    font-size: var(--font-size-body-lg);
+    overflow-wrap: anywhere;
+  }
+
+  .social-card__followers {
+    margin-block-start: var(--space-2xs);
+    font-size: var(--font-size-body-lg);
+  }
+
+  /* Hover: the card lifts with a soft rose shadow (no movement with reduced motion, shadow only) */
+  .social-card--link:hover,
+  .social-card--link:focus-visible {
+    box-shadow: var(--shadow-card-rose);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .social-card--link:hover,
+    .social-card--link:focus-visible {
+      transform: translateY(-0.5rem);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .social-card__arrow svg {
+      transition: none;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.social_card",
+  "tag": null,
+  "settings": [
+    {
+      "type": "select",
+      "id": "network",
+      "label": "t:labels.social_network",
+      "options": [
+        { "value": "instagram", "label": "t:options.social_network.instagram" },
+        { "value": "x", "label": "t:options.social_network.x" },
+        { "value": "youtube", "label": "t:options.social_network.youtube" },
+        { "value": "facebook", "label": "t:options.social_network.facebook" },
+        { "value": "linkedin", "label": "t:options.social_network.linkedin" },
+        { "value": "tiktok", "label": "t:options.social_network.tiktok" },
+        { "value": "pinterest", "label": "t:options.social_network.pinterest" },
+        { "value": "whatsapp", "label": "t:options.social_network.whatsapp" }
+      ],
+      "default": "instagram"
+    },
+    {
+      "type": "text",
+      "id": "name",
+      "label": "t:labels.heading",
+      "info": "t:labels.social_name_info",
+      "default": "Instagram"
+    },
+    {
+      "type": "text",
+      "id": "handle",
+      "label": "t:labels.social_handle",
+      "default": "@oroskin.beauty"
+    },
+    {
+      "type": "text",
+      "id": "followers",
+      "label": "t:labels.social_followers",
+      "default": "1.2M followers"
+    },
+    {
+      "type": "url",
+      "id": "link",
+      "label": "t:labels.link",
+      "info": "t:labels.social_link_info"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.social_card"
+    }
+  ]
+}
+{% endschema %}

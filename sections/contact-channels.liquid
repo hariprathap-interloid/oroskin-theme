@@ -1,0 +1,289 @@
+{%- comment -%}
+  Contact channels (M8.1, Figma 170:108573 "Ways to reach us / Choose your channel"): an eyebrow, a
+  heading with red words, then one card per Channel block (Live chat, Email, Phone, WhatsApp).
+  Cards: 1 column on phones, 2 on tablets, 4 from 1200px, all the same height.
+
+  Animation (Figma scroll states): the heading slides in from the left; the cards use the
+  Scroll animation setting, one after the other (cards 2 and 3 together, as in the Figma).
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+
+  assign animation = section.settings.animation
+  if section.index == 1
+    assign animation = 'none'
+  endif
+-%}
+
+{% render 'screen-scale' %}
+
+{%- if section.blocks.size > 0 -%}
+  <div
+    class="contact-channels full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.fill_screen %} section--fill-screen{% endif %}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
+    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};"
+  >
+    <animate-on-scroll class="contact-channels__inner">
+      {%- if section.settings.eyebrow != blank or section.settings.heading != blank -%}
+        <div
+          class="contact-channels__header"
+          {% if animation != 'none' %}
+            data-animate="slide-left"
+          {% endif %}
+        >
+          {%- if section.settings.eyebrow != blank -%}
+            <p class="eyebrow">{{ section.settings.eyebrow | escape }}</p>
+          {%- endif -%}
+          {%- if section.settings.heading != blank -%}
+            <h2 class="h1 contact-channels__heading">{{ section.settings.heading }}</h2>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+
+      <div class="contact-channels__grid">
+        {% content_for 'blocks' %}
+      </div>
+    </animate-on-scroll>
+  </div>
+{%- endif -%}
+
+{% stylesheet %}
+  .contact-channels {
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  .contact-channels__inner {
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  .contact-channels__heading {
+    margin-block-start: var(--space-2xl); /* eyebrow → heading: 42px */
+  }
+
+  /* Red words: made italic in the editor, shown upright in the accent colour (Figma "Channel") */
+  .contact-channels__heading em {
+    font-style: normal;
+    color: var(--color-accent);
+  }
+
+  .contact-channels__grid {
+    display: grid;
+    gap: var(--space-lg);
+    margin-block-start: var(--space-3xl); /* heading → cards: 72px */
+  }
+
+  @media (min-width: 750px) {
+    .contact-channels__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  /* Figma: four 408px cards with 63px between them */
+  @media (min-width: 1200px) {
+    .contact-channels__grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--space-3xl);
+    }
+  }
+
+  /* Stagger (Figma: card 1, then cards 2 + 3 together, then card 4) */
+  .contact-channels__grid > :nth-child(4n + 2),
+  .contact-channels__grid > :nth-child(4n + 3) {
+    --animate-delay: 100ms;
+  }
+
+  .contact-channels__grid > :nth-child(4n) {
+    --animate-delay: 200ms;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.contact_channels",
+  "tag": "section",
+  "class": "contact-channels-section",
+  "blocks": [
+    {
+      "type": "_contact-channel"
+    }
+  ],
+  "max_blocks": 8,
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "Ways to reach us"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.italic_accent_info",
+      "default": "Choose your <em>channel</em>"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "checkbox",
+      "id": "fill_screen",
+      "label": "t:labels.fill_screen",
+      "info": "t:labels.fill_screen_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "scale_screen",
+      "label": "t:labels.scale_screen",
+      "info": "t:labels.scale_screen_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "text_scale",
+      "label": "t:labels.text_scale",
+      "info": "t:labels.text_scale_info",
+      "min": 100,
+      "max": 130,
+      "step": 5,
+      "unit": "%",
+      "default": 110,
+      "visible_if": "{{ section.settings.scale_screen }}"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "select",
+      "id": "animation",
+      "label": "t:labels.animation",
+      "info": "t:labels.animation_info",
+      "options": [
+        {
+          "value": "none",
+          "label": "t:options.animation.none"
+        },
+        {
+          "value": "fade-up",
+          "label": "t:options.animation.fade_up"
+        },
+        {
+          "value": "zoom-in",
+          "label": "t:options.animation.zoom_in"
+        },
+        {
+          "value": "slide-bottom",
+          "label": "t:options.animation.slide_bottom"
+        }
+      ],
+      "default": "fade-up"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 96
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 96
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.contact_channels",
+      "blocks": [
+        {
+          "type": "_contact-channel",
+          "settings": {
+            "icon": "chat",
+            "label": "Fastest response",
+            "title": "Live chat",
+            "value_type": "none",
+            "text": "<p>Speak directly with a beauty concierge. No bots — only humans who love beauty.</p>",
+            "status": "Online now",
+            "link_label": "Start conversation"
+          }
+        },
+        {
+          "type": "_contact-channel",
+          "settings": {
+            "icon": "mail",
+            "label": "Email",
+            "title": "Email us",
+            "value_type": "email",
+            "text": "<p>We reply to every message personally within 4 hours during business days.</p>",
+            "link_label": "Send email"
+          }
+        },
+        {
+          "type": "_contact-channel",
+          "settings": {
+            "icon": "phone",
+            "label": "Phone",
+            "title": "Call us",
+            "value_type": "phone",
+            "text": "<p>Toll-free from the US, UK and EU. For orders, returns and concierge requests.</p>",
+            "link_label": "Call now"
+          }
+        },
+        {
+          "type": "_contact-channel",
+          "settings": {
+            "icon": "mobile",
+            "label": "WhatsApp",
+            "title": "Message us",
+            "value_type": "whatsapp",
+            "text": "<p>Prefer to message? Our concierge team is on WhatsApp for discreet, personal support.</p>",
+            "link_label": "Open WhatsApp"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

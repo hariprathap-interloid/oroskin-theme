@@ -215,7 +215,8 @@
     "youtube": "YouTube",
     "tiktok": "TikTok",
     "pinterest": "Pinterest",
-    "x": "X (Twitter)"
+    "x": "X (Twitter)",
+    "linkedin": "LinkedIn"
   },
   "sections": {
     "custom_liquid": {
@@ -294,5 +295,30 @@
     "previous": "Previous products",
     "next": "Next products",
     "placeholder_title": "Product title"
+  },
+  "contact": {
+    "form": {
+      "topic": "Topic",
+      "first_name": "First name",
+      "first_name_placeholder": "First name",
+      "last_name": "Last name",
+      "last_name_placeholder": "Last name",
+      "email": "Email address",
+      "email_placeholder": "you@example.com",
+      "order_number": "Order number",
+      "order_number_label": "Order number (optional)",
+      "order_number_placeholder": "e.g. #1001",
+      "subject": "Subject",
+      "subject_placeholder": "e.g. My order hasn't arrived yet…",
+      "message": "Your message",
+      "message_placeholder": "How can we help?",
+      "send": "Send message",
+      "success": "Thanks for reaching out. We'll get back to you as soon as possible.",
+      "subject_field": "Message subject"
+    },
+    "map": {
+      "filters": "Filter locations",
+      "all": "All locations"
+    }
   }
 }

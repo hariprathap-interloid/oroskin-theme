@@ -1,0 +1,369 @@
+{% doc %}
+  One card in Contact channels (Figma 170:108573 "Choose your channel"): a round icon badge, a small
+  accent label ("Email"), a title ("Email us"), the address or number as a link, a short text, an
+  optional "Online now" line and a link at the bottom ("Send email →").
+
+  The merchant picks a Contact type and fills in only that type's field (each field shows only for its
+  type, so it's clear where the number goes). The link is built from it:
+  email → mailto:, phone → tel: (digits only), WhatsApp → https://wa.me/<digits> (plus ?text= when a
+  pre-filled message is set: WhatsApp opens the chat with that text typed in).
+  The Link setting is only for the "None (text only)" type, e.g. a chat app's page for "Start
+  conversation". With no link the bottom link is hidden.
+  An email card with no address uses the store's email (Settings > General).
+
+  @example
+  {% content_for 'block', type: '_contact-channel', id: 'contact-channel' %}
+{% enddoc %}
+
+{%- liquid
+  assign value_type = block.settings.value_type
+  case value_type
+    when 'email'
+      assign value = block.settings.email | strip | default: shop.email
+    when 'phone'
+      assign value = block.settings.phone | strip
+    when 'whatsapp'
+      assign value = block.settings.whatsapp_number | strip
+    else
+      assign value = ''
+  endcase
+
+  # tel: and wa.me links need digits only: "+1 (800) 586-4473" -> "+18005864473"
+  assign digits = value | remove: ' ' | remove: '(' | remove: ')' | remove: '-' | remove: '.'
+
+  assign value_url = ''
+  if value != blank
+    case value_type
+      when 'email'
+        assign value_url = 'mailto:' | append: value
+      when 'phone'
+        assign value_url = 'tel:' | append: digits
+      when 'whatsapp'
+        assign whatsapp_number = digits | remove: '+'
+        assign value_url = 'https://wa.me/' | append: whatsapp_number
+        if block.settings.whatsapp_message != blank
+          assign whatsapp_text = block.settings.whatsapp_message | url_encode
+          assign value_url = value_url | append: '?text=' | append: whatsapp_text
+        endif
+    endcase
+  endif
+
+  # The Link setting only counts for the text-only type (its field is hidden for the others)
+  assign link_url = value_url
+  if value_type == 'none'
+    assign link_url = block.settings.link
+  endif
+
+  # WhatsApp opens another site, so in a new tab; email and phone open the visitor's own app
+  assign new_tab = false
+  if value_type == 'whatsapp'
+    assign new_tab = true
+  endif
+
+  assign icon_file = 'icon-' | append: block.settings.icon | append: '.svg'
+
+  # Each card animates on its own (the section staggers them); never in the first section
+  assign animation = section.settings.animation
+  if section.index == 1
+    assign animation = 'none'
+  endif
+-%}
+
+<div
+  class="contact-channel"
+  {% if animation != 'none' %}
+    data-animate="{{ animation }}"
+  {% endif %}
+  {{ block.shopify_attributes }}
+>
+  {%- if block.settings.icon != 'none' -%}
+    <span class="contact-channel__badge">{{ icon_file | inline_asset_content }}</span>
+  {%- endif -%}
+
+  {%- if block.settings.label != blank -%}
+    <p class="contact-channel__label">{{ block.settings.label | escape }}</p>
+  {%- endif -%}
+
+  {%- if block.settings.title != blank -%}
+    <h3 class="contact-channel__title">{{ block.settings.title | escape }}</h3>
+  {%- endif -%}
+
+  {%- if value != blank and value_type != 'none' -%}
+    <p class="contact-channel__value">
+      <a
+        href="{{ value_url }}"
+        {% if new_tab %}
+          target="_blank" rel="noopener"
+        {% endif %}
+      >
+        {{- value | escape -}}
+      </a>
+    </p>
+  {%- endif -%}
+
+  {%- if block.settings.text != blank -%}
+    <div class="contact-channel__text rte">{{ block.settings.text }}</div>
+  {%- endif -%}
+
+  {%- if block.settings.status != blank -%}
+    <p class="contact-channel__status">
+      {%- render 'status-dot' -%}
+      {{- block.settings.status | escape -}}
+    </p>
+  {%- endif -%}
+
+  {%- if link_url != blank and block.settings.link_label != blank -%}
+    <p class="contact-channel__footer">
+      <a
+        class="contact-channel__link"
+        href="{{ link_url }}"
+        {% if new_tab %}
+          target="_blank" rel="noopener"
+        {% endif %}
+      >
+        {{- block.settings.link_label | escape -}}
+        {%- if new_tab -%}
+          <span class="visually-hidden"> ({{ 'accessibility.new_window' | t }})</span>
+        {%- endif -%}
+        {{- 'icon-arrow.svg' | inline_asset_content -}}
+      </a>
+    </p>
+  {%- endif -%}
+</div>
+
+{% stylesheet %}
+  /*
+    Figma card: 408 x 468px. Made roomier on purpose (developer, 2026-10-30): bigger badge, title and
+    text, more padding, at least 520 Figma px tall. Sizes in Figma px x --px follow the screen in a
+    scaled section (snippets/screen-scale.liquid) and are exact px elsewhere.
+    Column layout, so the bottom link can be pushed to the bottom of the card (margin-block-start:
+    auto) and all links line up when the texts have different lengths.
+  */
+  .contact-channel {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-block-size: calc(520 * var(--px, 0.0625rem));
+    padding: var(--space-xl) var(--space-2xl) var(--space-2xl);
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-md);
+    background-color: var(--color-card);
+  }
+
+  /* 80px circle, 40px icon (Figma 66 / 34, enlarged). The pale fill is the scheme's border colour */
+  .contact-channel__badge {
+    display: grid;
+    place-items: center;
+    inline-size: max(4.125rem, calc(80 * var(--px, 0.0625rem)));
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background-color: var(--color-border);
+    color: var(--color-accent);
+  }
+
+  .contact-channel__badge svg {
+    inline-size: max(2.125rem, calc(40 * var(--px, 0.0625rem)));
+    block-size: auto;
+  }
+
+  .contact-channel__label {
+    margin: var(--space-lg) 0 0; /* 20px under the badge */
+    color: var(--color-accent);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-nav);
+    text-transform: uppercase;
+  }
+
+  /* The Figma title is in the body font (not the serif headings); 26px (Figma 22, enlarged) */
+  .contact-channel__title {
+    margin: var(--space-2xs) 0 0;
+    font-family: var(--font-body--family);
+    font-style: var(--font-body--style);
+    font-weight: var(--font-weight-medium);
+    font-size: var(--font-size-h3);
+    line-height: var(--line-height-body);
+  }
+
+  .contact-channel__value {
+    margin: var(--space-xs) 0 0;
+    font-size: var(--font-size-body-lg);
+    overflow-wrap: anywhere; /* long email addresses */
+  }
+
+  .contact-channel__value a {
+    color: var(--color-accent);
+    text-decoration: none;
+  }
+
+  .contact-channel__value a:hover {
+    text-decoration: underline;
+  }
+
+  .contact-channel__text {
+    margin-block-start: var(--space-sm);
+    font-size: var(--font-size-body-lg);
+    line-height: var(--line-height-body);
+  }
+
+  .contact-channel__status {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+    margin: var(--space-lg) 0 0;
+    padding-inline-start: var(--space-xs);
+    color: var(--color-accent);
+    font-size: var(--font-size-body-lg);
+  }
+
+  /* Pushed to the bottom of the card; at least 32px under the text */
+  .contact-channel__footer {
+    margin: auto 0 0;
+    padding-block-start: var(--space-xl);
+  }
+
+  /*
+    "SEND EMAIL →": the underline runs under the text AND the arrow (Figma), so it's a 1px background
+    line rather than text-decoration (which skips the icon). 2px on hover, and the arrow moves right.
+  */
+  .contact-channel__link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding-block-end: var(--space-xs);
+    background: linear-gradient(currentcolor, currentcolor) left bottom / 100% 1px no-repeat;
+    color: var(--color-accent);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-nav);
+    text-decoration: none;
+    text-transform: uppercase;
+  }
+
+  .contact-channel__link:hover {
+    background-size: 100% 2px;
+  }
+
+  .contact-channel__link svg {
+    flex: none;
+    inline-size: max(1.125rem, calc(20 * var(--px, 0.0625rem)));
+    block-size: auto;
+    transition: transform var(--duration-fast) var(--ease-out);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .contact-channel__link:hover svg {
+      transform: translateX(0.25rem);
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.contact_channel",
+  "tag": null,
+  "settings": [
+    {
+      "type": "select",
+      "id": "icon",
+      "label": "t:labels.icon",
+      "options": [
+        { "value": "chat", "label": "t:options.channel_icon.chat" },
+        { "value": "mail", "label": "t:options.channel_icon.mail" },
+        { "value": "phone", "label": "t:options.channel_icon.phone" },
+        { "value": "mobile", "label": "t:options.channel_icon.mobile" },
+        { "value": "whatsapp", "label": "t:options.channel_icon.whatsapp" },
+        { "value": "none", "label": "t:options.channel_icon.none" }
+      ],
+      "default": "chat"
+    },
+    {
+      "type": "text",
+      "id": "label",
+      "label": "t:labels.eyebrow",
+      "default": "Fastest response"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "t:labels.heading",
+      "default": "Live chat"
+    },
+    {
+      "type": "select",
+      "id": "value_type",
+      "label": "t:labels.channel_type",
+      "options": [
+        { "value": "none", "label": "t:options.channel_type.none" },
+        { "value": "email", "label": "t:options.channel_type.email" },
+        { "value": "phone", "label": "t:options.channel_type.phone" },
+        { "value": "whatsapp", "label": "t:options.channel_type.whatsapp" }
+      ],
+      "default": "none"
+    },
+    {
+      "type": "text",
+      "id": "email",
+      "label": "t:labels.channel_email",
+      "info": "t:labels.channel_email_info",
+      "visible_if": "{{ block.settings.value_type == 'email' }}"
+    },
+    {
+      "type": "text",
+      "id": "phone",
+      "label": "t:labels.channel_phone",
+      "info": "t:labels.channel_phone_info",
+      "visible_if": "{{ block.settings.value_type == 'phone' }}"
+    },
+    {
+      "type": "text",
+      "id": "whatsapp_number",
+      "label": "t:labels.channel_whatsapp",
+      "info": "t:labels.channel_whatsapp_info",
+      "visible_if": "{{ block.settings.value_type == 'whatsapp' }}"
+    },
+    {
+      "type": "text",
+      "id": "whatsapp_message",
+      "label": "t:labels.whatsapp_message",
+      "info": "t:labels.whatsapp_message_info",
+      "visible_if": "{{ block.settings.value_type == 'whatsapp' }}"
+    },
+    {
+      "type": "paragraph",
+      "content": "t:labels.whatsapp_help",
+      "visible_if": "{{ block.settings.value_type == 'whatsapp' }}"
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "t:labels.text",
+      "default": "<p>Speak directly with a beauty concierge. No bots — only humans who love beauty.</p>"
+    },
+    {
+      "type": "text",
+      "id": "status",
+      "label": "t:labels.channel_status",
+      "info": "t:labels.channel_status_info"
+    },
+    {
+      "type": "text",
+      "id": "link_label",
+      "label": "t:labels.link_label",
+      "default": "Start conversation"
+    },
+    {
+      "type": "url",
+      "id": "link",
+      "label": "t:labels.link",
+      "info": "t:labels.channel_link_info",
+      "visible_if": "{{ block.settings.value_type == 'none' }}"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.contact_channel"
+    }
+  ]
+}
+{% endschema %}

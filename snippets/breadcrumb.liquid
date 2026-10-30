@@ -1,0 +1,55 @@
+{% doc %}
+  Breadcrumb "HOME › CONTACT" (Figma: small uppercase links above the page eyebrow). The last item is
+  the current page: not a link, marked aria-current="page", in the accent colour. A section can give
+  the current item another colour with the CSS variable --breadcrumb-current.
+
+  One shared copy for new sections. The collection banner, cart and collection list still have their
+  own inline copies (same look); they can switch to this snippet later.
+
+  @param {string} current - Title of the current page, e.g. page.title
+  @param {string} [class] - Extra class on the <nav>, for spacing inside a section
+
+  @example
+  {% render 'breadcrumb', current: page.title, class: 'contact__breadcrumb' %}
+{% enddoc %}
+
+<nav class="breadcrumb {{ class }}" aria-label="{{ 'accessibility.breadcrumb' | t }}">
+  <ol>
+    <li><a href="{{ routes.root_url }}">{{ 'accessibility.home' | t }}</a></li>
+    <li aria-current="page">{{ current | escape }}</li>
+  </ol>
+</nav>
+
+{% stylesheet %}
+  .breadcrumb ol {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  .breadcrumb li + li::before {
+    content: "›";
+    margin-inline-end: var(--space-xs);
+    color: var(--color-text);
+  }
+
+  .breadcrumb a {
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  .breadcrumb a:hover {
+    text-decoration: underline;
+  }
+
+  .breadcrumb [aria-current] {
+    color: var(--breadcrumb-current, var(--color-accent));
+  }
+{% endstylesheet %}

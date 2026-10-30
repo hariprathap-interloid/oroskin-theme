@@ -1,0 +1,332 @@
+{%- comment -%}
+  Contact locations (M8.1, Figma 170:108823): two columns.
+  Left: "Visit our office" eyebrow, "Our global locations", and a white panel of office cards.
+  Right, a little lower: the centred "Find us online" eyebrow, "Connect on social", and the social
+  cards in rows of 3 + 2.
+
+  Each column's cards live in their own static block (Locations panel, Social cards), because a
+  section's {% content_for 'blocks' %} outputs all its blocks in one place; static blocks let the
+  merchant add and reorder cards in each column separately.
+
+  The social heading is placed as in the Figma (centred slightly left of the cards' middle), by
+  the developer's choice (2026-10-29).
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+
+  assign animation = section.settings.animation
+  if section.index == 1
+    assign animation = 'none'
+  endif
+-%}
+
+{% render 'screen-scale' %}
+
+<div
+  class="contact-locations full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.fill_screen %} section--fill-screen{% endif %}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};"
+>
+  <animate-on-scroll class="contact-locations__inner">
+    <div class="contact-locations__offices">
+      {%- if section.settings.locations_eyebrow != blank or section.settings.locations_heading != blank -%}
+        <div
+          class="contact-locations__titles"
+          {% if animation != 'none' %}
+            data-animate="slide-left"
+          {% endif %}
+        >
+          {%- if section.settings.locations_eyebrow != blank -%}
+            <p class="eyebrow">{{ section.settings.locations_eyebrow | escape }}</p>
+          {%- endif -%}
+          {%- if section.settings.locations_heading != blank -%}
+            <h2 class="contact-locations__heading">{{ section.settings.locations_heading }}</h2>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+
+      {% content_for 'block', type: '_location-list', id: 'locations' %}
+    </div>
+
+    <div class="contact-locations__social">
+      {%- if section.settings.social_eyebrow != blank or section.settings.social_heading != blank -%}
+        <div
+          class="contact-locations__titles contact-locations__titles--social"
+          {% if animation != 'none' %}
+            data-animate="fade-up"
+          {% endif %}
+        >
+          {%- if section.settings.social_eyebrow != blank -%}
+            <p class="eyebrow eyebrow--center">{{ section.settings.social_eyebrow | escape }}</p>
+          {%- endif -%}
+          {%- if section.settings.social_heading != blank -%}
+            <h2 class="contact-locations__heading">{{ section.settings.social_heading }}</h2>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+
+      {% content_for 'block', type: '_social-list', id: 'social' %}
+    </div>
+  </animate-on-scroll>
+</div>
+
+{% stylesheet %}
+  .contact-locations {
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  /* Phones and tablets: offices, then social. Two columns from 1200px (Figma 546 + 64 + 1212) */
+  .contact-locations__inner {
+    display: grid;
+    gap: var(--space-3xl);
+    align-items: start;
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  @media (min-width: 1200px) {
+    .contact-locations__inner {
+      grid-template-columns: minmax(0, 546fr) minmax(0, 1212fr);
+    }
+
+    /* The social column starts 68px lower than the offices (Figma eyebrows at y 162 and 230) */
+    .contact-locations__social {
+      padding-block-start: var(--space-3xl);
+    }
+
+    /*
+      Figma: the social heading is centred at x 1209, ~56px left of the cards' middle (1265). The
+      right padding shifts the centre left by half of it: 9.25% of 1212px ≈ 112px → 56px.
+    */
+    .contact-locations__titles--social {
+      padding-inline-end: 9.25%;
+    }
+  }
+
+  /* Red words (optional): made italic in the editor, shown upright in the accent colour */
+  .contact-locations__heading {
+    margin-block-start: var(--space-2xl); /* eyebrow → heading: ~42px (Figma 37 / 37) */
+    font-size: var(--font-size-h2); /* 40px */
+  }
+
+  .contact-locations__heading em {
+    font-style: normal;
+    color: var(--color-accent);
+  }
+
+  .contact-locations__titles {
+    margin-block-end: var(--space-lg); /* heading → offices panel: 22px */
+  }
+
+  .contact-locations__titles--social {
+    margin-block-end: var(--space-2xl); /* heading → social cards: 55px */
+    text-align: center;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.contact_locations",
+  "tag": "section",
+  "class": "contact-locations-section",
+  "blocks": [
+    {
+      "type": "_location-list"
+    },
+    {
+      "type": "_social-list"
+    }
+  ],
+  "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.locations"
+    },
+    {
+      "type": "text",
+      "id": "locations_eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "Visit our office"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "locations_heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.italic_accent_info",
+      "default": "Our global locations"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.social_media"
+    },
+    {
+      "type": "text",
+      "id": "social_eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "Find us online"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "social_heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.italic_accent_info",
+      "default": "Connect on social"
+    },
+    {
+      "type": "select",
+      "id": "social_icon_style",
+      "label": "t:labels.social_icon_style",
+      "options": [
+        {
+          "value": "brand",
+          "label": "t:options.social_icon_style.brand"
+        },
+        {
+          "value": "mono",
+          "label": "t:options.social_icon_style.mono"
+        }
+      ],
+      "default": "brand"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "checkbox",
+      "id": "fill_screen",
+      "label": "t:labels.fill_screen",
+      "info": "t:labels.fill_screen_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "scale_screen",
+      "label": "t:labels.scale_screen",
+      "info": "t:labels.scale_screen_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "text_scale",
+      "label": "t:labels.text_scale",
+      "info": "t:labels.text_scale_info",
+      "min": 100,
+      "max": 130,
+      "step": 5,
+      "unit": "%",
+      "default": 110,
+      "visible_if": "{{ section.settings.scale_screen }}"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "select",
+      "id": "animation",
+      "label": "t:labels.animation",
+      "info": "t:labels.animation_info",
+      "options": [
+        {
+          "value": "none",
+          "label": "t:options.animation.none"
+        },
+        {
+          "value": "fade-up",
+          "label": "t:options.animation.fade_up"
+        }
+      ],
+      "default": "fade-up"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 96
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.contact_locations",
+      "blocks": [
+        {
+          "type": "_location-list",
+          "id": "locations",
+          "static": true,
+          "blocks": [
+            {
+              "type": "_location-card",
+              "settings": { "code": "FR", "title": "Paris — Headquarters", "address": "14 Rue du Faubourg Saint-Honoré\n75008 Paris, France", "hours": "Mon–Fri · 9am – 7pm CET" }
+            },
+            {
+              "type": "_location-card",
+              "settings": { "code": "US", "title": "New York", "address": "432 West Broadway, Suite 300\nSoHo, New York NY 10012", "hours": "Mon–Fri · 9am – 6pm EST" }
+            },
+            {
+              "type": "_location-card",
+              "settings": { "code": "JP", "title": "Tokyo", "address": "2-11-3 Minami-Aoyama\nMinato-ku, Tokyo 107-0062", "hours": "Mon–Fri · 10am – 7pm JST" }
+            }
+          ]
+        },
+        {
+          "type": "_social-list",
+          "id": "social",
+          "static": true,
+          "blocks": [
+            { "type": "_social-card", "settings": { "network": "instagram", "name": "Instagram", "handle": "@oroskin.beauty", "followers": "1.2M followers" } },
+            { "type": "_social-card", "settings": { "network": "x", "name": "Twitter/X", "handle": "@oroskin", "followers": "340k followers" } },
+            { "type": "_social-card", "settings": { "network": "youtube", "name": "YouTube", "handle": "OroSkin Beauty", "followers": "215k followers" } },
+            { "type": "_social-card", "settings": { "network": "facebook", "name": "Facebook", "handle": "OroSkin Beauty Co.", "followers": "896k followers" } },
+            { "type": "_social-card", "settings": { "network": "linkedin", "name": "LinkedIn", "handle": "OroSkin Beauty Co.", "followers": "58k followers" } }
+          ]
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

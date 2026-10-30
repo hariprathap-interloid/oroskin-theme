@@ -1,0 +1,173 @@
+{% doc %}
+  One place on the Locations map (Figma 170:108673: a red dot with a dark glass label "New York /
+  Flagship" under it). Across and Down are percentages of the map IMAGE (0 = left/top edge,
+  100 = right/bottom edge), not of the box it's shown in, so the dot stays on its city when the map
+  is cropped to another shape (e.g. on phones). Location types: one or more of the names in the
+  section's Location types list ("Offices" or "Offices, Flagship stores"); the matching filter
+  buttons show the pin. Compared as handles, so capitals and spaces don't matter.
+
+  @example
+  {% content_for 'block', type: '_map-pin', id: 'map-pin' %}
+{% enddoc %}
+
+{%- liquid
+  assign pin_types = block.settings.types | split: ','
+
+  # The dot appears after the map (the section staggers the pins); never in the first section
+  assign animation = 'zoom-in'
+  if section.settings.animation == 'none' or section.index == 1
+    assign animation = 'none'
+  endif
+-%}
+
+{%- if block.settings.name != blank -%}
+  <div
+    class="map-pin"
+    data-pin-type="{%- for pin_type in pin_types -%}{{ pin_type | strip | handleize }} {% endfor -%}"
+    style="--pin-x: {{ block.settings.x }}%; --pin-y: {{ block.settings.y }}%;"
+    {{ block.shopify_attributes }}
+  >
+    {%- comment -%}
+      The animation sits on an inner element: the outer one is placed with transform, and the
+      reveal's own transform (zoom-in) would replace it for a moment and make the pin jump.
+    {%- endcomment -%}
+    <div
+      class="map-pin__inner"
+      {% if animation != 'none' %}
+        data-animate="{{ animation }}"
+      {% endif %}
+    >
+      <span class="map-pin__dot" aria-hidden="true"></span>
+      <p class="map-pin__label">
+        <span class="map-pin__name">{{ block.settings.name | escape }}</span>
+        {%- if block.settings.type_label != blank -%}
+          <span class="map-pin__type">{{ block.settings.type_label | escape }}</span>
+        {%- endif -%}
+      </p>
+    </div>
+  </div>
+{%- endif -%}
+
+{% stylesheet %}
+  /*
+    The point (--pin-x, --pin-y) is the centre of the 28px dot; the label hangs ~12px under it,
+    centred (Figma: 132 x 82 dark glass boxes).
+  */
+  .map-pin {
+    position: absolute;
+    inset-inline-start: var(--pin-x);
+    inset-block-start: var(--pin-y);
+    transform: translate(-50%, calc(-14 * var(--px, 0.0625rem)));
+  }
+
+  .map-pin[hidden] {
+    display: none;
+  }
+
+  .map-pin__inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  /* Red dot with a darker ring and a soft glow (the map behind is always dark) */
+  .map-pin__dot {
+    inline-size: max(1rem, calc(28 * var(--px, 0.0625rem)));
+    aspect-ratio: 1;
+    border: 1px solid var(--color-accent);
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--color-accent) 75%, transparent);
+    box-shadow: 0 0 0.75rem color-mix(in srgb, var(--color-accent) 70%, transparent);
+  }
+
+  /* Dark glass: white text is used on purpose (the map image is dark on every colour scheme) */
+  .map-pin__label {
+    display: grid;
+    justify-items: center;
+    min-inline-size: calc(132 * var(--px, 0.0625rem)); /* 132px */
+    margin: 0;
+    padding: var(--space-sm) var(--space-lg);
+    border: 1px solid #ffffff40;
+    border-radius: var(--radius-xs);
+    background-color: #ffffff1a;
+    color: #ffffff;
+    font-size: var(--font-size-body);
+    line-height: 1.4;
+    text-align: center;
+    white-space: nowrap;
+    -webkit-backdrop-filter: blur(var(--glass-frost));
+    backdrop-filter: blur(var(--glass-frost));
+  }
+
+  .map-pin__type {
+    color: #ffffffb3;
+  }
+
+  /* Small screens: smaller labels so neighbouring cities (London, Dubai) overlap less */
+  @media (max-width: 749px) {
+    .map-pin__dot {
+      inline-size: 1rem;
+    }
+
+    .map-pin__label {
+      min-inline-size: 0;
+      padding: var(--space-2xs) var(--space-xs);
+      font-size: var(--font-size-small);
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.map_pin",
+  "tag": null,
+  "settings": [
+    {
+      "type": "text",
+      "id": "name",
+      "label": "t:labels.pin_name",
+      "default": "London"
+    },
+    {
+      "type": "text",
+      "id": "type_label",
+      "label": "t:labels.pin_type_label",
+      "default": "Studio"
+    },
+    {
+      "type": "text",
+      "id": "types",
+      "label": "t:labels.pin_types",
+      "info": "t:labels.pin_types_info",
+      "default": "Offices"
+    },
+    {
+      "type": "range",
+      "id": "x",
+      "label": "t:labels.pin_x",
+      "info": "t:labels.pin_position_info",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "%",
+      "default": 50
+    },
+    {
+      "type": "range",
+      "id": "y",
+      "label": "t:labels.pin_y",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "%",
+      "default": 35
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.map_pin"
+    }
+  ]
+}
+{% endschema %}

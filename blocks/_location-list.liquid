@@ -1,0 +1,50 @@
+{% doc %}
+  The Locations panel (static block, left column of Contact locations): a white panel holding one
+  Location card per office. Only the Contact locations section uses it.
+
+  @example
+  {% content_for 'block', type: '_location-list', id: 'locations' %}
+{% enddoc %}
+
+{%- liquid
+  assign animation = 'slide-left'
+  if section.settings.animation == 'none' or section.index == 1
+    assign animation = 'none'
+  endif
+-%}
+
+<div
+  class="location-list"
+  {% if animation != 'none' %}
+    data-animate="{{ animation }}"
+    style="--animate-delay: 100ms;"
+  {% endif %}
+  {{ block.shopify_attributes }}
+>
+  {% content_for 'blocks' %}
+</div>
+
+{% stylesheet %}
+  /* Figma: 546 x 715 white panel, cards 492 wide, 27px in from the sides, ~16px apart */
+  .location-list {
+    display: grid;
+    gap: var(--space-md);
+    padding: var(--space-lg);
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-md);
+    background-color: var(--color-background);
+  }
+
+  .location-list:empty {
+    display: none;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.location_list",
+  "tag": null,
+  "blocks": [{ "type": "_location-card" }],
+  "settings": []
+}
+{% endschema %}
