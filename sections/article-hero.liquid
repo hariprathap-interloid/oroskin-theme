@@ -1,0 +1,615 @@
+{%- comment -%}
+  Article hero (M8.3, Figma 1:18396 top, first section of the article page): breadcrumb, then the
+  article's image as a big rounded card with, on a dark fade, the topic pill, the title (H1), the
+  summary and a meta row: author, date, read time and a red "Share article" button.
+
+  - Topic = the article's first tag. Title highlight = the article metafield custom.title_highlight
+    (text): those words of the title show in the accent colour ("the Golden Hour").
+  - Author: the name, with the staff account's photo when Shopify has one, else the initials.
+  - Share article: the share icons (snippets/share-links.liquid) take the button's place on hover, or
+    after a click / tap (phones).
+  - First section of the page, so no scroll animation, and the image loads straight away with high
+    priority (it's the largest thing on screen: the LCP).
+  - Sized to the screen like the blog hero (snippets/screen-scale.liquid).
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+  assign topic = article.tags.first
+
+  # The title, escaped, with the highlight words wrapped in <em> (shown upright in the accent colour).
+  # Only the first match is wrapped, and only if the words really are in the title.
+  assign title_html = article.title | escape
+  assign highlight = article.metafields.custom.title_highlight.value | strip | escape
+  if highlight != blank and title_html contains highlight
+    assign highlight_html = '<em>' | append: highlight | append: '</em>'
+    assign title_html = title_html | replace_first: highlight, highlight_html
+  endif
+
+  assign summary = article.excerpt | strip_html | strip
+
+  capture minutes
+    render 'read-time', article: article, speed: section.settings.reading_speed
+  endcapture
+  assign minutes = minutes | strip
+
+  assign name_parts = article.author | split: ' '
+  assign initials = name_parts.first | slice: 0
+  if name_parts.size > 1
+    assign last_initial = name_parts.last | slice: 0
+    assign initials = initials | append: last_initial
+  endif
+-%}
+
+{% render 'screen-scale' %}
+
+<div
+  class="article-hero full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }}; --hero-radius: {{ section.settings.corner_radius }}px;"
+>
+  <div class="article-hero__inner">
+    {%- if section.settings.show_breadcrumb -%}
+      {% render 'breadcrumb',
+        current: article.title,
+        parent_title: blog.title,
+        parent_url: blog.url,
+        class: 'article-hero__breadcrumb'
+      %}
+    {%- endif -%}
+
+    <div class="article-hero__card{% if article.image == blank %} article-hero__card--no-image{% endif %}">
+      {%- if article.image != blank -%}
+        <div class="article-hero__media">
+          {{
+            article.image
+            | image_url: width: 3840
+            | image_tag:
+              widths: '750, 1100, 1500, 1920, 2560, 3840',
+              sizes: '(min-width: 1920px) 1820px, 96vw',
+              alt: article.image.alt,
+              loading: 'eager',
+              fetchpriority: 'high'
+          }}
+        </div>
+      {%- endif -%}
+
+      <div class="article-hero__content">
+        {%- if section.settings.show_topic and topic != blank -%}
+          <span class="article-hero__topic">{{ topic | escape }}</span>
+        {%- endif -%}
+
+        <div class="article-hero__text">
+          <h1 class="article-hero__title">{{ title_html }}</h1>
+          {%- if summary != blank -%}
+            <p class="article-hero__summary">{{ summary }}</p>
+          {%- endif -%}
+        </div>
+
+        <div class="article-hero__meta">
+          {%- if article.author != blank -%}
+            <span class="article-hero__author">
+              <span class="article-hero__avatar" aria-hidden="true">
+                {%- if article.user.image != blank -%}
+                  {{ article.user.image | image_url: width: 160, height: 160, crop: 'center' | image_tag: alt: '' }}
+                {%- else -%}
+                  {{ initials | upcase }}
+                {%- endif -%}
+              </span>
+              {{ article.author | escape }}
+            </span>
+          {%- endif -%}
+
+          <span class="article-hero__facts">
+            <span class="article-hero__fact">
+              {{- 'icon-calendar.svg' | inline_asset_content -}}
+              {{ article.published_at | time_tag: '%b %-d, %Y' }}
+            </span>
+            <span class="article-hero__fact">
+              {{- 'icon-clock.svg' | inline_asset_content -}}
+              {{ 'blog.read_time' | t: minutes: minutes }}
+            </span>
+          </span>
+
+          {%- if section.settings.show_share -%}
+            {%- comment -%}
+              Figma: the red "Share article" button; the outlined glass pill with the share icons
+              takes its place on mouse hover, or after a click / tap (phones have no hover).
+            {%- endcomment -%}
+            <share-button class="article-hero__share">
+              <button
+                class="button article-hero__share-button article-hero__share-main"
+                type="button"
+                aria-expanded="false"
+                aria-controls="ArticleShare-{{ section.id }}"
+              >
+                {{- 'icon-share.svg' | inline_asset_content -}}
+                {{ 'blog.article.share_article' | t }}
+              </button>
+              {%- assign share_id = 'ArticleShare-' | append: section.id -%}
+              {% render 'share-links', url: canonical_url, title: article.title, style: 'pill', id: share_id %}
+            </share-button>
+          {%- endif -%}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% stylesheet %}
+  /*
+    Figma 1920: card 1841 x 816 from y 190, radius ~100px; pill 49px from the top, text ~62px from
+    the left, meta row 77px tall, 46px from the bottom. Sizes are Figma px x --px (screen-scale) with
+    rem floors, or tokens.
+  */
+  .article-hero {
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  .article-hero__inner {
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  .article-hero__breadcrumb {
+    margin-block-end: var(--space-xl);
+  }
+
+  /* The card: the photo fills it; the text sits on a dark fade from the bottom left */
+  .article-hero__card {
+    position: relative;
+    display: flex;
+    overflow: hidden;
+    min-block-size: 32rem;
+    border-radius: var(--hero-radius, 100px);
+    background-color: #1a1a1a;
+    color: #ffffff;
+    isolation: isolate;
+  }
+
+  @media (min-width: 990px) {
+    .article-hero__card {
+      aspect-ratio: 1841 / 816;
+    }
+  }
+
+  .article-hero__media,
+  .article-hero__media img {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  .article-hero__media {
+    z-index: -1;
+  }
+
+  .article-hero__media img {
+    object-fit: cover;
+  }
+
+  .article-hero__media::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(to top, #000000d9 0%, #00000080 30%, transparent 60%),
+      linear-gradient(to right, #00000099 0%, transparent 55%);
+  }
+
+  /* No image: a pale panel with dark text */
+  .article-hero__card--no-image {
+    background-color: var(--color-tint-subtle);
+    color: var(--color-text);
+  }
+
+  .article-hero__content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-xl);
+    padding:
+      max(var(--space-xl), calc(49 * var(--px, 0.0625rem)))
+      max(var(--space-lg), calc(62 * var(--px, 0.0625rem)))
+      max(var(--space-xl), calc(46 * var(--px, 0.0625rem)));
+  }
+
+  /* Topic pill (top left): see-through glass over the photo, white text */
+  .article-hero__topic {
+    align-self: flex-start;
+    padding: 0.3125rem 1.0625rem; /* 5px 17px */
+    border: 1px solid color-mix(in srgb, var(--color-accent) 50%, transparent);
+    border-radius: var(--radius-lg); /* 50px */
+    background-color: color-mix(in srgb, var(--color-accent) 15%, transparent);
+    color: #ffffff;
+    font-size: var(--font-size-body-lg);
+    line-height: 1.3;
+    -webkit-backdrop-filter: blur(var(--glass-frost));
+    backdrop-filter: blur(var(--glass-frost));
+  }
+
+  /* Title and summary sit low in the card, above the meta row */
+  .article-hero__text {
+    margin-block-start: auto;
+  }
+
+  .article-hero__title {
+    max-inline-size: max(18rem, calc(640 * var(--px, 0.0625rem)));
+    margin: 0;
+    color: inherit;
+    font-size: var(--font-size-h1); /* 60px */
+    line-height: 1.15;
+  }
+
+  /*
+    The title highlight (article field "Title highlight") in the accent colour, upright. The Figma's
+    dark red on a dark photo is under 3:1: to check in the M9 contrast pass.
+  */
+  .article-hero__title em {
+    color: var(--color-accent);
+    font-style: normal;
+  }
+
+  .article-hero__summary {
+    max-inline-size: max(20rem, calc(800 * var(--px, 0.0625rem)));
+    margin: var(--space-lg) 0 0;
+    font-size: var(--font-size-body-sm);
+    line-height: 1.5;
+    opacity: 0.9;
+  }
+
+  /* Author on the left, date and read time in the middle, Share on the far right */
+  .article-hero__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-md) max(var(--space-xl), calc(72 * var(--px, 0.0625rem)));
+  }
+
+  .article-hero__author {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-md);
+    font-size: var(--font-size-body);
+  }
+
+  .article-hero__avatar {
+    display: grid;
+    flex: none;
+    place-items: center;
+    overflow: hidden;
+    inline-size: max(3.5rem, calc(77 * var(--px, 0.0625rem)));
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--color-accent) 15%, #ffffff);
+    color: var(--color-accent);
+    font-size: var(--font-size-body);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .article-hero__avatar img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .article-hero__facts {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm) max(var(--space-lg), calc(40 * var(--px, 0.0625rem)));
+  }
+
+  .article-hero__fact {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: var(--font-size-body);
+  }
+
+  .article-hero__fact svg {
+    flex: none;
+    inline-size: 1.25rem;
+    block-size: auto;
+  }
+
+  /*
+    Button and pill share one grid cell, right-aligned, so the pill appears exactly where the button
+    was. Only on devices with a real hover (mouse): there the pill shows on hover or when the keyboard
+    reaches the button; the button fades out but stays focusable underneath.
+  */
+  .article-hero__share {
+    display: grid;
+    align-items: center;
+    justify-items: end;
+    margin-inline-start: auto;
+  }
+
+  .article-hero__share > * {
+    grid-area: 1 / 1;
+  }
+
+  .article-hero__share-button {
+    min-block-size: 3.125rem; /* 50px, the same height as the pill */
+  }
+
+  .article-hero__share-button svg {
+    flex: none;
+    inline-size: 1.1em;
+    block-size: auto;
+  }
+
+  /*
+    The pill waits invisible on top of the button. pointer-events: none lets clicks reach the button
+    under it; it stays in the keyboard order (no visibility: hidden), so Tab goes button → icons.
+  */
+  .article-hero__share .share-links {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--duration-fast) var(--ease-out);
+  }
+
+  .article-hero__share-main {
+    transition: opacity var(--duration-fast) var(--ease-out);
+  }
+
+  /*
+    The pill's icons rise from below and fade in, one after another (60ms apart), when the pill opens.
+    Only with motion allowed; otherwise they simply appear with the pill.
+  */
+  @media (prefers-reduced-motion: no-preference) {
+    .article-hero__share .share-links__list > li {
+      opacity: 0;
+      translate: 0 0.75rem;
+      transition:
+        opacity var(--duration-base) var(--ease-out),
+        translate var(--duration-base) var(--ease-out);
+    }
+
+    .article-hero__share .share-links__list > li:nth-child(2) {
+      transition-delay: 60ms;
+    }
+
+    .article-hero__share .share-links__list > li:nth-child(3) {
+      transition-delay: 120ms;
+    }
+
+    .article-hero__share .share-links__list > li:nth-child(4) {
+      transition-delay: 180ms;
+    }
+
+    .article-hero__share .share-links__list > li:nth-child(5) {
+      transition-delay: 240ms;
+    }
+  }
+
+  /*
+    Open: after a click / tap on the button (is-open, set by the script below), on mouse hover
+    (devices that have one), or when the keyboard is on one of the icons. Not while the keyboard is
+    on the button itself: then the button and its focus ring stay visible.
+  */
+  .article-hero__share.is-open .share-links,
+  .article-hero__share .share-links:focus-within {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .article-hero__share.is-open .share-links__list > li,
+  .article-hero__share .share-links:focus-within .share-links__list > li {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  .article-hero__share.is-open .article-hero__share-main,
+  .article-hero__share:has(.share-links:focus-within) .article-hero__share-main {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  @media (hover: hover) {
+    .article-hero__share:hover .share-links {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .article-hero__share:hover .share-links__list > li {
+      opacity: 1;
+      translate: 0 0;
+    }
+
+    .article-hero__share:hover .article-hero__share-main {
+      opacity: 0;
+      pointer-events: none;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <share-button>: a click or tap on "Share article" shows the share icons in its place (is-open)
+   * and moves the focus to the first icon; the phone has no hover, so this is how it opens there.
+   * Closes on a click outside, on Escape (focus back to the button) or when the keyboard leaves the
+   * icons. Copying and sharing are done by the icons (snippets/share-links.liquid).
+   */
+  class ShareButton extends HTMLElement {
+    connectedCallback() {
+      this.button = this.querySelector('.article-hero__share-button');
+      this.panel = this.querySelector('.share-links');
+      this.button?.addEventListener('click', () => this.open());
+
+      // Close on a tap / click outside, or with Escape (focus goes back to the button)
+      this.onDocumentClick = (event) => {
+        if (!this.contains(event.target)) this.close();
+      };
+      this.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape' || !this.classList.contains('is-open')) return;
+        this.close();
+        this.button.focus();
+      });
+      // Keyboard: leaving the last icon closes it
+      this.addEventListener('focusout', (event) => {
+        if (!this.contains(event.relatedTarget)) this.close();
+      });
+    }
+
+    disconnectedCallback() {
+      document.removeEventListener('click', this.onDocumentClick);
+    }
+
+    // Shows the icons in place of the button and puts the focus on the first one
+    open() {
+      this.classList.add('is-open');
+      this.button.setAttribute('aria-expanded', 'true');
+      document.addEventListener('click', this.onDocumentClick);
+      this.panel?.querySelector('a, button')?.focus({ preventScroll: true });
+    }
+
+    close() {
+      if (!this.classList.contains('is-open')) return;
+      this.classList.remove('is-open');
+      this.button.setAttribute('aria-expanded', 'false');
+      document.removeEventListener('click', this.onDocumentClick);
+    }
+  }
+
+  if (!customElements.get('share-button')) customElements.define('share-button', ShareButton);
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.article_hero",
+  "tag": "section",
+  "class": "article-hero-section",
+  "enabled_on": {
+    "templates": ["article"]
+  },
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "t:labels.article_hero_help"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_breadcrumb",
+      "label": "t:labels.show_breadcrumb",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_topic",
+      "label": "t:labels.show_article_topic",
+      "info": "t:labels.show_article_topic_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_share",
+      "label": "t:labels.show_share_button",
+      "info": "t:labels.show_share_button_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "reading_speed",
+      "label": "t:labels.reading_speed",
+      "info": "t:labels.reading_speed_info",
+      "min": 150,
+      "max": 300,
+      "step": 10,
+      "unit": "wpm",
+      "default": 200
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "range",
+      "id": "corner_radius",
+      "label": "t:labels.corner_radius",
+      "min": 0,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "default": 100
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "checkbox",
+      "id": "scale_screen",
+      "label": "t:labels.scale_screen",
+      "info": "t:labels.scale_screen_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "text_scale",
+      "label": "t:labels.text_scale",
+      "info": "t:labels.text_scale_info",
+      "min": 100,
+      "max": 130,
+      "step": 5,
+      "unit": "%",
+      "default": 110,
+      "visible_if": "{{ section.settings.scale_screen }}"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 32
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 48
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.article_hero"
+    }
+  ]
+}
+{% endschema %}

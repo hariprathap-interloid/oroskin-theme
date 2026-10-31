@@ -1,0 +1,197 @@
+{% doc %}
+  One "The edit" product row inside an article's text (Figma blog details 1:18484, 1116 x 187):
+  photo, vendor, title, a 2-line description, price and the "Add to cart" pill (snippets/quick-add.liquid,
+  pill style: adds without leaving the article and updates the header's cart count).
+
+  - Price and pill sit in two fixed-width columns, so the prices line up on every row whatever their
+    length (sale price, "From", unit price) and the pills line up on the right.
+  - The whole row opens the product: the title link stretches over it; the pill sits above that.
+  - Narrow rows (under 50rem, e.g. tablets): price and pill move under the text.
+
+  @param {product} product - The product
+  @param {string} [heading_tag] - The title's tag (default 'h3': the rows sit under the article's H2)
+
+  @example
+  {% render 'article-product-row', product: product %}
+{% enddoc %}
+
+{%- liquid
+  assign title_tag = heading_tag | default: 'h3'
+  assign description = product.description | strip_html | strip | truncate: 180
+-%}
+
+<div class="article-product-row">
+  <div class="article-product-row__inner">
+    <div class="article-product-row__media">
+      {%- if product.featured_image != blank -%}
+        {{
+          product.featured_image
+          | image_url: width: 400
+          | image_tag: widths: '160, 280, 400', sizes: '(min-width: 1200px) 141px, 120px', alt: '', loading: 'lazy'
+        }}
+      {%- else -%}
+        {{ 'product-1' | placeholder_svg_tag: 'article-product-row__placeholder' }}
+      {%- endif -%}
+    </div>
+
+    <div class="article-product-row__info">
+      {%- if product.vendor != blank -%}
+        <p class="article-product-row__vendor">{{ product.vendor | escape }}</p>
+      {%- endif -%}
+      <{{ title_tag }} class="article-product-row__title">
+        <a class="article-product-row__link" href="{{ product.url }}">{{ product.title | escape }}</a>
+      </{{ title_tag }}>
+      {%- if description != blank -%}
+        <p class="article-product-row__description">{{ description | escape }}</p>
+      {%- endif -%}
+    </div>
+
+    <div class="article-product-row__buy">
+      {% render 'price', product: product %}
+      {% render 'quick-add', product: product, style: 'pill', size: 50, class: 'article-product-row__add' %}
+    </div>
+  </div>
+</div>
+
+{% stylesheet %}
+  /*
+    Figma 1920: row 1116 x 187, radius ~19, 1px pale border; photo 141 x 134 (radius ~10) 33px in;
+    text column from x+204 (30px after the photo); price and pill on the right.
+    Sizes are Figma px x --px (screen-scale) with rem floors, or tokens.
+    The rows sit inside .article-body.rte, so the selectors here use two classes to beat its list,
+    image and link rules.
+  */
+
+  /* The outer box is the size container: the inner grid changes with the row's own width */
+  .article-product-row {
+    container-type: inline-size;
+  }
+
+  .article-product-row__inner {
+    position: relative;
+    display: grid;
+    grid-template-columns: max(6rem, calc(141 * var(--px, 0.0625rem))) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: max(var(--space-lg), calc(30 * var(--px, 0.0625rem)));
+    padding:
+      max(var(--space-md), calc(26 * var(--px, 0.0625rem)))
+      max(var(--space-lg), calc(31 * var(--px, 0.0625rem)))
+      max(var(--space-md), calc(26 * var(--px, 0.0625rem)))
+      max(var(--space-lg), calc(33 * var(--px, 0.0625rem)));
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-sm);
+    background-color: var(--color-background);
+  }
+
+  .article-product-row .article-product-row__media {
+    overflow: hidden;
+    aspect-ratio: 141 / 134;
+    border-radius: var(--radius-xs);
+    background-color: var(--color-tint-subtle);
+  }
+
+  .article-product-row .article-product-row__media img,
+  .article-product-row .article-product-row__placeholder {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    border-radius: 0;
+    object-fit: cover;
+    transition: scale var(--duration-slow) var(--ease-out);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .article-product-row:hover .article-product-row__media img {
+      scale: 1.05;
+    }
+  }
+
+  .article-product-row__info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    max-inline-size: 32rem; /* 507px: the description wraps to 2 lines as in the Figma */
+  }
+
+  .article-product-row .article-product-row__info > * {
+    margin: 0;
+  }
+
+  .article-product-row__vendor {
+    color: var(--color-accent);
+    font-size: var(--font-size-body-sm);
+    line-height: 1.5;
+  }
+
+  .article-product-row__title {
+    font-family: var(--font-body--family);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  .article-product-row .article-product-row__link {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* The title link covers the whole row */
+  .article-product-row__link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-sm);
+  }
+
+  .article-product-row:hover .article-product-row__link {
+    color: var(--color-accent);
+  }
+
+  /* Two lines at most, cut with "…" */
+  .article-product-row__description {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    font-size: var(--font-size-caption);
+    line-height: 1.8;
+    opacity: 0.85;
+  }
+
+  /*
+    Price and pill: two fixed-width columns (the same on every row), so the prices start at the same
+    place and the pills end at the same place. 11rem fits "From $48.00" or "$54.00 $72.00"; 13rem is
+    the Figma pill (205px).
+  */
+  .article-product-row__buy {
+    display: grid;
+    grid-template-columns: 11rem 13rem;
+    align-items: center;
+    column-gap: max(var(--space-lg), calc(32 * var(--px, 0.0625rem)));
+  }
+
+  .article-product-row__buy .price {
+    color: var(--color-accent);
+    font-size: var(--font-size-body-lg);
+  }
+
+  /* Above the stretched title link, so the pill gets its own clicks */
+  .article-product-row__add {
+    position: relative;
+    z-index: 1;
+    justify-self: end;
+  }
+
+  /* Narrow rows (no design: our choice): photo + text on top, price and pill on one line below */
+  @container (max-width: 50rem) {
+    .article-product-row__inner {
+      grid-template-columns: max(5.5rem, calc(141 * var(--px, 0.0625rem))) minmax(0, 1fr);
+    }
+
+    .article-product-row__buy {
+      grid-column: 1 / -1;
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+  }
+{% endstylesheet %}

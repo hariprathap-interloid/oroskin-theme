@@ -1,68 +1,1022 @@
-{% comment %}
-  This section is used in the article template to render the article page, which
-  displays the full content of the blog post and can optionally include a
-  comments section for customers (not shown in this example).
+{%- comment -%}
+  Article (M8.3 part 2, Figma 1:18396 under the hero): the article's text in the Figma style, with a
+  sidebar beside it (author, "In this article", products, tags, share) and, under the text, a share
+  row and the author's bio card. Tablets and phones: one column, the contents as a box at the top,
+  products and tags under the text.
 
-  https://shopify.dev/docs/storefronts/themes/architecture/templates/article
-{% endcomment %}
+  The text is the article's own rich text (Online Store > Blog posts); the theme styles what the
+  editor writes (also explained in the theme editor's help text):
+  - first paragraph = the lead (italic, accent rule on the left)
+  - Heading 2 = section heading, an italic word shows upright in the accent colour; a Heading 6
+    right above it = the small eyebrow ("—— SECTION ONE")
+  - quote = quote card; a last line starting with "—" = the attribution (accent)
+  - quote with a bullet list inside = tips box; its first line is the box's title
+  - image, then a paragraph that is all italic = the caption, shown on the image
+  - numbered list whose items are **bold word**, line break, title, line break, text = the 01–05 steps
+  - a paragraph with only [products] = where "The edit" product rows go (all the article's products);
+    no such paragraph = the rows come after the text
 
-{% if article.image %}
-  {{ article.image | image_url: width: 1000 | image_tag }}
-{% endif %}
+  A Liquid pass below gives every H2 an id (the contents links jump to them), marks the attribution
+  lines and wraps each step's title; everything else is CSS.
+  Products: the article field custom.products (list of products); the sidebar shows the first 2,
+  "The edit" all of them (snippets/article-product-row.liquid).
+{%- endcomment -%}
 
-<h1>{{ article.title }}</h1>
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
 
-{% assign date = article.published_at | time_tag: format: 'date' %}
-<p>{{ 'blog.article_metadata_html' | t: date: date, author: article.author }}</p>
+  # 1. One spelling for what different editors write (old editor <b>/<i>, <br/> or <br />)
+  assign body = article.content
+  assign body = body | replace: '<br/>', '<br>' | replace: '<br />', '<br>'
+  assign body = body | replace: '<b>', '<strong>' | replace: '</b>', '</strong>'
+  assign body = body | replace: '<i>', '<em>' | replace: '</i>', '</em>'
 
-{{ article.content }}
+  # 2. Quote attribution: a paragraph that starts with a dash ("— Dr. Arnaud") gets a class
+  assign body = body | replace: '<p>—', '<p class="article-body__cite">—' | replace: '<p>&mdash;', '<p class="article-body__cite">&mdash;'
 
-{% if blog.comments_enabled? %}
-  <h2>{{ 'blog.article_comments' | t }}</h2>
+  # 3. H2 ids + the contents list. Split before every "<h2": each piece after the first starts with
+  #    the rest of a heading tag, e.g. '>The philosophy of <em>Intention</em></h2><p>…'. The id is a
+  #    number ("article-heading-2"), not the words: headings in other alphabets would give an empty
+  #    handle, and two equal headings the same id.
+  assign heading_count = 0
+  assign contents_items = ''
+  assign chunks = body | split: '<h2'
+  capture body
+    for chunk in chunks
+      if forloop.first
+        echo chunk
+        continue
+      endif
 
-  <div id="comments">
-    {% paginate article.comments by 10 %}
-      {% for comment in article.comments %}
-        <div>
-          <p>{{ comment.author }}</p>
-          <p>
-            {{- comment.created_at | time_tag: format: 'date' -}}
-          </p>
-          <p>{{ comment.content }}</p>
+      assign heading_count = heading_count | plus: 1
+      assign heading_id = 'article-heading-' | append: heading_count
+
+      # The heading's own text: up to </h2>, minus the tag's attributes (anything before the first ">")
+      assign heading_html = chunk | split: '</h2>' | first
+      assign heading_attrs = heading_html | split: '>' | first
+      assign heading_text = heading_html | remove_first: heading_attrs | remove_first: '>' | strip_html | strip
+
+      if heading_text != blank
+        assign contents_items = contents_items | append: '<li><a href="#' | append: heading_id | append: '" data-contents-link>' | append: heading_text | append: '</a></li>'
+      endif
+
+      echo '<h2 id="' | append: heading_id | append: '"' | append: chunk
+    endfor
+  endcapture
+
+  # 4. Steps: an item that starts "<strong>Cleanse</strong><br>Title<br>Text" gets its title wrapped
+  #    in a span (a bare line of text between two line breaks can't be styled). Split before every
+  #    "<li>"; Shopify saves a line break after it, so each piece is lstripped before the check. Items
+  #    whose bold word isn't followed by a line break (the tips box) stay as they are.
+  assign items = body | split: '<li>'
+  capture body
+    for chunk in items
+      if forloop.first
+        echo chunk
+        continue
+      endif
+
+      echo '<li>'
+      assign item = chunk | lstrip
+      assign item_start = item | slice: 0, 8
+      assign is_step = false
+      if item_start == '<strong>'
+        assign step_parts = item | split: '<br>'
+        assign label_end = step_parts[0] | slice: -9, 9
+        if step_parts.size > 2 and label_end == '</strong>'
+          unless step_parts[0] contains '</li>' or step_parts[1] contains '</li>'
+            assign is_step = true
+          endunless
+        endif
+      endif
+
+      if is_step
+        assign step_head = step_parts[0] | append: '<br>' | append: step_parts[1] | append: '<br>'
+        assign step_rest = item | remove_first: step_head
+        echo step_parts[0] | append: '<span class="article-body__step-title">' | append: step_parts[1] | append: '</span>' | append: step_rest
+      else
+        echo chunk
+      endif
+    endfor
+  endcapture
+
+  # 5. The [products] marker: the text is cut there and "The edit" rows go in between. No marker:
+  #    body_after stays empty, so the rows come after the text.
+  assign body = body | replace: '[products]<br>', '[products]'
+  assign products_marker = '<p>[products]</p>'
+  assign body_before = body
+  assign body_after = ''
+  if body contains products_marker
+    assign body_before = body | split: products_marker | first
+    assign body_after = body | remove_first: body_before | remove_first: products_marker | remove: products_marker
+  endif
+
+  # Sidebar data
+  assign featured_products = article.metafields.custom.products.value
+  assign author_bio = article.user.bio | strip
+  assign quote_icon = 'icon-quote-open.svg' | asset_url
+  assign tips_icon = 'icon-sparkle.svg' | asset_url
+
+  assign show_products = false
+  if section.settings.show_products and featured_products.size > 0
+    assign show_products = true
+  endif
+  assign show_edit = false
+  if section.settings.show_edit_rows and featured_products.size > 0
+    assign show_edit = true
+  endif
+  assign show_tags = false
+  if section.settings.show_tags and article.tags.size > 0
+    assign show_tags = true
+  endif
+  assign show_contents = false
+  if section.settings.show_contents and contents_items != blank
+    assign show_contents = true
+  endif
+-%}
+
+{% render 'screen-scale' %}
+
+<div
+  class="article full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 100 | divided_by: 100.0 }}; --icon-quote: url('{{ quote_icon }}'); --icon-tips: url('{{ tips_icon }}');"
+>
+  <article-layout class="article__layout{% if section.settings.sticky_sidebar %} article__layout--sticky{% endif %}">
+    <div class="article__main">
+      {%- comment -%} Tablets and phones: the contents as a box above the text {%- endcomment -%}
+      {%- if show_contents -%}
+        <details class="article__contents-box">
+          <summary class="article__contents-summary">
+            {{ 'blog.article.in_this_article' | t }}
+            {{- 'icon-chevron.svg' | inline_asset_content -}}
+          </summary>
+          <nav aria-label="{{ 'blog.article.in_this_article' | t | escape }}">
+            <ol class="article__contents" role="list">
+              {{- contents_items -}}
+            </ol>
+          </nav>
+        </details>
+      {%- endif -%}
+
+      <div class="article-body rte">
+        {{- body_before -}}
+        {%- if show_edit -%}
+          <ul class="article-edit" role="list">
+            {%- for featured_product in featured_products -%}
+              <li>{% render 'article-product-row', product: featured_product %}</li>
+            {%- endfor -%}
+          </ul>
+        {%- endif -%}
+        {{- body_after -}}
+      </div>
+
+      {%- if section.settings.show_share_row -%}
+        <div class="article__share-row">
+          <p class="article__label">{{ 'blog.article.share' | t }}</p>
+          {% render 'share-links', url: canonical_url, title: article.title, style: 'round' %}
         </div>
-      {% endfor %}
+      {%- endif -%}
 
-      {{ paginate | default_pagination: anchor: 'comments' }}
-    {% endpaginate %}
-  </div>
-
-  {% form 'new_comment', article %}
-    <h2>{{ 'blog.comment_form_title' | t }}</h2>
-
-    {{ form.errors | default_errors }}
-
-    <div>
-      <label for="author">{{ 'blog.comment_form_name' | t }}</label>
-      <input type="text" name="comment[author]" id="author" value="{{ form.author }}" required>
+      {%- if section.settings.show_author_bio and author_bio != blank -%}
+        <div class="article__bio-card">
+          {% render 'author-avatar', article: article, class: 'article__bio-avatar' %}
+          <div class="article__bio-text">
+            <p class="article__bio-name">{{ article.author | escape }}</p>
+            <p class="article__bio">{{ author_bio | escape | newline_to_br }}</p>
+          </div>
+        </div>
+      {%- endif -%}
     </div>
 
-    <div>
-      <label for="email">{{ 'blog.comment_form_email' | t }}</label>
-      <input type="email" name="comment[email]" id="email" value="{{ form.email }}" required>
-    </div>
+    <div class="article__side" data-article-side>
+      {%- if section.settings.show_author and article.author != blank -%}
+        <div class="article__author-card article__side--wide-only">
+          <div class="article__author">
+            {% render 'author-avatar', article: article, class: 'article__author-avatar' %}
+            <p class="article__author-name">{{ article.author | escape }}</p>
+          </div>
+          {%- if author_bio != blank -%}
+            <p class="article__author-bio">{{ author_bio | escape | truncatewords: 30 }}</p>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
 
-    <div>
-      <label for="body">{{ 'blog.comment_form_body' | t }}</label>
-      <textarea name="comment[body]" id="body" required>{{ form.body }}</textarea>
-    </div>
+      {%- if show_contents -%}
+        <nav class="article__side-block article__side--wide-only" aria-labelledby="ArticleContents-{{ section.id }}">
+          <h2 class="article__label" id="ArticleContents-{{ section.id }}">{{ 'blog.article.in_this_article' | t }}</h2>
+          <ol class="article__contents" role="list">
+            {{- contents_items -}}
+          </ol>
+        </nav>
+      {%- endif -%}
 
-    <input type="submit" value="{{ 'blog.comment_form_submit' | t }}">
-  {% endform %}
-{% endif %}
+      {%- if show_products -%}
+        <div class="article__side-block">
+          <h2 class="article__label">{{ 'blog.article.products_heading' | t }}</h2>
+          <ul class="article__products" role="list">
+            {%- for featured_product in featured_products limit: 2 -%}
+              <li>{% render 'article-product-card', product: featured_product %}</li>
+            {%- endfor -%}
+          </ul>
+        </div>
+      {%- endif -%}
+
+      {%- if show_tags -%}
+        <div class="article__side-block">
+          <h2 class="article__label">{{ 'blog.article.tags' | t }}</h2>
+          <ul class="article__tags" role="list">
+            {%- for tag in article.tags -%}
+              {%- assign tag_handle = tag | handleize -%}
+              <li><a class="article__tag" href="{{ blog.url }}/tagged/{{ tag_handle }}">{{ tag | escape }}</a></li>
+            {%- endfor -%}
+          </ul>
+        </div>
+      {%- endif -%}
+
+      {%- if section.settings.show_share -%}
+        <div class="article__side-block article__side--wide-only">
+          <h2 class="article__label">{{ 'blog.article.share' | t }}</h2>
+          {% render 'share-links', url: canonical_url, title: article.title, style: 'round' %}
+        </div>
+      {%- endif -%}
+    </div>
+  </article-layout>
+</div>
+
+{% stylesheet %}
+  /*
+    Figma 1920: text column 1114 wide, sidebar 354 wide, 171px after the text (the Figma's extra 174px
+    on the left is left out, so the text lines up with the other sections). Sizes are Figma px x --px
+    (screen-scale) with rem floors, or tokens.
+  */
+  .article {
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  .article__layout {
+    display: grid;
+    gap: var(--space-2xl);
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  .article__main {
+    min-inline-size: 0;
+  }
+
+  .article__side {
+    display: flex;
+    flex-direction: column;
+    gap: max(var(--space-xl), calc(40 * var(--px, 0.0625rem)));
+  }
+
+  /* Author, sidebar contents and sidebar share only show beside the text */
+  .article__side--wide-only {
+    display: none;
+  }
+
+  /*
+    Beside each other from 1200px, filling the section's content box edge to edge like every other
+    section (so the text lines up with the hero card and the breadcrumb). Every part is a share (fr)
+    of that box, so the Figma proportions hold at any "Section width": text 1114, gap 171, sidebar 354
+    (at least 17rem). The gap is its own empty column, so it shrinks with the box (never under 48px).
+  */
+  @media (min-width: 1200px) {
+    .article__layout {
+      grid-template-columns: minmax(0, 1114fr) minmax(var(--space-2xl), 171fr) minmax(17rem, 354fr);
+      column-gap: 0;
+    }
+
+    .article__main {
+      grid-column: 1;
+    }
+
+    .article__side {
+      grid-column: 3;
+    }
+
+    .article__side--wide-only {
+      display: block;
+    }
+
+    .article__contents-box {
+      display: none;
+    }
+
+    /*
+      Sticky sidebar. It's often taller than the screen, so it doesn't stick at the top (its end
+      would never be seen): it scrolls with the page until its bottom is in view, then stays there.
+      The script below measures it into --side-height; when it's shorter than the screen it simply
+      sticks under the header. Without the script it sticks under the header.
+    */
+    .article__layout--sticky .article__side {
+      position: sticky;
+      inset-block-start: min(
+        calc(var(--header-space, 6.0625rem) + var(--space-lg)),
+        calc(100svh - var(--side-height, 0px) - var(--space-lg))
+      );
+      align-self: start;
+    }
+  }
+
+  /* Small uppercase accent labels ("IN THIS ARTICLE", "TAGS", "SHARE") */
+  .article__label {
+    margin: 0 0 var(--space-md);
+    color: var(--color-accent);
+    font-family: var(--font-body--family);
+    font-size: var(--font-size-label);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    line-height: var(--line-height-heading);
+    text-transform: uppercase;
+  }
+
+  /* ---------- The article text ---------- */
+
+  .article-body {
+    font-size: var(--font-size-body-sm); /* 18px */
+    line-height: 1.85;
+  }
+
+  /* Anchor jumps land below the sticky header */
+  .article-body h2 {
+    scroll-margin-block-start: calc(var(--header-space, 6.0625rem) + var(--space-xl));
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html:has(.article__layout) {
+      scroll-behavior: smooth;
+    }
+  }
+
+  .article-body.rte > * + * {
+    margin-block-start: max(var(--space-lg), calc(40 * var(--px, 0.0625rem)));
+  }
+
+  .article-body strong {
+    font-weight: 600;
+  }
+
+  /* Lead: the first paragraph, italic and bigger, with a 2px accent rule on its left */
+  .article-body > p:first-child:not(:has(img)) {
+    padding-inline-start: max(var(--space-lg), calc(36 * var(--px, 0.0625rem)));
+    border-inline-start: 2px solid var(--color-accent);
+    font-size: var(--font-size-body-lg); /* 22px */
+    font-style: italic;
+    line-height: 1.75;
+  }
+
+  /* Section heading: 40px heading font; an italic word turns upright and accent */
+  .article-body.rte > h2 {
+    margin-block-start: max(var(--space-3xl), calc(110 * var(--px, 0.0625rem)));
+    font-size: var(--font-size-h2);
+    line-height: 1.25;
+  }
+
+  .article-body h2 em {
+    color: var(--color-accent);
+    font-style: normal;
+  }
+
+  .article-body.rte > :is(h2, h3, h4) + * {
+    margin-block-start: max(var(--space-md), calc(28 * var(--px, 0.0625rem)));
+  }
+
+  /* Eyebrow: a Heading 6, with the theme's 66px accent rule before it, right above the H2 */
+  .article-body.rte > h6 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin-block-start: max(var(--space-3xl), calc(110 * var(--px, 0.0625rem)));
+    color: var(--color-accent);
+  }
+
+  .article-body > h6::before {
+    content: "";
+    flex: none;
+    inline-size: 4.125rem; /* 66px */
+    block-size: 2px;
+    background-color: currentcolor;
+  }
+
+  .article-body.rte > h6 + h2 {
+    margin-block-start: max(var(--space-sm), calc(18 * var(--px, 0.0625rem)));
+  }
+
+  /*
+    Quote card (Figma: 1114 x 244, the accent at 3% on white, 1px border, radius 25, pale quote mark
+    top left, italic 24px text, accent attribution). Two classes: the theme's .rte blockquote (left
+    rule, heading font) must lose.
+  */
+  .article-body.rte blockquote {
+    position: relative;
+    margin-inline: 0;
+    padding:
+      max(var(--space-xl), calc(42 * var(--px, 0.0625rem)))
+      max(var(--space-lg), calc(40 * var(--px, 0.0625rem)))
+      max(var(--space-lg), calc(36 * var(--px, 0.0625rem)))
+      max(var(--space-2xl), calc(74 * var(--px, 0.0625rem)));
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-md);
+    background-color: color-mix(in srgb, var(--color-accent) 3%, var(--color-background));
+    box-shadow: var(--shadow-card);
+    font-family: var(--font-body--family);
+    font-size: var(--font-size-body-lg);
+    font-style: italic;
+    line-height: 1.6;
+  }
+
+  .article-body blockquote > * {
+    margin: 0;
+  }
+
+  .article-body blockquote > * + * {
+    margin-block-start: var(--space-md);
+  }
+
+  /* The quote mark: the theme's quote icon as a mask, filled with a pale accent */
+  .article-body blockquote::before {
+    content: "";
+    position: absolute;
+    inset-block-start: max(var(--space-sm), calc(12 * var(--px, 0.0625rem)));
+    inset-inline-start: max(var(--space-md), calc(26 * var(--px, 0.0625rem)));
+    inline-size: max(2.5rem, calc(52 * var(--px, 0.0625rem)));
+    aspect-ratio: 125 / 78;
+    background-color: color-mix(in srgb, var(--color-accent) 18%, transparent);
+    -webkit-mask: var(--icon-quote) center / contain no-repeat;
+    mask: var(--icon-quote) center / contain no-repeat;
+  }
+
+  .article-body blockquote .article-body__cite {
+    color: var(--color-accent);
+    font-size: var(--font-size-body);
+    font-style: normal;
+  }
+
+  /*
+    Tips box: a quote with a bullet list inside (Figma 1116 x 415, the theme's card colours). The
+    first line is its title, in the accent colour after a sparkle; the list is upright body text.
+  */
+  .article-body.rte blockquote:has(ul) {
+    padding: max(var(--space-lg), calc(36 * var(--px, 0.0625rem)));
+    background-color: var(--color-card);
+    font-size: var(--font-size-body-sm);
+    font-style: normal;
+    line-height: 1.8;
+  }
+
+  .article-body blockquote:has(ul)::before {
+    content: none;
+  }
+
+  .article-body blockquote:has(ul) > :first-child:not(ul) {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    color: var(--color-accent);
+    font-size: var(--font-size-body-lg);
+  }
+
+  .article-body blockquote:has(ul) > :first-child:not(ul)::before {
+    content: "";
+    flex: none;
+    inline-size: 1.25rem;
+    aspect-ratio: 1;
+    background-color: currentcolor;
+    -webkit-mask: var(--icon-tips) center / contain no-repeat;
+    mask: var(--icon-tips) center / contain no-repeat;
+  }
+
+  .article-body blockquote ul {
+    padding-inline-start: 1.25em;
+  }
+
+  .article-body blockquote li::marker {
+    color: var(--color-text);
+  }
+
+  /* "The edit": the product rows at the [products] line, 20px apart (Figma) */
+  .article-body.rte .article-edit {
+    display: grid;
+    gap: max(var(--space-md), calc(20 * var(--px, 0.0625rem)));
+    padding: 0;
+    list-style: none;
+  }
+
+  .article-body.rte .article-edit > li {
+    margin: 0;
+  }
+
+  /* Images: full width, rounded (Figma 1114 x 548, radius ~40) */
+  .article-body img {
+    display: block;
+    inline-size: 100%;
+    max-inline-size: 100%;
+    block-size: auto;
+    border-radius: max(var(--radius-sm), calc(40 * var(--px, 0.0625rem)));
+  }
+
+  /*
+    Caption: an all-italic paragraph right after an image is moved up onto the image's bottom edge,
+    white on a dark fade (no wrapper needed, so it works whatever the editor wraps the image in).
+    It moves up by its own height, which leaves that much room under the image before the next part.
+  */
+  .article-body :is(p:has(> img), img) + p:has(> em:only-child) {
+    position: relative;
+    z-index: 1;
+    margin-block-start: 0;
+    padding: var(--space-2xl) max(var(--space-md), calc(20 * var(--px, 0.0625rem))) var(--space-md);
+    border-radius: 0 0 max(var(--radius-sm), calc(40 * var(--px, 0.0625rem))) max(var(--radius-sm), calc(40 * var(--px, 0.0625rem)));
+    background: linear-gradient(to top, #000000b3, transparent);
+    color: #ffffff;
+    font-size: var(--font-size-small);
+    line-height: 1.5;
+    translate: 0 -100%;
+  }
+
+  .article-body :is(p:has(> img), img) + p:has(> em:only-child) + * {
+    margin-block-start: 0;
+  }
+
+  /*
+    Steps 01–05: a numbered list whose items start with a bold word (the pill), then the title (the
+    Liquid pass wraps it) and the text. The number is a big pale counter on the left.
+  */
+  .article-body ol:has(> li > .article-body__step-title) {
+    padding: 0;
+    list-style: none;
+    counter-reset: article-step;
+  }
+
+  .article-body ol:has(> li > .article-body__step-title) > li {
+    position: relative;
+    padding-inline-start: max(4rem, calc(76 * var(--px, 0.0625rem)));
+    counter-increment: article-step;
+  }
+
+  .article-body ol:has(> li > .article-body__step-title) > li + li {
+    margin-block-start: max(var(--space-xl), calc(48 * var(--px, 0.0625rem)));
+  }
+
+  .article-body ol:has(> li > .article-body__step-title) > li::before {
+    content: counter(article-step, decimal-leading-zero);
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    color: color-mix(in srgb, var(--color-accent) 20%, transparent);
+    font-family: var(--font-heading--family);
+    font-size: max(2.5rem, calc(58 * var(--px, 0.0625rem)));
+    line-height: 1;
+  }
+
+  .article-body ol:has(> li > .article-body__step-title) > li > strong:first-child {
+    display: inline-block;
+    padding: 0.15em 0.9em;
+    border: 1px solid color-mix(in srgb, var(--color-accent) 45%, transparent);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-tint);
+    color: var(--color-accent);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.6;
+  }
+
+  .article-body__step-title {
+    display: block;
+    margin-block: var(--space-sm) var(--space-xs);
+    font-family: var(--font-heading--family);
+    font-size: var(--font-size-h3); /* 26px */
+    line-height: 1.3;
+  }
+
+  /* ---------- Under the text ---------- */
+
+  .article__share-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-lg);
+    margin-block-start: max(var(--space-2xl), calc(60 * var(--px, 0.0625rem)));
+  }
+
+  .article__share-row .article__label {
+    margin: 0;
+  }
+
+  /* Author bio card (Figma 1116 x 319): avatar 77, name, bio */
+  .article__bio-card {
+    display: flex;
+    align-items: flex-start;
+    gap: max(var(--space-lg), calc(32 * var(--px, 0.0625rem)));
+    margin-block-start: max(var(--space-xl), calc(48 * var(--px, 0.0625rem)));
+    padding: max(var(--space-lg), calc(40 * var(--px, 0.0625rem)));
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-md);
+    background-color: var(--color-background);
+    box-shadow: var(--shadow-card);
+  }
+
+  .article__bio-avatar {
+    inline-size: max(3.5rem, calc(77 * var(--px, 0.0625rem)));
+  }
+
+  .article__bio-name {
+    margin: 0;
+    font-size: var(--font-size-body-lg);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .article__bio {
+    max-inline-size: 45rem;
+    margin: var(--space-sm) 0 0;
+    font-size: var(--font-size-body-sm);
+    line-height: 1.7;
+  }
+
+  /* ---------- Sidebar ---------- */
+
+  /* Author card (Figma 354 x 338): avatar 64 + name, then the bio */
+  .article__author-card {
+    padding: max(var(--space-lg), calc(28 * var(--px, 0.0625rem)));
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-sm);
+    background-color: var(--color-background);
+    box-shadow: var(--shadow-card);
+  }
+
+  .article__author {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+  }
+
+  .article__author-avatar {
+    inline-size: max(3.25rem, calc(64 * var(--px, 0.0625rem)));
+  }
+
+  .article__author-name {
+    margin: 0;
+    font-size: var(--font-size-body);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .article__author-bio {
+    margin: var(--space-md) 0 0;
+    font-size: var(--font-size-body-sm);
+    line-height: 1.6;
+  }
+
+  /* "In this article": 01–06 pale numbers + the heading links; the current one turns accent */
+  .article__contents {
+    display: grid;
+    gap: var(--space-sm);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: article-contents;
+  }
+
+  .article__contents li {
+    display: flex;
+    gap: var(--space-md);
+    align-items: baseline;
+    counter-increment: article-contents;
+  }
+
+  .article__contents li::before {
+    content: counter(article-contents, decimal-leading-zero);
+    flex: none;
+    min-inline-size: 1.5em;
+    color: color-mix(in srgb, var(--color-accent) 45%, transparent);
+    font-family: var(--font-heading--family);
+    font-size: var(--font-size-small);
+  }
+
+  .article__contents a {
+    color: var(--color-text);
+    font-size: var(--font-size-body-sm);
+    line-height: 1.4;
+    text-decoration: none;
+    transition: color var(--duration-fast) var(--ease-out);
+  }
+
+  .article__contents a:hover,
+  .article__contents a[aria-current] {
+    color: var(--color-accent);
+  }
+
+  /* The box above the text (tablets and phones) */
+  .article__contents-box {
+    margin-block-end: var(--space-xl);
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-sm);
+    background-color: var(--color-background);
+    box-shadow: var(--shadow-card);
+  }
+
+  .article__contents-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
+    color: var(--color-accent);
+    font-size: var(--font-size-label);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .article__contents-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .article__contents-summary svg {
+    flex: none;
+    inline-size: 0.875rem;
+    block-size: auto;
+    transition: rotate var(--duration-fast) var(--ease-out);
+  }
+
+  .article__contents-box[open] .article__contents-summary svg {
+    rotate: 180deg;
+  }
+
+  .article__contents-box .article__contents {
+    padding: 0 var(--space-lg) var(--space-lg);
+  }
+
+  .article__products {
+    display: grid;
+    gap: var(--space-lg);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* Tablets: the two product cards side by side under the text */
+  @media (min-width: 750px) and (max-width: 1199px) {
+    .article__products {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  /* Tags: outlined chips that open the blog filtered to that tag */
+  .article__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .article__tag {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 2.5rem; /* 41px, Figma */
+    padding-inline: var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    color: var(--color-text);
+    font-size: var(--font-size-body-sm);
+    text-decoration: none;
+    transition:
+      color var(--duration-fast) var(--ease-out),
+      border-color var(--duration-fast) var(--ease-out);
+  }
+
+  .article__tag:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <article-layout>: two small jobs for the article page.
+   * 1. Measures the sidebar into --side-height, so the sticky sidebar can stop with its bottom in view
+   *    when it's taller than the screen (see the CSS).
+   * 2. "In this article": marks the link of the section being read (aria-current, accent colour):
+   *    the last heading that has passed the top third of the screen.
+   */
+  class ArticleLayout extends HTMLElement {
+    connectedCallback() {
+      this.side = this.querySelector('[data-article-side]');
+      if (this.side && 'ResizeObserver' in window) {
+        this.resizeObserver = new ResizeObserver(() => {
+          this.style.setProperty('--side-height', `${this.side.offsetHeight}px`);
+        });
+        this.resizeObserver.observe(this.side);
+      }
+
+      this.links = [...this.querySelectorAll('[data-contents-link]')];
+      const ids = [...new Set(this.links.map((link) => link.hash.slice(1)))];
+      this.headings = ids.map((id) => document.getElementById(id)).filter(Boolean);
+      if (!this.headings.length) return;
+
+      // One check per frame at most, however fast the scroll events come
+      this.onScroll = () => {
+        if (this.frame) return;
+        this.frame = requestAnimationFrame(() => {
+          this.frame = null;
+          this.markCurrent();
+        });
+      };
+      window.addEventListener('scroll', this.onScroll, { passive: true });
+      this.markCurrent();
+    }
+
+    disconnectedCallback() {
+      this.resizeObserver?.disconnect();
+      if (this.onScroll) window.removeEventListener('scroll', this.onScroll);
+    }
+
+    markCurrent() {
+      const line = window.innerHeight / 3;
+      let current = null;
+      for (const heading of this.headings) {
+        if (heading.getBoundingClientRect().top > line) break;
+        current = heading;
+      }
+      for (const link of this.links) {
+        if (current && link.hash === `#${current.id}`) {
+          link.setAttribute('aria-current', 'true');
+        } else {
+          link.removeAttribute('aria-current');
+        }
+      }
+    }
+  }
+
+  if (!customElements.get('article-layout')) customElements.define('article-layout', ArticleLayout);
+{% endjavascript %}
 
 {% schema %}
 {
   "name": "t:general.article",
-  "settings": []
+  "tag": "section",
+  "class": "article-section",
+  "enabled_on": {
+    "templates": ["article"]
+  },
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "t:labels.article_help"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.sidebar"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_author",
+      "label": "t:labels.show_author_card",
+      "info": "t:labels.show_author_card_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_contents",
+      "label": "t:labels.show_contents",
+      "info": "t:labels.show_contents_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_products",
+      "label": "t:labels.show_article_products",
+      "info": "t:labels.show_article_products_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_tags",
+      "label": "t:labels.show_article_tags",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_share",
+      "label": "t:labels.show_share_links",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "sticky_sidebar",
+      "label": "t:labels.sticky_sidebar",
+      "info": "t:labels.sticky_sidebar_info",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.below_article"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_edit_rows",
+      "label": "t:labels.show_edit_rows",
+      "info": "t:labels.show_edit_rows_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_share_row",
+      "label": "t:labels.show_share_links",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_author_bio",
+      "label": "t:labels.show_author_bio",
+      "info": "t:labels.show_author_bio_info",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "checkbox",
+      "id": "scale_screen",
+      "label": "t:labels.scale_screen",
+      "info": "t:labels.scale_screen_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "text_scale",
+      "label": "t:labels.text_scale",
+      "info": "t:labels.text_scale_info",
+      "min": 100,
+      "max": 130,
+      "step": 5,
+      "unit": "%",
+      "default": 100,
+      "visible_if": "{{ section.settings.scale_screen }}"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.article"
+    }
+  ]
 }
 {% endschema %}

@@ -1,0 +1,144 @@
+{% doc %}
+  A product card for the article sidebar (Figma "Products in this ritual", made more compact on
+  review): photo, title, a size line, price, and a round cart button in the photo's top right
+  (snippets/quick-add.liquid: adds without leaving the article and updates the header's cart count;
+  sold out opens the product page).
+
+  - Size line: the first available variant's name ("Body lotion · 100ml"), or the product type when
+    the product has no variants (Shopify calls that one variant "Default Title", which isn't shown).
+  - The whole card opens the product: the title link stretches over it; the cart button sits above that.
+
+  @param {product} product - The product
+  @param {string} [heading_tag] - The title's tag (default 'h3': the sidebar label is an h2)
+
+  @example
+  {% render 'article-product-card', product: product %}
+{% enddoc %}
+
+{%- liquid
+  assign title_tag = heading_tag | default: 'h3'
+  assign detail = ''
+  unless product.has_only_default_variant
+    assign detail = product.selected_or_first_available_variant.title
+  endunless
+  if detail == blank
+    assign detail = product.type
+  endif
+-%}
+
+<div class="article-product-card">
+  <div class="article-product-card__media">
+    {%- if product.featured_image != blank -%}
+      {{
+        product.featured_image
+        | image_url: width: 720
+        | image_tag: widths: '360, 540, 720', sizes: '(min-width: 1200px) 360px, (min-width: 750px) 45vw, 90vw', alt: '', loading: 'lazy'
+      }}
+    {%- else -%}
+      {{ 'product-1' | placeholder_svg_tag: 'article-product-card__placeholder' }}
+    {%- endif -%}
+  </div>
+
+  <div class="article-product-card__info">
+    <{{ title_tag }} class="article-product-card__title">
+      <a class="article-product-card__link" href="{{ product.url }}">{{ product.title | escape }}</a>
+    </{{ title_tag }}>
+    {%- if detail != blank -%}
+      <p class="article-product-card__detail">{{ detail | escape }}</p>
+    {%- endif -%}
+    {% render 'price', product: product %}
+  </div>
+
+  {% render 'quick-add', product: product, size: 44, icon_color: 'var(--color-accent)', class: 'article-product-card__add' %}
+</div>
+
+{% stylesheet %}
+  /* Figma 1920: card 356 wide, photo on top (radius 19), white panel with a soft shadow; shorter photo
+     and tighter text than the Figma (438 tall), so both cards fit the sidebar more easily */
+  /* No overflow: hidden here: it would cut off the Add to cart error message under the pill */
+  .article-product-card {
+    position: relative;
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-sm);
+    background-color: var(--color-background);
+    box-shadow: var(--shadow-card);
+  }
+
+  .article-product-card__media {
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    background-color: var(--color-tint-subtle);
+  }
+
+  .article-product-card__media img,
+  .article-product-card__placeholder {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    transition: scale var(--duration-slow) var(--ease-out);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .article-product-card:hover .article-product-card__media img {
+      scale: 1.05;
+    }
+  }
+
+  .article-product-card__info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2xs);
+    padding: var(--space-md);
+  }
+
+  .article-product-card__info > * {
+    margin: 0;
+  }
+
+  .article-product-card__title {
+    margin: 0;
+    font-family: var(--font-body--family);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.35;
+  }
+
+  .article-product-card__link {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* The title link covers the whole card */
+  .article-product-card__link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+
+  .article-product-card:hover .article-product-card__link {
+    color: var(--color-accent);
+  }
+
+  .article-product-card__detail {
+    margin: 0;
+    font-size: var(--font-size-body-sm);
+    opacity: 0.8;
+  }
+
+  .article-product-card__info .price {
+    margin-block-start: var(--space-xs);
+    color: var(--color-accent);
+    font-size: var(--font-size-body);
+  }
+
+  /* Top right of the photo, above the stretched title link so it gets its own clicks */
+  .article-product-card__add {
+    position: absolute;
+    inset-block-start: var(--space-sm);
+    inset-inline-end: var(--space-sm);
+    z-index: 1;
+  }
+{% endstylesheet %}

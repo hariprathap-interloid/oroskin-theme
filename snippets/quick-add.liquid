@@ -24,9 +24,13 @@
   @param {string} [icon_color] - Colour of the cart icon and speed lines (default white), e.g. dark on
     white photos
   @param {string} [options] - Products with several variants: 'add_first' (default) or 'link'
+  @param {string} [style] - 'round' (default, the glass circle) or 'pill' (the article sidebar's white
+    "ADD TO CART" pill: same adding and tick, no driving off; the visible text is the button's name,
+    the product name is added for screen readers; sold out = a disabled "Sold out" pill)
 
   @example
   {% render 'quick-add', product: product, class: 'product-panels__cart' %}
+  {% render 'quick-add', product: product, style: 'pill', size: 44 %}
 {% enddoc %}
 
 {%- liquid
@@ -53,6 +57,7 @@
   assign cart_icon = 'icon-cart.svg' | inline_asset_content
   assign tilt_icon = 'icon-cart-tilt.svg' | inline_asset_content
 
+  assign button_style = style | default: 'round'
   assign button_size = size | default: 50
   assign button_color = icon_color | default: '#ffffff'
   capture quick_add_style
@@ -72,9 +77,18 @@
   </span>
 {%- endcapture -%}
 
+{%- comment -%}
+  The pill shows its label as text, so that text must be the start of its accessible name (an
+  aria-label "Add Serum to cart" would hide the visible "Add to cart" from voice control): the visible
+  text, then the product name in a visually hidden span ("Add to cart: Serum").
+{%- endcomment -%}
+{%- capture hidden_name -%}
+  <span class="visually-hidden">: {{ add_name | escape }}</span>
+{%- endcapture -%}
+
 {%- if can_add -%}
   <quick-add
-    class="quick-add {{ class }}"
+    class="quick-add quick-add--{{ button_style }} {{ class }}"
     style="{{ quick_add_style }}"
     data-variant-id="{{ variant.id }}"
     data-label-added="{{ 'products.quick_add.added' | t: title: add_name }}"
@@ -83,13 +97,35 @@
     {%- form 'product', product, class: 'quick-add__form' -%}
       <input type="hidden" name="id" value="{{ variant.id }}">
       <input type="hidden" name="quantity" value="1">
-      <button type="submit" class="quick-add__button" aria-label="{{ add_label | escape }}">
-        {{ quick_add_art }}
-      </button>
+      {%- if button_style == 'pill' -%}
+        <button type="submit" class="quick-add__button">
+          {{ quick_add_art }}
+          {{- 'products.add_to_cart' | t -}}
+          {{- hidden_name -}}
+        </button>
+      {%- else -%}
+        <button type="submit" class="quick-add__button" aria-label="{{ add_label | escape }}">
+          {{ quick_add_art }}
+        </button>
+      {%- endif -%}
     {%- endform -%}
     <span class="visually-hidden" role="status" data-quick-add-status></span>
     <span class="quick-add__message" data-quick-add-message hidden></span>
   </quick-add>
+{%- elsif button_style == 'pill' -%}
+  <div class="quick-add quick-add--pill {{ class }}" style="{{ quick_add_style }}">
+    {%- if product.available -%}
+      <a class="quick-add__button" href="{{ product.url }}">
+        {{- 'products.card.view_details' | t -}}
+        {{- hidden_name -}}
+      </a>
+    {%- else -%}
+      <button type="button" class="quick-add__button" disabled>
+        {{- 'products.sold_out' | t -}}
+        {{- hidden_name -}}
+      </button>
+    {%- endif -%}
+  </div>
 {%- else -%}
   <div class="quick-add {{ class }}" style="{{ quick_add_style }}">
     <a class="quick-add__button" href="{{ product.url }}" aria-label="{{ choose_label | escape }}">
@@ -140,6 +176,59 @@
   .quick-add__button:focus-visible {
     outline: 2px solid #ffffff;
     outline-offset: 2px;
+  }
+
+  /*
+    Pill (Figma article sidebar "🛒 ADD TO CART"): a white pill with the soft glass shadow, accent
+    label and cart. Same two-class weight as the circle above, written after it, so it wins.
+  */
+  .quick-add--pill .quick-add__button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    inline-size: auto;
+    padding-inline: var(--space-lg);
+    background-color: var(--color-background);
+    box-shadow: var(--shadow-header);
+    color: var(--color-accent);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-nav);
+    text-decoration: none;
+    text-transform: uppercase;
+    white-space: nowrap;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .quick-add--pill .quick-add__button:hover {
+    background-color: var(--color-accent);
+    box-shadow: var(--shadow-header);
+    color: var(--color-background);
+  }
+
+  .quick-add--pill .quick-add__button:focus-visible {
+    outline-color: var(--color-accent);
+  }
+
+  .quick-add--pill .quick-add__button:disabled {
+    background-color: var(--color-background);
+    color: var(--color-text);
+    cursor: default;
+    opacity: 0.55;
+  }
+
+  /*
+    The pill's cart stays in place while adding: the circle's drive-off distance is worked out from the
+    circle's size and would run over the label. It tilts, then the gold tick pops in.
+  */
+  .quick-add--pill .quick-add__line {
+    display: none;
+  }
+
+  quick-add.quick-add--pill.is-adding .quick-add__icon--tilt {
+    animation: none;
   }
 
   /* The cart: both poses stacked; the tick sits on its top right */

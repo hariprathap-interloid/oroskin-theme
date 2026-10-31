@@ -1,0 +1,754 @@
+{%- comment -%}
+  Article comments (M8.3 part 4, Figma 1:18396 "Thoughts & Reflections", y 8136): heading and count,
+  the comment form in a card, the comments (initials avatar, name, date, text) and "Load more".
+
+  Shopify's own comments (Online Store > Blog posts > Manage blogs > the blog > Comments):
+  - Off: the section shows nothing (in the theme editor, a note saying so).
+  - The form posts to Shopify, which reloads the article at the form (its action ends in #<form id>)
+    with a message: "awaiting approval" when the blog is moderated, or the errors (form.errors) with
+    what was typed kept.
+  - Only approved comments are in article.comments. Shopify keeps no photo, likes or replies for
+    them, so those Figma parts are left out (decision C); the avatar shows the initials.
+  - Pages of comments: "Load more" fetches the next page through the Section Rendering API and adds
+    it to the list in place; without JavaScript it is a normal link to the next page.
+  - Dates: written as a date; the script turns recent ones into "2 days ago" in the shop's language.
+  - "Line up with the article text": from 1200px the content uses the article section's columns, so
+    it sits under the text and leaves the sidebar's column empty (as in the Figma).
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+  assign form_id = 'ArticleCommentForm-' | append: section.id
+  assign message_id = 'ArticleCommentMessage-' | append: section.id
+  assign per_page = section.settings.comments_per_page | default: 3
+-%}
+
+{%- if blog.comments_enabled? -%}
+  {% render 'screen-scale' %}
+
+  <div
+    class="article-comments full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}{% if section.settings.align_with_text %} article-comments--aligned{% endif %}"
+    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
+  >
+    <article-comments
+      class="article-comments__inner"
+      id="comments"
+      data-section-id="{{ section.id }}"
+      data-loaded-text="{{ 'blog.comments.loaded' | t | escape }}"
+    >
+      <div class="article-comments__content">
+        <div class="article-comments__header">
+          {%- if section.settings.heading != blank -%}
+            <h2 class="article-comments__heading">{{ section.settings.heading | escape }}</h2>
+          {%- endif -%}
+          <p class="article-comments__count">
+            {{- 'blog.comments.count' | t: count: article.comments_count }}
+            <span aria-hidden="true">·</span>
+            {{ 'blog.comments.join' | t -}}
+          </p>
+        </div>
+
+        {%- form 'new_comment', article, id: form_id, class: 'article-comments__form' -%}
+          {%- liquid
+            assign value_author = form.author | default: customer.name
+            assign value_email = form.email | default: customer.email
+            assign error_author = false
+            assign error_email = false
+            assign error_body = false
+            assign known_commenter = false
+            if customer and value_author != blank and value_email != blank
+              assign known_commenter = true
+            endif
+            if form.errors
+              if form.errors contains 'author'
+                assign error_author = true
+              endif
+              if form.errors contains 'email'
+                assign error_email = true
+              endif
+              if form.errors contains 'body'
+                assign error_body = true
+              endif
+            endif
+          -%}
+
+          {%- comment -%}
+            After posting, Shopify reloads the page here; the script moves focus to this message so
+            screen readers announce it.
+          {%- endcomment -%}
+          {%- if form.posted_successfully? -%}
+            <p class="form-message form-message--success" id="{{ message_id }}" tabindex="-1" data-focus-after-submit>
+              {%- if blog.moderated? -%}
+                {{- 'blog.comments.success_moderated' | t -}}
+              {%- else -%}
+                {{- 'blog.comments.success' | t -}}
+              {%- endif -%}
+            </p>
+          {%- elsif form.errors -%}
+            <div class="form-message form-message--error" id="{{ message_id }}" tabindex="-1" data-focus-after-submit>
+              {{- form.errors | default_errors -}}
+            </div>
+          {%- endif -%}
+
+          {%- comment -%}
+            The card (Figma: avatar, text, Post comment on one line). Shopify also needs a name and an
+            email: those fields open under the text once the visitor clicks into it or has typed
+            something (CSS, no script), and stay open after an error. A logged-in customer whose name
+            and email Shopify knows never sees them: they are filled in and stay hidden.
+          {%- endcomment -%}
+          <div class="article-comments__card{% if form.errors %} is-open{% endif %}{% if known_commenter %} article-comments__card--known{% endif %}">
+            {%- if customer -%}
+              {% render 'author-avatar', name: customer.name, class: 'article-comments__avatar' %}
+            {%- else -%}
+              <span class="author-avatar article-comments__avatar" aria-hidden="true">
+                {{- 'icon-account.svg' | inline_asset_content -}}
+              </span>
+            {%- endif -%}
+
+            <label class="visually-hidden" for="{{ form_id }}-body">{{ 'blog.comments.body_label' | t }}</label>
+            <textarea
+              class="article-comments__textarea"
+              id="{{ form_id }}-body"
+              name="comment[body]"
+              rows="1"
+              placeholder="{{ 'blog.comments.body_placeholder' | t }}"
+              required
+              {% if error_body %}
+                aria-invalid="true"
+                aria-describedby="{{ message_id }}"
+              {% endif %}
+            >{{ form.body }}</textarea>
+
+            <div class="article-comments__extra">
+              <div class="article-comments__fields">
+                <div class="article-comments__field">
+                  <label class="article-comments__label" for="{{ form_id }}-author">{{ 'blog.comments.name' | t }}</label>
+                  <input
+                    class="article-comments__input"
+                    type="text"
+                    id="{{ form_id }}-author"
+                    name="comment[author]"
+                    value="{{ value_author | escape }}"
+                    autocomplete="name"
+                    required
+                    {% if error_author %}
+                      aria-invalid="true"
+                      aria-describedby="{{ message_id }}"
+                    {% endif %}
+                  >
+                </div>
+                <div class="article-comments__field">
+                  <label class="article-comments__label" for="{{ form_id }}-email">{{ 'blog.comments.email' | t }}</label>
+                  <input
+                    class="article-comments__input"
+                    type="email"
+                    id="{{ form_id }}-email"
+                    name="comment[email]"
+                    value="{{ value_email | escape }}"
+                    autocomplete="email"
+                    autocapitalize="off"
+                    spellcheck="false"
+                    required
+                    aria-describedby="{{ form_id }}-email-note{% if error_email %} {{ message_id }}{% endif %}"
+                    {% if error_email %}
+                      aria-invalid="true"
+                    {% endif %}
+                  >
+                </div>
+              </div>
+              <p class="article-comments__note" id="{{ form_id }}-email-note">
+                {{- 'blog.comments.email_note' | t -}}
+                {%- if blog.moderated? %} {{ 'blog.comments.moderated_note' | t }}{% endif -%}
+              </p>
+            </div>
+
+            <button class="button article-comments__submit" type="submit">
+              {{- 'blog.comments.submit' | t -}}
+              {{- 'icon-send.svg' | inline_asset_content -}}
+            </button>
+          </div>
+        {%- endform -%}
+
+        {%- paginate article.comments by per_page -%}
+          {%- liquid
+            assign shown_until = paginate.current_offset | plus: article.comments.size
+            assign remaining = paginate.items | minus: shown_until
+          -%}
+
+          {%- if article.comments.size > 0 -%}
+            <ol class="article-comments__list" role="list" data-comments-list>
+              {%- for comment in article.comments -%}
+                <li class="article-comments__comment" id="comment-{{ comment.id }}" tabindex="-1">
+                  {% render 'author-avatar', name: comment.author, class: 'article-comments__avatar' %}
+                  <div class="article-comments__body">
+                    <div class="article-comments__meta">
+                      <p class="article-comments__author">{{ comment.author | escape }}</p>
+                      <span class="article-comments__date" data-timestamp="{{ comment.created_at | date: '%s' }}">
+                        {{- comment.created_at | time_tag: format: 'date' -}}
+                      </span>
+                    </div>
+                    <div class="article-comments__text">{{ comment.content }}</div>
+                  </div>
+                </li>
+              {%- endfor -%}
+            </ol>
+          {%- else -%}
+            <p class="article-comments__empty">{{ 'blog.comments.empty' | t }}</p>
+          {%- endif -%}
+
+          <div class="article-comments__more" data-comments-more>
+            {%- if paginate.next and remaining > 0 -%}
+              <a class="article-comments__more-link" href="{{ paginate.next.url }}#comments" data-load-more>
+                {{- 'blog.comments.load_more' | t: count: remaining -}}
+                {{- 'icon-chevron.svg' | inline_asset_content -}}
+              </a>
+            {%- endif -%}
+          </div>
+        {%- endpaginate -%}
+
+        <p class="visually-hidden" role="status" data-comments-status></p>
+      </div>
+    </article-comments>
+  </div>
+{%- elsif request.design_mode -%}
+  <p class="article-comments__off">{{ 'blog.comments.off_editor' | t }}</p>
+{%- endif -%}
+
+{% stylesheet %}
+  /*
+    Figma 1920: heading 40px (heading font), count line 20px; form card 1116 x 123 (radius ~25, 1px
+    pale border), avatar 58; each comment: avatar 58, name 20px medium, date on the right (grey),
+    text 20px; "LOAD 35 MORE COMMENTS ⌄" accent label with an underline, centred.
+    Sizes are Figma px x --px (screen-scale) with rem floors, or tokens.
+  */
+  .article-comments {
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  .article-comments__inner {
+    display: block;
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+    scroll-margin-block-start: calc(var(--header-space, 6.0625rem) + var(--space-lg));
+  }
+
+  /* From 1200px: the article section's columns (text 1114 / gap 171 / sidebar 354), content under the text */
+  @media (min-width: 1200px) {
+    .article-comments--aligned .article-comments__inner {
+      display: grid;
+      grid-template-columns: minmax(0, 1114fr) minmax(var(--space-2xl), 171fr) minmax(17rem, 354fr);
+    }
+  }
+
+  .article-comments__content {
+    display: flex;
+    flex-direction: column;
+    gap: max(var(--space-xl), calc(40 * var(--px, 0.0625rem)));
+    min-inline-size: 0;
+  }
+
+  .article-comments__header > * {
+    margin: 0;
+  }
+
+  .article-comments__heading {
+    font-size: var(--font-size-h2);
+    line-height: 1.25;
+  }
+
+  .article-comments__count {
+    margin-block-start: var(--space-xs);
+    font-size: var(--font-size-body);
+  }
+
+  /* ---------- Form card ---------- */
+  .article-comments__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    margin: 0;
+  }
+
+  /*
+    At rest (Figma 1116 x 123): avatar | text | Post comment on one line.
+    Open (a text field has focus, text is typed, or after an error; not when only the button has focus,
+    so clicking Post never moves it away from under the pointer): the text takes the whole line, then the name
+    and email fields with Post comment beside them. The known customer's card stays at rest.
+  */
+  .article-comments__card {
+    display: grid;
+    grid-template-columns: max(3rem, calc(58 * var(--px, 0.0625rem))) minmax(0, 1fr) auto;
+    grid-template-areas: 'avatar body submit';
+    align-items: center;
+    gap: var(--space-md) max(var(--space-md), calc(26 * var(--px, 0.0625rem)));
+    padding: max(var(--space-md), calc(24 * var(--px, 0.0625rem))) max(var(--space-lg), calc(33 * var(--px, 0.0625rem)));
+    border: 1px solid var(--color-card-border);
+    border-radius: max(var(--radius-sm), calc(20 * var(--px, 0.0625rem)));
+    background-color: var(--color-background);
+    transition: border-color var(--duration-fast) var(--ease-out);
+  }
+
+  .article-comments__card:focus-within {
+    border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-background));
+  }
+
+  /*
+    Avatars are 58px circles (Figma) in the card and in the list. align-self: flex-start stops the
+    comment row (a flex row) from stretching the avatar to the row's height, which would turn the
+    circle into an oval; block-size: auto lets aspect-ratio: 1 set the height.
+  */
+  .article-comments .article-comments__avatar {
+    flex: none;
+    align-self: flex-start;
+    inline-size: max(3rem, calc(58 * var(--px, 0.0625rem)));
+    block-size: auto;
+    aspect-ratio: 1;
+    font-size: var(--font-size-caption);
+  }
+
+  /* In the card it fills its grid column (the same 58px) */
+  .article-comments__card .article-comments__avatar {
+    grid-area: avatar;
+    align-self: start;
+    inline-size: 100%;
+  }
+
+  .article-comments__avatar svg {
+    inline-size: 45%;
+    block-size: auto;
+  }
+
+  /* The text field has no box of its own: the card is the box (Figma) */
+  .article-comments .article-comments__textarea {
+    grid-area: body;
+    align-self: start;
+    min-inline-size: 0;
+    min-block-size: max(3rem, calc(58 * var(--px, 0.0625rem)));
+    padding: var(--space-sm) 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    color: var(--color-text);
+    font-size: var(--font-size-body);
+    line-height: 1.5;
+    resize: none;
+    field-sizing: content;
+  }
+
+  .article-comments .article-comments__textarea:focus-visible {
+    outline: none;
+  }
+
+  .article-comments__textarea::placeholder {
+    color: color-mix(in srgb, var(--color-text) 55%, var(--color-background));
+  }
+
+  .article-comments__submit {
+    grid-area: submit;
+  }
+
+  .article-comments__submit svg {
+    inline-size: 1.125rem;
+    block-size: 1.125rem;
+  }
+
+  .article-comments__extra {
+    display: none;
+    grid-area: extra;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .article-comments__card:is(.is-open, :has(:is(textarea, input):focus), :has(.article-comments__textarea:not(:placeholder-shown))):not(.article-comments__card--known),
+  .article-comments__card--known.is-open {
+    grid-template-areas:
+      'avatar body body'
+      '. extra submit';
+  }
+
+  .article-comments__card:is(.is-open, :has(:is(textarea, input):focus), :has(.article-comments__textarea:not(:placeholder-shown))):not(.article-comments__card--known) .article-comments__extra,
+  .article-comments__card--known.is-open .article-comments__extra {
+    display: flex;
+  }
+
+  .article-comments__card:is(.is-open, :has(:is(textarea, input):focus), :has(.article-comments__textarea:not(:placeholder-shown))):not(.article-comments__card--known) .article-comments__submit,
+  .article-comments__card--known.is-open .article-comments__submit {
+    align-self: start;
+    margin-block-start: 1.5rem; /* level with the fields, under their labels */
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .article-comments__extra {
+      animation: article-comments-open var(--duration-normal) var(--ease-out);
+    }
+  }
+
+  @keyframes article-comments-open {
+    from {
+      opacity: 0;
+      translate: 0 -0.5rem;
+    }
+  }
+
+  .article-comments__fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+  }
+
+  .article-comments__field {
+    display: flex;
+    flex: 1 1 12rem;
+    flex-direction: column;
+    gap: var(--space-2xs);
+  }
+
+  .article-comments__label {
+    font-size: var(--font-size-small);
+  }
+
+  .article-comments .article-comments__input {
+    min-block-size: 3.125rem; /* 50px, the button's height */
+    padding-inline: var(--space-lg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-card);
+    color: var(--color-text);
+    font-size: var(--font-size-caption);
+  }
+
+  .article-comments .article-comments__input:focus-visible {
+    border-color: var(--color-accent);
+  }
+
+  .article-comments .article-comments__input[aria-invalid='true'] {
+    border-color: var(--color-error);
+  }
+
+  .article-comments__card:has(.article-comments__textarea[aria-invalid='true']) {
+    border-color: var(--color-error);
+  }
+
+  .article-comments__note {
+    margin: 0;
+    font-size: var(--font-size-small);
+    opacity: 0.8;
+  }
+
+  /* Narrow cards (no design: our choice): the button gets its own full line under the fields */
+  @media (max-width: 749px) {
+    .article-comments__card {
+      grid-template-areas:
+        'avatar body body'
+        'submit submit submit';
+    }
+
+    .article-comments__card:is(.is-open, :has(:is(textarea, input):focus), :has(.article-comments__textarea:not(:placeholder-shown))):not(.article-comments__card--known),
+    .article-comments__card--known.is-open {
+      grid-template-areas:
+        'avatar body body'
+        'extra extra extra'
+        'submit submit submit';
+    }
+
+    .article-comments__card .article-comments__submit {
+      justify-self: end;
+      margin-block-start: 0;
+    }
+  }
+
+  /* ---------- Comments ---------- */
+  .article-comments__list {
+    display: flex;
+    flex-direction: column;
+    gap: max(var(--space-xl), calc(48 * var(--px, 0.0625rem)));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .article-comments__comment {
+    display: flex;
+    gap: max(var(--space-md), calc(21 * var(--px, 0.0625rem)));
+    scroll-margin-block-start: calc(var(--header-space, 6.0625rem) + var(--space-lg));
+  }
+
+  .article-comments__comment:focus {
+    outline: none;
+  }
+
+  .article-comments__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-sm);
+    min-inline-size: 0;
+  }
+
+  .article-comments__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-xs) var(--space-md);
+    padding-block-start: var(--space-xs);
+  }
+
+  .article-comments__author {
+    margin: 0;
+    font-size: var(--font-size-body);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .article-comments__date {
+    color: color-mix(in srgb, var(--color-text) 60%, var(--color-background));
+    font-size: var(--font-size-body);
+  }
+
+  .article-comments__text {
+    font-size: var(--font-size-body);
+    line-height: 1.4;
+  }
+
+  .article-comments__text > * {
+    margin: 0;
+  }
+
+  .article-comments__text > * + * {
+    margin-block-start: var(--space-sm);
+  }
+
+  .article-comments__empty {
+    margin: 0;
+    font-size: var(--font-size-body);
+    font-style: italic;
+  }
+
+  /* ---------- Load more ---------- */
+  .article-comments__more {
+    display: flex;
+    justify-content: center;
+  }
+
+  .article-comments__more:empty {
+    display: none;
+  }
+
+  .article-comments__more-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding-block-end: var(--space-xs);
+    border-block-end: 1px solid currentcolor;
+    color: var(--color-accent);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-decoration: none;
+    text-transform: uppercase;
+  }
+
+  .article-comments__more-link svg {
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
+    transition: translate var(--duration-fast) var(--ease-out);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .article-comments__more-link:hover svg {
+      translate: 0 0.125rem;
+    }
+  }
+
+  .article-comments__more-link[aria-busy='true'] {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  /* Theme editor only: comments are turned off for this blog */
+  .article-comments__off {
+    margin: var(--space-xl) auto;
+    padding: var(--space-md);
+    max-inline-size: 40rem;
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-sm);
+    text-align: center;
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <article-comments>
+   * - Focus moves to the message after posting (it only exists right after the visitor's own post).
+   * - Dates under 30 days old read "2 days ago" (Intl.RelativeTimeFormat, in the page's language).
+   * - "Load more" fetches the next page of this section (Section Rendering API: ?section_id=), adds its
+   *   comments to the list, swaps in its own "Load more" link and moves focus to the first new comment.
+   *   If the fetch fails, the link just opens the next page.
+   */
+  class ArticleComments extends HTMLElement {
+    connectedCallback() {
+      this.list = this.querySelector('[data-comments-list]');
+      this.more = this.querySelector('[data-comments-more]');
+      this.status = this.querySelector('[data-comments-status]');
+
+      this.querySelector('[data-focus-after-submit]')?.focus();
+      this.relativeDates(this);
+      this.more?.addEventListener('click', (event) => {
+        const link = event.target.closest('[data-load-more]');
+        if (!link) return;
+        event.preventDefault();
+        this.loadMore(link);
+      });
+    }
+
+    relativeDates(root) {
+      if (!('RelativeTimeFormat' in Intl)) return;
+      const format = new Intl.RelativeTimeFormat(document.documentElement.lang || undefined, { numeric: 'auto' });
+      const now = Date.now() / 1000;
+      root.querySelectorAll('[data-timestamp]').forEach((date) => {
+        const seconds = now - Number(date.dataset.timestamp);
+        const time = date.querySelector('time') || date;
+        if (!(seconds >= 0) || seconds > 30 * 86400) return;
+        if (seconds < 3600) time.textContent = format.format(-Math.max(1, Math.round(seconds / 60)), 'minute');
+        else if (seconds < 86400) time.textContent = format.format(-Math.round(seconds / 3600), 'hour');
+        else time.textContent = format.format(-Math.round(seconds / 86400), 'day');
+      });
+    }
+
+    async loadMore(link) {
+      link.setAttribute('aria-busy', 'true');
+      try {
+        const url = new URL(link.href, window.location.href);
+        url.hash = '';
+        url.searchParams.set('section_id', this.dataset.sectionId);
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(response.statusText);
+        const page = new DOMParser().parseFromString(await response.text(), 'text/html');
+        const comments = [...page.querySelectorAll('[data-comments-list] > li')];
+        const nextMore = page.querySelector('[data-comments-more]');
+        if (!this.list || comments.length === 0) throw new Error('No comments');
+
+        this.relativeDates(page);
+        this.list.append(...comments);
+        this.more.innerHTML = nextMore ? nextMore.innerHTML : '';
+        comments[0].focus({ preventScroll: true });
+        comments[0].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        if (this.status) this.status.textContent = this.dataset.loadedText || '';
+      } catch {
+        window.location.href = link.href;
+      }
+    }
+  }
+
+  if (!customElements.get('article-comments')) customElements.define('article-comments', ArticleComments);
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.article_comments",
+  "tag": "section",
+  "class": "article-comments-section",
+  "enabled_on": {
+    "templates": ["article"]
+  },
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "t:labels.article_comments_help"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "Thoughts & reflections"
+    },
+    {
+      "type": "range",
+      "id": "comments_per_page",
+      "label": "t:labels.comments_per_page",
+      "min": 3,
+      "max": 20,
+      "step": 1,
+      "default": 3
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "checkbox",
+      "id": "align_with_text",
+      "label": "t:labels.align_with_article_text",
+      "info": "t:labels.align_with_article_text_info",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "checkbox",
+      "id": "scale_screen",
+      "label": "t:labels.scale_screen",
+      "info": "t:labels.scale_screen_info",
+      "default": true
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 32
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.article_comments"
+    }
+  ]
+}
+{% endschema %}

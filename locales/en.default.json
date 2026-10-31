@@ -5,13 +5,33 @@
     "back_to_shopping": "Back to shopping"
   },
   "blog": {
-    "article_comments": "Comments",
-    "article_metadata_html": "{{ date }} by {{ author }}",
-    "comment_form_body": "Comment",
-    "comment_form_email": "Email",
-    "comment_form_name": "Name",
-    "comment_form_submit": "Post",
-    "comment_form_title": "Add a comment",
+    "related": {
+      "empty_editor": "No other articles in this blog yet, so this section is hidden on the store."
+    },
+    "comments": {
+      "count": {
+        "zero": "No comments yet",
+        "one": "{{ count }} comment",
+        "other": "{{ count }} comments"
+      },
+      "join": "Join the conversation",
+      "body_label": "Your comment",
+      "body_placeholder": "Share your thoughts on this article…",
+      "name": "Name",
+      "email": "Email",
+      "email_note": "Your email isn't published.",
+      "moderated_note": "Comments appear once they're approved.",
+      "submit": "Post comment",
+      "success": "Thanks, your comment has been posted.",
+      "success_moderated": "Thanks, your comment was sent. It will appear once it's approved.",
+      "empty": "Be the first to share your thoughts.",
+      "load_more": {
+        "one": "Load {{ count }} more comment",
+        "other": "Load {{ count }} more comments"
+      },
+      "loaded": "More comments loaded",
+      "off_editor": "Comments are turned off for this blog. Turn them on in Online Store > Blog posts > Manage blogs."
+    },
     "read_time_short": "{{ minutes }} min",
     "play_video": "Play video: {{ title }}",
     "trending": {
@@ -28,7 +48,18 @@
     "articles_heading": "Articles",
     "empty": "No articles yet. Check back soon.",
     "empty_topic": "No articles in this topic yet.",
-    "show_all": "See all articles"
+    "show_all": "See all articles",
+    "article": {
+      "share_article": "Share article",
+      "link_copied": "Link copied",
+      "copy_link": "Copy link",
+      "share_on": "Share on {{ network }}",
+      "instagram_profile": "Our Instagram",
+      "in_this_article": "In this article",
+      "products_heading": "Products in this ritual",
+      "tags": "Tags",
+      "share": "Share"
+    }
   },
   "cart": {
     "checkout": "Checkout",

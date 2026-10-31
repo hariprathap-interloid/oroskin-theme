@@ -1,0 +1,210 @@
+{% doc %}
+  Share links for an article (Figma blog details: hero hover state, sidebar, share row): copy link,
+  Facebook, WhatsApp and X share the page; Instagram has no web share link, so its icon opens the
+  shop's Instagram profile (Theme settings > Social media), and is left out when that's empty.
+
+  The copy button copies the link and announces "Link copied" (role="status"). The share links open
+  in a new window and say so to screen readers.
+
+  @param {string} url - The page's full URL, e.g. canonical_url
+  @param {string} title - The page title, for WhatsApp and X
+  @param {string} [style] - 'pill' (one outlined glass pill, white icons: the hero) or 'round' (50px
+    round glass buttons, accent icons: sidebar and share row). Default 'round'
+  @param {string} [id] - An id for the list, e.g. for a button's aria-controls
+
+  @example
+  {% render 'share-links', url: canonical_url, title: article.title, style: 'pill' %}
+{% enddoc %}
+
+{%- liquid
+  assign share_style = style | default: 'round'
+  assign encoded_url = url | url_encode
+  assign encoded_title = title | url_encode
+  assign whatsapp_text = title | append: ' ' | append: url | url_encode
+  assign new_window = 'accessibility.new_window' | t
+-%}
+
+<share-links
+  class="share-links share-links--{{ share_style }}"
+  {% if id != blank %}id="{{ id }}"{% endif %}
+  data-copied-text="{{ 'blog.article.link_copied' | t | escape }}">
+  <ul class="share-links__list" role="list">
+    <li>
+      <button class="share-links__item" type="button" data-copy-url="{{ url }}" aria-label="{{ 'blog.article.copy_link' | t | escape }}">
+        {{- 'icon-link.svg' | inline_asset_content -}}
+      </button>
+    </li>
+    <li>
+      <a
+        class="share-links__item"
+        href="https://www.facebook.com/sharer/sharer.php?u={{ encoded_url }}"
+        target="_blank"
+        rel="noopener"
+        aria-label="{{ 'blog.article.share_on' | t: network: 'Facebook' | escape }} ({{ new_window }})"
+      >
+        {{- 'icon-facebook.svg' | inline_asset_content -}}
+      </a>
+    </li>
+    <li>
+      <a
+        class="share-links__item"
+        href="https://wa.me/?text={{ whatsapp_text }}"
+        target="_blank"
+        rel="noopener"
+        aria-label="{{ 'blog.article.share_on' | t: network: 'WhatsApp' | escape }} ({{ new_window }})"
+      >
+        {{- 'icon-whatsapp.svg' | inline_asset_content -}}
+      </a>
+    </li>
+    <li>
+      <a
+        class="share-links__item"
+        href="https://x.com/intent/post?url={{ encoded_url }}&text={{ encoded_title }}"
+        target="_blank"
+        rel="noopener"
+        aria-label="{{ 'blog.article.share_on' | t: network: 'X' | escape }} ({{ new_window }})"
+      >
+        {{- 'icon-x.svg' | inline_asset_content -}}
+      </a>
+    </li>
+    {%- if settings.social_instagram_link != blank -%}
+      <li>
+        <a
+          class="share-links__item"
+          href="{{ settings.social_instagram_link }}"
+          target="_blank"
+          rel="noopener"
+          aria-label="{{ 'blog.article.instagram_profile' | t | escape }} ({{ new_window }})"
+        >
+          {{- 'icon-instagram.svg' | inline_asset_content -}}
+        </a>
+      </li>
+    {%- endif -%}
+  </ul>
+  <span class="visually-hidden" role="status" data-share-status></span>
+</share-links>
+
+{% stylesheet %}
+  .share-links__list {
+    display: flex;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* isolation: isolate keeps the hover circle (z-index: -1) inside the button, under the icon */
+  .share-links .share-links__item {
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    place-items: center;
+    min-block-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+    color: inherit;
+    cursor: pointer;
+    transition: color var(--duration-normal) var(--ease-out);
+  }
+
+  /* Hover / keyboard focus, as on the footer's social icons: a circle grows from the centre */
+  .share-links__item::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background-color: var(--share-hover-fill);
+    transform: scale(0);
+    transition: transform var(--duration-normal) var(--ease-out);
+  }
+
+  .share-links__item:hover::before,
+  .share-links__item:focus-visible::before {
+    transform: scale(1);
+  }
+
+  /* Reduced motion: the fill and colour change at once, no growing */
+  @media (prefers-reduced-motion: reduce) {
+    .share-links .share-links__item,
+    .share-links__item::before {
+      transition: none;
+    }
+  }
+
+  .share-links__item svg {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+  }
+
+  /* Pill (the hero's hover state): one outlined glass pill, white icons, 50px tall */
+  .share-links--pill .share-links__list {
+    gap: var(--space-xs);
+    block-size: 3.125rem;
+    padding-inline: var(--space-md);
+    border: 1px solid #ffffff;
+    border-radius: var(--radius-pill);
+    background-color: #ffffff1a;
+    color: #ffffff;
+    -webkit-backdrop-filter: blur(var(--glass-frost));
+    backdrop-filter: blur(var(--glass-frost));
+  }
+
+  .share-links--pill .share-links__item {
+    --share-hover-fill: #ffffff33;
+    inline-size: 2.25rem;
+    aspect-ratio: 1;
+    border-radius: 50%;
+  }
+
+  /* Round (sidebar, share row): 50px round glass buttons, accent icons */
+  .share-links--round .share-links__list {
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    color: var(--color-accent);
+  }
+
+  .share-links--round .share-links__item {
+    --share-hover-fill: var(--color-accent);
+    inline-size: 3.125rem;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background-color: var(--color-background);
+    box-shadow: var(--shadow-header);
+  }
+
+  .share-links--round .share-links__item:hover,
+  .share-links--round .share-links__item:focus-visible {
+    color: var(--color-background);
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <share-links>: the copy-link button copies its data-copy-url and announces the "Link copied"
+   * text (from data-copied-text) in the status element for 2.5 seconds.
+   */
+  class ShareLinks extends HTMLElement {
+    connectedCallback() {
+      this.status = this.querySelector('[data-share-status]');
+      this.querySelector('[data-copy-url]')?.addEventListener('click', (event) => this.copy(event.currentTarget));
+    }
+
+    async copy(button) {
+      try {
+        await navigator.clipboard.writeText(button.dataset.copyUrl);
+        if (!this.status) return;
+        this.status.textContent = this.dataset.copiedText || '';
+        clearTimeout(this.timer);
+        this.timer = setTimeout(() => (this.status.textContent = ''), 2500);
+      } catch {
+        window.prompt('', button.dataset.copyUrl);
+      }
+    }
+  }
+
+  if (!customElements.get('share-links')) customElements.define('share-links', ShareLinks);
+{% endjavascript %}

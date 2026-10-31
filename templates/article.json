@@ -9,12 +9,27 @@
  */
 {
   "sections": {
+    "hero": {
+      "type": "article-hero",
+      "settings": {}
+    },
     "main": {
       "type": "article",
+      "settings": {}
+    },
+    "comments": {
+      "type": "article-comments",
+      "settings": {}
+    },
+    "related": {
+      "type": "article-related",
       "settings": {}
     }
   },
   "order": [
-    "main"
+    "hero",
+    "main",
+    "comments",
+    "related"
   ]
 }

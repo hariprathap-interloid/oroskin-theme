@@ -1,0 +1,61 @@
+{% doc %}
+  A round avatar: for an article's author, the staff account's profile photo when Shopify has one
+  (Settings > Users), else the initials of the author's name ("Céleste Arnaud" → "CA"). Articles
+  made by an app or the API have no staff account, so they always show the initials. With a name
+  instead (a comment's author), always the initials: Shopify keeps no photo for commenters.
+
+  Decorative (aria-hidden): the name is always written next to it. The size comes from the class
+  the caller adds.
+
+  @param {article} [article] - The article (its author)
+  @param {string} [name] - A name, used instead of the article's author (e.g. comment.author)
+  @param {string} [class] - Extra class, e.g. 'article__author-avatar' (sets the size)
+
+  @example
+  {% render 'author-avatar', article: article, class: 'article__author-avatar' %}
+  {% render 'author-avatar', name: comment.author, class: 'article-comments__avatar' %}
+{% enddoc %}
+
+{%- liquid
+  assign avatar_name = name | default: article.author
+  assign avatar_image = blank
+  if name == blank
+    assign avatar_image = article.user.image
+  endif
+  assign name_parts = avatar_name | strip | split: ' '
+  assign initials = name_parts.first | slice: 0
+  if name_parts.size > 1
+    assign last_initial = name_parts.last | slice: 0
+    assign initials = initials | append: last_initial
+  endif
+-%}
+
+<span class="author-avatar {{ class }}" aria-hidden="true">
+  {%- if avatar_image != blank -%}
+    {{ avatar_image | image_url: width: 160, height: 160, crop: 'center' | image_tag: alt: '', loading: 'lazy' }}
+  {%- else -%}
+    {{ initials | upcase }}
+  {%- endif -%}
+</span>
+
+{% stylesheet %}
+  .author-avatar {
+    display: grid;
+    flex: none;
+    place-items: center;
+    overflow: hidden;
+    inline-size: 4rem;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--color-accent) 15%, var(--color-background));
+    color: var(--color-accent);
+    font-size: var(--font-size-body);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .author-avatar img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+{% endstylesheet %}

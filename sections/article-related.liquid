@@ -1,0 +1,388 @@
+{%- comment -%}
+  Related articles (M8.3 part 5, Figma 1:18396 "More from the Journal", y 9212): eyebrow, heading
+  with an accent word, "View all articles" link and article cards (snippets/article-card.liquid, the
+  blog listing's card).
+
+  Which articles: first those of the same blog that share the article's topic (its first tag, the
+  topic pill in the hero), then the blog's newest, never the article itself or the same one twice.
+  An article with no other articles in its blog shows nothing (in the theme editor, a note).
+
+  "Line up with the article text": from 1200px the content uses the article section's columns, so it
+  sits under the text and leaves the sidebar's column empty (as in the Figma).
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+  assign topic_scheme = section.settings.topic_color_scheme.id | default: 'scheme-2'
+  assign arrow_scheme = section.settings.arrow_color_scheme.id | default: 'scheme-2'
+  assign card_animation = section.settings.animation
+  if section.index == 1
+    assign card_animation = 'none'
+  endif
+
+  assign limit = section.settings.articles_to_show | default: 2
+  assign topic = article.tags.first
+  assign view_all_url = section.settings.link | default: blog.url
+
+  # Ids shown so far, as ",12,34," so "contains ',12,'" can't match 123
+  assign shown_ids = ','
+  assign shown_count = 0
+
+  capture related_cards
+    if topic != blank
+      for related in blog.articles
+        if shown_count >= limit
+          break
+        endif
+        if related.id == article.id
+          continue
+        endif
+        if related.tags contains topic
+          echo '<li class="article-related__item">'
+          render 'article-card', article: related, animation: card_animation, topic_scheme: topic_scheme, arrow_scheme: arrow_scheme
+          echo '</li>'
+          assign shown_ids = shown_ids | append: related.id | append: ','
+          assign shown_count = shown_count | plus: 1
+        endif
+      endfor
+    endif
+
+    for related in blog.articles
+      if shown_count >= limit
+        break
+      endif
+      if related.id == article.id
+        continue
+      endif
+      assign related_key = ',' | append: related.id | append: ','
+      if shown_ids contains related_key
+        continue
+      endif
+      echo '<li class="article-related__item">'
+      render 'article-card', article: related, animation: card_animation, topic_scheme: topic_scheme, arrow_scheme: arrow_scheme
+      echo '</li>'
+      assign shown_ids = shown_ids | append: related.id | append: ','
+      assign shown_count = shown_count | plus: 1
+    endfor
+  endcapture
+-%}
+
+{%- if shown_count > 0 -%}
+  {% render 'screen-scale' %}
+
+  <div
+    class="article-related full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}{% if section.settings.align_with_text %} article-related--aligned{% endif %}"
+    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
+  >
+    <div class="article-related__inner">
+      <div class="article-related__content">
+        <div class="article-related__header">
+          {%- if section.settings.eyebrow != blank -%}
+            <p class="eyebrow article-related__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+          {%- endif -%}
+          <div class="article-related__title-row">
+            {%- if section.settings.heading != blank -%}
+              <h2 class="article-related__heading">{{ section.settings.heading }}</h2>
+            {%- endif -%}
+            {%- if section.settings.link_label != blank -%}
+              <a class="article-related__view-all" href="{{ view_all_url }}">
+                {{- section.settings.link_label | escape -}}
+                <span class="article-related__view-all-arrow" aria-hidden="true">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+              </a>
+            {%- endif -%}
+          </div>
+        </div>
+
+        <animate-on-scroll class="article-related__reveal">
+          <ul class="article-related__grid" role="list">
+            {{- related_cards -}}
+          </ul>
+        </animate-on-scroll>
+      </div>
+    </div>
+  </div>
+{%- elsif request.design_mode -%}
+  <p class="article-related__empty">{{ 'blog.related.empty_editor' | t }}</p>
+{%- endif -%}
+
+{% stylesheet %}
+  /*
+    Figma 1920: eyebrow, then the heading row ("More from the Journal" 40px; "VIEW ALL ARTICLES →"
+    at the text column's right edge), cards 484 x 406, 34px apart, 68px under the heading.
+    Sizes are Figma px x --px (screen-scale) with rem floors, or tokens.
+  */
+  .article-related {
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  .article-related__inner {
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  /* From 1200px: the article section's columns (text 1114 / gap 171 / sidebar 354), content under the text */
+  @media (min-width: 1200px) {
+    .article-related--aligned .article-related__inner {
+      display: grid;
+      grid-template-columns: minmax(0, 1114fr) minmax(var(--space-2xl), 171fr) minmax(17rem, 354fr);
+    }
+  }
+
+  .article-related__content {
+    display: flex;
+    flex-direction: column;
+    gap: max(var(--space-xl), calc(68 * var(--px, 0.0625rem)));
+    min-inline-size: 0;
+  }
+
+  .article-related__header {
+    display: flex;
+    flex-direction: column;
+    gap: max(var(--space-lg), calc(42 * var(--px, 0.0625rem)));
+  }
+
+  .article-related__eyebrow {
+    margin: 0;
+  }
+
+  .article-related__title-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md) var(--space-xl);
+  }
+
+  .article-related__heading {
+    margin: 0;
+    font-size: var(--font-size-h2);
+    line-height: 1.25;
+  }
+
+  /* "More from the *Journal*": the italic word in the accent colour, upright */
+  .article-related__heading em {
+    color: var(--color-accent);
+    font-style: normal;
+  }
+
+  /* "VIEW ALL ARTICLES →": accent label with an underline (Figma) */
+  .article-related__view-all {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding-block-end: var(--space-xs);
+    border-block-end: 1px solid currentcolor;
+    color: var(--color-accent);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-decoration: none;
+    text-transform: uppercase;
+  }
+
+  .article-related__view-all-arrow svg {
+    display: block;
+    inline-size: 1.1em;
+    block-size: auto;
+    transition: translate var(--duration-fast) var(--ease-out);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .article-related__view-all:hover .article-related__view-all-arrow svg {
+      translate: 0.25em 0;
+    }
+  }
+
+  .article-related__reveal {
+    display: block;
+  }
+
+  /*
+    Cards at most 484px wide (Figma) and at least 20rem; as many per row as fit, left-aligned, so
+    2 cards sit side by side under the text as in the Figma and wrap on narrow screens.
+  */
+  .article-related__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), max(20rem, calc(484 * var(--px, 0.0625rem)))));
+    gap: max(var(--space-lg), calc(34 * var(--px, 0.0625rem)));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .article-related__item {
+    display: flex;
+  }
+
+  .article-related__item > * {
+    flex: 1;
+  }
+
+  /* Theme editor only: no other articles to show */
+  .article-related__empty {
+    margin: var(--space-xl) auto;
+    padding: var(--space-md);
+    max-inline-size: 40rem;
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-sm);
+    text-align: center;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.article_related",
+  "tag": "section",
+  "class": "article-related-section",
+  "enabled_on": {
+    "templates": ["article"]
+  },
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "t:labels.article_related_help"
+    },
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "Continue reading"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.italic_accent_info",
+      "default": "More from the <em>Journal</em>"
+    },
+    {
+      "type": "text",
+      "id": "link_label",
+      "label": "t:labels.link_label",
+      "default": "View all articles"
+    },
+    {
+      "type": "url",
+      "id": "link",
+      "label": "t:labels.link",
+      "info": "t:labels.article_related_link_info"
+    },
+    {
+      "type": "range",
+      "id": "articles_to_show",
+      "label": "t:labels.articles_to_show",
+      "min": 2,
+      "max": 4,
+      "step": 1,
+      "default": 2
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "checkbox",
+      "id": "align_with_text",
+      "label": "t:labels.align_with_article_text",
+      "info": "t:labels.align_with_article_text_info",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "checkbox",
+      "id": "scale_screen",
+      "label": "t:labels.scale_screen",
+      "info": "t:labels.scale_screen_info",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "animation",
+      "label": "t:labels.card_animation",
+      "options": [
+        {
+          "value": "none",
+          "label": "t:options.animation.none"
+        },
+        {
+          "value": "fade-up",
+          "label": "t:options.animation.fade_up"
+        }
+      ],
+      "default": "fade-up"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "color_scheme",
+      "id": "topic_color_scheme",
+      "label": "t:labels.topic_color_scheme",
+      "info": "t:labels.topic_color_scheme_info",
+      "default": "scheme-2"
+    },
+    {
+      "type": "color_scheme",
+      "id": "arrow_color_scheme",
+      "label": "t:labels.arrow_color_scheme",
+      "info": "t:labels.arrow_color_scheme_info",
+      "default": "scheme-2"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 96
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.article_related"
+    }
+  ]
+}
+{% endschema %}
