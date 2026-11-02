@@ -102,7 +102,10 @@
     "value_card": "Value card",
     "about_numbers": "About numbers",
     "stat_figure": "Stat figure",
-    "marquee": "Marquee"
+    "marquee": "Marquee",
+    "faq": "FAQ",
+    "faq_topic": "FAQ topic",
+    "faq_question": "Question"
   },
   "labels": {
     "alignment": "Alignment",
@@ -784,7 +787,23 @@
     "marquee_text_size": "Text size",
     "marquee_text_size_info": "At a 1920px screen; it scales with the screen.",
     "marquee_outline": "Alternate with outline text",
-    "marquee_outline_info": "Every second repeat shows as a thin outline, as in the design."
+    "marquee_outline_info": "Every second repeat shows as a thin outline, as in the design.",
+    "faq_question": "Question",
+    "faq_answer": "Answer",
+    "faq_topic_text": "Short line",
+    "faq_topic_handle": "Link name",
+    "faq_topic_handle_info": "The part after # in the link to this topic, e.g. order-shipping. Leave empty to use the title.",
+    "faq_ask_link": "\"Ask human\" link",
+    "faq_ask_link_info": "Shown under every answer. Usually your contact page; empty = no button.",
+    "faq_contact_link_info": "Usually your contact page. Empty = the button writes an email to your store address (Settings > Store details).",
+    "faq_second_label": "Second button",
+    "faq_second_link": "Second button link",
+    "faq_second_link_info": "Empty = the customer account, where Shopify shows the orders and their tracking.",
+    "faq_question_radius": "Question corner radius",
+    "faq_question_radius_info": "The corners of the question rows and the search results (19px in the design).",
+    "faq_contact_header": "\"Still unanswered?\" card",
+    "faq_contact_header_info": "Shown under the questions in a topic and under the search results (not on the overview, as in the design).",
+    "faq_show_contact": "Show the card"
   },
   "options": {
     "collection_list_header": {
@@ -1153,6 +1172,16 @@
     "marquee_direction": {
       "left": "Left",
       "right": "Right"
+    },
+    "faq_icon": {
+      "box": "Box",
+      "account": "Account",
+      "return": "Returns",
+      "card": "Card",
+      "bottle": "Bottle",
+      "truck": "Truck",
+      "heart": "Heart",
+      "none": "None"
     }
   },
   "color_scheme": {

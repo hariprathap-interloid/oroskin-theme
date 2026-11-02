@@ -389,5 +389,28 @@
     "heading_pause": "Pause the changing heading",
     "heading_play": "Play the changing heading",
     "numbers_empty": "Add Stat figure blocks: one card per number."
+  },
+  "faq": {
+    "title": "FAQ",
+    "answers": {
+      "one": "{{ count }} answer",
+      "other": "{{ count }} answers"
+    },
+    "topics": "FAQ topics",
+    "all_subjects": "All subjects",
+    "search_label": "Search the questions",
+    "search_placeholder": "What are you looking for?",
+    "results_for": "Results for “{{ query }}”",
+    "no_results": "No answers found. Try another word, or write to us below.",
+    "helpful": "Did this answer help?",
+    "yes": "Yes",
+    "ask_human": "Ask human",
+    "thanks": "Thank you, we’re glad it helped.",
+    "empty": "Add FAQ topic blocks, each with its questions.",
+    "results_count": {
+      "one": "{{ count }} answer",
+      "other": "{{ count }} answers"
+    },
+    "search_clear": "Clear the search"
   }
 }

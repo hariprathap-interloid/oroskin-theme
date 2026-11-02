@@ -1,0 +1,1097 @@
+{%- comment -%}
+  FAQ (M8.5, design/briefs/faq.md, exports design/inbox/Faq: "Default" = overview, "Default-1" …
+  "Default-5" = topics, "faq" / "Variant10" … "Variant14" = phone). One section, three views:
+  - overview: breadcrumb, "How can we help?", "Ask us anything.", intro, search, the topic cards;
+  - topic (#handle in the URL): breadcrumb HOME > FAQ > TOPIC, pills, the topic's questions and
+    the answer card (Back returns to the overview);
+  - results (typing in the search): every matching question, across all topics.
+  Topic blocks draw their own card and panel; the script (<faq-page>) shows one view at a time.
+  Without JS: the cards, then every topic with its questions as open/close rows.
+  Microdata: the section is the FAQPage, each question block a Question (search engines).
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+  # Two steps: written as one line, "| t" ran on the page title too ("Translation missing: en.Contact")
+  assign faq_title = 'faq.title' | t
+  assign breadcrumb_title = page.title | default: faq_title
+  assign results_label = 'faq.results_for' | t: query: '[query]'
+-%}
+
+{% render 'screen-scale' %}
+
+{%- comment -%} The big numbers use the heading font's thin weight, the "Still unanswered?" title its semibold; only this page needs them {%- endcomment -%}
+{% style %}
+  {{ settings.type_heading_font | font_modify: 'weight', '200' | font_face: font_display: 'swap' }}
+  {{ settings.type_heading_font | font_modify: 'weight', '600' | font_face: font_display: 'swap' }}
+{% endstyle %}
+
+<faq-page
+  class="faq{% if request.design_mode %} faq--editor{% endif %} full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }}; --faq-row-radius: {{ section.settings.question_radius | default: 19 }}px;"
+  data-view="overview"
+  data-label-count-one="{{ 'faq.results_count.one' | t: count: '[count]' | escape }}"
+  data-label-count-other="{{ 'faq.results_count.other' | t: count: '[count]' | escape }}"
+  data-label-results="{{ results_label | escape }}"
+  data-label-all="{{ 'faq.all_subjects' | t | escape }}"
+  data-label-thanks="{{ 'faq.thanks' | t | escape }}"
+  itemscope
+  itemtype="https://schema.org/FAQPage"
+>
+  <div class="faq__inner">
+    {%- if section.settings.show_breadcrumb -%}
+      {% render 'breadcrumb', current: breadcrumb_title, class: 'faq__breadcrumb' %}
+    {%- endif -%}
+
+    {%- comment -%} Topic pills: built by the script from the topics (shown in the topic view) {%- endcomment -%}
+    <nav class="faq__pills" aria-label="{{ 'faq.topics' | t | escape }}" hidden>
+      <span class="faq__pill-arrow" hidden>{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+      <ul class="faq__pills-list" role="list" data-faq-pills></ul>
+    </nav>
+
+    <div class="faq__intro">
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="eyebrow eyebrow--center faq__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+      {%- endif -%}
+      <h1 class="faq__heading">
+        {%- if section.settings.heading != blank -%}
+          {{ section.settings.heading }}
+        {%- else -%}
+          {{ breadcrumb_title | escape }}
+        {%- endif -%}
+      </h1>
+      {%- if section.settings.text != blank -%}
+        <div class="faq__text">{{ section.settings.text }}</div>
+      {%- endif -%}
+
+      {%- comment -%} Only with the script: it filters the questions on the page (no Shopify search) {%- endcomment -%}
+      <form class="faq__search" role="search" data-faq-search>
+        <label class="visually-hidden" for="FaqSearch-{{ section.id }}">{{ 'faq.search_label' | t }}</label>
+        <input
+          class="faq__search-input"
+          id="FaqSearch-{{ section.id }}"
+          type="search"
+          name="q"
+          autocomplete="off"
+          placeholder="{{ 'faq.search_placeholder' | t | escape }}"
+        >
+        <span class="faq__search-icon" aria-hidden="true">{{ 'icon-search.svg' | inline_asset_content }}</span>
+        {%- comment -%} Our own clear button (the browser's one sat on the magnifier); shown while there's text {%- endcomment -%}
+        <button type="button" class="faq__search-clear" data-faq-search-clear hidden>
+          <span class="visually-hidden">{{ 'faq.search_clear' | t }}</span>
+          {{- 'icon-close.svg' | inline_asset_content -}}
+        </button>
+      </form>
+    </div>
+
+    {%- comment -%} Search results: a card like the answer card, filled by the script {%- endcomment -%}
+    <div class="faq__results" data-faq-results hidden>
+      <div class="faq__results-head">
+        <h2 class="faq__results-title" data-faq-results-title tabindex="-1"></h2>
+        <p class="faq__results-count" data-faq-results-count></p>
+      </div>
+      <ul class="faq__results-list" role="list" data-faq-results-list></ul>
+      <p class="faq__results-empty" data-faq-results-empty hidden>{{ 'faq.no_results' | t }}</p>
+    </div>
+
+    {%- if section.blocks.size > 0 -%}
+      <div class="faq__topics">
+        {% content_for 'blocks' %}
+      </div>
+    {%- elsif request.design_mode -%}
+      <p class="faq__empty">{{ 'faq.empty' | t }}</p>
+    {%- endif -%}
+
+    {%- if section.settings.show_contact -%}
+      {% render 'faq-contact',
+        heading: section.settings.contact_heading,
+        text: section.settings.contact_text,
+        button_label: section.settings.contact_button_label,
+        button_link: section.settings.contact_button_link,
+        second_label: section.settings.contact_second_label,
+        second_link: section.settings.contact_second_link
+      %}
+    {%- endif -%}
+  </div>
+</faq-page>
+
+{% stylesheet %}
+  /*
+    Figma 1920 ("Default"): breadcrumb x 50 y 150; eyebrow y 175; H1 ~72px y 230–290 ("Ask us
+    *anything.*", accent upright); intro ~22px / 35px, max ~840, y 350–385; search 767 x 48, ~80px
+    under the intro; 5 cards 322 wide, gap 52, ~82px under the search.
+    Topic view ("Default-1"): pills y 193–241 (48 tall, radius ~8, gap ~36), the panel from y 315.
+  */
+  .faq {
+    display: block;
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+    background-color: var(--color-background);
+  }
+
+  .faq__inner {
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  .faq__intro {
+    text-align: center;
+  }
+
+  .faq__eyebrow {
+    margin-block-start: var(--space-sm);
+  }
+
+  .faq__heading {
+    margin: max(var(--space-lg), calc(40 * var(--px, 0.0625rem))) 0 0;
+    font-size: max(2.25rem, calc(72 * var(--px, 0.0625rem)));
+    font-weight: 400;
+    line-height: 1.1;
+  }
+
+  .faq__heading em {
+    color: var(--color-accent);
+    font-style: normal;
+  }
+
+  .faq__text {
+    max-inline-size: max(30rem, calc(860 * var(--px, 0.0625rem)));
+    margin: max(var(--space-lg), calc(50 * var(--px, 0.0625rem))) auto 0;
+    font-size: max(1rem, calc(22 * var(--px, 0.0625rem)));
+    line-height: 1.6;
+  }
+
+  .faq__text > * {
+    margin: 0;
+  }
+
+  /* ---------- Search (767 x 48, magnifier at the right) ---------- */
+  .faq__search {
+    position: relative;
+    max-inline-size: max(20rem, calc(767 * var(--px, 0.0625rem)));
+    margin: max(var(--space-xl), calc(70 * var(--px, 0.0625rem))) auto 0;
+  }
+
+  .faq:not([data-ready]) .faq__search {
+    display: none;
+  }
+
+  /* display: block: an inline input leaves a gap under it, so the form (and the centred icon) was taller */
+  .faq__search-input {
+    display: block;
+    inline-size: 100%;
+    min-block-size: max(2.5rem, calc(48 * var(--px, 0.0625rem)));
+    box-sizing: border-box;
+    padding: 0 3.25rem 0 var(--space-lg);
+    border: 1px solid var(--color-card-border);
+    border-radius: max(0.75rem, calc(14 * var(--px, 0.0625rem)));
+    background-color: var(--color-card);
+    color: var(--color-text);
+    font-size: var(--font-size-caption);
+  }
+
+  /* The browser's own clear ✕ is hidden: it sat on top of the magnifier. Ours replaces the magnifier */
+  .faq__search-input::-webkit-search-cancel-button {
+    display: none;
+    -webkit-appearance: none;
+  }
+
+  .faq__search-clear {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: calc(var(--space-lg) - 0.5rem);
+    display: grid;
+    place-items: center;
+    inline-size: 2.25rem;
+    margin-block: auto;
+    block-size: 2.25rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--color-text);
+    cursor: pointer;
+  }
+
+  .faq__search-clear:hover {
+    background-color: color-mix(in srgb, var(--color-accent) 8%, transparent);
+    color: var(--color-accent);
+  }
+
+  .faq__search-clear[hidden] {
+    display: none;
+  }
+
+  .faq__search-clear svg {
+    inline-size: 0.9rem;
+    block-size: 0.9rem;
+  }
+
+  .faq__search.has-text .faq__search-icon {
+    display: none;
+  }
+
+  .faq__search-icon {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: var(--space-lg);
+    display: grid;
+    place-items: center;
+    color: var(--color-text);
+    pointer-events: none;
+  }
+
+  .faq__search-icon svg {
+    display: block;
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+  }
+
+  /* ---------- Topic cards (5 columns; the topic blocks' cards and panels are the grid items) ---------- */
+  .faq__topics {
+    counter-reset: faq-topic;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: max(var(--space-xl), calc(52 * var(--px, 0.0625rem)));
+    margin-block-start: max(var(--space-2xl), calc(82 * var(--px, 0.0625rem)));
+  }
+
+  /*
+    Shopify wraps each block in a div: the wrappers (and the topic blocks, see _faq-topic) step out
+    of the layout, so each topic's card and panel are the grid items.
+  */
+  .faq__topics > * {
+    display: contents;
+  }
+
+  /* Without the script, a panel has no answer card: the questions take the full width */
+  .faq:not([data-ready]) .faq-topic__panel {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "head"
+      "list";
+  }
+
+  /* ---------- Pills (topic view) ---------- */
+  .faq__pills-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm) max(var(--space-md), calc(36 * var(--px, 0.0625rem)));
+    margin: max(var(--space-lg), calc(35 * var(--px, 0.0625rem))) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .faq__pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    min-block-size: max(2.5rem, calc(48 * var(--px, 0.0625rem)));
+    box-sizing: border-box;
+    padding: 0 var(--space-md);
+    border: 1px solid var(--color-card-border);
+    border-radius: max(0.5rem, calc(8 * var(--px, 0.0625rem)));
+    background-color: var(--color-background);
+    color: var(--color-text);
+    font-family: var(--font-body--family);
+    font-size: max(1rem, calc(18 * var(--px, 0.0625rem)));
+    font-weight: var(--font-weight-medium);
+    text-decoration: none;
+    cursor: pointer;
+    transition:
+      border-color var(--duration-fast) var(--ease-out),
+      color var(--duration-fast) var(--ease-out);
+  }
+
+  .faq__pill:hover,
+  .faq__pill[aria-current="true"] {
+    border-color: color-mix(in srgb, var(--color-accent) 35%, transparent);
+    color: var(--color-accent);
+  }
+
+  .faq__pill svg {
+    inline-size: 1.1rem;
+    block-size: auto;
+    transform: scaleX(-1);
+  }
+
+  /*
+    ---------- Results (no Figma frame: built from the answer card's look) ----------
+    "Results for “…”" with the count at the right, then a grid of cards, one per match, as wide as
+    the topic cards (3 or more per row on a laptop, 2 on tablets, 1 on phones). Each card: the
+    topic's icon, the topic name (accent label), the question and the start of its answer (the
+    searched word marked in both), and an arrow. Hover / focus: a pale fill, the arrow slides right.
+  */
+  .faq__results {
+    margin-block-start: max(var(--space-2xl), calc(70 * var(--px, 0.0625rem)));
+  }
+
+  .faq__results[hidden] {
+    display: none;
+  }
+
+  .faq__results-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-xs) var(--space-md);
+    padding-block-end: var(--space-md);
+    border-block-end: 1px solid var(--color-card-border);
+  }
+
+  .faq__results-title {
+    margin: 0;
+    font-size: var(--font-size-h3);
+    font-weight: 400;
+    line-height: 1.2;
+  }
+
+  .faq__results-title:focus {
+    outline: none;
+  }
+
+  .faq__results-count {
+    margin: 0;
+    color: var(--color-accent);
+    font-size: var(--font-size-caption);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  /* At least ~22rem per card: 3 on a laptop, 4 or more on a wide screen, then 2, then 1 */
+  .faq__results-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+    gap: max(var(--space-md), calc(32 * var(--px, 0.0625rem)));
+    margin: max(var(--space-lg), calc(32 * var(--px, 0.0625rem))) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .faq__result {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+    gap: var(--space-md);
+    inline-size: 100%;
+    block-size: 100%;
+    box-sizing: border-box;
+    padding: max(var(--space-lg), calc(28 * var(--px, 0.0625rem)));
+    border: 1px solid var(--color-card-border);
+    border-radius: max(1rem, calc(24 * var(--px, 0.0625rem)));
+    background-color: color-mix(in srgb, var(--color-accent) 1%, var(--color-background));
+    box-shadow: var(--shadow-card);
+    color: var(--color-text);
+    font-family: var(--font-body--family);
+    text-align: start;
+    cursor: pointer;
+    transition: background-color var(--duration-fast) var(--ease-out);
+  }
+
+  .faq__result:hover,
+  .faq__result:focus-visible {
+    background-color: color-mix(in srgb, var(--color-accent) 5%, transparent);
+  }
+
+  .faq__result .faq-topic__icon {
+    margin: 0;
+  }
+
+  .faq__result-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-inline-size: 0;
+  }
+
+  .faq__result-topic {
+    color: var(--color-accent);
+    font-size: var(--font-size-small);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .faq__result-question {
+    font-size: var(--font-size-body-lg);
+    line-height: 1.35;
+  }
+
+  /* The start of the answer: two lines at most */
+  .faq__result-excerpt {
+    display: -webkit-box;
+    overflow: hidden;
+    color: color-mix(in srgb, var(--color-text) 70%, transparent);
+    font-size: var(--font-size-body-sm);
+    line-height: 1.5;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  /* The searched word */
+  .faq__result mark {
+    padding-inline: 0.1em;
+    border-radius: 0.2em;
+    background-color: color-mix(in srgb, var(--color-accent) 12%, transparent);
+    color: var(--color-accent);
+  }
+
+  .faq__result-arrow {
+    display: grid;
+    place-items: center;
+    inline-size: 2.25rem;
+    block-size: 2.25rem;
+    border: 1px solid color-mix(in srgb, var(--color-accent) 25%, transparent);
+    border-radius: 50%;
+    color: var(--color-accent);
+    transition:
+      background-color var(--duration-base) var(--ease-out),
+      transform var(--duration-base) var(--ease-out);
+  }
+
+  .faq__result-arrow svg {
+    inline-size: 0.9rem;
+    block-size: auto;
+  }
+
+  .faq__result:hover .faq__result-arrow,
+  .faq__result:focus-visible .faq__result-arrow {
+    background-color: var(--color-background);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .faq__result:hover .faq__result-arrow,
+    .faq__result:focus-visible .faq__result-arrow {
+      transform: translateX(4px);
+    }
+  }
+
+  .faq__results-empty {
+    margin: var(--space-lg) 0 0;
+    font-size: var(--font-size-body);
+  }
+
+  @media (max-width: 749px) {
+    .faq__result {
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: var(--space-sm);
+      padding: var(--space-md);
+    }
+
+    .faq__result .faq-topic__icon {
+      display: none;
+    }
+  }
+
+  .faq__empty {
+    margin: var(--space-xl) 0 0;
+    text-align: center;
+  }
+
+  /* ---------- Views (with the script) ---------- */
+  .faq[data-ready][data-view="overview"] .faq-topic__panel,
+  .faq[data-ready][data-view="results"] .faq-topic__panel,
+  .faq[data-ready][data-view="results"] .faq-topic__card,
+  .faq[data-ready][data-view="topic"] .faq-topic__card,
+  .faq[data-ready][data-view="topic"] .faq-topic__panel:not(.is-current),
+  .faq[data-ready][data-view="topic"] .faq__eyebrow,
+  .faq[data-ready][data-view="topic"] .faq__text,
+  .faq[data-ready][data-view="topic"] .faq__search,
+  .faq[data-ready][data-view="overview"]:not(.faq--editor) .faq-contact {
+    display: none;
+  }
+
+  /* The topic view keeps the page's h1 for screen readers only (the topic title is the h2) */
+  .faq[data-ready][data-view="topic"] .faq__heading {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .faq[data-ready][data-view="topic"] .faq__pills {
+    display: block;
+  }
+
+  .faq[data-ready][data-view="topic"] .faq-topic__panel.is-current {
+    margin-block-start: 0;
+  }
+
+  .faq[data-ready][data-view="topic"] .faq__topics {
+    margin-block-start: max(var(--space-xl), calc(70 * var(--px, 0.0625rem)));
+  }
+
+  /* The view switch: the new view fades in (never on page load: this is the page's first section) */
+  @media (prefers-reduced-motion: no-preference) {
+    .faq.is-entering .faq__topics,
+    .faq.is-entering .faq__results {
+      animation: faq-view-in var(--duration-slow) var(--ease-out);
+    }
+  }
+
+  @keyframes faq-view-in {
+    from {
+      opacity: 0;
+      transform: translateY(0.75rem);
+    }
+  }
+
+  /* Tablets: 3 + 2 cards */
+  @media (max-width: 1199px) {
+    .faq__topics {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: var(--space-lg);
+    }
+
+    .faq-topic__card {
+      grid-column: span 2;
+    }
+  }
+
+  /* Phones ("faq"): 2 + 2 + 1 cards, the odd last one centred */
+  @media (max-width: 749px) {
+    .faq__heading {
+      font-size: 1.75rem;
+    }
+
+    .faq__text {
+      font-size: 0.8125rem;
+    }
+
+    .faq__search {
+      margin-block-start: var(--space-lg);
+    }
+
+    .faq__topics {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--space-sm);
+      margin-block-start: var(--space-md);
+    }
+
+    .faq-topic__card {
+      grid-column: span 2;
+    }
+
+    /* The wrappers are counted (they're the topics, one each) */
+    .faq__topics > :last-child:nth-child(odd) .faq-topic__card {
+      grid-column: 2 / span 2;
+    }
+
+    .faq__pills-list {
+      gap: var(--space-xs);
+    }
+
+    .faq__pill {
+      min-block-size: 1.75rem;
+      padding: 0 var(--space-xs);
+      font-size: 0.6875rem;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <faq-page>: shows one view of the FAQ at a time.
+   * - The URL's #handle picks the topic (the cards and pills are plain links to it, so the Back
+   *   button returns to the overview); no #handle = the overview, or the search results.
+   * - A question row (a <details> summary) shows its answer in the topic's answer card instead of
+   *   opening; focus moves to the card's question so screen readers read it.
+   * - Search filters every question (question and answer text) on the page; nothing is sent anywhere.
+   * - In the theme editor, selecting a Topic or Question block shows it.
+   */
+  class FaqPage extends HTMLElement {
+    connectedCallback() {
+      this.topics = [...this.querySelectorAll('[data-faq-topic]')].map((element) => ({
+        element,
+        handle: element.dataset.handle,
+        title: element.dataset.title,
+        panel: element.querySelector('.faq-topic__panel'),
+        card: element.querySelector('[data-faq-card]'),
+        questions: [...element.querySelectorAll('[data-faq-question]')],
+      }));
+      if (!this.topics.length) return;
+
+      this.query = '';
+      this.breadcrumb = this.querySelector('.faq__breadcrumb ol');
+      this.breadcrumbHTML = this.breadcrumb?.innerHTML;
+      this.buildPills();
+
+      this.topics.forEach((topic) => {
+        topic.questions.forEach((question, index) => {
+          question.open = false;
+          question.querySelector('summary').addEventListener('click', (event) => {
+            event.preventDefault();
+            this.select(topic, index, true);
+          });
+        });
+        topic.card?.querySelector('[data-faq-yes]')?.addEventListener('click', () => this.thank(topic));
+      });
+
+      const search = this.querySelector('[data-faq-search]');
+      const input = search?.querySelector('input');
+      const clear = search?.querySelector('[data-faq-search-clear]');
+      search?.addEventListener('submit', (event) => event.preventDefault());
+      input?.addEventListener('input', () => {
+        const hasText = input.value !== '';
+        search.classList.toggle('has-text', hasText);
+        if (clear) clear.hidden = !hasText;
+        clearTimeout(this.searchTimer);
+        this.searchTimer = setTimeout(() => {
+          this.query = input.value.trim();
+          this.render();
+        }, 150);
+      });
+      clear?.addEventListener('click', () => {
+        input.value = '';
+        input.dispatchEvent(new Event('input'));
+        input.focus();
+      });
+
+      /*
+        Topic links (cards, pills): handled here instead of by the browser. A plain #link lets the
+        browser jump first and the script redraw a moment later (a visible flicker); pushState
+        changes the URL without a jump, and the new topic is drawn in the same frame. Back /
+        forward still work (popstate).
+      */
+      this.addEventListener('click', (event) => {
+        const link = event.target.closest('a[href^="#"]');
+        if (!link || event.metaKey || event.ctrlKey || event.shiftKey) return;
+        const handle = decodeURIComponent(link.getAttribute('href').slice(1));
+        if (!this.topics.some((topic) => topic.handle === handle)) return;
+        event.preventDefault();
+        this.goTo(handle);
+      });
+
+      this.onLocation = () => this.render(true);
+      window.addEventListener('hashchange', this.onLocation);
+      window.addEventListener('popstate', this.onLocation);
+
+      // Theme editor: show the topic of the selected block
+      this.onSelect = (event) => {
+        const topic = this.topics.find((item) => item.element.contains(event.target));
+        if (!topic) return;
+        const index = topic.questions.findIndex((question) => question.contains(event.target));
+        this.showTopic(topic, Math.max(index, 0));
+      };
+      document.addEventListener('shopify:block:select', this.onSelect);
+
+      this.setAttribute('data-ready', '');
+      // A shared #topic link: the browser has already jumped down to that panel; start at the top
+      this.render(true);
+    }
+
+    disconnectedCallback() {
+      window.removeEventListener('hashchange', this.onLocation);
+      window.removeEventListener('popstate', this.onLocation);
+      document.removeEventListener('shopify:block:select', this.onSelect);
+    }
+
+    buildPills() {
+      const list = this.querySelector('[data-faq-pills]');
+      if (!list) return;
+      const all = document.createElement('li');
+      all.innerHTML = `<button type="button" class="faq__pill">${this.querySelector('.faq__pill-arrow')?.innerHTML ?? ''}</button>`;
+      const allButton = all.firstElementChild;
+      allButton.append(this.dataset.labelAll);
+      allButton.addEventListener('click', () => this.goOverview());
+      list.append(all);
+
+      this.topics.forEach((topic) => {
+        const item = document.createElement('li');
+        const link = document.createElement('a');
+        link.className = 'faq__pill';
+        link.href = `#${topic.handle}`;
+        link.textContent = topic.title;
+        topic.pill = link;
+        item.append(link);
+        list.append(item);
+      });
+    }
+
+    render(fromLocation = false) {
+      const handle = decodeURIComponent(window.location.hash.slice(1));
+      const topic = this.topics.find((item) => item.handle === handle);
+      if (topic) this.showTopic(topic, this.pendingIndex ?? 0, fromLocation);
+      else if (this.query.length >= 2) this.showResults();
+      else this.setView('overview');
+      this.pendingIndex = null;
+    }
+
+    setView(view) {
+      const changed = this.dataset.view !== view;
+      this.dataset.view = view;
+      this.querySelector('[data-faq-results]').hidden = view !== 'results';
+      if (view !== 'topic') this.setBreadcrumb(null);
+      // A new view fades in (not the first one: no animation on page load)
+      if (changed && this.rendered) {
+        this.classList.remove('is-entering');
+        void this.offsetWidth; // restart the animation
+        this.classList.add('is-entering');
+      }
+      this.rendered = true;
+    }
+
+    showTopic(topic, index = 0, scroll = false) {
+      this.setView('topic');
+      this.topics.forEach((item) => {
+        item.panel.classList.toggle('is-current', item === topic);
+        if (item.pill) item.pill.setAttribute('aria-current', String(item === topic));
+      });
+      this.setBreadcrumb(topic);
+      this.select(topic, index, false);
+      // Only when the visitor had scrolled down past the section's top (no jump when already there)
+      if (scroll && this.getBoundingClientRect().top < 0) this.scrollIntoView({ block: 'start' });
+    }
+
+    /** Opens a topic: the URL gets #handle (one history step), no browser jump */
+    goTo(handle) {
+      if (window.location.hash.slice(1) !== handle) history.pushState(null, '', `#${handle}`);
+      this.render(true);
+    }
+
+    goOverview() {
+      history.pushState(null, '', window.location.pathname + window.location.search);
+      this.render();
+      this.scrollIntoView({ block: 'start' });
+    }
+
+    /** HOME > FAQ > TOPIC: the page title becomes a link back to the overview */
+    setBreadcrumb(topic) {
+      if (!this.breadcrumb) return;
+      this.breadcrumb.innerHTML = this.breadcrumbHTML;
+      if (!topic) return;
+      const current = this.breadcrumb.querySelector('[aria-current]');
+      const link = document.createElement('a');
+      link.href = window.location.pathname;
+      link.textContent = current.textContent;
+      link.addEventListener('click', (event) => {
+        event.preventDefault();
+        this.goOverview();
+      });
+      current.removeAttribute('aria-current');
+      current.replaceChildren(link);
+      const item = document.createElement('li');
+      item.setAttribute('aria-current', 'page');
+      item.textContent = topic.title;
+      this.breadcrumb.append(item);
+    }
+
+    /** Shows question number `index` of `topic` in the answer card */
+    select(topic, index, fromClick) {
+      const question = topic.questions[index];
+      if (!question || !topic.card) return;
+      topic.questions.forEach((item, i) => {
+        item.classList.toggle('is-active', i === index);
+        item.querySelector('summary').setAttribute('aria-current', String(i === index));
+      });
+
+      const card = topic.card;
+      card.querySelector('[data-faq-card-number]').textContent = String(index + 1).padStart(2, '0');
+      card.querySelector('[data-faq-card-question]').textContent =
+        question.querySelector('.faq-question__text').textContent;
+      card.querySelector('[data-faq-card-answer]').innerHTML =
+        question.querySelector('[itemprop="text"]').innerHTML;
+      card.querySelector('[data-faq-feedback]').hidden = false;
+      card.querySelector('[data-faq-thanks]').textContent = '';
+
+      if (fromClick) {
+        const heading = card.querySelector('[data-faq-card-question]');
+        heading.focus({ preventScroll: true });
+        // Phones / tablets: the card is under the list
+        if (window.matchMedia('(max-width: 1099px)').matches) {
+          const smooth = window.matchMedia('(prefers-reduced-motion: no-preference)').matches;
+          card.scrollIntoView({ block: 'nearest', behavior: smooth ? 'smooth' : 'auto' });
+        }
+      }
+    }
+
+    thank(topic) {
+      topic.card.querySelector('[data-faq-feedback]').hidden = true;
+      topic.card.querySelector('[data-faq-thanks]').textContent = this.dataset.labelThanks;
+    }
+
+    /**
+     * One row per matching question: the topic's icon, the topic name, the question and the start
+     * of its answer (the searched word in a <mark> in both), and an arrow. Built with text nodes
+     * only, so nothing typed in the search can become HTML.
+     */
+    showResults() {
+      this.setView('results');
+      const query = this.query.toLowerCase();
+      const list = this.querySelector('[data-faq-results-list]');
+      const arrow = this.querySelector('.faq__pill-arrow')?.innerHTML ?? '';
+      list.replaceChildren();
+
+      this.topics.forEach((topic) => {
+        topic.questions.forEach((question, index) => {
+          const questionText = question.querySelector('.faq-question__text').textContent.trim();
+          const answerText = question.querySelector('[itemprop="text"]').textContent.trim().replace(/\s+/g, ' ');
+          if (!`${questionText} ${answerText}`.toLowerCase().includes(query)) return;
+
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'faq__result';
+
+          const icon = topic.element.querySelector('.faq-topic__icon');
+          if (icon) button.append(icon.cloneNode(true));
+
+          const body = document.createElement('span');
+          body.className = 'faq__result-body';
+          body.append(
+            this.textSpan('faq__result-topic', topic.title),
+            this.textSpan('faq__result-question', questionText, query),
+            this.textSpan('faq__result-excerpt', answerText, query)
+          );
+          button.append(body);
+
+          const arrowBox = document.createElement('span');
+          arrowBox.className = 'faq__result-arrow';
+          arrowBox.setAttribute('aria-hidden', 'true');
+          arrowBox.innerHTML = arrow;
+          button.append(arrowBox);
+
+          button.addEventListener('click', () => {
+            this.pendingIndex = index;
+            this.goTo(topic.handle);
+          });
+          const item = document.createElement('li');
+          item.append(button);
+          list.append(item);
+        });
+      });
+
+      const count = list.children.length;
+      this.querySelector('[data-faq-results-title]').textContent = this.dataset.labelResults.replace(
+        '[query]',
+        this.query
+      );
+      const countLabel = count === 1 ? this.dataset.labelCountOne : this.dataset.labelCountOther;
+      this.querySelector('[data-faq-results-count]').textContent = count ? countLabel.replace('[count]', count) : '';
+      this.querySelector('[data-faq-results-empty]').hidden = count > 0;
+    }
+
+    /** A <span> with `text`, each match of `query` wrapped in <mark> (as text nodes, never HTML) */
+    textSpan(className, text, query = '') {
+      const span = document.createElement('span');
+      span.className = className;
+      if (!query) {
+        span.textContent = text;
+        return span;
+      }
+      const lower = text.toLowerCase();
+      let start = 0;
+      let found = lower.indexOf(query);
+      while (found !== -1) {
+        span.append(text.slice(start, found));
+        const mark = document.createElement('mark');
+        mark.textContent = text.slice(found, found + query.length);
+        span.append(mark);
+        start = found + query.length;
+        found = lower.indexOf(query, start);
+      }
+      span.append(text.slice(start));
+      return span;
+    }
+  }
+
+  if (!customElements.get('faq-page')) customElements.define('faq-page', FaqPage);
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.faq",
+  "tag": "section",
+  "class": "faq-section",
+  "enabled_on": {
+    "templates": ["page"]
+  },
+  "blocks": [{ "type": "_faq-topic" }],
+  "max_blocks": 12,
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_breadcrumb",
+      "label": "t:labels.show_breadcrumb",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "How can we help?"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.italic_accent_info",
+      "default": "Ask us <em>anything.</em>"
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "t:labels.text",
+      "default": "<p>Find quick answers to your questions about our services, billing, or account setup. If you cannot find what you need, our team is always ready to assist you.</p>"
+    },
+    {
+      "type": "url",
+      "id": "ask_link",
+      "label": "t:labels.faq_ask_link",
+      "info": "t:labels.faq_ask_link_info"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.faq_contact_header",
+      "info": "t:labels.faq_contact_header_info"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_contact",
+      "label": "t:labels.faq_show_contact",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "contact_heading",
+      "label": "t:labels.heading",
+      "default": "Still unanswered?",
+      "visible_if": "{{ section.settings.show_contact }}"
+    },
+    {
+      "type": "text",
+      "id": "contact_text",
+      "label": "t:labels.text",
+      "default": "A real person replies within one working day — usually within the hour, Paris time.",
+      "visible_if": "{{ section.settings.show_contact }}"
+    },
+    {
+      "type": "text",
+      "id": "contact_button_label",
+      "label": "t:labels.button_label",
+      "default": "Write message",
+      "visible_if": "{{ section.settings.show_contact }}"
+    },
+    {
+      "type": "url",
+      "id": "contact_button_link",
+      "label": "t:labels.button_link",
+      "info": "t:labels.faq_contact_link_info"
+    },
+    {
+      "type": "text",
+      "id": "contact_second_label",
+      "label": "t:labels.faq_second_label",
+      "default": "Track order",
+      "visible_if": "{{ section.settings.show_contact }}"
+    },
+    {
+      "type": "url",
+      "id": "contact_second_link",
+      "label": "t:labels.faq_second_link",
+      "info": "t:labels.faq_second_link_info"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "range",
+      "id": "question_radius",
+      "label": "t:labels.faq_question_radius",
+      "info": "t:labels.faq_question_radius_info",
+      "min": 0,
+      "max": 40,
+      "step": 1,
+      "unit": "px",
+      "default": 19
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "checkbox",
+      "id": "scale_screen",
+      "label": "t:labels.scale_screen",
+      "info": "t:labels.scale_screen_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "text_scale",
+      "label": "t:labels.text_scale",
+      "info": "t:labels.text_scale_info",
+      "min": 100,
+      "max": 130,
+      "step": 5,
+      "unit": "%",
+      "default": 110,
+      "visible_if": "{{ section.settings.scale_screen }}"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.faq",
+      "blocks": [
+        {
+          "type": "_faq-topic",
+          "blocks": [{ "type": "_faq-question" }]
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

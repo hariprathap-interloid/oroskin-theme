@@ -1,0 +1,194 @@
+{% doc %}
+  "Still unanswered?" (M8.5, design/briefs/faq.md, bottom of "Default-1" … "Default-5"): a wide card
+  with a title and a line on the left, and two buttons on the right ("Write message" to the contact
+  page, "Track order" to the customer account, where Shopify shows the orders and their tracking).
+  Part of the FAQ section (its settings are there); the FAQ hides it on the overview, as in the
+  Figma, and shows it in a topic and in the search results.
+
+  @param {string} [heading] - The title, e.g. "Still unanswered?"
+  @param {string} [text] - The line under it
+  @param {string} [button_label] - First button (red)
+  @param {string} [button_link] - Its link, usually the contact page. Empty = an email to the shop (shop.email)
+  @param {string} [second_label] - Second button (glass pill)
+  @param {string} [second_link] - Its link. Empty = the customer account (routes.account_url)
+
+  @example
+  {% render 'faq-contact',
+    heading: section.settings.contact_heading,
+    text: section.settings.contact_text,
+    button_label: section.settings.contact_button_label,
+    button_link: section.settings.contact_button_link,
+    second_label: section.settings.contact_second_label,
+    second_link: section.settings.contact_second_link
+  %}
+{% enddoc %}
+
+{%- liquid
+  assign second_url = second_link | default: routes.account_url
+  # No link set: the button still shows and writes an email to the shop (Settings > Store details)
+  assign shop_mail = 'mailto:' | append: shop.email
+  assign button_url = button_link | default: shop_mail
+-%}
+
+<div class="faq-contact">
+  <div class="faq-contact__card">
+    <div class="faq-contact__copy">
+      {%- if heading != blank -%}
+        <h2 class="faq-contact__heading">{{ heading | escape }}</h2>
+      {%- endif -%}
+      {%- if text != blank -%}
+        <p class="faq-contact__text">{{ text | escape }}</p>
+      {%- endif -%}
+    </div>
+
+    <div class="faq-contact__actions">
+      {%- if button_label != blank -%}
+        <a class="button faq-contact__button" href="{{ button_url }}">
+          {{- button_label | escape -}}
+          <span class="faq-contact__icon" aria-hidden="true">{{ 'icon-send.svg' | inline_asset_content }}</span>
+        </a>
+      {%- endif -%}
+      {%- if second_label != blank -%}
+        <a class="button button--secondary faq-contact__second" href="{{ second_url }}">
+          {{- second_label | escape -}}
+        </a>
+      {%- endif -%}
+    </div>
+  </div>
+</div>
+
+{% stylesheet %}
+  /*
+    Figma 1920 ("Default-1"): ~90px under the questions; card 1418 x 135 centred, fill #fcfafa (accent
+    ~2% on white), radius ~24, soft shadow, padding 32 / 49 / 32 / 55; title heading font semibold
+    ~32px; line body ~20px; "WRITE MESSAGE" red pill 258 x 50 with a paper plane; "TRACK ORDER"
+    glass pill ~185 x 50. The FAQ section loads the 600 weight and sets --px (screen scale).
+  */
+  .faq-contact {
+    margin-block-start: max(var(--space-2xl), calc(90 * var(--px, 0.0625rem)));
+  }
+
+  .faq-contact__card {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-lg) var(--space-xl);
+    inline-size: min(calc(1418 * var(--px, 0.0625rem)), 100%);
+    min-block-size: max(7rem, calc(135 * var(--px, 0.0625rem)));
+    box-sizing: border-box;
+    margin-inline: auto;
+    padding:
+      max(var(--space-lg), calc(32 * var(--px, 0.0625rem)))
+      max(var(--space-lg), calc(49 * var(--px, 0.0625rem)))
+      max(var(--space-lg), calc(32 * var(--px, 0.0625rem)))
+      max(var(--space-lg), calc(55 * var(--px, 0.0625rem)));
+    border-radius: max(1rem, calc(24 * var(--px, 0.0625rem)));
+    background-color: color-mix(in srgb, var(--color-accent) 2%, var(--color-background));
+    box-shadow: 0 4px 24px 0 #0000000d;
+  }
+
+  /*
+    The glass circle, drawn as a soft glow: accent ~7% in the middle fading to nothing at the edge
+    (a flat 3% fill with a backdrop blur shows nothing over a plain card: there's nothing behind it
+    to blur). The Figma values, for reference: #7d000008 fill, blur 17.9px, 65 x 65, 4px left of the
+    card and 72px below its top.
+  */
+  .faq-contact__card::before {
+    content: "";
+    position: absolute;
+    inset-block-start: calc(72 * var(--px, 0.0625rem));
+    inset-inline-start: calc(-4 * var(--px, 0.0625rem));
+    inline-size: max(3rem, calc(65 * var(--px, 0.0625rem)));
+    block-size: max(3rem, calc(65 * var(--px, 0.0625rem)));
+    border-radius: 50%;
+    background: radial-gradient(
+      circle,
+      color-mix(in srgb, var(--color-accent) 7%, transparent) 0%,
+      color-mix(in srgb, var(--color-accent) 3%, transparent) 45%,
+      #7d000000 72%
+    );
+    filter: blur(4px);
+    pointer-events: none;
+  }
+
+  .faq-contact__copy {
+    position: relative;
+    flex: 1 1 24rem;
+  }
+
+  .faq-contact__heading {
+    margin: 0;
+    font-size: max(1.5rem, calc(32 * var(--px, 0.0625rem)));
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .faq-contact__text {
+    margin: max(var(--space-xs), calc(12 * var(--px, 0.0625rem))) 0 0;
+    font-size: max(0.9375rem, calc(20 * var(--px, 0.0625rem)));
+    line-height: 1.5;
+  }
+
+  .faq-contact__actions {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md) max(var(--space-md), calc(32 * var(--px, 0.0625rem)));
+  }
+
+  /*
+    The buttons follow the screen like the rest of the card (the theme's .button has fixed sizes):
+    Figma 50px tall, 35px side padding, ~16.5px lettering at 1920.
+  */
+  .faq-contact__button,
+  .faq-contact__second {
+    min-block-size: max(2.75rem, calc(50 * var(--px, 0.0625rem)));
+    padding-inline: max(1.25rem, calc(35 * var(--px, 0.0625rem)));
+    font-size: max(var(--font-size-caption), calc(16.5 * var(--px, 0.0625rem)));
+  }
+
+  .faq-contact__icon {
+    display: inline-flex;
+  }
+
+  .faq-contact__icon svg {
+    inline-size: max(1.125rem, calc(19 * var(--px, 0.0625rem)));
+    block-size: auto;
+  }
+
+  /* TRACK ORDER: the glass pill (white, the glass shadows, no red border) */
+  .faq-contact__second {
+    border-color: transparent;
+    box-shadow: var(--shadow-header);
+  }
+
+  @media (max-width: 749px) {
+    .faq-contact {
+      margin-block-start: var(--space-xl);
+    }
+
+    .faq-contact__card {
+      padding: var(--space-md);
+    }
+
+    .faq-contact__heading {
+      font-size: 1.125rem;
+    }
+
+    .faq-contact__text {
+      font-size: var(--font-size-caption);
+    }
+
+    .faq-contact__actions {
+      gap: var(--space-sm);
+    }
+
+    .faq-contact__button,
+    .faq-contact__second {
+      min-block-size: 2.5rem;
+      padding-inline: var(--space-md);
+    }
+  }
+{% endstylesheet %}

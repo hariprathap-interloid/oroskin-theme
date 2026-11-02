@@ -1,0 +1,536 @@
+{%- comment -%}
+  One FAQ topic (design/briefs/faq.md, exports "Default" (card) and "Default-1" … "Default-5"
+  (panel)). It draws both of its views, because a section can't read its theme blocks' settings:
+  - the card for the overview: icon, pale number, title, line, "4 ANSWERS" and an arrow; a link to
+    #handle, so without JS it jumps to the panel below;
+  - the panel (id = handle): icon + title + line, the questions (nested Question blocks) and, for
+    the script, the answer card.
+  The section's script shows one view at a time; without JS the cards and all panels show.
+{%- endcomment -%}
+
+{%- liquid
+  assign title = block.settings.title | default: block.settings.handle
+  assign handle = block.settings.handle | default: title | handleize
+  if handle == blank
+    assign handle = block.id
+  endif
+  assign icon = block.settings.icon | default: 'box'
+  assign icon_file = 'icon-' | append: icon | append: '.svg'
+  assign question_count = block.blocks.size
+-%}
+
+<div
+  class="faq-topic"
+  data-faq-topic
+  data-handle="{{ handle | escape }}"
+  data-title="{{ title | escape }}"
+  {{ block.shopify_attributes }}
+>
+  <a class="faq-topic__card" href="#{{ handle | escape }}">
+    <span class="faq-topic__number" aria-hidden="true"></span>
+    {%- if icon != 'none' -%}
+      <span class="faq-topic__icon" aria-hidden="true">{{ icon_file | inline_asset_content }}</span>
+    {%- endif -%}
+    <span class="faq-topic__title">{{ title | escape }}</span>
+    {%- if block.settings.text != blank -%}
+      <span class="faq-topic__text">{{ block.settings.text | escape }}</span>
+    {%- endif -%}
+    <span class="faq-topic__footer">
+      <span class="faq-topic__count">{{ 'faq.answers' | t: count: question_count }}</span>
+      <span class="faq-topic__arrow" aria-hidden="true">{{ 'icon-arrow-solid.svg' | inline_asset_content }}</span>
+    </span>
+  </a>
+
+  <section class="faq-topic__panel" id="{{ handle | escape }}" aria-labelledby="FaqTopic-{{ block.id }}">
+    <header class="faq-topic__head">
+      {%- if icon != 'none' -%}
+        <span class="faq-topic__icon" aria-hidden="true">{{ icon_file | inline_asset_content }}</span>
+      {%- endif -%}
+      <div>
+        <h2 class="faq-topic__heading" id="FaqTopic-{{ block.id }}">{{ title | escape }}</h2>
+        {%- if block.settings.text != blank -%}
+          <p class="faq-topic__line">{{ block.settings.text | escape }}</p>
+        {%- endif -%}
+      </div>
+    </header>
+
+    <div class="faq-topic__list">
+      {% content_for 'blocks' %}
+    </div>
+
+    {%- comment -%} Filled by the script with the chosen question; hidden without JS {%- endcomment -%}
+    <div class="faq-answer" data-faq-card>
+      <span class="faq-answer__number" data-faq-card-number aria-hidden="true"></span>
+      <p class="faq-answer__label">{{ title | escape }}</p>
+      <h3 class="faq-answer__question" data-faq-card-question tabindex="-1"></h3>
+      <span class="faq-answer__rule" aria-hidden="true"></span>
+      <div class="faq-answer__text" data-faq-card-answer></div>
+
+      <div class="faq-answer__footer" data-faq-feedback>
+        <p class="faq-answer__ask">{{ 'faq.helpful' | t }}</p>
+        <button type="button" class="button button--secondary faq-answer__yes" data-faq-yes>
+          {{- 'faq.yes' | t -}}
+        </button>
+        {%- if section.settings.ask_link != blank -%}
+          <a class="button faq-answer__human" href="{{ section.settings.ask_link }}">{{ 'faq.ask_human' | t }}</a>
+        {%- endif -%}
+      </div>
+      <p class="faq-answer__thanks" data-faq-thanks role="status"></p>
+    </div>
+  </section>
+</div>
+
+{% stylesheet %}
+  /*
+    Figma 1920 ("Default"): card 322 x 268, radius ~24, 1px pale border, soft shadow, padding ~25;
+    icon 48px circle (1px pale accent ring); number heading font thin ~90px, accent 20%, top right,
+    cut by the card's top edge; title heading font ~28px; line body ~16px; "4 ANSWERS" accent
+    label; 42px red arrow circle (↗). Hover (card 05): a pale circle with an accent →, more shadow.
+    Panel ("Default-1"): left column 712 (head + questions), right answer card 793 x ~433.
+  */
+
+  /* The block's wrappers don't take part in the layout: the card and the panel are the grid items */
+  .faq-topic {
+    display: contents;
+  }
+
+  .faq-topic__card {
+    counter-increment: faq-topic;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-block-size: max(14rem, calc(268 * var(--px, 0.0625rem)));
+    box-sizing: border-box;
+    padding: max(var(--space-md), calc(25 * var(--px, 0.0625rem))) max(var(--space-md), calc(27 * var(--px, 0.0625rem)));
+    border: 1px solid var(--color-card-border);
+    border-radius: max(1rem, calc(24 * var(--px, 0.0625rem)));
+    background-color: color-mix(in srgb, var(--color-accent) 1%, var(--color-background));
+    box-shadow: var(--shadow-card);
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  /* "01", "02"…: cut by the card's top edge (it starts above it) */
+  .faq-topic__number::before {
+    content: counter(faq-topic, decimal-leading-zero);
+  }
+
+  .faq-topic__number {
+    position: absolute;
+    inset-block-start: -0.32em;
+    inset-inline-end: max(0.25rem, calc(8 * var(--px, 0.0625rem)));
+    color: color-mix(in srgb, var(--color-accent) 20%, transparent);
+    font-family: var(--font-heading--family);
+    font-size: max(3.5rem, calc(90 * var(--px, 0.0625rem)));
+    font-weight: 200;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  .faq-topic__icon {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    inline-size: max(2.5rem, calc(48 * var(--px, 0.0625rem)));
+    block-size: max(2.5rem, calc(48 * var(--px, 0.0625rem)));
+    box-sizing: border-box;
+    border: 1px solid color-mix(in srgb, var(--color-accent) 15%, transparent);
+    border-radius: 50%;
+    background-color: var(--color-background);
+    color: var(--color-accent);
+  }
+
+  .faq-topic__icon svg {
+    inline-size: max(1.125rem, calc(20 * var(--px, 0.0625rem)));
+    block-size: max(1.125rem, calc(20 * var(--px, 0.0625rem)));
+  }
+
+  .faq-topic__title {
+    margin-block-start: max(var(--space-lg), calc(38 * var(--px, 0.0625rem)));
+    font-family: var(--font-heading--family);
+    font-size: max(1.375rem, calc(28 * var(--px, 0.0625rem)));
+    line-height: 1.2;
+  }
+
+  .faq-topic__text {
+    margin-block-start: max(var(--space-sm), calc(18 * var(--px, 0.0625rem)));
+    font-size: var(--font-size-caption);
+    line-height: 1.45;
+  }
+
+  .faq-topic__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    margin-block-start: auto;
+    padding-block-start: var(--space-lg);
+  }
+
+  .faq-topic__count {
+    color: var(--color-accent);
+    font-size: var(--font-size-caption);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  /* The arrow: a red circle with ↗ (the solid → icon turned); hover: a pale circle with → */
+  .faq-topic__arrow {
+    --arrow-size: max(2.25rem, calc(42 * var(--px, 0.0625rem)));
+
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    inline-size: var(--arrow-size);
+    block-size: var(--arrow-size);
+    box-sizing: border-box;
+    border: 1px solid var(--color-button);
+    border-radius: 50%;
+    background-color: var(--color-button);
+    box-shadow: var(--shadow-button);
+    color: var(--color-button-text);
+    transition:
+      background-color var(--duration-base) var(--ease-out),
+      border-color var(--duration-base) var(--ease-out),
+      color var(--duration-base) var(--ease-out),
+      transform var(--duration-normal) var(--ease-out);
+  }
+
+  .faq-topic__arrow svg {
+    inline-size: max(1rem, calc(18 * var(--px, 0.0625rem)));
+    block-size: auto;
+    transform: rotate(-45deg);
+  }
+
+  /*
+    Hover animation (Default card 05): the circle rolls to the right like a wheel. Turning 45deg
+    (clockwise) turns the ↗ inside it into →, while it moves 0.2 x its width to the right (~8px for
+    42px; a true roll would be 0.39 x, which looked too far). Both happen in one transform, so the
+    roll and the arrow's turn stay in sync. The card itself doesn't change.
+    Reduced motion: only the colours change (↗ becomes → at once).
+  */
+  @media (prefers-reduced-motion: no-preference) {
+    .faq-topic__card:hover .faq-topic__arrow,
+    .faq-topic__card:focus-visible .faq-topic__arrow {
+      transform: translateX(calc(var(--arrow-size) * 0.2)) rotate(45deg);
+    }
+  }
+
+  .faq-topic__card:hover .faq-topic__arrow,
+  .faq-topic__card:focus-visible .faq-topic__arrow {
+    border-color: var(--color-accent);
+    background-color: color-mix(in srgb, var(--color-accent) 10%, var(--color-background));
+    color: var(--color-accent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .faq-topic__card:hover .faq-topic__arrow svg,
+    .faq-topic__card:focus-visible .faq-topic__arrow svg {
+      transform: none;
+    }
+  }
+
+  @media (max-width: 749px) {
+    .faq-topic__arrow {
+      --arrow-size: 1.5rem;
+    }
+  }
+
+  /* ---------- The panel ---------- */
+  .faq-topic__panel {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 712fr) minmax(0, 793fr);
+    grid-template-areas:
+      "head card"
+      "list card";
+    align-items: start;
+    column-gap: max(var(--space-2xl), calc(144 * var(--px, 0.0625rem)));
+    margin-block-start: var(--space-2xl);
+    padding-inline: max(0rem, calc(85 * var(--px, 0.0625rem)));
+    scroll-margin-block-start: 8rem;
+  }
+
+  .faq-topic__head {
+    grid-area: head;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    margin-block-end: max(var(--space-xl), calc(52 * var(--px, 0.0625rem)));
+  }
+
+  .faq-topic__head .faq-topic__icon {
+    margin-block-start: 0.6rem;
+  }
+
+  .faq-topic__heading {
+    margin: 0;
+    font-size: max(1.375rem, calc(28 * var(--px, 0.0625rem)));
+    font-weight: 400;
+    line-height: 1.2;
+  }
+
+  .faq-topic__line {
+    margin: var(--space-xs) 0 0;
+    font-size: var(--font-size-caption);
+  }
+
+  .faq-topic__list {
+    grid-area: list;
+    counter-reset: faq-question;
+    display: flex;
+    flex-direction: column;
+    gap: max(var(--space-md), calc(27 * var(--px, 0.0625rem)));
+  }
+
+  /* ---------- The answer card (only with the script) ---------- */
+  .faq-answer {
+    display: none;
+  }
+
+  .faq[data-ready] .faq-answer {
+    grid-area: card;
+    position: sticky;
+    inset-block-start: 8rem;
+    display: block;
+    overflow: hidden;
+    margin-block-start: max(var(--space-md), calc(25 * var(--px, 0.0625rem)));
+    padding: max(var(--space-xl), calc(55 * var(--px, 0.0625rem)));
+    border-radius: max(1rem, calc(24 * var(--px, 0.0625rem)));
+    background-color: color-mix(in srgb, var(--color-accent) 1%, var(--color-background));
+    box-shadow: 0 20px 60px 0 #0000000f;
+  }
+
+  .faq-answer__number {
+    position: absolute;
+    inset-block-start: -0.32em;
+    inset-inline-end: max(var(--space-md), calc(25 * var(--px, 0.0625rem)));
+    color: color-mix(in srgb, var(--color-accent) 20%, transparent);
+    font-family: var(--font-heading--family);
+    font-size: max(3.5rem, calc(90 * var(--px, 0.0625rem)));
+    font-weight: 200;
+    line-height: 1;
+  }
+
+  .faq-answer__label {
+    margin: 0;
+    color: var(--color-accent);
+    font-size: var(--font-size-caption);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .faq-answer__question {
+    margin: max(var(--space-md), calc(28 * var(--px, 0.0625rem))) 0 0;
+    font-size: max(1.5rem, calc(36 * var(--px, 0.0625rem)));
+    font-weight: 400;
+    line-height: 1.2;
+  }
+
+  .faq-answer__question:focus {
+    outline: none;
+  }
+
+  .faq-answer__rule {
+    display: block;
+    inline-size: max(2.5rem, calc(52 * var(--px, 0.0625rem)));
+    block-size: 2px;
+    margin-block-start: var(--space-sm);
+    background-color: var(--color-text);
+  }
+
+  .faq-answer__text {
+    margin-block-start: max(var(--space-lg), calc(40 * var(--px, 0.0625rem)));
+    font-size: max(1rem, calc(22 * var(--px, 0.0625rem)));
+    line-height: 1.6;
+  }
+
+  .faq-answer__text > * {
+    margin: 0;
+  }
+
+  .faq-answer__text > * + * {
+    margin-block-start: var(--space-sm);
+  }
+
+  .faq-answer__footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-md);
+    margin-block-start: max(var(--space-xl), calc(55 * var(--px, 0.0625rem)));
+    padding-block-start: max(var(--space-lg), calc(32 * var(--px, 0.0625rem)));
+    border-block-start: 1px solid var(--color-card-border);
+  }
+
+  .faq-answer__footer[hidden] {
+    display: none;
+  }
+
+  .faq-answer__ask {
+    margin: 0;
+    font-size: var(--font-size-body-sm);
+  }
+
+  /* Figma ~40px tall at 1920; they follow the screen like the card (the theme's .button is fixed) */
+  .faq-answer__yes,
+  .faq-answer__human {
+    min-block-size: max(2.5rem, calc(40 * var(--px, 0.0625rem)));
+    padding-inline: max(1.25rem, calc(25 * var(--px, 0.0625rem)));
+    font-size: max(var(--font-size-caption), calc(16 * var(--px, 0.0625rem)));
+  }
+
+  /* YES: the glass pill (white, the glass shadows, no red border) */
+  .faq-answer__yes {
+    border-color: transparent;
+    box-shadow: var(--shadow-header);
+  }
+
+  .faq-answer__thanks {
+    margin: 0;
+    color: var(--color-accent);
+    font-size: var(--font-size-body-sm);
+  }
+
+  .faq-answer__thanks:empty {
+    display: none;
+  }
+
+  .faq-answer__thanks:not(:empty) {
+    margin-block-start: max(var(--space-xl), calc(55 * var(--px, 0.0625rem)));
+    padding-block-start: max(var(--space-lg), calc(32 * var(--px, 0.0625rem)));
+    border-block-start: 1px solid var(--color-card-border);
+  }
+
+  /* Tablets and phones (Variant10): one column: questions, then the answer card */
+  @media (max-width: 1099px) {
+    .faq-topic__panel {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas:
+        "head"
+        "list"
+        "card";
+      padding-inline: 0;
+    }
+
+    .faq[data-ready] .faq-answer {
+      position: relative;
+      inset-block-start: auto;
+      margin-block-start: var(--space-xl);
+      padding: var(--space-lg);
+    }
+  }
+
+  @media (max-width: 749px) {
+    .faq-topic__card {
+      min-block-size: 0;
+      padding: var(--space-sm);
+    }
+
+    .faq-topic__number {
+      font-size: 2.75rem;
+    }
+
+    .faq-topic__icon {
+      inline-size: 1.75rem;
+      block-size: 1.75rem;
+    }
+
+    .faq-topic__icon svg {
+      inline-size: 0.875rem;
+      block-size: 0.875rem;
+    }
+
+    .faq-topic__title {
+      margin-block-start: var(--space-md);
+      font-size: 1rem;
+    }
+
+    .faq-topic__text {
+      margin-block-start: var(--space-xs);
+      font-size: 0.75rem;
+    }
+
+    .faq-topic__count {
+      font-size: 0.5625rem;
+    }
+
+    .faq-topic__arrow {
+      inline-size: 1.5rem;
+      block-size: 1.5rem;
+    }
+
+    .faq-topic__arrow svg {
+      inline-size: 0.625rem;
+    }
+
+    /* Variant10: no topic header on phones once the pills name the topic */
+    .faq[data-ready] .faq-topic__head {
+      display: none;
+    }
+
+    .faq[data-ready] .faq-topic__panel {
+      margin-block-start: var(--space-lg);
+    }
+
+    .faq-answer__question {
+      font-size: 1.25rem;
+    }
+
+    .faq-answer__text {
+      font-size: var(--font-size-caption);
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.faq_topic",
+  "blocks": [{ "type": "_faq-question" }],
+  "settings": [
+    {
+      "type": "text",
+      "id": "title",
+      "label": "t:labels.title",
+      "default": "Order & Shipping"
+    },
+    {
+      "type": "text",
+      "id": "text",
+      "label": "t:labels.faq_topic_text",
+      "default": "Delivery windows, tracking, packaging"
+    },
+    {
+      "type": "select",
+      "id": "icon",
+      "label": "t:labels.icon",
+      "options": [
+        { "value": "box", "label": "t:options.faq_icon.box" },
+        { "value": "account", "label": "t:options.faq_icon.account" },
+        { "value": "returns", "label": "t:options.faq_icon.return" },
+        { "value": "card", "label": "t:options.faq_icon.card" },
+        { "value": "bottle", "label": "t:options.faq_icon.bottle" },
+        { "value": "truck", "label": "t:options.faq_icon.truck" },
+        { "value": "heart-bold", "label": "t:options.faq_icon.heart" },
+        { "value": "none", "label": "t:options.faq_icon.none" }
+      ],
+      "default": "box"
+    },
+    {
+      "type": "text",
+      "id": "handle",
+      "label": "t:labels.faq_topic_handle",
+      "info": "t:labels.faq_topic_handle_info"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.faq_topic",
+      "blocks": [
+        { "type": "_faq-question" }
+      ]
+    }
+  ]
+}
+{% endschema %}

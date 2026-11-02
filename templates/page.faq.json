@@ -1,0 +1,265 @@
+{
+  "sections": {
+    "faq": {
+      "type": "faq",
+      "blocks": {
+        "shipping": {
+          "type": "_faq-topic",
+          "settings": {
+            "title": "Order & Shipping",
+            "text": "Delivery windows, tracking, packaging",
+            "icon": "box",
+            "handle": "order-shipping"
+          },
+          "blocks": {
+            "order-shipping-1": {
+              "type": "_faq-question",
+              "settings": {
+                "question": "How long does delivery take?",
+                "answer": "<p>Complimentary express delivery arrives in 2–3 business days worldwide. Each parcel ships from the nearest atelier — Paris, New York, or Seoul — so nothing crosses more borders than it has to.</p>"
+              }
+            },
+            "order-shipping-2": {
+              "type": "_faq-question",
+              "settings": {
+                "question": "Where is my order right now?",
+                "answer": "<p>Open your account and choose Orders: every parcel has its live tracking link there. You also receive it by email the moment your order leaves the atelier.</p>"
+              }
+            },
+            "order-shipping-3": {
+              "type": "_faq-question",
+              "settings": {
+                "question": "Do you ship internationally?",
+                "answer": "<p>Yes, to more than 60 countries. Duties and taxes are shown at checkout, so there is nothing more to pay on delivery.</p>"
+              }
+            },
+            "order-shipping-4": {
+              "type": "_faq-question",
+              "settings": {
+                "question": "How is my order packaged?",
+                "answer": "<p>In recycled card and paper only, without plastic fillers. Refills travel in their own sleeve, ready to slip into your case.</p>"
+              }
+            }
+          },
+          "block_order": [
+            "order-shipping-1",
+            "order-shipping-2",
+            "order-shipping-3",
+            "order-shipping-4"
+          ]
+        },
+        "account": {
+          "type": "_faq-topic",
+          "settings": {
+            "title": "My Account",
+            "text": "Sign in, profile, saved details",
+            "icon": "account",
+            "handle": "my-account"
+          },
+          "blocks": {
+            "my-account-1": {
+              "type": "_faq-question",
+              "settings": {
+                "question": "How do I create an account?",
+                "answer": "<p>Choose Login in the top navigation and switch to Create Account. You only need a name, an email and a password — we never ask for anything we do not use.</p>"
+              }
+            },
+            "my-account-2": {
+              "type": "_faq-question",
+              "settings": {
+                "question": "I have forgotten my password.",
+                "answer": "<p>Choose Login, then Forgot your password, and enter your email. We send you a link to choose a new one; it stays valid for 24 hours.</p>"
+              }
+            },
+            "my-account-3": {
+              "type": "_faq-question",
+              "settings": {
+                "question": "Can I change my saved address?",
+                "answer": "<p>Yes. In your account, open Addresses to edit, add or remove one, and choose which is your default for checkout.</p>"
+              }
+            },
+            "my-account-4": {
+              "type": "_faq-question",
+              "settings": {
+                "question": "How do I close my account?",
+                "answer": "<p>Write to us from the contact page with the email of your account. We close it within two working days and confirm once your data is deleted.</p>"
+              }
+            }
+          },
+          "block_order": [
+            "my-account-1",
+            "my-account-2",
+            "my-account-3",
+            "my-account-4"
+          ]
+        },
+        "returns": {
+          "type": "_faq-topic",
+          "settings": {
+            "title": "Returns & Exchanges",
+            "text": "Sixty days, collected from your door",
+            "icon": "returns",
+            "handle": "returns-exchanges"
+          },
+          "blocks": {
+            "returns-exchanges-1": {
+              "type": "_faq-question",
+              "settings": {
+                "question": "What is your return policy?",
+                "answer": "<p>You have sixty days to return any unopened product, and thirty days for opened skincare that did not suit you. Returns are always free.</p>"
+              }
+            },
+            "returns-exchanges-2": {
+              "type": "_faq-question",
+              "settings": {
+                "question": "How do I start a return?",
+                "answer": "<p>Open the order in your account and choose Return items, or write to us. We book a courier to collect the parcel from your door.</p>"
+              }
+            },
+            "returns-exchanges-3": {
+              "type": "_faq-question",
+              "settings": {
+                "question": "Can I exchange a shade or size?",
+                "answer": "<p>Yes. Choose Exchange instead of Return and pick the new shade or size; we send it as soon as the courier has collected the first one.</p>"
+              }
+            },
+            "returns-exchanges-4": {
+              "type": "_faq-question",
+              "settings": {
+                "question": "When will I get my refund?",
+                "answer": "<p>Within five working days after the parcel reaches us, back to the card or account you paid with.</p>"
+              }
+            }
+          },
+          "block_order": [
+            "returns-exchanges-1",
+            "returns-exchanges-2",
+            "returns-exchanges-3",
+            "returns-exchanges-4"
+          ]
+        },
+        "payment": {
+          "type": "_faq-topic",
+          "settings": {
+            "title": "Payment & Billing",
+            "text": "Cards, invoices, promo codes",
+            "icon": "card",
+            "handle": "payment-billing"
+          },
+          "blocks": {
+            "payment-billing-1": {
+              "type": "_faq-question",
+              "settings": {
+                "question": "Which payment methods do you accept?",
+                "answer": "<p>All major cards, Shop Pay, Apple Pay, Google Pay and PayPal. The methods available in your country are shown at checkout.</p>"
+              }
+            },
+            "payment-billing-2": {
+              "type": "_faq-question",
+              "settings": {
+                "question": "Is my payment information secure?",
+                "answer": "<p>Yes. Payments are handled by Shopify on encrypted connections, and we never see or store your full card number.</p>"
+              }
+            },
+            "payment-billing-3": {
+              "type": "_faq-question",
+              "settings": {
+                "question": "Can I get an invoice for my order?",
+                "answer": "<p>Your order confirmation email is your receipt. For a company invoice with your tax number, write to us with the order number.</p>"
+              }
+            },
+            "payment-billing-4": {
+              "type": "_faq-question",
+              "settings": {
+                "question": "How do I use a promo code?",
+                "answer": "<p>Enter it in the Discount code field at checkout. One code applies per order, and the saving shows before you pay.</p>"
+              }
+            }
+          },
+          "block_order": [
+            "payment-billing-1",
+            "payment-billing-2",
+            "payment-billing-3",
+            "payment-billing-4"
+          ]
+        },
+        "products": {
+          "type": "_faq-topic",
+          "settings": {
+            "title": "Products & Ingredients",
+            "text": "Formulas, suitability, results",
+            "icon": "bottle",
+            "handle": "products-ingredients"
+          },
+          "blocks": {
+            "products-ingredients-1": {
+              "type": "_faq-question",
+              "settings": {
+                "question": "Are your formulas suitable for sensitive skin?",
+                "answer": "<p>Every formula is dermatologist-tested, fragrance-optional and free of drying alcohols. The Frost and Pearl lines are built specifically for reactive skin.</p>"
+              }
+            },
+            "products-ingredients-2": {
+              "type": "_faq-question",
+              "settings": {
+                "question": "Is the gold in your formulas real?",
+                "answer": "<p>Yes. Our gold-infused formulas use pure 24-carat gold leaf, suspended in small amounts for radiance; it is safe on skin and never coloured.</p>"
+              }
+            },
+            "products-ingredients-3": {
+              "type": "_faq-question",
+              "settings": {
+                "question": "How long until I see results?",
+                "answer": "<p>Most clients see a difference in texture within two weeks, and in tone and firmness after six to eight weeks of daily use.</p>"
+              }
+            },
+            "products-ingredients-4": {
+              "type": "_faq-question",
+              "settings": {
+                "question": "Do you test on animals?",
+                "answer": "<p>Never. OroSkin is cruelty-free and vegan, and none of our ingredient suppliers test on animals either.</p>"
+              }
+            }
+          },
+          "block_order": [
+            "products-ingredients-1",
+            "products-ingredients-2",
+            "products-ingredients-3",
+            "products-ingredients-4"
+          ]
+        }
+      },
+      "block_order": [
+        "shipping",
+        "account",
+        "returns",
+        "payment",
+        "products"
+      ],
+      "settings": {
+        "show_breadcrumb": true,
+        "eyebrow": "How can we help?",
+        "heading": "Ask us <em>anything.</em>",
+        "text": "<p>Find quick answers to your questions about our services, billing, or account setup. If you cannot find what you need, our team is always ready to assist you.</p>",
+        "ask_link": "shopify://pages/contact",
+        "section_width": "widest",
+        "scale_screen": true,
+        "text_scale": 110,
+        "color_scheme": "scheme-2",
+        "padding_top": 24,
+        "padding_bottom": 80,
+        "question_radius": 19,
+        "show_contact": true,
+        "contact_heading": "Still unanswered?",
+        "contact_text": "A real person replies within one working day — usually within the hour, Paris time.",
+        "contact_button_label": "Write message",
+        "contact_button_link": "shopify://pages/contact",
+        "contact_second_label": "Track order",
+        "contact_second_link": ""
+      }
+    }
+  },
+  "order": [
+    "faq"
+  ]
+}

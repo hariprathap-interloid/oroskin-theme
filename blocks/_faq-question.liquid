@@ -1,0 +1,142 @@
+{%- comment -%}
+  One question of an FAQ topic (design/briefs/faq.md, exports "Default-1" … "Default-5"): a row
+  "01 How long does delivery take?" with its answer.
+  - Without JS it's a <details>: the row opens and shows the answer under it.
+  - With the section's script (data-ready) the row becomes a button: the answer is hidden here and
+    copied into the topic's answer card on the right.
+  - Microdata (itemprop / itemtype) marks it as a Question with an Answer for search engines; the
+    section is the FAQPage around all of them.
+{%- endcomment -%}
+
+{%- if block.settings.question != blank -%}
+  <details
+    class="faq-question"
+    data-faq-question
+    itemscope
+    itemprop="mainEntity"
+    itemtype="https://schema.org/Question"
+    {{ block.shopify_attributes }}
+  >
+    <summary class="faq-question__row">
+      <span class="faq-question__number" aria-hidden="true"></span>
+      <span class="faq-question__text" itemprop="name">{{ block.settings.question | escape }}</span>
+    </summary>
+    <div
+      class="faq-question__answer"
+      data-faq-answer
+      itemscope
+      itemprop="acceptedAnswer"
+      itemtype="https://schema.org/Answer"
+    >
+      <div itemprop="text">{{ block.settings.answer }}</div>
+    </div>
+  </details>
+{%- endif -%}
+
+{% stylesheet %}
+  /*
+    Figma 1920 (Default-1): rows 712 x 68, one every 95px (gap ~27); "01" body ~20px accent and the
+    question body ~22px; the left edge is a thin pale accent "(" (a 2px border, rounded by the
+    section's "Question corner radius" setting, --faq-row-radius, default 19px). Open / active: fill accent ~5%, radius on the right too, accent edge, accent question.
+  */
+  .faq-question {
+    counter-increment: faq-question;
+  }
+
+  .faq-question__row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    min-block-size: max(3.25rem, calc(68 * var(--px, 0.0625rem)));
+    box-sizing: border-box;
+    padding: var(--space-sm) var(--space-lg) var(--space-sm) max(var(--space-md), calc(22 * var(--px, 0.0625rem)));
+    border-inline-start: 2px solid color-mix(in srgb, var(--color-accent) 30%, transparent);
+    /* Full pill radius always: without a fill only the left "(" edge shows; with the hover or active fill the right end is round too */
+    border-radius: var(--faq-row-radius, 19px);
+    font-size: max(1.0625rem, calc(22 * var(--px, 0.0625rem)));
+    line-height: 1.35;
+    list-style: none;
+    cursor: pointer;
+    transition:
+      background-color var(--duration-fast) var(--ease-out),
+      color var(--duration-fast) var(--ease-out),
+      border-color var(--duration-fast) var(--ease-out);
+  }
+
+  .faq-question__row::-webkit-details-marker {
+    display: none;
+  }
+
+  .faq-question__number::before {
+    content: counter(faq-question, decimal-leading-zero);
+  }
+
+  .faq-question__number {
+    flex-shrink: 0;
+    color: var(--color-accent);
+    font-size: 0.9em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .faq-question__row:hover {
+    background-color: color-mix(in srgb, var(--color-accent) 3%, transparent);
+  }
+
+  .faq-question[open] > .faq-question__row,
+  .faq-question.is-active > .faq-question__row {
+    border-inline-start-color: var(--color-accent);
+    border-radius: var(--faq-row-radius, 19px);
+    background-color: color-mix(in srgb, var(--color-accent) 5%, transparent);
+    color: var(--color-accent);
+  }
+
+  .faq-question__answer {
+    padding: var(--space-md) var(--space-lg) var(--space-lg) calc(var(--space-lg) + 2.5ch);
+    line-height: 1.6;
+  }
+
+  .faq-question__answer > div > * {
+    margin: 0;
+  }
+
+  .faq-question__answer > div > * + * {
+    margin-block-start: var(--space-sm);
+  }
+
+  /* With the script the answer lives in the answer card; the row is a button that never "opens" */
+  .faq[data-ready] .faq-question__answer {
+    display: none;
+  }
+
+  @media (max-width: 749px) {
+    .faq-question__row {
+      gap: var(--space-sm);
+      padding-inline-end: var(--space-md);
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.faq_question",
+  "settings": [
+    {
+      "type": "text",
+      "id": "question",
+      "label": "t:labels.faq_question",
+      "default": "How long does delivery take?"
+    },
+    {
+      "type": "richtext",
+      "id": "answer",
+      "label": "t:labels.faq_answer",
+      "default": "<p>Write the answer here.</p>"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.faq_question"
+    }
+  ]
+}
+{% endschema %}
