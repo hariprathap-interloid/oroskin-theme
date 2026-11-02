@@ -1,0 +1,292 @@
+{%- comment -%}
+  About values (M8.4 part 6, design/briefs/about-us.md §4.6, exports "Default-9" (desktop),
+  "Variant49" / "Variant50" (phone)): "What we stand for" / "Our core Values" and one Value card
+  block per value, numbered 01, 02… by a CSS counter.
+  Desktop: 3 columns; with "Feature the first card" the first card is two rows tall (its photo at
+  the bottom). Phones and tablets: the first card full width (photo beside the text), the others in
+  2 columns. The cards fade up one after another (the global animation setting).
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+-%}
+
+{% render 'screen-scale' %}
+
+{%- comment -%}
+  The cards' numbers use the heading font at a thin weight (200) and the titles at semibold (600):
+  the page only loads regular and bold, so this section loads those two weights itself
+  (font_modify returns nothing when the chosen font has no such cut, and the nearest one is used).
+{%- endcomment -%}
+{% style %}
+  {{ settings.type_heading_font | font_modify: 'weight', '200' | font_face: font_display: 'swap' }}
+  {{ settings.type_heading_font | font_modify: 'weight', '600' | font_face: font_display: 'swap' }}
+{% endstyle %}
+
+<div
+  class="about-values full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};"
+>
+  <div class="about-values__inner">
+    {%- if section.settings.eyebrow != blank or section.settings.heading != blank -%}
+      <header class="about-values__header">
+        {%- if section.settings.eyebrow != blank -%}
+          <p class="eyebrow eyebrow--center">{{ section.settings.eyebrow | escape }}</p>
+        {%- endif -%}
+        {%- if section.settings.heading != blank -%}
+          <h2 class="about-values__heading">{{ section.settings.heading }}</h2>
+        {%- endif -%}
+      </header>
+    {%- endif -%}
+
+    {%- if section.blocks.size > 0 -%}
+      <animate-on-scroll
+        class="about-values__list{% if section.settings.feature_first %} about-values__list--feature{% endif %}"
+      >
+        {% content_for 'blocks' %}
+      </animate-on-scroll>
+    {%- elsif request.design_mode -%}
+      <p class="about-values__empty">{{ 'about.values_empty' | t }}</p>
+    {%- endif -%}
+  </div>
+</div>
+
+{% stylesheet %}
+  /*
+    Figma 1920 (Default-9): eyebrow y 148, heading ~66px y 205–265 ("Our Core *Values*", accent
+    upright); cards from y 306: 3 columns 538 wide (x 103 / 691 / 1279, gap ~50), 2 rows ~326
+    tall with a ~48 gap; card 01 spans both rows.
+  */
+  .about-values {
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+    background-color: var(--color-background);
+  }
+
+  .about-values__inner {
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  .about-values__header {
+    margin-block-end: max(var(--space-xl), calc(40 * var(--px, 0.0625rem)));
+    text-align: center;
+  }
+
+  .about-values__heading {
+    margin: max(var(--space-lg), calc(40 * var(--px, 0.0625rem))) 0 0;
+    font-size: max(2rem, calc(66 * var(--px, 0.0625rem)));
+    line-height: 1.15;
+  }
+
+  .about-values__heading em {
+    color: var(--color-accent);
+    font-style: normal;
+  }
+
+  .about-values__list {
+    counter-reset: value-card;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-rows: minmax(max(16rem, calc(326 * var(--px, 0.0625rem))), auto);
+    gap: max(var(--space-xl), calc(48 * var(--px, 0.0625rem))) max(var(--space-xl), calc(50 * var(--px, 0.0625rem)));
+  }
+
+  /* Shopify wraps each block in a div: the wrappers are the grid items */
+  .about-values__list--feature > :first-child {
+    grid-row: span 2;
+  }
+
+  /* The cards fade up one after another */
+  .about-values__list > :nth-child(3n + 2) .value-card {
+    --animate-delay: 100ms;
+  }
+
+  .about-values__list > :nth-child(3n + 3) .value-card {
+    --animate-delay: 200ms;
+  }
+
+  .about-values__empty {
+    margin: 0;
+    text-align: center;
+  }
+
+  /* Phones and tablets (Variant49, answer 12): 2 columns, the featured card full width */
+  @media (max-width: 1199px) {
+    .about-values__list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-auto-rows: auto;
+      gap: var(--space-md);
+    }
+
+    .about-values__list--feature > :first-child {
+      grid-column: 1 / -1;
+      grid-row: auto;
+    }
+
+    .about-values__list > :nth-child(n) .value-card {
+      --animate-delay: 0ms;
+    }
+
+    .about-values__list > :nth-child(odd) .value-card {
+      --animate-delay: 100ms;
+    }
+  }
+
+  /* Phones: one card per row, so each card has room for its text */
+  @media (max-width: 749px) {
+    .about-values__list {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-sm);
+    }
+
+    .about-values__list > :nth-child(n) .value-card {
+      --animate-delay: 0ms;
+    }
+
+    .about-values__heading {
+      margin-block-start: var(--space-md);
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.about_values",
+  "tag": "section",
+  "class": "about-values-section",
+  "enabled_on": {
+    "templates": ["page"]
+  },
+  "blocks": [{ "type": "_value-card" }],
+  "max_blocks": 12,
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "What we stand for"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.italic_accent_info",
+      "default": "Our core <em>Values</em>"
+    },
+    {
+      "type": "checkbox",
+      "id": "feature_first",
+      "label": "t:labels.values_feature_first",
+      "info": "t:labels.values_feature_first_info",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "checkbox",
+      "id": "scale_screen",
+      "label": "t:labels.scale_screen",
+      "info": "t:labels.scale_screen_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "text_scale",
+      "label": "t:labels.text_scale",
+      "info": "t:labels.text_scale_info",
+      "min": 100,
+      "max": 130,
+      "step": 5,
+      "unit": "%",
+      "default": 110,
+      "visible_if": "{{ section.settings.scale_screen }}"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 120
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 120
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.about_values",
+      "blocks": [
+        {
+          "type": "_value-card",
+          "settings": {
+            "icon": "diamond",
+            "title": "Uncompromising curation"
+          }
+        },
+        {
+          "type": "_value-card",
+          "settings": {
+            "icon": "lashes",
+            "title": "Conscious beauty",
+            "text": "<p>Sustainability is not a trend: it's our responsibility.</p>"
+          }
+        },
+        {
+          "type": "_value-card",
+          "settings": {
+            "icon": "heart-bold",
+            "title": "Client above all",
+            "text": "<p>Every decision is made with one person in mind: the client who trusts us with their ritual.</p>"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

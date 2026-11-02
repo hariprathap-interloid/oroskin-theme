@@ -1,0 +1,694 @@
+{%- comment -%}
+  About pillars (M8.4 part 3, design/briefs/about-us.md §4.3, exports "Default-2", "Default-12",
+  "Default-13", mobile "Variant45-3"): Mission / Vision / Promise as slides that change while the
+  visitor scrolls, next to two columns of photos.
+
+  - Slides: one Pillar block each (blocks/_pillar.liquid). With the script, the section is one
+    screen tall per slide and its panel is sticky: scrolling through it changes the slide (01 / 03,
+    the progress bars) instead of moving the page. Without JS the slides simply stack.
+  - Photos: one shared set (Photo 1–8, section settings), split over two columns (odd photos left,
+    even right), as in the exports where the same photos move between slides. While scrolling the
+    left column moves up and the right one down: smoothly with "Photos drift while scrolling",
+    one step per slide without it (and for visitors who reduce motion).
+  - The script writes --progress (0 → 1) on the section; the CSS turns it into the column moves.
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+  assign slide_count = section.blocks.size
+
+  assign photos = ''
+  for i in (1..8)
+    assign photo_key = 'image_' | append: i
+    if section.settings[photo_key] != blank
+      assign photos = photos | append: photo_key | append: ','
+    endif
+  endfor
+  assign photo_keys = photos | split: ','
+-%}
+
+{% render 'screen-scale' %}
+
+<about-pillars
+  class="about-pillars full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
+  style="--slides: {{ slide_count | at_least: 1 }}; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};"
+  {% if section.settings.drift %}
+    data-drift
+  {% endif %}
+>
+  <div class="about-pillars__panel">
+    <div class="about-pillars__inner">
+      <div class="about-pillars__story">
+        {%- if slide_count > 1 -%}
+          <div class="about-pillars__progress" aria-hidden="true">
+            {%- for block in section.blocks -%}
+              <span class="about-pillars__bar{% if forloop.first %} is-active{% endif %}"></span>
+            {%- endfor -%}
+            <span class="about-pillars__count">
+              <span class="about-pillars__count-current">01</span> /
+              {% if slide_count < 10 %}0{% endif %}{{ slide_count -}}
+            </span>
+          </div>
+        {%- endif -%}
+
+        {%- if slide_count > 0 -%}
+          <div class="about-pillars__slides">
+            {% content_for 'blocks' %}
+          </div>
+        {%- elsif request.design_mode -%}
+          <p class="about-pillars__empty">{{ 'about.pillars_empty' | t }}</p>
+        {%- endif -%}
+      </div>
+
+      {%- if photo_keys.size > 0 or request.design_mode -%}
+        <div class="about-pillars__photos" aria-hidden="true">
+          {%- for column in (1..2) -%}
+            <div class="about-pillars__column about-pillars__column--{{ column }}">
+              {%- if photo_keys.size > 0 -%}
+                {%- for photo_key in photo_keys -%}
+                  {%- liquid
+                    # Odd photos (1st, 3rd…) go left, even ones right
+                    assign photo_column = 2
+                    assign odd = forloop.index | modulo: 2
+                    if odd == 1
+                      assign photo_column = 1
+                    endif
+                  -%}
+                  {%- if photo_column == column -%}
+                    {% render 'image',
+                      image: section.settings[photo_key],
+                      class: 'about-pillars__photo',
+                      alt: '',
+                      sizes: '(min-width: 1200px) 21vw, (min-width: 750px) 40vw, 30vw',
+                      widths: '240, 360, 480, 640, 800',
+                      loading: 'lazy'
+                    %}
+                  {%- endif -%}
+                {%- endfor -%}
+              {%- else -%}
+                {%- comment -%} Editor only: a hint of the photo columns until photos are chosen {%- endcomment -%}
+                {%- for i in (1..3) -%}
+                  <div class="about-pillars__photo about-pillars__photo--placeholder">
+                    {{ 'lifestyle-1' | placeholder_svg_tag }}
+                  </div>
+                {%- endfor -%}
+              {%- endif -%}
+            </div>
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+    </div>
+  </div>
+</about-pillars>
+
+{% stylesheet %}
+  /*
+    Figma 1920 (Default-2): text column x 55–815; progress y 197 (3 bars: active 66px accent,
+    others ~30px accent 20%, then "01 / 03"); photos from y 155 to the screen's bottom, columns
+    x 1068 (396 wide) and x 1488 (387 wide), gap 24, square corners, a white fade over the last
+    ~200px; the right column starts higher. Sizes: Figma px x --px with rem floors, or tokens.
+  */
+  .about-pillars {
+    --progress: 0;
+    --drift-distance: 35%;
+
+    display: block;
+    counter-reset: pillar;
+    background-color: var(--color-background);
+  }
+
+  .about-pillars__inner {
+    display: grid;
+    gap: var(--space-2xl);
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  @media (min-width: 990px) {
+    .about-pillars__inner {
+      grid-template-columns: minmax(0, 1013fr) minmax(0, 807fr);
+      column-gap: var(--space-xl);
+    }
+  }
+
+  .about-pillars__story {
+    padding-block: max(6.5rem, calc(185 * var(--px, 0.0625rem))) var(--space-2xl);
+  }
+
+  /* ---------- Progress ---------- */
+  .about-pillars__progress {
+    display: flex;
+    align-items: center;
+    gap: max(var(--space-md), calc(17 * var(--px, 0.0625rem)));
+    margin-block-end: max(var(--space-xl), calc(60 * var(--px, 0.0625rem)));
+    font-size: var(--font-size-label);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+  }
+
+  .about-pillars__bar {
+    inline-size: max(1.25rem, calc(30 * var(--px, 0.0625rem)));
+    block-size: 2px;
+    background-color: color-mix(in srgb, var(--color-accent) 20%, transparent);
+  }
+
+  .about-pillars__bar.is-active {
+    inline-size: max(2.5rem, calc(66 * var(--px, 0.0625rem)));
+    background-color: var(--color-accent);
+  }
+
+  .about-pillars__count {
+    margin-inline-start: max(var(--space-md), calc(15 * var(--px, 0.0625rem)));
+    white-space: nowrap;
+  }
+
+  .about-pillars__slides > * + * {
+    margin-block-start: var(--space-3xl);
+  }
+
+  .about-pillars__empty {
+    margin: 0;
+  }
+
+  /* ---------- Photos ---------- */
+  .about-pillars__photos {
+    display: grid;
+    grid-template-columns: minmax(0, 396fr) minmax(0, 387fr);
+    align-items: start;
+    position: relative;
+    gap: max(var(--space-md), calc(24 * var(--px, 0.0625rem)));
+    overflow: hidden;
+  }
+
+  /*
+    The fade across the bottom of the screen (Figma "image 680": full width, 195px tall, from
+    y 836 to the frame's bottom, over the photos and the text side alike): clear at the top left,
+    the background at the bottom right. It uses the scheme's background, so it's white on the
+    white scheme and still blends into any other scheme.
+  */
+  .about-pillars__panel {
+    position: relative;
+  }
+
+  .about-pillars__panel::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0;
+    z-index: 1;
+    block-size: max(7rem, calc(195 * var(--px, 0.0625rem))); /* 195px at 1920 */
+    /*
+      In a wide, short band the slanted gradient is already partly white along its top edge on the
+      right, which drew a hard line (like a box). This mask fades the band in from its top, so it
+      has no edge and melts into the photos like an overlay.
+    */
+    -webkit-mask-image: linear-gradient(to bottom, #00000000, #000000 70%);
+    mask-image: linear-gradient(to bottom, #00000000, #000000 70%);
+    background: linear-gradient(
+      163.39deg,
+      color-mix(in srgb, var(--color-background) 0%, transparent) 11.49%,
+      var(--color-background) 96.29%
+    );
+    pointer-events: none;
+  }
+
+  .about-pillars__column {
+    display: grid;
+    gap: inherit;
+  }
+
+  .about-pillars__photo,
+  .about-pillars__photo img {
+    display: block;
+    inline-size: 100%;
+  }
+
+  .about-pillars__photo--placeholder {
+    aspect-ratio: 4 / 5;
+    background-color: var(--color-tint-subtle);
+  }
+
+  .about-pillars__photo--placeholder svg {
+    inline-size: 100%;
+    block-size: 100%;
+    fill: var(--color-tint-border);
+  }
+
+  /*
+    ---------- With the script (data-ready, from 990px) ----------
+    The section is one screen tall per slide; its panel sticks to the top for the whole way, so the
+    visitor scrolls "through" it. Slides lie on top of each other, the current one shows.
+  */
+  @media (min-width: 990px) {
+    .about-pillars[data-ready] {
+      block-size: calc(var(--slides) * 100svh);
+    }
+
+    .about-pillars[data-ready] .about-pillars__panel {
+      position: sticky;
+      inset-block-start: 0;
+      block-size: 100svh;
+      overflow: hidden;
+    }
+
+    .about-pillars[data-ready] .about-pillars__inner {
+      block-size: 100%;
+    }
+
+    .about-pillars[data-ready] .about-pillars__photos {
+      align-self: stretch;
+      margin-block-start: max(6rem, calc(155 * var(--px, 0.0625rem)));
+    }
+
+    /* The left column moves up, the right one (starting higher) moves down */
+    .about-pillars[data-ready] .about-pillars__column--1 {
+      translate: 0 calc(var(--progress) * var(--drift-distance) * -1);
+    }
+
+    .about-pillars[data-ready] .about-pillars__column--2 {
+      translate: 0 calc((var(--progress) - 1) * var(--drift-distance));
+    }
+  }
+
+  .about-pillars[data-ready] .about-pillars__slides {
+    display: grid;
+  }
+
+  /*
+    Shopify wraps every theme block in its own <div class="shopify-block">: the wrappers are the
+    direct children (stacked in one cell), the .pillar inside each one fades
+  */
+  .about-pillars[data-ready] .about-pillars__slides > * {
+    grid-area: 1 / 1;
+    margin: 0;
+  }
+
+  /*
+    The slide change, line by line (label, heading, text, checklist):
+    - waiting slides: invisible, already placed where they will come from (--enter-from: below when
+      scrolling down, above when scrolling back; the script sets it), no transition, so they jump
+      there unseen;
+    - the leaving slide (is-leaving): fades out quickly, moving the other way;
+    - the new slide (is-active): its lines rise into place one after another, starting once the old
+      one has mostly gone, so the two texts never overlap in a muddle.
+    --motion: 0 for visitors who reduce motion: then it's a plain, quick fade.
+  */
+  .about-pillars {
+    --enter-from: 2rem;
+    --motion: 1;
+  }
+
+  .about-pillars[data-ready] .pillar {
+    pointer-events: none;
+  }
+
+  .about-pillars[data-ready] .pillar.is-active {
+    pointer-events: auto;
+  }
+
+  .about-pillars[data-ready] .pillar > * {
+    opacity: 0;
+    translate: 0 calc(var(--enter-from) * var(--motion));
+  }
+
+  .about-pillars[data-ready] .pillar.is-leaving > * {
+    translate: 0 calc(var(--enter-from) * var(--motion) * -0.5);
+    transition:
+      opacity 280ms ease-in,
+      translate 380ms ease-in;
+  }
+
+  .about-pillars[data-ready] .pillar.is-active > * {
+    opacity: 1;
+    translate: 0 0;
+    transition:
+      opacity 600ms var(--ease-out) calc(220ms + var(--line, 0) * 90ms),
+      translate 900ms var(--ease-out) calc(220ms + var(--line, 0) * 90ms);
+  }
+
+  .about-pillars[data-ready] .pillar > :nth-child(2) {
+    --line: 1;
+  }
+
+  .about-pillars[data-ready] .pillar > :nth-child(3) {
+    --line: 2;
+  }
+
+  .about-pillars[data-ready] .pillar > :nth-child(n + 4) {
+    --line: 3;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .about-pillars {
+      --motion: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .about-pillars__bar {
+      transition:
+        inline-size var(--duration-slow) var(--ease-out),
+        background-color var(--duration-slow) var(--ease-out);
+    }
+
+    /* One step per slide (no drift): the columns glide to their new place */
+    .about-pillars[data-ready]:not([data-drift-on]) .about-pillars__column {
+      transition: translate 1s var(--ease-out);
+    }
+  }
+
+  /*
+    ---------- Phones and tablets (Variant45-3) ----------
+    The text, then the photos as two rows sliding sideways (left row to the left, right row to the
+    right) while the slide changes. The section stays one screen tall per slide.
+  */
+  @media (max-width: 989px) {
+    .about-pillars[data-ready] {
+      block-size: calc(var(--slides) * 100svh);
+    }
+
+    .about-pillars[data-ready] .about-pillars__panel {
+      position: sticky;
+      inset-block-start: 0;
+      display: flex;
+      flex-direction: column;
+      block-size: 100svh;
+      overflow: hidden;
+    }
+
+    .about-pillars__inner {
+      gap: var(--space-lg);
+    }
+
+    .about-pillars__story {
+      padding-block: 6rem 0;
+    }
+
+    .about-pillars__photos {
+      grid-template-columns: none;
+      margin-inline: calc(var(--page-margin) * -1);
+    }
+
+    .about-pillars__column {
+      display: flex;
+      inline-size: max-content;
+    }
+
+    .about-pillars__column--2 {
+      margin-inline-start: calc(var(--page-margin) * -2);
+    }
+
+    .about-pillars__photo,
+    .about-pillars__photo img {
+      inline-size: auto;
+      block-size: 7.25rem;
+    }
+
+    .about-pillars__photo img {
+      aspect-ratio: auto;
+      object-fit: cover;
+    }
+
+    .about-pillars__photo--placeholder {
+      aspect-ratio: 1;
+    }
+
+    .about-pillars[data-ready] .about-pillars__column--1 {
+      translate: calc(var(--progress) * var(--drift-distance) * -1) 0;
+    }
+
+    .about-pillars[data-ready] .about-pillars__column--2 {
+      translate: calc((var(--progress) - 1) * var(--drift-distance)) 0;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <about-pillars>: turns scrolling through the (tall) section into slide changes.
+   *
+   * update() runs at most once per frame while the section is on screen (an IntersectionObserver
+   * adds and removes the scroll listener). It measures how far the visitor is through the section
+   * (0 at its top, 1 at its end), shows slide floor(progress x slides), and writes --progress:
+   * - "Photos drift while scrolling" on (data-drift) and motion allowed: the exact progress, so the
+   *   photo columns follow the scroll smoothly (data-drift-on);
+   * - otherwise one step per slide (0, 0.5, 1 for three slides): the columns glide once per slide.
+   * In the theme editor, selecting a Pillar block scrolls to its slide.
+   */
+  class AboutPillars extends HTMLElement {
+    connectedCallback() {
+      this.slides = [...this.querySelectorAll('.pillar')];
+      if (!this.slides.length) return;
+
+      this.bars = [...this.querySelectorAll('.about-pillars__bar')];
+      this.counter = this.querySelector('.about-pillars__count-current');
+      const motion = window.matchMedia('(prefers-reduced-motion: no-preference)');
+      this.drift = this.hasAttribute('data-drift') && motion.matches;
+      this.toggleAttribute('data-drift-on', this.drift);
+      this.current = -1;
+
+      this.onScroll = () => {
+        if (this.frame) return;
+        this.frame = requestAnimationFrame(() => {
+          this.frame = null;
+          this.update();
+        });
+      };
+
+      this.visibility = new IntersectionObserver(([entry]) => {
+        if (entry.isIntersecting) {
+          window.addEventListener('scroll', this.onScroll, { passive: true });
+          window.addEventListener('resize', this.onScroll);
+          this.update();
+        } else {
+          window.removeEventListener('scroll', this.onScroll);
+          window.removeEventListener('resize', this.onScroll);
+        }
+      });
+
+      this.setAttribute('data-ready', '');
+      this.visibility.observe(this);
+      this.activate(0);
+
+      this.addEventListener('shopify:block:select', (event) => this.scrollToSlide(event.target));
+    }
+
+    disconnectedCallback() {
+      clearTimeout(this.leaveTimer);
+      this.visibility?.disconnect();
+      window.removeEventListener('scroll', this.onScroll);
+      window.removeEventListener('resize', this.onScroll);
+    }
+
+    /** 0 at the section's top, 1 once its end reaches the bottom of the screen */
+    progress() {
+      const rect = this.getBoundingClientRect();
+      const travel = rect.height - window.innerHeight;
+      if (travel <= 0) return 0;
+      return Math.min(Math.max(-rect.top / travel, 0), 1);
+    }
+
+    update() {
+      const count = this.slides.length;
+      const progress = this.progress();
+      const index = Math.min(Math.floor(progress * count), count - 1);
+      const step = count > 1 ? index / (count - 1) : 0;
+
+      this.style.setProperty('--progress', String(this.drift ? progress : step));
+      this.activate(index);
+    }
+
+    activate(index) {
+      if (index === this.current) return;
+      const previous = this.current;
+      this.current = index;
+
+      // Scrolling down: the new lines come up from below; back up: down from above
+      this.style.setProperty('--enter-from', index < previous ? '-2rem' : '2rem');
+
+      clearTimeout(this.leaveTimer);
+      this.slides.forEach((slide, i) => {
+        slide.classList.toggle('is-leaving', i === previous);
+        slide.classList.toggle('is-active', i === index);
+      });
+      // The leaving slide is gone after ~400ms: back to "waiting", unseen
+      this.leaveTimer = setTimeout(() => {
+        this.slides.forEach((slide) => slide.classList.remove('is-leaving'));
+      }, 450);
+      this.bars.forEach((bar, i) => bar.classList.toggle('is-active', i === index));
+      if (this.counter) this.counter.textContent = String(index + 1).padStart(2, '0');
+    }
+
+    scrollToSlide(target) {
+      const index = this.slides.indexOf(target.closest?.('.pillar'));
+      if (index < 0) return;
+
+      const top = this.getBoundingClientRect().top + window.scrollY;
+      const travel = this.offsetHeight - window.innerHeight;
+      window.scrollTo({ top: top + (travel * (index + 0.5)) / this.slides.length });
+    }
+  }
+
+  if (!customElements.get('about-pillars')) customElements.define('about-pillars', AboutPillars);
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.about_pillars",
+  "tag": "section",
+  "class": "about-pillars-section",
+  "enabled_on": {
+    "templates": ["page"]
+  },
+  "blocks": [{ "type": "_pillar" }],
+  "max_blocks": 6,
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "t:labels.about_pillars_help"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.pillars_photos"
+    },
+    {
+      "type": "paragraph",
+      "content": "t:labels.pillars_photos_info"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_1",
+      "label": "t:labels.photo_1"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_2",
+      "label": "t:labels.photo_2"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_3",
+      "label": "t:labels.photo_3"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_4",
+      "label": "t:labels.photo_4"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_5",
+      "label": "t:labels.photo_5"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_6",
+      "label": "t:labels.photo_6"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_7",
+      "label": "t:labels.photo_7"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_8",
+      "label": "t:labels.photo_8"
+    },
+    {
+      "type": "checkbox",
+      "id": "drift",
+      "label": "t:labels.pillars_drift",
+      "info": "t:labels.pillars_drift_info",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "checkbox",
+      "id": "scale_screen",
+      "label": "t:labels.scale_screen",
+      "info": "t:labels.scale_screen_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "text_scale",
+      "label": "t:labels.text_scale",
+      "info": "t:labels.text_scale_info",
+      "min": 100,
+      "max": 130,
+      "step": 5,
+      "unit": "%",
+      "default": 110,
+      "visible_if": "{{ section.settings.scale_screen }}"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.about_pillars",
+      "blocks": [
+        {
+          "type": "_pillar",
+          "settings": {
+            "label": "Mission",
+            "heading": "Make beauty you can read as easily as you can wear.",
+            "checklist": "Full dose disclosure on all 68 formulas\nNine named growers, long-term contracts\nRefillable glass and aluminium only"
+          }
+        },
+        {
+          "type": "_pillar",
+          "settings": {
+            "label": "Vision",
+            "heading": "A beauty house measured in decades, not launches.",
+            "checklist": "Zero virgin plastic across the line\nEvery claim backed by in-vivo panels\nFormulas revised, not replaced"
+          }
+        },
+        {
+          "type": "_pillar",
+          "settings": {
+            "label": "Promise",
+            "heading": "Three quiet minutes that actually do something.",
+            "checklist": "11-second absorption standard\n6-hour wear verification on skin\nVegan, cruelty-free, dermatologist-reviewed"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

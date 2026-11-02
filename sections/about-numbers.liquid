@@ -1,0 +1,375 @@
+{%- comment -%}
+  About numbers (M8.4 part 7, design/briefs/about-us.md §4.7, exports "Default-10", "big"):
+  "By the numbers" / "Proof, not promises." and one Stat figure block per number.
+  Desktop: 4 square cards in a row, set at staggered heights (Default-10, "Stagger the cards").
+  Phones and tablets: 2 x 2. The cards fade up one after another and each number counts up from 0
+  once, when its card is in view (only with animations on and motion allowed).
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+-%}
+
+{% render 'screen-scale' %}
+
+{%- comment -%} The titles are semibold (600): the page only loads regular and bold {%- endcomment -%}
+{% style %}
+  {{ settings.type_heading_font | font_modify: 'weight', '600' | font_face: font_display: 'swap' }}
+{% endstyle %}
+
+<about-numbers
+  class="about-numbers full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};"
+>
+  <div class="about-numbers__inner">
+    {%- if section.settings.eyebrow != blank or section.settings.heading != blank -%}
+      <header class="about-numbers__header">
+        {%- if section.settings.eyebrow != blank -%}
+          <p class="eyebrow eyebrow--center">{{ section.settings.eyebrow | escape }}</p>
+        {%- endif -%}
+        {%- if section.settings.heading != blank -%}
+          <h2 class="about-numbers__heading">{{ section.settings.heading }}</h2>
+        {%- endif -%}
+      </header>
+    {%- endif -%}
+
+    {%- if section.blocks.size > 0 -%}
+      <animate-on-scroll
+        class="about-numbers__list{% if section.settings.stagger %} about-numbers__list--stagger{% endif %}"
+      >
+        {% content_for 'blocks' %}
+      </animate-on-scroll>
+    {%- elsif request.design_mode -%}
+      <p class="about-numbers__empty">{{ 'about.numbers_empty' | t }}</p>
+    {%- endif -%}
+  </div>
+</about-numbers>
+
+{% stylesheet %}
+  /*
+    Figma 1920 (Default-10): eyebrow y 148, heading ~66px y 205–265 ("*Proof,* not promises.",
+    accent upright); 4 cards 371x371 at x 183 / 598 / 1015 / 1430 (gap ~45, row ~1618 wide);
+    card tops staggered y 330 / 437 / 357 / 408 (0 / 107 / 27 / 78 below the first).
+  */
+  .about-numbers {
+    display: block;
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+    background-color: var(--color-background);
+  }
+
+  .about-numbers__inner {
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  .about-numbers__header {
+    margin-block-end: max(var(--space-xl), calc(65 * var(--px, 0.0625rem)));
+    text-align: center;
+  }
+
+  .about-numbers__heading {
+    margin: max(var(--space-lg), calc(40 * var(--px, 0.0625rem))) 0 0;
+    font-size: max(2rem, calc(66 * var(--px, 0.0625rem)));
+    line-height: 1.15;
+  }
+
+  .about-numbers__heading em {
+    color: var(--color-accent);
+    font-style: normal;
+  }
+
+  .about-numbers__list {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 371fr));
+    align-items: start;
+    gap: max(var(--space-lg), calc(45 * var(--px, 0.0625rem)));
+    max-inline-size: calc(1618 * var(--px, 0.0625rem));
+    margin-inline: auto;
+  }
+
+  /* Staggered heights (Shopify wraps each block in a div: the wrappers are the grid items) */
+  .about-numbers__list--stagger > :nth-child(4n + 2) {
+    margin-block-start: calc(107 * var(--px, 0.0625rem));
+  }
+
+  .about-numbers__list--stagger > :nth-child(4n + 3) {
+    margin-block-start: calc(27 * var(--px, 0.0625rem));
+  }
+
+  .about-numbers__list--stagger > :nth-child(4n + 4) {
+    margin-block-start: calc(78 * var(--px, 0.0625rem));
+  }
+
+  /* The cards fade up one after another */
+  .about-numbers__list > :nth-child(4n + 2) .stat-figure {
+    --animate-delay: 100ms;
+  }
+
+  .about-numbers__list > :nth-child(4n + 3) .stat-figure {
+    --animate-delay: 200ms;
+  }
+
+  .about-numbers__list > :nth-child(4n + 4) .stat-figure {
+    --animate-delay: 300ms;
+  }
+
+  .about-numbers__empty {
+    margin: 0;
+    text-align: center;
+  }
+
+  /* Phones and tablets (brief §8): 2 x 2, no stagger */
+  @media (max-width: 1199px) {
+    .about-numbers__list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-md);
+      max-inline-size: 48rem;
+    }
+
+    .about-numbers__list--stagger > :nth-child(n) {
+      margin-block-start: 0;
+    }
+
+    .about-numbers__list > :nth-child(n) .stat-figure {
+      --animate-delay: 0ms;
+    }
+
+    .about-numbers__list > :nth-child(even) .stat-figure {
+      --animate-delay: 100ms;
+    }
+  }
+
+  @media (max-width: 749px) {
+    .about-numbers__list {
+      gap: var(--space-sm);
+    }
+
+    .about-numbers__heading {
+      margin-block-start: var(--space-md);
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <about-numbers>: counts each card's number up from 0 once, when the card is in view.
+   *
+   * The real value is the data-count attribute (also in a visually hidden copy for screen readers);
+   * only the visible, aria-hidden digits change. The count keeps the value's decimals ("4.9" counts
+   * 0.0 → 4.9). A value that isn't a plain number (e.g. "N/A", or "31,400" with a comma) is left as
+   * it is. Off (the final value shows straight away): animations off (also in the theme editor),
+   * reduced motion, or no JS.
+   */
+  class AboutNumbers extends HTMLElement {
+    connectedCallback() {
+      const animations = document.documentElement.classList.contains('animations-on');
+      const motion = window.matchMedia('(prefers-reduced-motion: no-preference)').matches;
+      if (!animations || !motion) return;
+
+      const counts = [...this.querySelectorAll('.stat-figure__count')].filter((count) =>
+        /^\d+(\.\d+)?$/.test(count.dataset.count)
+      );
+      if (!counts.length) return;
+
+      // Start from 0 before the cards come into view
+      counts.forEach((count) => this.render(count, 0));
+
+      this.observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            this.observer.unobserve(entry.target);
+            this.countUp(entry.target);
+          });
+        },
+        { threshold: 0.5 }
+      );
+      counts.forEach((count) => this.observer.observe(count));
+    }
+
+    disconnectedCallback() {
+      this.observer?.disconnect();
+      this.frames?.forEach((frame) => cancelAnimationFrame(frame));
+    }
+
+    render(count, value) {
+      const decimals = (count.dataset.count.split('.')[1] || '').length;
+      count.querySelector('.stat-figure__number').textContent = value.toFixed(decimals);
+    }
+
+    countUp(count) {
+      const target = parseFloat(count.dataset.count);
+      const duration = 1200;
+      const start = performance.now();
+      this.frames ??= new Set();
+
+      const step = (now) => {
+        const progress = Math.min((now - start) / duration, 1);
+        const eased = 1 - (1 - progress) ** 3; // ease-out: fast first, gentle at the end
+        this.render(count, target * eased);
+        if (progress < 1) {
+          const frame = requestAnimationFrame(step);
+          this.frames.add(frame);
+        }
+      };
+      requestAnimationFrame(step);
+    }
+  }
+
+  if (!customElements.get('about-numbers')) customElements.define('about-numbers', AboutNumbers);
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.about_numbers",
+  "tag": "section",
+  "class": "about-numbers-section",
+  "enabled_on": {
+    "templates": ["page"]
+  },
+  "blocks": [{ "type": "_stat-figure" }],
+  "max_blocks": 8,
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "By the numbers"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.italic_accent_info",
+      "default": "<em>Proof,</em> not promises."
+    },
+    {
+      "type": "checkbox",
+      "id": "stagger",
+      "label": "t:labels.numbers_stagger",
+      "info": "t:labels.numbers_stagger_info",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "checkbox",
+      "id": "scale_screen",
+      "label": "t:labels.scale_screen",
+      "info": "t:labels.scale_screen_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "text_scale",
+      "label": "t:labels.text_scale",
+      "info": "t:labels.text_scale_info",
+      "min": 100,
+      "max": 130,
+      "step": 5,
+      "unit": "%",
+      "default": 110,
+      "visible_if": "{{ section.settings.scale_screen }}"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 120
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 80
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.about_numbers",
+      "blocks": [
+        {
+          "type": "_stat-figure",
+          "settings": {
+            "value": "98",
+            "suffix": "%",
+            "title": "Would buy again",
+            "text": "Of 31,400 verified clients"
+          }
+        },
+        {
+          "type": "_stat-figure",
+          "settings": {
+            "value": "4.9",
+            "suffix": "",
+            "title": "Average rating",
+            "text": "Across every piece we make"
+          }
+        },
+        {
+          "type": "_stat-figure",
+          "settings": {
+            "source": "collection",
+            "suffix": "+",
+            "title": "Global products",
+            "text": "Luxury products curated globally"
+          }
+        },
+        {
+          "type": "_stat-figure",
+          "settings": {
+            "value": "15",
+            "suffix": "",
+            "title": "Total awards",
+            "text": "Industry awards since 2018"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

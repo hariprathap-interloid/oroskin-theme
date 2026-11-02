@@ -1,0 +1,276 @@
+{%- comment -%}
+  One card of the About values (design/briefs/about-us.md §4.6, exports "Default-9" (desktop),
+  "Variant49" / "Variant50" (phone)): a round icon, the pale number "01" top right (a CSS counter
+  from the section), a title, the text and an optional photo at the bottom.
+  The section makes its first card two rows tall (Feature the first card); on phones and tablets
+  that card's photo sits beside its text.
+{%- endcomment -%}
+
+{%- liquid
+  assign icon = block.settings.icon | default: 'diamond'
+  assign icon_file = 'icon-' | append: icon | append: '.svg'
+-%}
+
+<article
+  class="value-card{% if block.settings.image != blank %} value-card--media{% endif %}"
+  data-animate="fade-up"
+  {{ block.shopify_attributes }}
+>
+  <div class="value-card__body">
+    <div class="value-card__top">
+      {%- if icon != 'none' -%}
+        <span class="value-card__icon" aria-hidden="true">{{ icon_file | inline_asset_content }}</span>
+      {%- endif -%}
+      <span class="value-card__number" aria-hidden="true"></span>
+    </div>
+
+    {%- if block.settings.title != blank -%}
+      <h3 class="value-card__title">{{ block.settings.title | escape }}</h3>
+    {%- endif -%}
+
+    {%- if block.settings.text != blank -%}
+      <div class="value-card__text">{{ block.settings.text }}</div>
+    {%- endif -%}
+  </div>
+
+  {%- if block.settings.image != blank -%}
+    <div class="value-card__media">
+      {% render 'image',
+        image: block.settings.image,
+        class: 'image--cover',
+        alt: '',
+        sizes: '(min-width: 1200px) 30vw, 45vw',
+        loading: 'lazy'
+      %}
+    </div>
+  {%- endif -%}
+</article>
+
+{% stylesheet %}
+  /*
+    Figma 1920 (Default-9): card #fcfafa, 1px pale border, radius ~24, soft shadow, padding ~32;
+    icon 50px circle, accent ~10% fill, accent icon 24px; number heading font thin ~90px, accent
+    ~20%, top right (its top in line with the icon); title heading font semibold ~36px accent,
+    ~24px under the icon; text body ~18px / 29px, ~30px under the title; photo 471x225, radius ~24,
+    ~20px under the text, at the card's bottom.
+  */
+  .value-card {
+    counter-increment: value-card;
+    display: flex;
+    flex-direction: column;
+    gap: max(var(--space-md), calc(20 * var(--px, 0.0625rem)));
+    block-size: 100%;
+    box-sizing: border-box;
+    padding: max(var(--space-lg), calc(32 * var(--px, 0.0625rem)));
+    border: 1px solid var(--color-card-border);
+    border-radius: max(1rem, calc(24 * var(--px, 0.0625rem)));
+    background-color: color-mix(in srgb, var(--color-accent) 2%, var(--color-background));
+    box-shadow: 0 2px 10px 0 #0000001a;
+  }
+
+  /* Figma: title ~24px under the icon row, text ~30px under the title */
+  .value-card__body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .value-card__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-md);
+  }
+
+  .value-card__icon {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    inline-size: max(2.75rem, calc(50 * var(--px, 0.0625rem)));
+    block-size: max(2.75rem, calc(50 * var(--px, 0.0625rem)));
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--color-accent) 10%, transparent);
+    color: var(--color-accent);
+  }
+
+  .value-card__icon svg {
+    inline-size: max(1.25rem, calc(24 * var(--px, 0.0625rem)));
+    block-size: max(1.25rem, calc(24 * var(--px, 0.0625rem)));
+  }
+
+  /* "01", "02"…: the section's counter (one per card) */
+  .value-card__number::before {
+    content: counter(value-card, decimal-leading-zero);
+  }
+
+  /*
+    line-height 1 and no negative margin: a tighter box let the digits rise above it, through the
+    card's top padding (they touched the card's edge).
+  */
+  .value-card__number {
+    margin: 0;
+    color: color-mix(in srgb, var(--color-accent) 20%, transparent);
+    font-family: var(--font-heading--family);
+    font-size: max(3rem, calc(90 * var(--px, 0.0625rem)));
+    font-weight: 200;
+    line-height: 1;
+  }
+
+  .value-card__title {
+    margin: max(var(--space-md), calc(24 * var(--px, 0.0625rem))) 0 0;
+    color: var(--color-accent);
+    font-size: max(1.5rem, calc(36 * var(--px, 0.0625rem)));
+    font-weight: 600;
+    line-height: 1.1;
+  }
+
+  .value-card__text {
+    margin-block-start: max(var(--space-lg), calc(30 * var(--px, 0.0625rem)));
+    font-size: var(--font-size-body-sm);
+    line-height: 1.6;
+  }
+
+  .value-card__text > * {
+    margin: 0;
+  }
+
+  .value-card__text > * + * {
+    margin-block-start: max(var(--space-md), calc(24 * var(--px, 0.0625rem)));
+  }
+
+  /*
+    The photo fills what is left of the card and never makes it taller: the img is taken out of the
+    flow (absolute), so the two-row card is as tall as its two rows (~326px each), not the photo.
+  */
+  .value-card__media {
+    position: relative;
+    overflow: hidden;
+    flex: 1 1 0;
+    min-block-size: max(10rem, calc(225 * var(--px, 0.0625rem)));
+    border-radius: max(1rem, calc(24 * var(--px, 0.0625rem)));
+  }
+
+  .value-card__media .image {
+    position: absolute;
+    inset: 0;
+  }
+
+  .value-card__media .image,
+  .value-card__media img {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  /* Phones and tablets (Variant49): smaller type; the photo card puts its photo beside the text */
+  @media (max-width: 1199px) {
+    .value-card {
+      gap: var(--space-sm);
+      padding: var(--space-md);
+    }
+
+    .value-card__icon {
+      inline-size: 2.25rem;
+      block-size: 2.25rem;
+    }
+
+    .value-card__icon svg {
+      inline-size: 1.125rem;
+      block-size: 1.125rem;
+    }
+
+    .value-card__number {
+      font-size: 2.25rem;
+    }
+
+    .value-card__title {
+      font-size: clamp(1.125rem, 3.5vw, 1.75rem);
+    }
+
+    .value-card__text {
+      font-size: clamp(0.75rem, 2vw, 1rem);
+    }
+
+    .value-card--media {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 0.7fr);
+      align-items: start;
+    }
+
+    .value-card__title {
+      margin-block-start: var(--space-sm);
+    }
+
+    .value-card__text {
+      margin-block-start: var(--space-sm);
+    }
+
+    .value-card--media .value-card__media {
+      align-self: center;
+      min-block-size: 0;
+      aspect-ratio: 3 / 5;
+    }
+  }
+
+  /* Phones: one card per row (the section), so the text can be bigger and the photo goes under it */
+  @media (max-width: 749px) {
+    .value-card__text {
+      font-size: var(--font-size-body-sm);
+    }
+
+    .value-card--media {
+      display: flex;
+    }
+
+    .value-card--media .value-card__media {
+      flex: none;
+      aspect-ratio: 16 / 10;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.value_card",
+  "settings": [
+    {
+      "type": "select",
+      "id": "icon",
+      "label": "t:labels.icon",
+      "options": [
+        { "value": "diamond", "label": "t:options.value_icon.diamond" },
+        { "value": "lashes", "label": "t:options.value_icon.lashes" },
+        { "value": "heart-bold", "label": "t:options.value_icon.heart" },
+        { "value": "graduation", "label": "t:options.value_icon.graduation" },
+        { "value": "globe", "label": "t:options.value_icon.globe" },
+        { "value": "sparkle", "label": "t:options.value_icon.sparkle" },
+        { "value": "shield", "label": "t:options.value_icon.shield" },
+        { "value": "users", "label": "t:options.value_icon.users" },
+        { "value": "none", "label": "t:options.value_icon.none" }
+      ],
+      "default": "diamond"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "t:labels.title",
+      "default": "Uncompromising curation"
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "t:labels.text",
+      "default": "<p>We believe that less is more. Every product has to earn its place in someone's ritual.</p>"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.image",
+      "info": "t:labels.value_image_info"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.value_card"
+    }
+  ]
+}
+{% endschema %}

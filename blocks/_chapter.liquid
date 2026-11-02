@@ -1,0 +1,253 @@
+{%- comment -%}
+  One chapter of the About chapters story (design/briefs/about-us.md §4.2, exports "Default-14" to
+  "Default-17"): a label ("Chapter I · Fragrance"), the heading, a text, a thin rule and one stat
+  ("3,600 blossoms per 30ml flacon"), one screen tall, over its photo or video (.chapter__media).
+  - Without JS the photo stays here, behind the words: the chapters are full-screen panels.
+  - With JS the section's script (sections/about-chapters.liquid) moves every chapter's photo into
+    its sticky layer to cross-fade them, and builds the side nav from the chapters' ids and headings.
+    It's done this way because a section can't read a theme block's settings (in the section,
+    section.blocks only gives "@theme" stand-ins), so each block draws its own photo.
+{%- endcomment -%}
+
+<article
+  class="chapter"
+  id="Chapter-{{ block.id }}"
+  {{ block.shopify_attributes }}
+>
+  <div class="chapter__media" aria-hidden="true">
+    {%- if block.settings.video != blank -%}
+      {{
+        block.settings.video
+        | video_tag:
+          image_size: '1920x',
+          class: 'chapter__video',
+          muted: true,
+          loop: true,
+          playsinline: true,
+          preload: 'none'
+      }}
+    {%- else -%}
+      {%- comment -%} Lazy: the story is below the hero, so the photos load as it gets close {%- endcomment -%}
+      {% render 'image', image: block.settings.image, class: 'image--cover', alt: '', loading: 'lazy' %}
+    {%- endif -%}
+  </div>
+
+  <div class="chapter__content">
+    {%- if block.settings.label != blank -%}
+      <p class="chapter__label">{{ block.settings.label | escape }}</p>
+    {%- endif -%}
+
+    {%- if block.settings.heading != blank -%}
+      <h2 class="chapter__heading">{{ block.settings.heading | escape }}</h2>
+    {%- endif -%}
+
+    {%- if block.settings.text != blank -%}
+      <div class="chapter__text">{{ block.settings.text }}</div>
+    {%- endif -%}
+
+    {%- if block.settings.stat_value != blank or block.settings.stat_label != blank -%}
+      <p class="chapter__stat">
+        <span class="chapter__stat-value">{{ block.settings.stat_value | escape }}</span>
+        <span class="chapter__stat-label">{{ block.settings.stat_label | escape }}</span>
+      </p>
+    {%- endif -%}
+  </div>
+</article>
+
+{% stylesheet %}
+  /*
+    Figma 1920 (Default-14): content x 308, max ~1070 wide; label y 248; heading 76px bold, 2 lines
+    (y 285–415); text 24px / 38px (y 445–630); rule y 686 (1px, accent ~60%, ~940 long); stat y 735:
+    value 36px bold + label (label style). Sizes: Figma px x --px with rem floors, or tokens.
+    The section sets --chapter-text (white) and --chapter-accent (the label colour setting).
+  */
+  .chapter {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    align-items: center;
+    min-block-size: 100svh;
+    /* The same space above (clear of the header pill) and below, so the words sit in the screen's middle */
+    padding-block: max(6.5rem, calc(130 * var(--px, 0.0625rem)));
+    padding-inline: var(--chapter-indent) var(--page-margin);
+  }
+
+  /* The photo or video fills the chapter (or, moved by the script, the section's sticky layer) */
+  .chapter__media {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    background-color: #1f1f1f;
+  }
+
+  /*
+    The dark overlay keeps the white words readable: clear at the top, darkest (70%) just under the
+    middle where the words are, 50% at the bottom (the developer's values). The section's Overlay
+    setting scales it (100% = as designed).
+  */
+  .chapter__media::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, #00000000 0%, #000000b3 43.71%, #00000080 100%);
+    opacity: var(--chapter-overlay, 1);
+  }
+
+  .chapter__media .image,
+  .chapter__video {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .chapter__content {
+    max-inline-size: max(20rem, calc(1070 * var(--px, 0.0625rem)));
+    color: var(--chapter-text);
+  }
+
+  .chapter__label {
+    margin: 0 0 max(var(--space-md), calc(30 * var(--px, 0.0625rem)));
+    color: var(--chapter-accent);
+    font-size: var(--font-size-label);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  .chapter__heading {
+    margin: 0;
+    max-inline-size: 18ch;
+    color: inherit;
+    font-family: var(--font-heading--family);
+    font-size: max(1.75rem, calc(76 * var(--px, 0.0625rem)));
+    font-weight: 700;
+    line-height: 1;
+    text-wrap: balance;
+  }
+
+  .chapter__text {
+    margin-block-start: max(var(--space-lg), calc(45 * var(--px, 0.0625rem)));
+    font-size: var(--font-size-body-lg);
+    line-height: 1.6;
+  }
+
+  .chapter__text > * {
+    margin: 0;
+  }
+
+  .chapter__text > * + * {
+    margin-block-start: var(--space-md);
+  }
+
+  /* The rule above the stat: the accent at ~60% */
+  .chapter__stat {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-xs) var(--space-sm);
+    max-inline-size: max(16rem, calc(940 * var(--px, 0.0625rem)));
+    margin: max(var(--space-xl), calc(70 * var(--px, 0.0625rem))) 0 0;
+    padding-block-start: max(var(--space-lg), calc(30 * var(--px, 0.0625rem)));
+    border-block-start: 1px solid color-mix(in srgb, var(--chapter-accent) 60%, transparent);
+  }
+
+  .chapter__stat-value {
+    font-family: var(--font-body--family);
+    font-size: max(1.5rem, calc(36 * var(--px, 0.0625rem)));
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .chapter__stat-label {
+    font-size: var(--font-size-label);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  /*
+    With the story script running (data-ready) and motion allowed, a chapter's words fade up when
+    its top reaches 70% down the screen (is-active), like Default-1 (the photo first, then the
+    words). No JS, animations off or reduced motion: always visible.
+  */
+  @media (prefers-reduced-motion: no-preference) {
+    .animations-on about-chapters[data-ready] .chapter__content {
+      opacity: 0;
+      translate: 0 2rem;
+      transition:
+        opacity var(--duration-slow) var(--ease-out),
+        translate var(--duration-slow) var(--ease-out);
+    }
+
+    .animations-on about-chapters[data-ready] .chapter.is-active .chapter__content {
+      opacity: 1;
+      translate: 0 0;
+    }
+  }
+
+  /* Phones (Variant45-2): smaller words */
+  @media (max-width: 749px) {
+    .chapter__text {
+      font-size: var(--font-size-body-sm);
+    }
+
+    .chapter__stat {
+      border-block-start: 0;
+      padding-block-start: 0;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.chapter",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.image",
+      "info": "t:labels.chapter_image_info"
+    },
+    {
+      "type": "video",
+      "id": "video",
+      "label": "t:labels.video",
+      "info": "t:labels.chapter_video_info"
+    },
+    {
+      "type": "text",
+      "id": "label",
+      "label": "t:labels.chapter_label",
+      "default": "Chapter I · Fragrance"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "Rose picked before the heat can take its oil."
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "t:labels.text"
+    },
+    {
+      "type": "text",
+      "id": "stat_value",
+      "label": "t:labels.stat_value"
+    },
+    {
+      "type": "text",
+      "id": "stat_label",
+      "label": "t:labels.stat_label"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.chapter"
+    }
+  ]
+}
+{% endschema %}

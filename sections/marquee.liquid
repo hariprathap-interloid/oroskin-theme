@@ -1,0 +1,305 @@
+{%- comment -%}
+  Marquee (M8.4 part 8, design/briefs/about-us.md §4.8 + answer 10, bottom of "Default-10"): one
+  line of big text that scrolls sideways without end, e.g. "BEAUTY HEALS NATURE, NATURE FEEDS
+  BEAUTY". Reusable on any page.
+  - Pure CSS: a track with two identical halves slides by one half, then starts over, so the seam
+    never shows. Each half repeats the sentence enough times to be wider than the screen.
+  - Screen readers read the sentence once (a visually hidden copy); the moving track is aria-hidden.
+  - Moves only with animations on (the global setting; never in the theme editor) and motion
+    allowed. It pauses on hover, and a pause / play button stops it (WCAG 2.2.2).
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+  assign text = section.settings.text | strip
+  assign separator = section.settings.separator | strip | escape
+  # Copies per half: enough to fill a wide screen even with short text or a small size
+  assign copies = 4
+-%}
+
+{%- comment -%} The solid repeats are extra bold (800): the page only loads regular and bold {%- endcomment -%}
+{% style %}
+  {{ settings.type_body_font | font_modify: 'weight', '800' | font_face: font_display: 'swap' }}
+{% endstyle %}
+
+{%- if text != blank -%}
+  <marquee-text
+    class="marquee full-width color-{{ scheme_id }} marquee--{{ section.settings.direction | default: 'left' }}"
+    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --marquee-size: {{ section.settings.text_size }}; --marquee-duration: {{ section.settings.speed }}s;"
+  >
+    <p class="visually-hidden">{{ text | escape }}</p>
+
+    <div class="marquee__viewport" aria-hidden="true">
+      <div class="marquee__track">
+        {%- for half in (1..2) -%}
+          <div class="marquee__half">
+            {%- for i in (1..copies) -%}
+              {%- comment -%} Every second repeat in outline (copies is even, so the pattern runs on across the seam) {%- endcomment -%}
+              {%- assign odd_repeat = forloop.index0 | modulo: 2 -%}
+              <span class="marquee__item{% if section.settings.outline and odd_repeat == 1 %} marquee__item--outline{% endif %}">{{ text | escape }}</span>
+              {%- if separator != blank -%}
+                <span class="marquee__separator">{{ separator }}</span>
+              {%- endif -%}
+            {%- endfor -%}
+          </div>
+        {%- endfor -%}
+      </div>
+    </div>
+
+    <button
+      type="button"
+      class="marquee__pause"
+      aria-pressed="false"
+      data-label-pause="{{ 'sections.marquee.pause' | t }}"
+      data-label-play="{{ 'sections.marquee.play' | t }}"
+      hidden
+    >
+      <span class="visually-hidden">{{ 'sections.marquee.pause' | t }}</span>
+      <svg class="marquee__pause-icon marquee__pause-icon--pause" aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="16" height="16"><rect x="3.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/><rect x="9.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/></svg>
+      <svg class="marquee__pause-icon marquee__pause-icon--play" aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="16" height="16"><path d="M4.5 2.8v10.4a.8.8 0 0 0 1.2.7l8.4-5.2a.8.8 0 0 0 0-1.4L5.7 2.1a.8.8 0 0 0-1.2.7z" fill="currentColor"/></svg>
+    </button>
+  </marquee-text>
+{%- elsif request.design_mode -%}
+  <p class="marquee__empty">{{ 'sections.marquee.empty' | t }}</p>
+{%- endif -%}
+
+{% stylesheet %}
+  /*
+    Figma 1920 (Default-10): full bleed, one line y 895–985; body font extra bold ~110px, uppercase,
+    accent, no wrap. --marquee-size is the "Text size" setting in px at a 1920 screen; it scales
+    with the screen (vw) down to a 2.5rem minimum.
+  */
+  .marquee {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+    background-color: var(--color-background);
+  }
+
+  .marquee__viewport {
+    overflow: hidden;
+  }
+
+  .marquee__track {
+    display: flex;
+    inline-size: max-content;
+  }
+
+  .marquee__half {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+  }
+
+  .marquee__item,
+  .marquee__separator {
+    flex-shrink: 0;
+    padding-inline-end: 0.35em;
+    color: var(--color-accent);
+    font-family: var(--font-body--family);
+    font-size: max(2.5rem, calc(var(--marquee-size, 110) / 1920 * 100vw));
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /*
+    The outline repeat (Figma prototype): regular weight, transparent fill, a thin accent stroke on
+    both sides of each stroke (the "double line" look), and wide letter-spacing (~0.08em: the
+    letters stand apart, as in the Figma).
+  */
+  .marquee__item--outline {
+    color: transparent;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    -webkit-text-stroke: max(1px, 0.012em) var(--color-accent);
+  }
+
+  /*
+    Moving: the track slides by one half (-50%), then starts over at 0; the two halves are the
+    same, so the jump back can't be seen. Right = the same animation played in reverse.
+  */
+  @media (prefers-reduced-motion: no-preference) {
+    .animations-on .marquee__track {
+      animation: marquee-slide var(--marquee-duration, 40s) linear infinite;
+    }
+
+    .animations-on .marquee--right .marquee__track {
+      animation-direction: reverse;
+    }
+
+    .animations-on .marquee:hover .marquee__track,
+    .animations-on .marquee.is-paused .marquee__track {
+      animation-play-state: paused;
+    }
+  }
+
+  @keyframes marquee-slide {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  /* Pause / play: a small round button at the bottom right (shown by the script only when it moves) */
+  .marquee__pause {
+    position: absolute;
+    inset-block-end: max(var(--space-xs), calc(var(--section-padding-bottom) - 2.75rem));
+    inset-inline-end: var(--page-margin);
+    display: grid;
+    place-items: center;
+    inline-size: 2.25rem;
+    block-size: 2.25rem;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-background);
+    box-shadow: var(--shadow-header);
+    color: var(--color-accent);
+    cursor: pointer;
+  }
+
+  .marquee__pause[hidden] {
+    display: none;
+  }
+
+  .marquee__pause-icon--play,
+  .marquee__pause[aria-pressed='true'] .marquee__pause-icon--pause {
+    display: none;
+  }
+
+  .marquee__pause[aria-pressed='true'] .marquee__pause-icon--play {
+    display: block;
+  }
+
+  .marquee__empty {
+    margin: 0;
+    padding: var(--space-xl);
+    text-align: center;
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <marquee-text>: shows the pause / play button when the text actually moves (animations on and
+   * motion allowed), and toggles is-paused, which stops the CSS animation where it is.
+   */
+  class MarqueeText extends HTMLElement {
+    connectedCallback() {
+      const animations = document.documentElement.classList.contains('animations-on');
+      const motion = window.matchMedia('(prefers-reduced-motion: no-preference)').matches;
+      this.button = this.querySelector('.marquee__pause');
+      if (!this.button || !animations || !motion) return;
+
+      this.button.hidden = false;
+      this.button.addEventListener('click', () => {
+        const paused = this.classList.toggle('is-paused');
+        this.button.setAttribute('aria-pressed', String(paused));
+        this.button.querySelector('.visually-hidden').textContent = paused
+          ? this.button.dataset.labelPlay
+          : this.button.dataset.labelPause;
+      });
+    }
+  }
+
+  if (!customElements.get('marquee-text')) customElements.define('marquee-text', MarqueeText);
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.marquee",
+  "tag": "section",
+  "class": "marquee-section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "text",
+      "label": "t:labels.text",
+      "default": "Beauty heals nature, nature feeds beauty."
+    },
+    {
+      "type": "checkbox",
+      "id": "outline",
+      "label": "t:labels.marquee_outline",
+      "info": "t:labels.marquee_outline_info",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "separator",
+      "label": "t:labels.marquee_separator",
+      "info": "t:labels.marquee_separator_info"
+    },
+    {
+      "type": "select",
+      "id": "direction",
+      "label": "t:labels.marquee_direction",
+      "options": [
+        { "value": "left", "label": "t:options.marquee_direction.left" },
+        { "value": "right", "label": "t:options.marquee_direction.right" }
+      ],
+      "default": "left"
+    },
+    {
+      "type": "range",
+      "id": "speed",
+      "label": "t:labels.marquee_speed",
+      "info": "t:labels.marquee_speed_info",
+      "min": 10,
+      "max": 120,
+      "step": 5,
+      "unit": "s",
+      "default": 40
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "range",
+      "id": "text_size",
+      "label": "t:labels.marquee_text_size",
+      "info": "t:labels.marquee_text_size_info",
+      "min": 40,
+      "max": 200,
+      "step": 5,
+      "unit": "px",
+      "default": 110
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 80
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.marquee"
+    }
+  ]
+}
+{% endschema %}

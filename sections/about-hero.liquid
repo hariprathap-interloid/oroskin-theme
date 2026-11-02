@@ -1,0 +1,833 @@
+{%- comment -%}
+  About hero (M8.4 part 1, design/briefs/about-us.md §4.1, export "Property 1=Default"): the first
+  section of the About us page.
+  Left: breadcrumb, a small italic line ("Our story"), the H1 on two lines ("Made *Slowly,*" /
+  "worn daily", the second line indented), an intro, a button and an underlined text link.
+  Right: a white card "The Oroskin, in three disciplines" with one Discipline block per row
+  (blocks/_discipline.liquid: an accordion, one row open at a time).
+
+  Heading conventions (both lines are inline_richtext, with Bold and Italic buttons in the editor):
+  Italic = accent, italic as in the Figma; Bold = the hand-drawn brush underline
+  (assets/brush-underline.svg) under that word, in the normal weight. (A plain text setting lost
+  typed <em>/<u> tags whenever the editor saved it.)
+  The text link (the Figma's "Book consultation": Oroskin has no booking feature, so it points to a
+  page or an app the merchant chooses; the template points it at the contact page) shows on the
+  store only with a link, and always in the theme editor.
+  No scroll animation: it's the page's first section (never hide the first screen).
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+  assign brush_url = 'brush-underline.svg' | asset_url
+  assign card_heading_id = 'AboutDisciplines-' | append: section.id
+  assign phrase_settings = 'heading_line_2,heading_line_2_b,heading_line_2_c,heading_line_2_d' | split: ','
+-%}
+
+{% render 'screen-scale' %}
+
+<div
+  class="about-hero full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.fill_screen %} section--fill-screen{% endif %}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }}; --brush-underline: url('{{ brush_url }}'); --heading-scale: {{ section.settings.heading_scale | default: 100 | divided_by: 100.0 }};"
+>
+  <div class="about-hero__inner">
+    {%- if section.settings.show_breadcrumb -%}
+      {% render 'breadcrumb', current: page.title, class: 'about-hero__breadcrumb' %}
+    {%- endif -%}
+
+    <div class="about-hero__grid">
+      <div class="about-hero__story">
+        <div class="about-hero__lettering">
+          {%- if section.settings.script_text != blank -%}
+            <p class="about-hero__script">{{ section.settings.script_text | escape }}</p>
+          {%- endif -%}
+          <h1 class="about-hero__heading">
+            {%- if section.settings.heading_line_1 != blank -%}
+              <span class="about-hero__line">{{ section.settings.heading_line_1 }}</span>
+            {%- endif -%}
+            {%- liquid
+              # Line 2 and its alternatives (the Figma prototype swaps them on a timer)
+              assign phrase_keys = ''
+              for key in phrase_settings
+                if section.settings[key] != blank
+                  assign phrase_keys = phrase_keys | append: key | append: ','
+                endif
+              endfor
+              assign phrase_keys = phrase_keys | split: ','
+            -%}
+            {%- if phrase_keys.size == 1 %}
+              <span class="about-hero__line about-hero__line--indent">{{ section.settings[phrase_keys.first] }}</span>
+            {%- elsif phrase_keys.size > 1 %}
+              {%- comment -%}
+                All versions sit in one grid cell, so the line is as wide as the longest one and nothing
+                moves when they swap. Screen readers read the first one only (the others are aria-hidden).
+              {%- endcomment -%}
+              <span class="about-hero__line about-hero__line--indent">
+                <about-hero-rotator
+                  class="about-hero__rotator"
+                  data-interval="{{ section.settings.rotate_interval }}"
+                >
+                  {%- for key in phrase_keys -%}
+                    <span
+                      class="about-hero__phrase{% if forloop.first %} is-active{% endif %}"
+                      {% unless forloop.first %}
+                        aria-hidden="true"
+                      {% endunless %}
+                    >
+                      {{- section.settings[key] -}}
+                    </span>
+                  {%- endfor -%}
+                  {%- comment -%}
+                    The brush stays put while only the words change (as in the prototype): it's drawn
+                    by this invisible copy of the first version, which never moves, so it sits under
+                    that version's Bold word. The versions themselves draw no brush.
+                  {%- endcomment -%}
+                  <span class="about-hero__brush-holder" aria-hidden="true">
+                    {{- section.settings[phrase_keys.first] -}}
+                  </span>
+                  {%- comment -%} With the script: one brush that glides to each version's Bold word {%- endcomment -%}
+                  <span class="about-hero__brush" aria-hidden="true"></span>
+                </about-hero-rotator>
+              </span>
+            {%- endif -%}
+            {%- if section.settings.heading_line_1 == blank and phrase_keys.size == 0 -%}
+              {{ page.title | escape }}
+            {%- endif -%}
+          </h1>
+          {%- if phrase_keys.size > 1 -%}
+            {%- comment -%}
+              Pause / play for the changing line (WCAG 2.2.2: it keeps moving, so it needs a way to stop).
+              Outside the h1 (a button doesn't belong in a heading). Hidden until the script runs, so it
+              never shows when nothing moves.
+            {%- endcomment -%}
+            <button
+              type="button"
+              class="about-hero__pause"
+              aria-pressed="false"
+              data-label-pause="{{ 'about.heading_pause' | t }}"
+              data-label-play="{{ 'about.heading_play' | t }}"
+              hidden
+            >
+              <span class="visually-hidden">{{ 'about.heading_pause' | t }}</span>
+              <svg class="about-hero__pause-icon about-hero__pause-icon--pause" aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="16" height="16"><rect x="3.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/><rect x="9.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/></svg>
+              <svg class="about-hero__pause-icon about-hero__pause-icon--play" aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="16" height="16"><path d="M4.5 2.8v10.4a.8.8 0 0 0 1.2.7l8.4-5.2a.8.8 0 0 0 0-1.4L5.7 2.1a.8.8 0 0 0-1.2.7z" fill="currentColor"/></svg>
+            </button>
+          {%- endif -%}
+        </div>
+
+        {%- if section.settings.text != blank -%}
+          <div class="about-hero__text">{{ section.settings.text }}</div>
+        {%- endif -%}
+
+        {%- liquid
+          assign show_button = false
+          if section.settings.button_label != blank and section.settings.button_link != blank
+            assign show_button = true
+          endif
+          # The text link needs a link on the store (a link to nowhere confuses visitors); in the theme
+          # editor it also shows without one, so the merchant sees it and knows to add the link
+          assign show_link = false
+          if section.settings.link_label != blank
+            if section.settings.link_url != blank or request.design_mode
+              assign show_link = true
+            endif
+          endif
+        -%}
+        {%- if show_button or show_link -%}
+          <div class="about-hero__actions">
+            {%- if show_button -%}
+              <a class="button" href="{{ section.settings.button_link }}">{{ section.settings.button_label | escape }}</a>
+            {%- endif -%}
+            {%- if show_link -%}
+              <a class="about-hero__link" href="{{ section.settings.link_url | default: '#' }}">
+                {{- section.settings.link_label | escape -}}
+                <span class="about-hero__link-arrow" aria-hidden="true">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+              </a>
+            {%- endif -%}
+          </div>
+        {%- endif -%}
+      </div>
+
+      <div
+        class="about-hero__card"
+        {% if section.settings.card_label != blank %}
+          role="group" aria-labelledby="{{ card_heading_id }}"
+        {% endif %}
+      >
+        {%- if section.settings.card_label != blank -%}
+          <h2 class="about-hero__card-label" id="{{ card_heading_id }}">{{ section.settings.card_label | escape }}</h2>
+        {%- endif -%}
+        <div class="about-hero__disciplines">
+          {% content_for 'blocks' %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% stylesheet %}
+  /*
+    Figma 1920 (export "Property 1=Default", 1:1): breadcrumb y 150; left column x 48–810, card
+    x 872–1868 (996 wide, y 190–970, radius ~30, soft shadow). "Our story" ~64px italic at x 150;
+    "Made Slowly," ~125px (cap ~85px); "worn daily" ~125px indented ~57px, brush under "daily";
+    intro ~24px / 38px; button 250 x 58; text link label + 1px underline.
+    Sizes are Figma px x --px (screen-scale) with rem floors, or tokens.
+  */
+  .about-hero {
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  .about-hero__inner {
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  .about-hero__breadcrumb {
+    margin-block-end: max(var(--space-lg), calc(32 * var(--px, 0.0625rem)));
+  }
+
+  /* Phones and tablets: the story, then the card. Two columns from 1200px */
+  .about-hero__grid {
+    display: grid;
+    gap: var(--space-2xl);
+    align-items: center;
+  }
+
+  @media (min-width: 1200px) {
+    .about-hero__grid {
+      grid-template-columns: minmax(0, 762fr) minmax(0, 996fr);
+      column-gap: calc(62 * var(--px, 0.0625rem));
+    }
+  }
+
+  /* ---------- Lettering ---------- */
+  .about-hero__lettering {
+    margin-block-end: max(var(--space-xl), calc(90 * var(--px, 0.0625rem)));
+  }
+
+  .about-hero__script {
+    margin: 0 0 calc(-0.15em) max(var(--space-xl), calc(100 * var(--px, 0.0625rem)));
+    font-family: var(--font-heading--family);
+    font-size: max(1.75rem, calc(64 * var(--px, 0.0625rem)));
+    font-style: italic;
+    line-height: 1.1;
+  }
+
+  .about-hero__heading {
+    margin: 0;
+    /* 125px at 1920, times the "Heading size" setting (--heading-scale, e.g. 0.8 = 80%) */
+    font-size: calc(max(2.75rem, calc(125 * var(--px, 0.0625rem))) * var(--heading-scale, 1));
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+  }
+
+  .about-hero__line {
+    display: block;
+  }
+
+  /* Pause / play for the changing line: a small round glass button at the lettering's bottom right */
+  .about-hero__lettering {
+    position: relative;
+  }
+
+  .about-hero__pause {
+    position: absolute;
+    inset-block-end: 0.5rem;
+    inset-inline-end: 0;
+    display: grid;
+    place-items: center;
+    inline-size: 2.25rem;
+    block-size: 2.25rem;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-background);
+    box-shadow: var(--shadow-header);
+    color: var(--color-accent);
+    cursor: pointer;
+  }
+
+  .about-hero__pause[hidden] {
+    display: none;
+  }
+
+  .about-hero__pause-icon--play,
+  .about-hero__pause[aria-pressed='true'] .about-hero__pause-icon--pause {
+    display: none;
+  }
+
+  .about-hero__pause[aria-pressed='true'] .about-hero__pause-icon--play {
+    display: block;
+  }
+
+  .about-hero__line--indent {
+    padding-inline-start: max(var(--space-lg), calc(57 * var(--px, 0.0625rem)));
+  }
+
+  /* "Made *Slowly,*": the italic word in the accent colour, kept italic as in the Figma */
+  .about-hero__heading em {
+    color: var(--color-accent);
+  }
+
+  /*
+    "worn **daily**": a Bold word gets the brush under it (and stays the heading's weight). <u> is
+    still read, for headings typed before the setting had Bold/Italic buttons.
+  */
+  .about-hero__heading strong,
+  .about-hero__heading u {
+    position: relative;
+    font-weight: inherit;
+    text-decoration: none;
+  }
+
+  .about-hero__heading strong::after,
+  .about-hero__heading u::after {
+    content: "";
+    position: absolute;
+    inset-inline: -8% -2%;
+    inset-block-end: -0.12em;
+    block-size: 0.18em;
+    background-color: var(--color-accent);
+    -webkit-mask: var(--brush-underline) center / 100% 100% no-repeat;
+    mask: var(--brush-underline) center / 100% 100% no-repeat;
+    pointer-events: none;
+  }
+
+  /*
+    ---------- Line 2 changing on a timer (Figma prototype: "worn daily" → "read openly" →
+    "refilled always") ----------
+    The versions share one grid cell (the line keeps the width of the longest: no jumps). Before
+    the script runs (and without JS) only the first shows. With the script (data-ready): the
+    leaving version rises out and fades, the next rises in from below.
+  */
+  .about-hero__rotator {
+    display: inline-grid;
+  }
+
+  /* Each version stays on one line (make the heading smaller with "Heading size" if one is too long) */
+  .about-hero__phrase,
+  .about-hero__brush-holder {
+    grid-area: 1 / 1;
+    white-space: nowrap;
+  }
+
+  /* Only the copy draws the brush: invisible text, visible brush, never moving */
+  .about-hero__phrase strong::after,
+  .about-hero__phrase u::after {
+    content: none;
+  }
+
+  .about-hero__brush-holder {
+    visibility: hidden;
+  }
+
+  .about-hero__brush-holder strong::after,
+  .about-hero__brush-holder u::after {
+    visibility: visible;
+  }
+
+  /*
+    With the script (data-ready) the copy's brush steps aside for one brush that the script places
+    under the current version's Bold word (--brush-x, --brush-y, --brush-w, in px inside the
+    line), so it slides and stretches to the new word while the words change.
+  */
+  .about-hero__rotator {
+    position: relative;
+  }
+
+  .about-hero__brush {
+    display: none;
+  }
+
+  .about-hero__rotator[data-ready] .about-hero__brush-holder strong::after,
+  .about-hero__rotator[data-ready] .about-hero__brush-holder u::after {
+    visibility: hidden;
+  }
+
+  .about-hero__rotator[data-ready] .about-hero__brush {
+    position: absolute;
+    inset-block-start: calc(var(--brush-y, 0px) - 0.06em);
+    inset-inline-start: var(--brush-x, 0px);
+    display: block;
+    inline-size: var(--brush-w, 0px);
+    block-size: 0.18em;
+    background-color: var(--color-accent);
+    -webkit-mask: var(--brush-underline) center / 100% 100% no-repeat;
+    mask: var(--brush-underline) center / 100% 100% no-repeat;
+    pointer-events: none;
+    transition:
+      inset-inline-start 800ms var(--ease-out) 150ms,
+      inline-size 800ms var(--ease-out) 150ms,
+      inset-block-start 800ms var(--ease-out) 150ms,
+      opacity 300ms ease;
+  }
+
+  .about-hero__rotator[data-ready] .about-hero__brush.is-hidden {
+    opacity: 0;
+  }
+
+  .about-hero__phrase:not(:first-child) {
+    visibility: hidden;
+  }
+
+  .about-hero__rotator[data-ready] .about-hero__phrase {
+    visibility: visible;
+    opacity: 0;
+    translate: 0 0.3em;
+  }
+
+  .about-hero__rotator[data-ready] .about-hero__phrase.is-leaving {
+    translate: 0 -0.25em;
+    transition:
+      opacity 350ms ease-in,
+      translate 450ms ease-in;
+  }
+
+  .about-hero__rotator[data-ready] .about-hero__phrase.is-active {
+    opacity: 1;
+    translate: 0 0;
+    transition:
+      opacity 700ms var(--ease-out) 200ms,
+      translate 900ms var(--ease-out) 200ms;
+  }
+
+  /* ---------- Intro and actions ---------- */
+  .about-hero__text {
+    max-inline-size: 48rem; /* ~760px */
+    font-size: var(--font-size-body-lg);
+    line-height: 1.6;
+  }
+
+  .about-hero__text > * {
+    margin: 0;
+  }
+
+  .about-hero__text > * + * {
+    margin-block-start: var(--space-md);
+  }
+
+  .about-hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-lg) max(var(--space-xl), calc(85 * var(--px, 0.0625rem)));
+    margin-block-start: max(var(--space-xl), calc(80 * var(--px, 0.0625rem)));
+  }
+
+  /* "BOOK CONSULTATION →": accent label with an underline */
+  .about-hero__link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding-block-end: var(--space-xs);
+    border-block-end: 1px solid currentcolor;
+    color: var(--color-accent);
+    font-size: var(--font-size-label);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-decoration: none;
+    text-transform: uppercase;
+  }
+
+  .about-hero__link-arrow svg {
+    display: block;
+    inline-size: 1.1em;
+    block-size: auto;
+    transition: translate var(--duration-fast) var(--ease-out);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .about-hero__link:hover .about-hero__link-arrow svg {
+      translate: 0.25em 0;
+    }
+  }
+
+  /* ---------- Disciplines card ---------- */
+  .about-hero__card {
+    padding:
+      max(var(--space-xl), calc(53 * var(--px, 0.0625rem)))
+      max(var(--space-lg), calc(93 * var(--px, 0.0625rem)))
+      max(var(--space-xl), calc(50 * var(--px, 0.0625rem)))
+      max(var(--space-lg), calc(82 * var(--px, 0.0625rem)));
+    border-radius: max(var(--radius-md), calc(30 * var(--px, 0.0625rem)));
+    background-color: var(--color-background);
+    box-shadow: var(--shadow-card);
+  }
+
+  .about-hero__card-label {
+    margin: 0 0 max(var(--space-md), calc(40 * var(--px, 0.0625rem)));
+    font-family: var(--font-body--family);
+    font-size: var(--font-size-label);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    line-height: var(--line-height-heading);
+    text-transform: uppercase;
+  }
+
+  .about-hero__disciplines {
+    counter-reset: discipline;
+  }
+
+  /* Phones (the 375px design): smaller indent, the buttons on one line */
+  @media (max-width: 749px) {
+    .about-hero__script {
+      margin-inline-start: var(--space-xl);
+    }
+
+    .about-hero__actions {
+      flex-wrap: nowrap;
+      justify-content: space-between;
+      gap: var(--space-md);
+    }
+
+    .about-hero__actions .button {
+      padding-inline: var(--space-lg);
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <about-hero-rotator>: swaps the heading's second line every few seconds (the section's
+   * "Change every" setting, data-interval in seconds). One brush glides to each version's Bold word
+   * (placeBrush) while the words change.
+   * - Runs only with animations on (the global setting; never in the theme editor) and for
+   *   visitors who allow motion; otherwise the first version just stays.
+   * - Loops for as long as the page is open. WCAG 2.2.2 (moving content that runs longer than 5
+   *   seconds needs a way to stop it): the pause / play button next to the heading stops it for
+   *   good (until pressed again), and it also pauses while the pointer is over the heading.
+   */
+  class AboutHeroRotator extends HTMLElement {
+    connectedCallback() {
+      this.phrases = [...this.querySelectorAll('.about-hero__phrase')];
+      const animations = document.documentElement.classList.contains('animations-on');
+      const motion = window.matchMedia('(prefers-reduced-motion: no-preference)').matches;
+      if (this.phrases.length < 2 || !animations || !motion) return;
+
+      this.index = 0;
+      this.paused = false;
+      this.delay = Math.max(Number(this.dataset.interval) || 3, 1) * 1000;
+      this.brush = this.querySelector('.about-hero__brush');
+      this.setAttribute('data-ready', '');
+
+      // The brush's first place: put it there at once (no glide in from the left)
+      if (this.brush) {
+        this.brush.style.transition = 'none';
+        this.placeBrush();
+        this.brush.getBoundingClientRect();
+        this.brush.style.transition = '';
+        // The heading's size changes with the screen: measure again when the line resizes
+        this.resize = new ResizeObserver(() => this.placeBrush());
+        this.resize.observe(this);
+      }
+
+      this.addEventListener('pointerenter', () => this.stop());
+      this.addEventListener('pointerleave', () => this.start());
+
+      // The button sits next to the h1, in the same lettering block
+      this.pauseButton = this.closest('.about-hero__lettering')?.querySelector('.about-hero__pause');
+      if (this.pauseButton) {
+        this.pauseButton.hidden = false;
+        this.pauseButton.addEventListener('click', () => this.togglePause());
+      }
+
+      this.start();
+    }
+
+    togglePause() {
+      this.paused = !this.paused;
+      const button = this.pauseButton;
+      button.setAttribute('aria-pressed', String(this.paused));
+      button.querySelector('.visually-hidden').textContent = this.paused
+        ? button.dataset.labelPlay
+        : button.dataset.labelPause;
+      if (this.paused) this.stop();
+      else this.start();
+    }
+
+    disconnectedCallback() {
+      this.stop();
+      clearTimeout(this.leaveTimer);
+      this.resize?.disconnect();
+    }
+
+    /**
+     * Puts the brush under the current version's Bold (or <u>) word, the same way the old ::after
+     * did: from 8% before the word to 2% after it, its top 0.06em above the word's bottom.
+     * offsetLeft / offsetTop ignore the versions' rise-in movement (translate), so it aims at the
+     * word's final place. No Bold word in this version: the brush fades out.
+     */
+    placeBrush() {
+      if (!this.brush) return;
+      const word = this.phrases[this.index].querySelector('strong, u');
+      this.brush.classList.toggle('is-hidden', !word);
+      if (!word) return;
+
+      const width = word.offsetWidth;
+      this.style.setProperty('--brush-x', `${word.offsetLeft - width * 0.08}px`);
+      this.style.setProperty('--brush-w', `${width * 1.1}px`);
+      this.style.setProperty('--brush-y', `${word.offsetTop + word.offsetHeight}px`);
+    }
+
+    start() {
+      if (this.timer || this.paused) return;
+      this.timer = setInterval(() => this.next(), this.delay);
+    }
+
+    stop() {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+
+    next() {
+      const previous = this.index;
+      this.index = (this.index + 1) % this.phrases.length;
+      this.phrases.forEach((phrase, i) => {
+        phrase.classList.toggle('is-leaving', i === previous);
+        phrase.classList.toggle('is-active', i === this.index);
+      });
+      this.placeBrush();
+      // Once it has gone (~450ms), the old version waits below again, unseen
+      clearTimeout(this.leaveTimer);
+      this.leaveTimer = setTimeout(() => {
+        this.phrases.forEach((phrase) => phrase.classList.remove('is-leaving'));
+      }, 500);
+    }
+  }
+
+  if (!customElements.get('about-hero-rotator')) customElements.define('about-hero-rotator', AboutHeroRotator);
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.about_hero",
+  "tag": "section",
+  "class": "about-hero-section",
+  "enabled_on": {
+    "templates": ["page"]
+  },
+  "blocks": [{ "type": "_discipline" }],
+  "max_blocks": 6,
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "t:labels.about_hero_help"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_breadcrumb",
+      "label": "t:labels.show_breadcrumb",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "script_text",
+      "label": "t:labels.about_script_text",
+      "default": "Our story"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading_line_1",
+      "label": "t:labels.heading_line_1",
+      "info": "t:labels.about_heading_info",
+      "default": "Made <em>Slowly,</em>"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading_line_2",
+      "label": "t:labels.heading_line_2",
+      "info": "t:labels.about_heading_info",
+      "default": "worn <strong>daily</strong>"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading_line_2_b",
+      "label": "t:labels.heading_line_2_b",
+      "info": "t:labels.heading_line_2_alt_info",
+      "default": "read <strong>openly</strong>"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading_line_2_c",
+      "label": "t:labels.heading_line_2_c",
+      "default": "refilled <strong>always</strong>"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading_line_2_d",
+      "label": "t:labels.heading_line_2_d"
+    },
+    {
+      "type": "range",
+      "id": "rotate_interval",
+      "label": "t:labels.heading_rotate_interval",
+      "info": "t:labels.heading_rotate_interval_info",
+      "min": 2,
+      "max": 8,
+      "step": 0.5,
+      "unit": "s",
+      "default": 3
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "t:labels.text",
+      "default": "<p>OroSkin is a fragrance, skincare and makeup house built on three unfashionable ideas: name your growers, dose your actives honestly, and make packaging you refill instead of replace.</p>"
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "t:labels.button_label",
+      "default": "Shop all products"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "t:labels.button_link",
+      "default": "/collections/all"
+    },
+    {
+      "type": "text",
+      "id": "link_label",
+      "label": "t:labels.link_label",
+      "default": "Book consultation"
+    },
+    {
+      "type": "url",
+      "id": "link_url",
+      "label": "t:labels.link",
+      "info": "t:labels.about_link_info"
+    },
+    {
+      "type": "text",
+      "id": "card_label",
+      "label": "t:labels.about_card_label",
+      "default": "The Oroskin, in three disciplines"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "checkbox",
+      "id": "fill_screen",
+      "label": "t:labels.fill_screen",
+      "info": "t:labels.fill_screen_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "scale_screen",
+      "label": "t:labels.scale_screen",
+      "info": "t:labels.scale_screen_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "text_scale",
+      "label": "t:labels.text_scale",
+      "info": "t:labels.text_scale_info",
+      "min": 100,
+      "max": 130,
+      "step": 5,
+      "unit": "%",
+      "default": 110,
+      "visible_if": "{{ section.settings.scale_screen }}"
+    },
+    {
+      "type": "range",
+      "id": "heading_scale",
+      "label": "t:labels.about_heading_scale",
+      "info": "t:labels.about_heading_scale_info",
+      "min": 50,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 100
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 48
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.about_hero",
+      "blocks": [
+        {
+          "type": "_discipline",
+          "settings": {
+            "title": "Fragrance",
+            "text": "<p>Naturals-led, 22% concentration, six-hour verified wear.</p>",
+            "open": true
+          }
+        },
+        {
+          "type": "_discipline",
+          "settings": {
+            "title": "Skincare",
+            "text": "<p>Actives at their clinical dose, printed on every carton.</p>"
+          }
+        },
+        {
+          "type": "_discipline",
+          "settings": {
+            "title": "Makeup",
+            "text": "<p>Forty-two shades mapped by undertone, in refillable cases.</p>"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

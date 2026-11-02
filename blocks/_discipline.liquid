@@ -1,0 +1,345 @@
+{%- comment -%}
+  One row of the About hero's "three disciplines" card (design/briefs/about-us.md §4.1): number, name
+  and product count; open, a photo, a short text and a "Shop ↗" link to the collection.
+
+  - It's a <details> with the same name as its siblings, so only one row is open at a time (the
+    browser closes the others). "Open when the page loads" opens it at first. Clicking the open row
+    closes it; the script below keeps the card's height then, so the centred hero doesn't move.
+  - Name: the Title setting, else the collection's title. Count: "Count text" if typed, else the
+    collection's product count ("19 formulas"). Photo: the Image setting, else the collection's image.
+  - The number (01, 02…) is a CSS counter on the card, so it follows the block order.
+{%- endcomment -%}
+
+{%- liquid
+  assign discipline = block.settings.collection
+  assign title = block.settings.title | default: discipline.title
+  assign image = block.settings.image | default: discipline.featured_image
+
+  assign count_text = block.settings.count_text
+  if count_text == blank and discipline != blank
+    assign count_text = 'about.formulas' | t: count: discipline.products_count
+  endif
+
+  # The open row's photo is on the first screen: load it at once there, lazily anywhere else
+  assign image_loading = 'lazy'
+  if section.index == 1 and block.settings.open
+    assign image_loading = 'eager'
+  endif
+-%}
+
+<details
+  class="discipline"
+  name="about-disciplines-{{ section.id }}"
+  {% if block.settings.open %}
+    open
+  {% endif %}
+  {{ block.shopify_attributes }}
+>
+  <summary class="discipline__summary">
+    <span class="discipline__number" aria-hidden="true"></span>
+    <span class="discipline__title">{{ title | default: '—' | escape }}</span>
+    {%- if count_text != blank -%}
+      <span class="discipline__count">{{ count_text | escape }}</span>
+    {%- endif -%}
+  </summary>
+
+  <div class="discipline__panel">
+    <div class="discipline__media">
+      {%- if image != blank -%}
+        {{
+          image
+          | image_url: width: 960
+          | image_tag: widths: '320, 480, 640, 960', sizes: '(min-width: 1200px) 320px, 40vw', alt: '', loading: image_loading
+        }}
+      {%- else -%}
+        {{ 'collection-1' | placeholder_svg_tag: 'discipline__placeholder' }}
+      {%- endif -%}
+    </div>
+
+    <div class="discipline__body">
+      {%- if block.settings.text != blank -%}
+        <div class="discipline__text">{{ block.settings.text }}</div>
+      {%- endif -%}
+      {%- if discipline != blank and block.settings.link_label != blank -%}
+        <a class="discipline__link" href="{{ discipline.url }}">
+          {{- block.settings.link_label | escape -}}
+          <span class="discipline__link-arrow" aria-hidden="true">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+        </a>
+      {%- endif -%}
+    </div>
+  </div>
+</details>
+
+{% stylesheet %}
+  /*
+    Figma 1920 (card x 872–1868): number x 954, name x 1012 (heading font ~64px), count right
+    (label); rows ~106px tall with a 1px rule under each. Open: photo 318 x 268 (radius ~10), the
+    text ~54px to its right. Sizes are Figma px x --px (screen-scale) with rem floors, or tokens.
+  */
+  .discipline {
+    counter-increment: discipline;
+    border-block-end: 1px solid var(--color-border);
+  }
+
+  .discipline__summary {
+    display: grid;
+    grid-template-columns: max(2rem, calc(58 * var(--px, 0.0625rem))) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-sm);
+    padding-block: max(var(--space-sm), calc(18 * var(--px, 0.0625rem)));
+    cursor: pointer;
+    list-style: none;
+  }
+
+  /* No browser triangle */
+  .discipline__summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .discipline__number::before {
+    content: counter(discipline, decimal-leading-zero);
+  }
+
+  .discipline__number,
+  .discipline__count {
+    font-size: var(--font-size-label);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  .discipline__number {
+    color: var(--color-accent);
+  }
+
+  .discipline__title {
+    font-family: var(--font-heading--family);
+    font-size: max(2rem, calc(64 * var(--px, 0.0625rem)));
+    font-weight: var(--font-heading--weight);
+    line-height: 1.2;
+    transition: color var(--duration-fast) var(--ease-out);
+  }
+
+  .discipline[open] .discipline__title,
+  .discipline__summary:hover .discipline__title {
+    color: var(--color-accent);
+  }
+
+  .discipline__panel {
+    display: grid;
+    grid-template-columns: minmax(0, 318fr) minmax(0, 450fr);
+    align-items: start;
+    gap: max(var(--space-lg), calc(54 * var(--px, 0.0625rem)));
+    padding-block: max(var(--space-sm), calc(16 * var(--px, 0.0625rem))) max(var(--space-md), calc(24 * var(--px, 0.0625rem)));
+  }
+
+  /*
+    Opening and closing glide (only with motion allowed). ::details-content is the part of a
+    <details> under its summary: its height goes 0 → auto, which interpolate-size lets the browser
+    animate; content-visibility waits (allow-discrete) so the closing row stays visible while it
+    shrinks. The panel fades at the same time. Browsers without these features open at once.
+  */
+  @media (prefers-reduced-motion: no-preference) {
+    @supports selector(::details-content) {
+      .discipline {
+        interpolate-size: allow-keywords;
+      }
+
+      .discipline::details-content {
+        block-size: 0;
+        overflow: clip;
+        transition:
+          block-size var(--duration-slow) var(--ease-out),
+          content-visibility var(--duration-slow) allow-discrete;
+      }
+
+      .discipline[open]::details-content {
+        block-size: auto;
+      }
+
+      .discipline__panel {
+        opacity: 0;
+        transition: opacity var(--duration-slow) var(--ease-out);
+      }
+
+      .discipline[open] .discipline__panel {
+        opacity: 1;
+      }
+    }
+  }
+
+  .discipline__media {
+    overflow: hidden;
+    aspect-ratio: 318 / 268;
+    border-radius: var(--radius-xs);
+    background-color: var(--color-tint-subtle);
+  }
+
+  .discipline__media img,
+  .discipline__placeholder {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .discipline__body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: max(var(--space-md), calc(40 * var(--px, 0.0625rem)));
+    padding-block-start: max(var(--space-sm), calc(30 * var(--px, 0.0625rem)));
+  }
+
+  .discipline__text {
+    font-size: var(--font-size-body-lg);
+    line-height: 1.6;
+  }
+
+  .discipline__text > * {
+    margin: 0;
+  }
+
+  .discipline__link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    color: var(--color-accent);
+    font-size: var(--font-size-body-lg);
+    text-decoration: none;
+  }
+
+  /* The → icon turned to ↗; it lifts a little more on hover */
+  .discipline__link-arrow svg {
+    display: block;
+    inline-size: 1em;
+    block-size: auto;
+    rotate: -45deg;
+    transition: translate var(--duration-fast) var(--ease-out);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .discipline__link:hover .discipline__link-arrow svg {
+      translate: 0.15em -0.15em;
+    }
+  }
+
+  /*
+    Phones (mobile export Variant45, 375px): a smaller name so it never runs into the count, the
+    count on the open row only, and the photo kept beside the text (~135px : the rest).
+  */
+  @media (max-width: 749px) {
+    .discipline__summary {
+      gap: var(--space-xs);
+    }
+
+    .discipline__title {
+      font-size: 1.75rem;
+      overflow-wrap: anywhere;
+    }
+
+    .discipline:not([open]) .discipline__count {
+      display: none;
+    }
+
+    .discipline__panel {
+      grid-template-columns: minmax(0, 135fr) minmax(0, 155fr);
+      gap: var(--space-md);
+    }
+
+    .discipline__body {
+      gap: var(--space-md);
+      padding-block-start: var(--space-sm);
+    }
+
+    .discipline__text,
+    .discipline__link {
+      font-size: var(--font-size-body-sm);
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * A "Fill the screen height" hero centres its content, so a card that shrinks would pull the
+   * breadcrumb and the story with it. Just before the last open row closes (click, Enter or Space on
+   * its summary), the card keeps its current height as a minimum: the rows fold up inside the white
+   * card and nothing around it moves. The minimum is dropped when the window's width changes, because
+   * the card's open height changes with the screen.
+   */
+  document.addEventListener('click', (event) => {
+    const summary = event.target.closest('.discipline__summary');
+    if (!summary || !summary.parentElement.open) return;
+
+    const card = summary.closest('.section--fill-screen .about-hero__card');
+    if (!card || card.querySelectorAll('.discipline[open]').length > 1) return;
+
+    card.style.minBlockSize = `${card.offsetHeight}px`;
+  });
+
+  // Only a width change resizes the card (phones fire "resize" when the address bar hides on scroll)
+  let lastWidth = window.innerWidth;
+  window.addEventListener('resize', () => {
+    if (window.innerWidth === lastWidth) return;
+    lastWidth = window.innerWidth;
+
+    document.querySelectorAll('.about-hero__card[style]').forEach((card) => {
+      card.style.removeProperty('min-block-size');
+    });
+  });
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.discipline",
+  "settings": [
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "t:labels.collection",
+      "info": "t:labels.discipline_collection_info"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "t:labels.title",
+      "info": "t:labels.discipline_title_info"
+    },
+    {
+      "type": "text",
+      "id": "count_text",
+      "label": "t:labels.discipline_count_text",
+      "info": "t:labels.discipline_count_text_info"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.image",
+      "info": "t:labels.discipline_image_info"
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "t:labels.text"
+    },
+    {
+      "type": "text",
+      "id": "link_label",
+      "label": "t:labels.link_label",
+      "default": "Shop"
+    },
+    {
+      "type": "checkbox",
+      "id": "open",
+      "label": "t:labels.discipline_open",
+      "info": "t:labels.discipline_open_info",
+      "default": false
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.discipline"
+    }
+  ]
+}
+{% endschema %}

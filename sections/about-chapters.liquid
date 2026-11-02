@@ -1,0 +1,410 @@
+{%- comment -%}
+  About chapters (M8.4 part 2, design/briefs/about-us.md §4.2, exports "Default-1", "Default-14" to
+  "Default-17", mobile "Variant45-1/-2"): a full-screen photo story, one screen per Chapter block.
+
+  Three layers share one grid cell:
+  1. the photos (sticky, one screen): the script moves every chapter's photo or video here, stacked,
+     only the active one visible; they cross-fade when the chapter changes;
+  2. the chapters (blocks/_chapter.liquid), one screen each, scrolling over the photos;
+  3. the side nav 01–04 (sticky, vertically centred): links to each chapter, the active one marked;
+     the script builds it from the chapters.
+  Why the script moves the photos and builds the nav: a section can't read its theme blocks'
+  settings (section.blocks only gives "@theme" stand-ins with other ids), so each Chapter block
+  draws its own photo, and the script gathers them.
+  The script finds the chapter crossing a line 70% down the screen (IntersectionObserver) and marks it.
+  Without JS: each chapter keeps its own photo behind its words (full-screen panels), no nav.
+{%- endcomment -%}
+
+{%- liquid
+  assign overlay = section.settings.overlay_opacity | divided_by: 100.0
+-%}
+
+{% render 'screen-scale' %}
+
+<about-chapters
+  class="about-chapters full-width{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
+  style="--chapter-text: {{ section.settings.text_color }}; --chapter-accent: {{ section.settings.label_color }}; --chapter-overlay: {{ overlay }}; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};"
+>
+  {%- if section.blocks.size > 0 -%}
+    {%- comment -%} Filled by the script with each chapter's photo (empty without JS) {%- endcomment -%}
+    <div class="about-chapters__media" aria-hidden="true"></div>
+
+    <div class="about-chapters__list">
+      {% content_for 'blocks' %}
+    </div>
+
+    {%- comment -%} The script adds one link per chapter; hidden until it does {%- endcomment -%}
+    <nav class="about-chapters__nav" aria-label="{{ 'about.chapters_nav' | t }}" hidden>
+      <ol class="about-chapters__nav-list"></ol>
+    </nav>
+  {%- elsif request.design_mode -%}
+    <p class="about-chapters__empty">{{ 'about.chapters_empty' | t }}</p>
+  {%- endif -%}
+</about-chapters>
+
+{% stylesheet %}
+  /*
+    Figma 1920: full bleed, each chapter one screen; dark overlay over the photo (~45%); content
+    x 308; side nav x 55, items 43px apart (y 450–580): a 30px rule + "02" in the text colour,
+    the active one a 66px rule + number in the accent. Sizes: Figma px x --px with rem floors.
+  */
+  .about-chapters {
+    --chapter-indent: max(4.75rem, calc(308 * var(--px, 0.0625rem)));
+
+    display: grid;
+    background-color: #1f1f1f; /* behind the photos while they load */
+  }
+
+  /* The three layers share one cell; the sticky ones stay one screen tall at the top */
+  .about-chapters > * {
+    grid-area: 1 / 1;
+  }
+
+  .about-chapters__media,
+  .about-chapters__nav {
+    position: sticky;
+    inset-block-start: 0;
+    align-self: start;
+    block-size: 100svh;
+  }
+
+  .about-chapters__media {
+    overflow: hidden;
+  }
+
+  /*
+    The chapters' photos once the script moved them here (.chapter__media, styled in the block:
+    absolute, filling the box, with the overlay): stacked, only the active one visible
+  */
+  .about-chapters__media .chapter__media {
+    z-index: auto;
+    opacity: 0;
+  }
+
+  .about-chapters__media .chapter__media.is-active {
+    opacity: 1;
+  }
+
+  .about-chapters__list {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* The nav sits on the left, over the chapters; only its links take clicks */
+  .about-chapters__nav {
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-self: start;
+    padding-inline-start: max(1rem, calc(55 * var(--px, 0.0625rem)));
+    pointer-events: none;
+  }
+
+  /* display: flex above would beat the hidden attribute (no JS, or a single chapter) */
+  .about-chapters__nav[hidden] {
+    display: none;
+  }
+
+  .about-chapters__nav-list {
+    display: grid;
+    gap: max(0.75rem, calc(22 * var(--px, 0.0625rem)));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .about-chapters__link {
+    display: flex;
+    align-items: center;
+    gap: max(0.75rem, calc(17 * var(--px, 0.0625rem)));
+    color: var(--chapter-text);
+    font-size: var(--font-size-label);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-decoration: none;
+    pointer-events: auto;
+  }
+
+  .about-chapters__rule {
+    inline-size: max(1.25rem, calc(30 * var(--px, 0.0625rem)));
+    block-size: 1px;
+    background-color: currentcolor;
+  }
+
+  .about-chapters__link[aria-current] {
+    color: var(--chapter-accent);
+  }
+
+  .about-chapters__link[aria-current] .about-chapters__rule {
+    inline-size: max(2.5rem, calc(66 * var(--px, 0.0625rem)));
+    block-size: 2px;
+  }
+
+  .about-chapters__empty {
+    margin: 0;
+    padding: var(--space-2xl) var(--page-margin);
+    color: #ffffff;
+    text-align: center;
+  }
+
+  /* The photo cross-fade and the nav rule's growth, only with motion allowed */
+  @media (prefers-reduced-motion: no-preference) {
+    .about-chapters__media .chapter__media {
+      transition: opacity 900ms var(--ease-out);
+    }
+
+    .about-chapters__rule {
+      transition: inline-size var(--duration-fast) var(--ease-out);
+    }
+  }
+
+  /* Phones (Variant45-2): the nav closer to the edge, shorter rules, so it fits beside the words */
+  @media (max-width: 749px) {
+    .about-chapters__nav-list {
+      gap: var(--space-sm);
+    }
+
+    .about-chapters__link {
+      gap: var(--space-xs);
+    }
+
+    .about-chapters__rule {
+      inline-size: 0.875rem;
+    }
+
+    .about-chapters__link[aria-current] .about-chapters__rule {
+      inline-size: 1.75rem;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <about-chapters>: the photo story.
+   *
+   * sync() gathers the chapters: it moves each chapter's photo (.chapter__media) into the sticky
+   * layer, in chapter order, and builds the side nav (one link per chapter: "01" + its heading for
+   * screen readers). A chapter remembers its moved photo (chapter.media), so sync() can run again:
+   * the theme editor re-renders a block when its settings change, and a MutationObserver re-syncs.
+   *
+   * The IntersectionObserver's root is a thin line across the viewport 70% down (rootMargin -69%
+   * top, -30% bottom), so one chapter crosses it at a time, early enough that its words are already
+   * fading in while it scrolls into view (the middle felt late: half a screen of photo without
+   * words). activate() then:
+   * - shows that chapter's photo (is-active: CSS cross-fades it) and plays its video, if any and
+   *   if motion is allowed, pausing the others;
+   * - marks its nav link (aria-current="step");
+   * - adds is-active to the chapter, so its words fade up (CSS, only with animations on).
+   * data-ready tells the CSS the script runs, so it may hide words until their chapter arrives.
+   */
+  class AboutChapters extends HTMLElement {
+    connectedCallback() {
+      this.media = this.querySelector('.about-chapters__media');
+      this.list = this.querySelector('.about-chapters__list');
+      this.nav = this.querySelector('.about-chapters__nav');
+      if (!this.media || !this.list || !this.nav) return;
+
+      this.motion = window.matchMedia('(prefers-reduced-motion: no-preference)');
+      this.current = -1;
+      this.observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) this.activate(this.chapters.indexOf(entry.target));
+          });
+        },
+        { rootMargin: '-69% 0px -30% 0px' }
+      );
+
+      this.sync();
+      this.mutations = new MutationObserver(() => this.sync());
+      this.mutations.observe(this.list, { childList: true, subtree: true });
+      this.setAttribute('data-ready', '');
+    }
+
+    disconnectedCallback() {
+      this.observer?.disconnect();
+      this.mutations?.disconnect();
+    }
+
+    sync() {
+      this.chapters = [...this.list.querySelectorAll('.chapter')];
+
+      const photos = this.chapters.map((chapter) => {
+        const own = chapter.querySelector('.chapter__media');
+        if (own) chapter.media = own;
+        return chapter.media;
+      });
+      this.slides = photos.filter(Boolean);
+      this.media.replaceChildren(...this.slides);
+
+      const items = this.chapters.map((chapter, i) => {
+        const link = document.createElement('a');
+        link.className = 'about-chapters__link';
+        link.href = `#${chapter.id}`;
+
+        const rule = document.createElement('span');
+        rule.className = 'about-chapters__rule';
+        rule.setAttribute('aria-hidden', 'true');
+        link.append(rule, String(i + 1).padStart(2, '0'));
+
+        const heading = chapter.querySelector('.chapter__heading');
+        if (heading) {
+          const name = document.createElement('span');
+          name.className = 'visually-hidden';
+          name.textContent = `: ${heading.textContent}`;
+          link.append(name);
+        }
+
+        const item = document.createElement('li');
+        item.append(link);
+        return item;
+      });
+      this.nav.querySelector('ol').replaceChildren(...items);
+      this.links = [...this.nav.querySelectorAll('.about-chapters__link')];
+      this.nav.hidden = this.chapters.length < 2;
+
+      this.observer.disconnect();
+      this.chapters.forEach((chapter) => this.observer.observe(chapter));
+
+      // Before any chapter reaches the middle, the first photo shows (Default-1: photo, no words yet)
+      const index = Math.min(Math.max(this.current, 0), this.chapters.length - 1);
+      this.current = -1;
+      this.activate(index, this.chapters[index]?.classList.contains('is-active'));
+
+      // Moving the photos changed the list: don't let that trigger another sync
+      this.mutations?.takeRecords();
+    }
+
+    activate(index, markChapter = true) {
+      const chapter = this.chapters[index];
+      if (!chapter) return;
+      // Same chapter again: nothing to do, unless it was re-rendered and lost its mark
+      if (index === this.current && (!markChapter || chapter.classList.contains('is-active'))) return;
+      this.current = index;
+
+      if (markChapter) {
+        this.chapters.forEach((chapter, i) => chapter.classList.toggle('is-active', i === index));
+      }
+      this.links.forEach((link, i) => {
+        if (i === index) link.setAttribute('aria-current', 'step');
+        else link.removeAttribute('aria-current');
+      });
+      this.chapters.forEach((chapter, i) => {
+        const slide = chapter.media;
+        if (!slide) return;
+        slide.classList.toggle('is-active', i === index);
+        const video = slide.querySelector('video');
+        if (!video) return;
+        if (i === index && this.motion.matches) video.play().catch(() => {});
+        else video.pause();
+      });
+    }
+  }
+
+  if (!customElements.get('about-chapters')) customElements.define('about-chapters', AboutChapters);
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.about_chapters",
+  "tag": "section",
+  "class": "about-chapters-section",
+  "enabled_on": {
+    "templates": ["page"]
+  },
+  "blocks": [{ "type": "_chapter" }],
+  "max_blocks": 8,
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "t:labels.about_chapters_help"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "t:labels.chapters_text_color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "label_color",
+      "label": "t:labels.chapters_label_color",
+      "info": "t:labels.chapters_label_color_info",
+      "default": "#7d0000"
+    },
+    {
+      "type": "range",
+      "id": "overlay_opacity",
+      "label": "t:labels.overlay_opacity",
+      "info": "t:labels.chapters_overlay_info",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 100
+    },
+    {
+      "type": "checkbox",
+      "id": "scale_screen",
+      "label": "t:labels.scale_screen",
+      "info": "t:labels.scale_screen_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "text_scale",
+      "label": "t:labels.text_scale",
+      "info": "t:labels.text_scale_info",
+      "min": 100,
+      "max": 130,
+      "step": 5,
+      "unit": "%",
+      "default": 110,
+      "visible_if": "{{ section.settings.scale_screen }}"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.about_chapters",
+      "blocks": [
+        {
+          "type": "_chapter",
+          "settings": {
+            "label": "Chapter I · Fragrance",
+            "heading": "Rose picked before the heat can take its oil.",
+            "stat_value": "3,600",
+            "stat_label": "Blossoms per 30ml flacon"
+          }
+        },
+        {
+          "type": "_chapter",
+          "settings": {
+            "label": "Chapter II · Skincare",
+            "heading": "Actives kept at their clinical dose, not their marketing dose.",
+            "stat_value": "40+",
+            "stat_label": "Formulation rounds per serum"
+          }
+        },
+        {
+          "type": "_chapter",
+          "settings": {
+            "label": "Chapter III · Makeup",
+            "heading": "Forty-two shades mapped by undertone, not lightness.",
+            "stat_value": "42",
+            "stat_label": "Shades, four undertone families"
+          }
+        },
+        {
+          "type": "_chapter",
+          "settings": {
+            "label": "Chapter IV · The ritual",
+            "heading": "Finally, it becomes three quiet minutes.",
+            "stat_value": "71%",
+            "stat_label": "Lower carbon per refill"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

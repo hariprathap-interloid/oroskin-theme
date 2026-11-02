@@ -1,0 +1,452 @@
+{%- comment -%}
+  One person of the About team (design/briefs/about-us.md §4.5 + answer 11, exports "Default-8",
+  "image.png" (hover), "leaders" (phone)): a square photo with an outline role word over its top
+  edge ("FOUNDER"), then the name and role.
+  - Hover or keyboard focus inside (focus-within): the card becomes a dark panel, the role word rises
+    with a faded copy above it, the name and role move onto the photo's bottom, round glass social
+    buttons show at the photo's top right and the quote shows under the photo. On touch, a tap
+    gives the hover state.
+  - The role word and the name on the photo are copies (aria-hidden): screen readers get the name and
+    role once, from the caption. The quote is always in the page (only faded), so screen readers
+    read it too.
+{%- endcomment -%}
+
+{%- liquid
+  assign name = block.settings.name
+  assign photo_alt = block.settings.image.alt | default: name
+  assign networks = 'instagram,facebook,linkedin' | split: ','
+  assign new_window = 'accessibility.new_window' | t
+  assign has_social = false
+  for network in networks
+    if block.settings[network] != blank
+      assign has_social = true
+    endif
+  endfor
+-%}
+
+<article
+  class="team-member"
+  data-animate="fade-up"
+  {{ block.shopify_attributes }}
+>
+  {%- if block.settings.role_word != blank -%}
+    <p class="team-member__word" data-word="{{ block.settings.role_word | escape }}" aria-hidden="true">
+      {{- block.settings.role_word | escape -}}
+    </p>
+  {%- endif -%}
+
+  <div class="team-member__media">
+    {% render 'image',
+      image: block.settings.image,
+      class: 'image--cover',
+      alt: photo_alt,
+      width: 800,
+      height: 800,
+      crop: 'center',
+      sizes: '(min-width: 1200px) 25vw, (min-width: 750px) 45vw, 50vw',
+      loading: 'lazy'
+    %}
+
+    {%- if name != blank or block.settings.role != blank -%}
+      <div class="team-member__overlay" aria-hidden="true">
+        {%- if name != blank -%}
+          <p class="team-member__overlay-name">{{ name | escape }}</p>
+        {%- endif -%}
+        {%- if block.settings.role != blank -%}
+          <p class="team-member__overlay-role">{{ block.settings.role | escape }}</p>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+
+    {%- if has_social -%}
+      <ul class="team-member__social" role="list">
+        {%- for network in networks -%}
+          {%- liquid
+            assign link = block.settings[network]
+            if link == blank
+              continue
+            endif
+            assign network_key = 'social.' | append: network
+            assign network_name = network_key | t
+            assign icon_file = 'icon-' | append: network | append: '.svg'
+          -%}
+          <li>
+            <a
+              class="team-member__social-link"
+              href="{{ link }}"
+              target="_blank"
+              rel="noopener"
+            >
+              {{- icon_file | inline_asset_content -}}
+              <span class="visually-hidden">
+                {{- 'about.team_social' | t: name: name, network: network_name }} ({{ new_window }})
+              </span>
+            </a>
+          </li>
+        {%- endfor -%}
+      </ul>
+    {%- endif -%}
+  </div>
+
+  <div class="team-member__below">
+    <div class="team-member__caption">
+      {%- if name != blank -%}
+        <h3 class="team-member__name">{{ name | escape }}</h3>
+      {%- endif -%}
+      {%- if block.settings.role != blank -%}
+        <p class="team-member__role">{{ block.settings.role | escape }}</p>
+      {%- endif -%}
+    </div>
+
+    {%- if block.settings.quote != blank -%}
+      <blockquote class="team-member__quote">
+        <p>“{{ block.settings.quote | escape }}”</p>
+      </blockquote>
+    {%- endif -%}
+  </div>
+</article>
+
+{% stylesheet %}
+  /*
+    Figma 1920 (Default-8): photo 393x393, radius ~16; the role word ~48px uppercase, accent outline
+    and a faint white fill, centred on the photo's top edge; name heading font ~36px; role accent
+    label ~18px letter-spaced, ~20px under the name.
+    Hover (image.png): a dark panel (~#1f1f1f, radius ~16) 12px around the photo and the quote; name
+    ~30px and role (white) on the photo's bottom over a dark fade; 3 round glass buttons (~40px)
+    stacked in the photo's top right; quote body ~17px white; the role word ~1.1em higher, with a
+    faded copy above it. The panel uses the scheme's text colour (dark on light schemes).
+  */
+  .team-member {
+    --member-pad: max(0.625rem, calc(12 * var(--px, 0.0625rem)));
+    --member-panel: var(--color-text);
+    --member-on-panel: var(--color-background);
+
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* The dark panel, drawn around the photo and the text below it */
+  .team-member::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: calc(var(--member-pad) * -1);
+    border-radius: calc(var(--radius-sm) - 3px + var(--member-pad));
+    background-color: var(--member-panel);
+    box-shadow: 0 1.25rem 2.5rem -1rem color-mix(in srgb, var(--member-panel) 45%, transparent);
+    opacity: 0;
+  }
+
+  /* The outline role word, over the photo's top edge; ::before is the faded copy that rises above it */
+  .team-member__word {
+    position: absolute;
+    z-index: 2;
+    inset-block-start: 0;
+    inset-inline: 0;
+    margin: 0;
+    color: #ffffff66;
+    font-family: var(--font-body--family);
+    font-size: max(1.5rem, calc(48 * var(--px, 0.0625rem)));
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    text-transform: uppercase;
+    white-space: nowrap;
+    -webkit-text-stroke: 1px var(--color-accent);
+    transform: translateY(-55%);
+    pointer-events: none;
+  }
+
+  /* Two faded copies (hover): ::before just above the word, ::after above that, fainter */
+  .team-member__word::before,
+  .team-member__word::after {
+    content: attr(data-word);
+    position: absolute;
+    inset: 0;
+    color: #ffffff99;
+    -webkit-text-stroke: 1px color-mix(in srgb, var(--color-text) 14%, transparent);
+    opacity: 0;
+    transform: translateY(0);
+  }
+
+  .team-member__word::after {
+    -webkit-text-stroke-color: color-mix(in srgb, var(--color-text) 8%, transparent);
+  }
+
+  .team-member__media {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 1;
+    border-radius: calc(var(--radius-sm) - 3px);
+    background-color: color-mix(in srgb, var(--color-text) 6%, var(--color-background));
+  }
+
+  .team-member__media .image,
+  .team-member__media img,
+  .team-member__media svg {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  /* Name + role on the photo (hover): over a dark fade at the bottom */
+  .team-member__overlay {
+    position: absolute;
+    inset: auto 0 0;
+    padding: 4rem var(--space-md) var(--space-md);
+    background: linear-gradient(to bottom, #00000000, #000000a6);
+    color: #ffffff;
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+
+  .team-member__overlay-name {
+    margin: 0;
+    font-family: var(--font-heading--family);
+    font-size: max(1.375rem, calc(30 * var(--px, 0.0625rem)));
+    line-height: 1.2;
+  }
+
+  .team-member__overlay-role {
+    margin: var(--space-xs) 0 0;
+    font-size: var(--font-size-caption);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  .team-member__social {
+    position: absolute;
+    inset-block-start: var(--space-sm);
+    inset-inline-end: var(--space-sm);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    opacity: 0;
+    transform: translateX(0.5rem);
+    /* Hidden buttons can't be tapped (a first tap opens the card); keyboard focus still reaches them */
+    pointer-events: none;
+  }
+
+  .team-member:hover .team-member__social,
+  .team-member:focus-within .team-member__social {
+    pointer-events: auto;
+  }
+
+  .team-member__social-link {
+    display: grid;
+    place-items: center;
+    inline-size: max(2.75rem, calc(52 * var(--px, 0.0625rem)));
+    block-size: max(2.75rem, calc(52 * var(--px, 0.0625rem)));
+    border-radius: 50%;
+    background-color: #ffffff40;
+    box-shadow: var(--shadow-header);
+    color: var(--color-accent);
+    -webkit-backdrop-filter: blur(var(--glass-frost));
+    backdrop-filter: blur(var(--glass-frost));
+  }
+
+  .team-member__social-link:hover {
+    background-color: #ffffffcc;
+  }
+
+  .team-member__social-link svg {
+    inline-size: max(1.375rem, calc(24 * var(--px, 0.0625rem)));
+    block-size: max(1.375rem, calc(24 * var(--px, 0.0625rem)));
+  }
+
+  /* The caption (rest) and the quote (hover) share one cell, so the card's height doesn't jump */
+  .team-member__below {
+    display: grid;
+    margin-block-start: max(var(--space-md), calc(20 * var(--px, 0.0625rem)));
+  }
+
+  .team-member__caption,
+  .team-member__quote {
+    grid-area: 1 / 1;
+  }
+
+  .team-member__name {
+    margin: 0;
+    font-size: max(1.5rem, calc(36 * var(--px, 0.0625rem)));
+    font-weight: 400;
+    line-height: 1.2;
+  }
+
+  .team-member__role {
+    margin: max(var(--space-sm), calc(16 * var(--px, 0.0625rem))) 0 0;
+    color: var(--color-accent);
+    font-size: var(--font-size-label);
+    letter-spacing: var(--letter-spacing-label);
+    line-height: 1.3;
+    text-transform: uppercase;
+  }
+
+  .team-member__quote {
+    margin: 0;
+    color: var(--member-on-panel);
+    font-size: var(--font-size-body-sm);
+    line-height: 1.6;
+    opacity: 0;
+  }
+
+  .team-member__quote p {
+    margin: 0;
+  }
+
+  /* ---------- Hover / keyboard focus ---------- */
+  .team-member:hover::before,
+  .team-member:focus-within::before,
+  .team-member:hover .team-member__overlay,
+  .team-member:focus-within .team-member__overlay,
+  .team-member:hover .team-member__social,
+  .team-member:focus-within .team-member__social,
+  .team-member:hover .team-member__quote,
+  .team-member:focus-within .team-member__quote {
+    opacity: 1;
+    transform: none;
+  }
+
+  .team-member:hover .team-member__caption,
+  .team-member:focus-within .team-member__caption {
+    opacity: 0;
+  }
+
+  .team-member:hover .team-member__word,
+  .team-member:focus-within .team-member__word {
+    transform: translateY(calc(-55% - var(--member-pad) - 0.6em));
+  }
+
+  .team-member:hover .team-member__word::before,
+  .team-member:focus-within .team-member__word::before {
+    opacity: 1;
+    transform: translateY(-0.8em);
+  }
+
+  .team-member:hover .team-member__word::after,
+  .team-member:focus-within .team-member__word::after {
+    opacity: 1;
+    transform: translateY(-1.6em);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .team-member::before,
+    .team-member__word,
+    .team-member__word::before,
+    .team-member__word::after,
+    .team-member__overlay,
+    .team-member__social,
+    .team-member__caption,
+    .team-member__quote {
+      transition:
+        opacity var(--duration-slow) var(--ease-out),
+        transform var(--duration-slow) var(--ease-out);
+    }
+  }
+
+  /* Phones and tablets ("leaders"): smaller words, smaller panel padding */
+  @media (max-width: 1199px) {
+    .team-member__word {
+      font-size: clamp(1.125rem, 4.5vw, 2.25rem);
+    }
+
+    .team-member__name {
+      font-size: clamp(1rem, 3.2vw, 1.75rem);
+    }
+
+    .team-member__role {
+      margin-block-start: var(--space-xs);
+      font-size: clamp(0.5625rem, 1.6vw, 0.875rem);
+      letter-spacing: 0.12em;
+    }
+
+    .team-member__quote {
+      font-size: var(--font-size-caption);
+    }
+  }
+
+  /* Phones: the photo is ~160px tall, so smaller buttons keep all three on it */
+  @media (max-width: 749px) {
+    .team-member__social {
+      inset-block-start: var(--space-xs);
+      inset-inline-end: var(--space-xs);
+      gap: var(--space-xs);
+    }
+
+    .team-member__social-link {
+      inline-size: 2rem;
+      block-size: 2rem;
+    }
+
+    .team-member__social-link svg {
+      inline-size: 1rem;
+      block-size: 1rem;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.team_member",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.image",
+      "info": "t:labels.team_image_info"
+    },
+    {
+      "type": "text",
+      "id": "role_word",
+      "label": "t:labels.team_role_word",
+      "info": "t:labels.team_role_word_info",
+      "default": "Founder"
+    },
+    {
+      "type": "text",
+      "id": "name",
+      "label": "t:labels.team_name",
+      "default": "Elise Beaumont"
+    },
+    {
+      "type": "text",
+      "id": "role",
+      "label": "t:labels.team_role",
+      "default": "Founder & creative director"
+    },
+    {
+      "type": "textarea",
+      "id": "quote",
+      "label": "t:labels.team_quote",
+      "info": "t:labels.team_quote_info"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.social_accounts"
+    },
+    {
+      "type": "url",
+      "id": "instagram",
+      "label": "t:labels.social_instagram"
+    },
+    {
+      "type": "url",
+      "id": "facebook",
+      "label": "t:labels.social_facebook"
+    },
+    {
+      "type": "url",
+      "id": "linkedin",
+      "label": "t:labels.social_linkedin"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.team_member"
+    }
+  ]
+}
+{% endschema %}

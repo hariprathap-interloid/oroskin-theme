@@ -1,0 +1,442 @@
+{%- comment -%}
+  About timeline (M8.4 part 4, design/briefs/about-us.md §4.4, exports "Default-3" to "Default-6"):
+  "Our journey" / "Seven years, slowly." and one Milestone block per step on a vertical rail.
+
+  While the visitor scrolls, the rail fills in the accent colour down to a reading line (60% down
+  the screen); milestones above that line are "reached" (full colour), the ones below stay faded
+  until the line gets to them (Default-4). The script only runs with animations on and motion
+  allowed; otherwise (and without JS) the whole rail is filled and every milestone in full colour.
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+-%}
+
+{% render 'screen-scale' %}
+
+<about-timeline
+  class="about-timeline full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};"
+>
+  <div class="about-timeline__inner">
+    {%- if section.settings.eyebrow != blank or section.settings.heading != blank -%}
+      <header class="about-timeline__header">
+        {%- if section.settings.eyebrow != blank -%}
+          <p class="eyebrow eyebrow--center">{{ section.settings.eyebrow | escape }}</p>
+        {%- endif -%}
+        {%- if section.settings.heading != blank -%}
+          <h2 class="about-timeline__heading">{{ section.settings.heading }}</h2>
+        {%- endif -%}
+      </header>
+    {%- endif -%}
+
+    {%- if section.blocks.size > 0 -%}
+      <div class="about-timeline__list">
+        <span class="about-timeline__rail" aria-hidden="true">
+          <span class="about-timeline__fill"></span>
+        </span>
+        {% content_for 'blocks' %}
+      </div>
+    {%- elsif request.design_mode -%}
+      <p class="about-timeline__empty">{{ 'about.timeline_empty' | t }}</p>
+    {%- endif -%}
+  </div>
+</about-timeline>
+
+{% stylesheet %}
+  /*
+    Figma 1920 (Default-3): eyebrow y 155 (centred, rules both sides), heading ~66px y 210–275
+    ("*Seven years*, slowly.": the accent words upright); first milestone ~85px under the heading.
+    --rail-x / --content-x: the rail at x 237 and the content at x 301 (from the page's x 48).
+  */
+  .about-timeline {
+    display: block;
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+    background-color: var(--color-background);
+  }
+
+  .about-timeline__inner {
+    --rail-x: max(1.25rem, calc(189 * var(--px, 0.0625rem)));
+    --content-x: max(3.5rem, calc(253 * var(--px, 0.0625rem)));
+
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  .about-timeline__header {
+    margin-block-end: max(var(--space-xl), calc(45 * var(--px, 0.0625rem)));
+    text-align: center;
+  }
+
+  .about-timeline__heading {
+    margin: max(var(--space-lg), calc(40 * var(--px, 0.0625rem))) 0 0;
+    font-size: max(2rem, calc(66 * var(--px, 0.0625rem)));
+    line-height: 1.1;
+  }
+
+  /* Italic words: the accent colour, upright (as in the Figma) */
+  .about-timeline__heading em {
+    color: var(--color-accent);
+    font-style: normal;
+  }
+
+  /*
+    The last milestone's rail piece stops a little under its marker (Default-4). Its wrapper is the
+    list's last child (Shopify wraps each block in a div, so .milestone itself is always a
+    :last-child of its wrapper).
+  */
+  .about-timeline__list > :last-child .milestone::before,
+  .about-timeline__list > :last-child .milestone::after {
+    inset-block-end: auto;
+    block-size: calc(max(var(--space-xl), calc(40 * var(--px, 0.0625rem))) + 4.5rem);
+  }
+
+  /*
+    With the script (data-ready), one rail for the whole list replaces the milestones' own pieces:
+    a pale track and the accent fill, like a progress bar. The script sets --rail-top /
+    --rail-length (px, from the first marker to just past the last one) and --fill-px, easing it
+    so the fill glides instead of jumping with the wheel. When the visitor stops scrolling partway
+    through (is-waiting), a light sweeps down the fill three times as a hint to scroll on; scrolling
+    hides it at once. It never loops for long (WCAG 2.2.2).
+  */
+  .about-timeline__list {
+    position: relative;
+  }
+
+  .about-timeline__rail {
+    display: none;
+  }
+
+  .about-timeline[data-ready] .about-timeline__rail {
+    position: absolute;
+    z-index: 0;
+    display: block;
+    inset-block-start: var(--rail-top, 0px);
+    inset-inline-start: calc(var(--rail-x) - 1px);
+    inline-size: 2px;
+    block-size: var(--rail-length, 0px);
+    background-color: color-mix(in srgb, var(--color-accent) 15%, transparent);
+    pointer-events: none;
+  }
+
+  /* The fill covers the whole rail and is cut to --fill-px (so the sweep isn't stretched) */
+  .about-timeline__fill {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background-color: var(--color-accent);
+    clip-path: inset(0 0 calc(100% - var(--fill-px, 0px)) 0);
+  }
+
+  .about-timeline__fill::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(
+      to bottom,
+      #ffffff00 0,
+      color-mix(in srgb, var(--color-background) 70%, transparent) 4rem,
+      #ffffff00 8rem
+    );
+    background-size: 100% 16rem;
+    opacity: 0;
+  }
+
+  /* Three sweeps, fading in and out, then it rests (restarts the next time the visitor pauses) */
+  .about-timeline__list.is-waiting .about-timeline__fill::after {
+    animation:
+      about-timeline-sweep 1.2s linear 3,
+      about-timeline-sweep-fade 3.6s ease-in-out forwards;
+  }
+
+  @keyframes about-timeline-sweep {
+    to {
+      background-position: 0 16rem;
+    }
+  }
+
+  @keyframes about-timeline-sweep-fade {
+    15%,
+    80% {
+      opacity: 1;
+    }
+
+    to {
+      opacity: 0;
+    }
+  }
+
+  .about-timeline__empty {
+    margin: 0;
+    text-align: center;
+  }
+
+  @media (max-width: 749px) {
+    .about-timeline__inner {
+      --rail-x: 0.6875rem;
+      --content-x: 2.25rem;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <about-timeline>: fills the rail while the visitor scrolls.
+   *
+   * The reading line is 60% down the screen. measure() places one rail from the first marker to
+   * just past the last one and notes where each marker sits on it (px from the rail's top: these
+   * don't change while scrolling). Each frame, the target is how much of the rail lies above the
+   * reading line; the drawn fill moves a share of the way there (easing), so it glides instead of
+   * jumping with each wheel step. A milestone is reached (full colour) once the fill gets to its
+   * marker, so markers light up as the line arrives.
+   * Off (nothing happens, so all is full colour): animations off (also in the theme editor) or
+   * reduced motion.
+   */
+  class AboutTimeline extends HTMLElement {
+    connectedCallback() {
+      this.list = this.querySelector('.about-timeline__list');
+      this.milestones = [...this.querySelectorAll('.milestone')];
+      const animations = document.documentElement.classList.contains('animations-on');
+      const motion = window.matchMedia('(prefers-reduced-motion: no-preference)').matches;
+      if (!this.list || !this.milestones.length || !animations || !motion) return;
+
+      this.drawn = 0;
+      this.onScroll = () => this.requestTick();
+
+      this.visibility = new IntersectionObserver(([entry]) => {
+        this.visible = entry.isIntersecting;
+        if (entry.isIntersecting) {
+          window.addEventListener('scroll', this.onScroll, { passive: true });
+          this.requestTick();
+        } else {
+          window.removeEventListener('scroll', this.onScroll);
+          this.setWaiting(false);
+        }
+      });
+
+      // Text reflow (resize, fonts loading) moves the markers: measure again
+      this.resizer = new ResizeObserver(() => {
+        this.measure();
+        this.requestTick();
+      });
+
+      this.setAttribute('data-ready', '');
+      this.measure();
+      this.resizer.observe(this.list);
+      this.visibility.observe(this);
+    }
+
+    disconnectedCallback() {
+      this.visibility?.disconnect();
+      this.resizer?.disconnect();
+      window.removeEventListener('scroll', this.onScroll);
+      if (this.frame) cancelAnimationFrame(this.frame);
+      clearTimeout(this.waitTimer);
+    }
+
+    // The hint shows only after the visitor has paused for a moment, partway through the rail
+    setWaiting(waiting) {
+      clearTimeout(this.waitTimer);
+      if (!waiting) {
+        this.list.classList.remove('is-waiting');
+        return;
+      }
+      this.waitTimer = setTimeout(() => {
+        const partway = this.drawn > 0 && this.drawn < this.railLength;
+        this.list.classList.toggle('is-waiting', Boolean(this.visible) && partway);
+      }, 800);
+    }
+
+    measure() {
+      const listTop = this.list.getBoundingClientRect().top;
+      this.markers = this.milestones.map((milestone) => {
+        const marker = milestone.querySelector('.milestone__marker');
+        const box = (marker || milestone).getBoundingClientRect();
+        return { milestone, size: box.height, middle: box.top + box.height / 2 - listTop };
+      });
+
+      const first = this.markers[0];
+      const last = this.markers[this.markers.length - 1];
+      this.railTop = first.middle;
+      this.railLength = last.middle + last.size * 2 - first.middle;
+      this.list.style.setProperty('--rail-top', `${this.railTop}px`);
+      this.list.style.setProperty('--rail-length', `${this.railLength}px`);
+    }
+
+    requestTick() {
+      if (this.frame) return;
+      this.frame = requestAnimationFrame(() => {
+        this.frame = null;
+        this.tick();
+      });
+    }
+
+    tick() {
+      const line = window.innerHeight * 0.6;
+      const railStart = this.list.getBoundingClientRect().top + this.railTop;
+      const target = Math.min(Math.max(line - railStart, 0), this.railLength);
+
+      // Move 15% of the remaining distance each frame; snap when it's under half a pixel
+      const gap = target - this.drawn;
+      this.drawn = Math.abs(gap) < 0.5 ? target : this.drawn + gap * 0.15;
+
+      this.list.style.setProperty('--fill-px', `${this.drawn.toFixed(1)}px`);
+
+      const reached = this.railTop + this.drawn;
+      this.markers.forEach(({ milestone, middle }) => {
+        milestone.classList.toggle('is-reached', middle <= reached + 0.5);
+      });
+
+      if (this.drawn !== target) {
+        this.setWaiting(false);
+        this.requestTick();
+      } else {
+        this.setWaiting(true);
+      }
+    }
+  }
+
+  if (!customElements.get('about-timeline')) customElements.define('about-timeline', AboutTimeline);
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.about_timeline",
+  "tag": "section",
+  "class": "about-timeline-section",
+  "enabled_on": {
+    "templates": ["page"]
+  },
+  "blocks": [{ "type": "_milestone" }],
+  "max_blocks": 12,
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "Our journey"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.italic_accent_info",
+      "default": "<em>Seven years</em>, slowly."
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "checkbox",
+      "id": "scale_screen",
+      "label": "t:labels.scale_screen",
+      "info": "t:labels.scale_screen_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "text_scale",
+      "label": "t:labels.text_scale",
+      "info": "t:labels.text_scale_info",
+      "min": 100,
+      "max": 130,
+      "step": 5,
+      "unit": "%",
+      "default": 110,
+      "visible_if": "{{ section.settings.scale_screen }}"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 120
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 80
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.about_timeline",
+      "blocks": [
+        {
+          "type": "_milestone",
+          "settings": {
+            "year": "2019",
+            "pill": "The beginning",
+            "title": "A lab above a perfumery",
+            "stat_value": "6m²",
+            "stat_label": "The entire first lab"
+          }
+        },
+        {
+          "type": "_milestone",
+          "settings": {
+            "year": "2021",
+            "pill": "The breakthrough",
+            "title": "Ferment No. 47",
+            "stat_value": "47",
+            "stat_label": "Batches before one held"
+          }
+        },
+        {
+          "type": "_milestone",
+          "settings": {
+            "year": "2023",
+            "pill": "The expansion",
+            "title": "Three cities, one atelier",
+            "stat_value": "−54%",
+            "stat_label": "Freight emissions"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

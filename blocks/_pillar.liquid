@@ -1,0 +1,182 @@
+{%- comment -%}
+  One slide of the About pillars section (design/briefs/about-us.md §4.3, exports "Default-2",
+  "Default-12", "Default-13", mobile "Variant45-3"): "01 · Mission", the heading, a text and a
+  checklist with accent ticks.
+  - The number (01, 02…) is a CSS counter on the section, so it follows the block order.
+  - Checklist: one point per line of the Checklist setting.
+  - With the section's script running, the slides lie on top of each other and only the current
+    one shows (is-active); without JS they simply stack.
+{%- endcomment -%}
+
+{%- liquid
+  assign points = block.settings.checklist | newline_to_br | split: '<br />'
+-%}
+
+<div class="pillar" {{ block.shopify_attributes }}>
+  <p class="pillar__label">
+    {%- if block.settings.label != blank -%}
+      <span class="pillar__label-text">{{ block.settings.label | escape }}</span>
+    {%- endif -%}
+  </p>
+
+  {%- if block.settings.heading != blank -%}
+    <h2 class="pillar__heading">{{ block.settings.heading | escape }}</h2>
+  {%- endif -%}
+
+  {%- if block.settings.text != blank -%}
+    <div class="pillar__text">{{ block.settings.text }}</div>
+  {%- endif -%}
+
+  {%- if block.settings.checklist != blank -%}
+    <ul class="pillar__checklist">
+      {%- for point in points -%}
+        {%- assign point_text = point | strip -%}
+        {%- if point_text != blank -%}
+          <li class="pillar__point">
+            <span class="pillar__check" aria-hidden="true">{{ 'icon-check.svg' | inline_asset_content }}</span>
+            {{- point_text | escape -}}
+          </li>
+        {%- endif -%}
+      {%- endfor -%}
+    </ul>
+  {%- endif -%}
+</div>
+
+{% stylesheet %}
+  /*
+    Figma 1920 (Default-2): label y 265 (accent label, "01 · MISSION"); heading ~66px regular, 2
+    lines, ~770 wide (y 330–460); text 24px / 38px (y 515–615); checklist from y 712, rows 58px
+    apart: tick 16px at x 55, text at x 102 (body-lg). Sizes: Figma px x --px with rem floors.
+  */
+  .pillar {
+    counter-increment: pillar;
+    max-inline-size: max(20rem, calc(810 * var(--px, 0.0625rem)));
+  }
+
+  .pillar__label {
+    margin: 0 0 max(var(--space-lg), calc(52 * var(--px, 0.0625rem)));
+    color: var(--color-accent);
+    font-size: var(--font-size-label);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  /* "01 · " before the label (only "01" when the label is empty) */
+  .pillar__label::before {
+    content: counter(pillar, decimal-leading-zero);
+  }
+
+  .pillar__label-text::before {
+    content: " · ";
+  }
+
+  .pillar__heading {
+    margin: 0;
+    font-family: var(--font-heading--family);
+    font-size: max(2rem, calc(66 * var(--px, 0.0625rem)));
+    font-weight: var(--font-heading--weight);
+    line-height: 1.1;
+    text-wrap: balance;
+  }
+
+  .pillar__text {
+    margin-block-start: max(var(--space-lg), calc(50 * var(--px, 0.0625rem)));
+    font-size: var(--font-size-body-lg);
+    line-height: 1.6;
+  }
+
+  .pillar__text > * {
+    margin: 0;
+  }
+
+  .pillar__text > * + * {
+    margin-block-start: var(--space-md);
+  }
+
+  .pillar__checklist {
+    display: grid;
+    gap: max(var(--space-md), calc(26 * var(--px, 0.0625rem)));
+    margin: max(var(--space-xl), calc(90 * var(--px, 0.0625rem))) 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--font-size-body-lg);
+    line-height: 1.4;
+  }
+
+  .pillar__point {
+    display: flex;
+    align-items: baseline;
+    gap: max(var(--space-md), calc(33 * var(--px, 0.0625rem)));
+  }
+
+  .pillar__check {
+    flex: none;
+    color: var(--color-accent);
+  }
+
+  .pillar__check svg {
+    display: block;
+    inline-size: max(0.875rem, calc(16 * var(--px, 0.0625rem)));
+    block-size: auto;
+  }
+
+  /* Phones (Variant45-3): tighter */
+  @media (max-width: 749px) {
+    .pillar__label {
+      margin-block-end: var(--space-md);
+    }
+
+    .pillar__heading {
+      font-size: 1.625rem;
+    }
+
+    .pillar__text {
+      margin-block-start: var(--space-md);
+      font-size: var(--font-size-body-sm);
+    }
+
+    .pillar__checklist {
+      gap: var(--space-sm);
+      margin-block-start: var(--space-lg);
+      font-size: var(--font-size-body-sm);
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.pillar",
+  "settings": [
+    {
+      "type": "text",
+      "id": "label",
+      "label": "t:labels.chapter_label",
+      "info": "t:labels.pillar_label_info",
+      "default": "Mission"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "Make beauty you can read as easily as you can wear."
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "t:labels.text"
+    },
+    {
+      "type": "textarea",
+      "id": "checklist",
+      "label": "t:labels.checklist",
+      "info": "t:labels.checklist_info"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.pillar"
+    }
+  ]
+}
+{% endschema %}

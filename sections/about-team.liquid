@@ -1,0 +1,416 @@
+{%- comment -%}
+  About team (M8.4 part 5, design/briefs/about-us.md §4.5, exports "Default-7", "Default-8",
+  "image.png" (hover), "leaders" (phone)): "The visionaries" / "Meet the minds behind OroSkin", an
+  intro, two hand-drawn arrows, one Team member block per person, and the vertical "OUR EXPERTS"
+  word down the left edge (decoration, slides in when the section enters).
+  Heading: Italic = accent, Bold = the brush underline (as in the hero).
+  The cards fade up one after another (the global animation setting); never on section 1.
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+  assign brush_url = 'brush-underline.svg' | asset_url
+-%}
+
+{% render 'screen-scale' %}
+
+<div
+  class="about-team full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }}; --brush-underline: url('{{ brush_url }}');"
+>
+  <animate-on-scroll>
+    {%- if section.settings.side_word != blank -%}
+      <div class="about-team__side" data-animate="slide-left" aria-hidden="true">
+        <p class="about-team__side-word">{{ section.settings.side_word | escape }}</p>
+      </div>
+    {%- endif -%}
+
+    <div class="about-team__inner">
+      <header class="about-team__header">
+        {%- if section.settings.show_arrows -%}
+          <span class="about-team__arrow about-team__arrow--left" aria-hidden="true">
+            {{- 'deco-arrow-left.svg' | inline_asset_content -}}
+          </span>
+          <span class="about-team__arrow about-team__arrow--right" aria-hidden="true">
+            {{- 'deco-arrow-right.svg' | inline_asset_content -}}
+          </span>
+        {%- endif -%}
+
+        {%- if section.settings.eyebrow != blank -%}
+          <p class="eyebrow eyebrow--center">{{ section.settings.eyebrow | escape }}</p>
+        {%- endif -%}
+        {%- if section.settings.heading != blank -%}
+          <h2 class="about-team__heading">{{ section.settings.heading }}</h2>
+        {%- endif -%}
+        {%- if section.settings.text != blank -%}
+          <div class="about-team__text">{{ section.settings.text }}</div>
+        {%- endif -%}
+      </header>
+
+      {%- if section.blocks.size > 0 -%}
+        <div class="about-team__list">
+          {% content_for 'blocks' %}
+        </div>
+      {%- elsif request.design_mode -%}
+        <p class="about-team__empty">{{ 'about.team_empty' | t }}</p>
+      {%- endif -%}
+    </div>
+  </animate-on-scroll>
+</div>
+
+{% stylesheet %}
+  /*
+    Figma 1920 (Default-8): eyebrow y 148, heading ~66px y 205–265 (brush under "OroSkin"), intro
+    ~19px / 29px centred, max ~880, y 310–360; arrows ~90x110 at x 380 y 285 and x 1600 y 325;
+    3 cards x 279 / 795 / 1311, 393 wide, gap 123, photos from y 487; "OUR EXPERTS" ~150px at
+    x 10–110, reading bottom to top, pale fill and a pale accent outline.
+    Phones and tablets ("leaders", answer 12): 2 columns, the odd last card centred below.
+  */
+  .about-team {
+    position: relative;
+    overflow: hidden;
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+    background-color: var(--color-background);
+  }
+
+  /* The vertical word: the wrapper slides in (data-animate), the word inside is turned */
+  .about-team__side {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: max(0.25rem, calc(10 * var(--px, 0.0625rem)));
+    pointer-events: none;
+  }
+
+  .about-team__side-word {
+    margin: 0;
+    color: color-mix(in srgb, var(--color-accent) 7%, var(--color-background));
+    font-family: var(--font-body--family);
+    font-size: max(4.5rem, calc(150 * var(--px, 0.0625rem)));
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    writing-mode: vertical-rl;
+    -webkit-text-stroke: 1px color-mix(in srgb, var(--color-accent) 22%, transparent);
+    transform: rotate(180deg);
+  }
+
+  .about-team__inner {
+    position: relative;
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  .about-team__header {
+    position: relative;
+    margin-block-end: max(var(--space-2xl), calc(110 * var(--px, 0.0625rem)));
+    text-align: center;
+  }
+
+  .about-team__heading {
+    margin: max(var(--space-lg), calc(40 * var(--px, 0.0625rem))) 0 0;
+    font-size: max(2rem, calc(66 * var(--px, 0.0625rem)));
+    line-height: 1.15;
+  }
+
+  .about-team__heading em {
+    color: var(--color-accent);
+    font-style: normal;
+  }
+
+  /* Bold = the hand-drawn brush under the word (as in the hero), in the heading's weight */
+  .about-team__heading strong {
+    position: relative;
+    font-weight: inherit;
+  }
+
+  .about-team__heading strong::after {
+    content: "";
+    position: absolute;
+    /* Figma: the brush is ~220x35 under a ~230px word at 66px, so about half the font size tall */
+    inset-inline: -10% -3%;
+    inset-block-end: -0.42em;
+    block-size: 0.45em;
+    background-color: var(--color-accent);
+    -webkit-mask: var(--brush-underline) center / 100% 100% no-repeat;
+    mask: var(--brush-underline) center / 100% 100% no-repeat;
+    pointer-events: none;
+  }
+
+  .about-team__text {
+    max-inline-size: max(30rem, calc(880 * var(--px, 0.0625rem)));
+    margin: max(var(--space-lg), calc(40 * var(--px, 0.0625rem))) auto 0;
+    font-size: var(--font-size-body);
+    line-height: 1.55;
+  }
+
+  .about-team__text > * {
+    margin: 0;
+  }
+
+  .about-team__arrow {
+    position: absolute;
+    color: var(--color-text);
+    pointer-events: none;
+  }
+
+  .about-team__arrow svg {
+    display: block;
+    inline-size: 100%;
+    block-size: auto;
+  }
+
+  .about-team__arrow--left {
+    inset-block-start: max(7rem, calc(137 * var(--px, 0.0625rem)));
+    inset-inline-start: calc(245 * var(--px, 0.0625rem));
+    inline-size: max(3.5rem, calc(86 * var(--px, 0.0625rem)));
+  }
+
+  .about-team__arrow--right {
+    inset-block-start: max(9rem, calc(177 * var(--px, 0.0625rem)));
+    inset-inline-end: calc(82 * var(--px, 0.0625rem));
+    inline-size: max(4rem, calc(103 * var(--px, 0.0625rem)));
+  }
+
+  /*
+    Breathing: both arrows grow a little and shrink back, slowly and together. They start with the
+    page (same stylesheet, same clock), so they stay in sync. Only with animations on and motion
+    allowed; otherwise they stand still.
+  */
+  @media (prefers-reduced-motion: no-preference) {
+    .animations-on .about-team__arrow svg {
+      animation: about-team-breathe 4s ease-in-out infinite;
+    }
+  }
+
+  @keyframes about-team-breathe {
+    0%,
+    100% {
+      transform: scale(0.92);
+    }
+
+    50% {
+      transform: scale(1.08);
+    }
+  }
+
+  .about-team__list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 393fr));
+    gap: max(var(--space-2xl), calc(80 * var(--px, 0.0625rem))) max(var(--space-2xl), calc(123 * var(--px, 0.0625rem)));
+    max-inline-size: calc(1425 * var(--px, 0.0625rem));
+    margin-inline: auto;
+  }
+
+  /* The cards fade up one after another (Shopify wraps each block, so the wrappers are counted) */
+  .about-team__list > :nth-child(3n + 2) .team-member {
+    --animate-delay: 100ms;
+  }
+
+  .about-team__list > :nth-child(3n + 3) .team-member {
+    --animate-delay: 200ms;
+  }
+
+  .about-team__empty {
+    margin: 0;
+    text-align: center;
+  }
+
+  @media (max-width: 1199px) {
+    .about-team__list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-2xl) var(--space-md);
+      max-inline-size: 48rem;
+    }
+
+    /* The odd last card: centred under the others, one column wide */
+    .about-team__list > :last-child:nth-child(odd) {
+      grid-column: 1 / -1;
+      justify-self: center;
+      inline-size: calc(50% - var(--space-md) / 2);
+    }
+
+    .about-team__list > :nth-child(n) .team-member {
+      --animate-delay: 0ms;
+    }
+
+    .about-team__list > :nth-child(2n) .team-member {
+      --animate-delay: 100ms;
+    }
+
+    .about-team__arrow {
+      display: none;
+    }
+  }
+
+  @media (max-width: 749px) {
+    .about-team__header {
+      margin-block-end: var(--space-2xl);
+    }
+
+    .about-team__heading {
+      margin-block-start: var(--space-md);
+    }
+
+    .about-team__text {
+      margin-block-start: var(--space-lg);
+      font-size: var(--font-size-body-sm);
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.about_team",
+  "tag": "section",
+  "class": "about-team-section",
+  "enabled_on": {
+    "templates": ["page"]
+  },
+  "blocks": [{ "type": "_team-member" }],
+  "max_blocks": 12,
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "The visionaries"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.about_heading_info",
+      "default": "Meet the minds <em>behind <strong>OroSkin</strong></em>"
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "t:labels.text",
+      "default": "<p>Three individuals from three different worlds — fashion, science, and technology — united by the belief that luxury beauty deserves a platform as extraordinary as the products themselves.</p>"
+    },
+    {
+      "type": "text",
+      "id": "side_word",
+      "label": "t:labels.team_side_word",
+      "info": "t:labels.team_side_word_info",
+      "default": "Our experts"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_arrows",
+      "label": "t:labels.team_show_arrows",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "checkbox",
+      "id": "scale_screen",
+      "label": "t:labels.scale_screen",
+      "info": "t:labels.scale_screen_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "text_scale",
+      "label": "t:labels.text_scale",
+      "info": "t:labels.text_scale_info",
+      "min": 100,
+      "max": 130,
+      "step": 5,
+      "unit": "%",
+      "default": 110,
+      "visible_if": "{{ section.settings.scale_screen }}"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 120
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 120
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.about_team",
+      "blocks": [
+        {
+          "type": "_team-member",
+          "settings": {
+            "role_word": "Founder",
+            "name": "Elise Beaumont",
+            "role": "Founder & creative director"
+          }
+        },
+        {
+          "type": "_team-member",
+          "settings": {
+            "role_word": "Co-founder",
+            "name": "Ananya Sharma",
+            "role": "Co-founder & formulator"
+          }
+        },
+        {
+          "type": "_team-member",
+          "settings": {
+            "role_word": "Co-founder",
+            "name": "Sophia Marie",
+            "role": "Co-founder & chemist"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

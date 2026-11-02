@@ -1,0 +1,196 @@
+{%- comment -%}
+  One card of the About numbers (design/briefs/about-us.md §4.7 + answer 4, export "Default-10"):
+  a big value ("98%"), a short rule, a title and a line of text, centred in a square card.
+  - The value is typed (a text setting, so the editor can connect it to a metafield, e.g. a review
+    app's shop rating), or counted: the number of products in a collection (default: all products).
+  - The section's script counts the visible number up from 0 once the card is in view. Screen
+    readers always get the real value (the counting copy is aria-hidden).
+{%- endcomment -%}
+
+{%- liquid
+  if block.settings.source == 'collection'
+    assign stat_collection = block.settings.collection | default: collections.all
+    assign stat_value = stat_collection.products_count | append: ''
+  else
+    assign stat_value = block.settings.value | strip
+  endif
+  assign prefix = block.settings.prefix | escape
+  assign suffix = block.settings.suffix | escape
+-%}
+
+<article class="stat-figure" data-animate="fade-up" {{ block.shopify_attributes }}>
+  {%- if stat_value != blank -%}
+    <p class="stat-figure__value">
+      <span class="stat-figure__count" data-count="{{ stat_value | escape }}" aria-hidden="true">
+        {{- prefix -}}
+        <span class="stat-figure__number">{{ stat_value | escape }}</span>
+        {{- suffix -}}
+      </span>
+      <span class="visually-hidden">{{ prefix }}{{ stat_value | escape }}{{ suffix }}</span>
+    </p>
+    <span class="stat-figure__rule" aria-hidden="true"></span>
+  {%- endif -%}
+
+  {%- if block.settings.title != blank -%}
+    <h3 class="stat-figure__title">{{ block.settings.title | escape }}</h3>
+  {%- endif -%}
+
+  {%- if block.settings.text != blank -%}
+    <p class="stat-figure__text">{{ block.settings.text | escape }}</p>
+  {%- endif -%}
+</article>
+
+{% stylesheet %}
+  /*
+    Figma 1920 (Default-10): card 371x371, #fdfcfb (the card colour on white), 1px pale border,
+    radius ~24; centred: value heading font ~70px accent, letter-spaced ~0.1em; rule 30x2 accent
+    ~45px under it; title heading font semibold ~34px, ~55px under the rule; text body ~17px,
+    ~20px under the title.
+  */
+  .stat-figure {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    aspect-ratio: 1;
+    padding: max(var(--space-lg), calc(32 * var(--px, 0.0625rem)));
+    /*
+      Figma: border #f0cbcb4f (= --color-card-border), shadow 0 0 10px #0000000d, fill #f6f2ec33.
+      Glass (Light -45°, 80%; Frost 0): like the theme's --glass-rim, a thin white inner edge lit
+      from the top left (80% = #ffffffcc) and a weaker one bottom right; -45° is ~0.71px on each
+      axis. Frost 0 = no blur. Refraction / dispersion are left out, as elsewhere in the theme (an
+      SVG filter, Chrome only).
+    */
+    border: 1px solid var(--color-card-border);
+    border-radius: max(1rem, calc(24 * var(--px, 0.0625rem)));
+    background-color: #f6f2ec33;
+    box-shadow:
+      0 0 10px 0 #0000000d,
+      inset 0.71px 0.71px 0 #ffffffcc,
+      inset -0.71px -0.71px 0 #ffffffad;
+    text-align: center;
+  }
+
+  .stat-figure__value {
+    margin: 0;
+    color: var(--color-accent);
+    font-family: var(--font-heading--family);
+    font-size: max(2.5rem, calc(70 * var(--px, 0.0625rem)));
+    line-height: 1;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+    /* Every digit as wide as the others, so the number doesn't wobble while it counts */
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat-figure__rule {
+    display: block;
+    inline-size: max(1.5rem, calc(30 * var(--px, 0.0625rem)));
+    block-size: 2px;
+    margin-block-start: max(var(--space-lg), calc(45 * var(--px, 0.0625rem)));
+    background-color: var(--color-accent);
+  }
+
+  .stat-figure__title {
+    margin: max(var(--space-xl), calc(55 * var(--px, 0.0625rem))) 0 0;
+    font-size: max(1.375rem, calc(34 * var(--px, 0.0625rem)));
+    font-weight: 600;
+    line-height: 1.15;
+  }
+
+  .stat-figure__text {
+    margin: max(var(--space-sm), calc(20 * var(--px, 0.0625rem))) 0 0;
+    font-size: var(--font-size-body-sm);
+    line-height: 1.4;
+  }
+
+  /* Phones (2 x 2): smaller type, tighter spacing, the card can grow taller than square */
+  @media (max-width: 749px) {
+    .stat-figure {
+      aspect-ratio: auto;
+      min-block-size: 10rem;
+      padding: var(--space-md) var(--space-sm);
+    }
+
+    .stat-figure__value {
+      font-size: 2rem;
+      letter-spacing: 0.05em;
+    }
+
+    .stat-figure__rule {
+      margin-block-start: var(--space-sm);
+    }
+
+    .stat-figure__title {
+      margin-block-start: var(--space-md);
+      font-size: 1.125rem;
+    }
+
+    .stat-figure__text {
+      margin-block-start: var(--space-xs);
+      font-size: var(--font-size-caption);
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.stat_figure",
+  "settings": [
+    {
+      "type": "select",
+      "id": "source",
+      "label": "t:labels.stat_source",
+      "options": [
+        { "value": "typed", "label": "t:options.stat_source.typed" },
+        { "value": "collection", "label": "t:options.stat_source.collection" }
+      ],
+      "default": "typed"
+    },
+    {
+      "type": "text",
+      "id": "value",
+      "label": "t:labels.stat_value",
+      "info": "t:labels.stat_figure_value_info",
+      "default": "98",
+      "visible_if": "{{ block.settings.source == 'typed' }}"
+    },
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "t:labels.collection",
+      "info": "t:labels.stat_collection_info"
+    },
+    {
+      "type": "text",
+      "id": "prefix",
+      "label": "t:labels.stat_prefix"
+    },
+    {
+      "type": "text",
+      "id": "suffix",
+      "label": "t:labels.stat_suffix",
+      "info": "t:labels.stat_suffix_info",
+      "default": "%"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "t:labels.title",
+      "default": "Would buy again"
+    },
+    {
+      "type": "text",
+      "id": "text",
+      "label": "t:labels.text",
+      "default": "Of 31,400 verified clients"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.stat_figure"
+    }
+  ]
+}
+{% endschema %}

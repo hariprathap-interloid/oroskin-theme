@@ -292,6 +292,11 @@
     "collection_tiles": {
       "shop": "Shop",
       "placeholder": "Choose a collection"
+    },
+    "marquee": {
+      "pause": "Pause the scrolling text",
+      "play": "Play the scrolling text",
+      "empty": "Add the text that scrolls."
     }
   },
   "products": {
@@ -368,5 +373,21 @@
       "filters": "Filter locations",
       "all": "All locations"
     }
+  },
+  "about": {
+    "formulas": {
+      "one": "{{ count }} formula",
+      "other": "{{ count }} formulas"
+    },
+    "chapters_nav": "Chapters",
+    "chapters_empty": "Add Chapter blocks to tell the story, one screen each.",
+    "pillars_empty": "Add Pillar blocks (mission, vision, promise…): one slide each.",
+    "timeline_empty": "Add Milestone blocks: one per step of the story, with its year.",
+    "team_empty": "Add Team member blocks: one card per person.",
+    "team_social": "{{ name }} on {{ network }}",
+    "values_empty": "Add Value card blocks: one card per value, numbered automatically.",
+    "heading_pause": "Pause the changing heading",
+    "heading_play": "Play the changing heading",
+    "numbers_empty": "Add Stat figure blocks: one card per number."
   }
 }
