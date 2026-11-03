@@ -1,0 +1,628 @@
+{%- comment -%}
+  Overview (M6.6, Figma PDP "Product details 6"): "THE OBJECT" eyebrow and a big heading with accent
+  words (left); a paragraph and spec rows (Texture / Finish / Format / Origin, middle); an image with
+  hotspots (right); then a large quote with an accent phrase and a 2 x 2 grid of figures (98% FELT SKIN
+  SOFTER…).
+  - Content: the Figma text is the demo. Every text and image field can be connected to a product
+    metafield in the theme editor ("Connect dynamic source"), so each product shows its own words;
+    an empty field hides its part.
+  - Hotspots: red dots at a position on the image (x / y in %). Hover, keyboard focus or a tap shows a
+    small frosted card with a title in the accent colour and a short text (the brief, answer 14).
+  - The tabs link here with the Anchor setting (#overview).
+  The blocks are the section's own (spec row, hotspot, figure), drawn where they belong by their type.
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+  assign anchor = section.settings.anchor | handleize | default: 'overview'
+  assign specs = section.blocks | where: 'type', 'spec'
+  assign hotspots = section.blocks | where: 'type', 'hotspot'
+  assign figures = section.blocks | where: 'type', 'figure'
+-%}
+
+<product-overview
+  id="{{ anchor }}"
+  class="product-overview full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
+>
+  <div class="product-overview__inner">
+    <div class="product-overview__top">
+      <div class="product-overview__intro" data-tab-item>
+        {%- if section.settings.eyebrow != blank -%}
+          <p class="eyebrow product-overview__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+        {%- endif -%}
+        {%- if section.settings.heading != blank -%}
+          <h2 class="product-overview__heading">{{ section.settings.heading }}</h2>
+        {%- endif -%}
+      </div>
+
+      <div class="product-overview__body" data-tab-item>
+        {%- if section.settings.text != blank -%}
+          <div class="product-overview__text rte">{{ section.settings.text }}</div>
+        {%- endif -%}
+        {%- if specs.size > 0 -%}
+          <dl class="product-overview__specs">
+            {%- for block in specs -%}
+              {%- if block.settings.label != blank and block.settings.value != blank -%}
+                <div class="product-overview__spec" {{ block.shopify_attributes }}>
+                  <dt>{{ block.settings.label | escape }}</dt>
+                  <dd>{{ block.settings.value | escape }}</dd>
+                </div>
+              {%- endif -%}
+            {%- endfor -%}
+          </dl>
+        {%- endif -%}
+      </div>
+
+      <div class="product-overview__media" data-tab-item>
+        {%- if section.settings.image != blank -%}
+          {{
+            section.settings.image
+            | image_url: width: 1400
+            | image_tag:
+              loading: 'lazy',
+              widths: '500, 800, 1100, 1400',
+              sizes: '(min-width: 990px) 32vw, 100vw',
+              class: 'product-overview__image'
+          }}
+        {%- else -%}
+          {{ 'lifestyle-1' | placeholder_svg_tag: 'product-overview__image product-overview__placeholder' }}
+        {%- endif -%}
+
+        {%- for block in hotspots -%}
+          {%- liquid
+            assign spot_id = 'Hotspot-' | append: block.id
+            assign spot_side = 'right'
+            if block.settings.x > 60
+              assign spot_side = 'left'
+            endif
+          -%}
+          <div
+            class="product-overview__hotspot product-overview__hotspot--{{ spot_side }}"
+            style="--spot-x: {{ block.settings.x }}%; --spot-y: {{ block.settings.y }}%;"
+            {{ block.shopify_attributes }}
+          >
+            <button
+              type="button"
+              class="product-overview__dot"
+              aria-expanded="false"
+              aria-controls="{{ spot_id }}"
+              data-hotspot
+            >
+              <span class="visually-hidden">{{ block.settings.title | default: block.settings.text | escape }}</span>
+            </button>
+            <div class="product-overview__card" id="{{ spot_id }}" role="tooltip">
+              {%- if block.settings.title != blank -%}
+                <p class="product-overview__card-title">{{ block.settings.title | escape }}</p>
+              {%- endif -%}
+              {%- if block.settings.text != blank -%}
+                <p class="product-overview__card-text">{{ block.settings.text | escape }}</p>
+              {%- endif -%}
+            </div>
+          </div>
+        {%- endfor -%}
+      </div>
+    </div>
+
+    {%- if section.settings.quote != blank or figures.size > 0 -%}
+      {%- comment -%} <animate-on-scroll> reveals the [data-animate] quote (without it the quote would stay hidden) {%- endcomment -%}
+      <animate-on-scroll class="product-overview__bottom">
+        {%- if section.settings.quote != blank -%}
+          <blockquote class="product-overview__quote" data-animate="fade-up" data-tab-item>
+            <p>{{ section.settings.quote }}</p>
+          </blockquote>
+        {%- endif -%}
+        {%- if figures.size > 0 -%}
+          <dl class="product-overview__figures" data-tab-item>
+            {%- for block in figures -%}
+              {%- if block.settings.value != blank -%}
+                <div class="product-overview__figure" {{ block.shopify_attributes }}>
+                  <dt class="product-overview__figure-label">{{ block.settings.label | escape }}</dt>
+                  <dd class="product-overview__figure-value">{{ block.settings.value | escape }}</dd>
+                </div>
+              {%- endif -%}
+            {%- endfor -%}
+          </dl>
+        {%- endif -%}
+      </animate-on-scroll>
+    {%- endif -%}
+  </div>
+</product-overview>
+
+{% stylesheet %}
+  /*
+    Figma 1920 ("Product details 6"): eyebrow y 213; heading x 50–475, ~70px, 3 lines, accent words;
+    text x 730–1185 ~22px; spec rows under it: label caps ~15px wide spacing (x 730), value ~18px
+    (x 870), ~38px apart; image x 1259–1870 (611 x 437, square corners), 3 red dots ~12px with a white
+    ring. Quote x 285–1080, the accent font ~56px, the accent phrase red; figures 2 x 2 x 1297–1830:
+    value ~24px medium, label caps ~15px, a hairline under the first row.
+  */
+  .product-overview {
+    display: block;
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+    background-color: var(--color-background);
+  }
+
+  .product-overview__inner {
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  .product-overview__top {
+    display: grid;
+    grid-template-columns: minmax(0, 680fr) minmax(0, 528fr) minmax(0, 611fr);
+    align-items: start;
+    gap: max(var(--space-lg), calc(50 * var(--px, 0.0625rem)));
+  }
+
+  .product-overview__eyebrow {
+    margin: 0 0 var(--space-lg);
+  }
+
+  .product-overview__heading {
+    margin: 0;
+    max-inline-size: 11ch;
+    font-size: var(--font-size-h1);
+    font-weight: 400;
+    line-height: 1.1;
+  }
+
+  .product-overview__heading em,
+  .product-overview__quote em {
+    color: var(--color-accent);
+    font-style: normal;
+  }
+
+  .product-overview__body {
+    padding-block-start: max(var(--space-lg), calc(80 * var(--px, 0.0625rem)));
+  }
+
+  .product-overview__text {
+    font-size: var(--font-size-body-lg);
+    line-height: 1.65;
+  }
+
+  .product-overview__specs {
+    display: grid;
+    gap: var(--space-md);
+    margin: max(var(--space-lg), calc(40 * var(--px, 0.0625rem))) 0 0;
+  }
+
+  .product-overview__spec {
+    display: grid;
+    grid-template-columns: minmax(6rem, 140fr) minmax(0, 315fr);
+    align-items: baseline;
+    gap: var(--space-md);
+  }
+
+  .product-overview__spec dt {
+    font-size: var(--font-size-small);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  .product-overview__spec dd {
+    margin: 0;
+    font-size: var(--font-size-body-sm);
+  }
+
+  .product-overview__media {
+    position: relative;
+    aspect-ratio: 611 / 437;
+    background-color: var(--color-tint, color-mix(in srgb, var(--color-text) 5%, var(--color-background)));
+  }
+
+  .product-overview__image {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .product-overview__placeholder {
+    fill: color-mix(in srgb, var(--color-text) 30%, transparent);
+  }
+
+  /* Hotspots: a red dot with a white ring; a pulse ring draws the eye (not with reduced motion) */
+  .product-overview__hotspot {
+    position: absolute;
+    inset-block-start: var(--spot-y);
+    inset-inline-start: var(--spot-x);
+    translate: -50% -50%;
+  }
+
+  .product-overview__dot {
+    position: relative;
+    display: block;
+    inline-size: 2.75rem; /* the touch target; the visible dot is drawn smaller */
+    block-size: 2.75rem;
+    min-block-size: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    box-shadow: none;
+    cursor: pointer;
+  }
+
+  .product-overview__dot::before {
+    content: "";
+    position: absolute;
+    inset: 50% auto auto 50%;
+    inline-size: 0.875rem;
+    block-size: 0.875rem;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    background-color: var(--color-accent);
+    box-shadow: 0 2px 6px #00000040;
+    translate: -50% -50%;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .product-overview__dot::after {
+      content: "";
+      position: absolute;
+      inset: 50% auto auto 50%;
+      inline-size: 0.875rem;
+      block-size: 0.875rem;
+      border-radius: 50%;
+      background-color: color-mix(in srgb, var(--color-accent) 45%, transparent);
+      translate: -50% -50%;
+      animation: product-hotspot-pulse 2.4s var(--ease-out) infinite;
+    }
+  }
+
+  @keyframes product-hotspot-pulse {
+    to {
+      opacity: 0;
+      scale: 3;
+    }
+  }
+
+  .product-overview__dot:hover,
+  .product-overview__dot:focus-visible {
+    background: none;
+  }
+
+  .product-overview__dot:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: -6px;
+  }
+
+  /* The card: a frosted glass box beside the dot (left of it when the dot is near the right edge) */
+  .product-overview__card {
+    position: absolute;
+    z-index: 2;
+    inset-block-start: 50%;
+    inline-size: max(13rem, calc(240 * var(--px, 0.0625rem)));
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid #ffffff59;
+    border-radius: max(0.625rem, calc(12 * var(--px, 0.0625rem)));
+    background-color: #ffffff33;
+    box-shadow: 0 8px 30px #0000002e;
+    color: #ffffff;
+    opacity: 0;
+    pointer-events: none;
+    translate: 0 -50%;
+    visibility: hidden;
+    transition:
+      opacity var(--duration-fast) var(--ease-out),
+      visibility 0s linear var(--duration-fast);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+  }
+
+  .product-overview__hotspot--right .product-overview__card {
+    inset-inline-start: calc(100% + 0.25rem);
+  }
+
+  .product-overview__hotspot--left .product-overview__card {
+    inset-inline-end: calc(100% + 0.25rem);
+  }
+
+  .product-overview__hotspot:hover .product-overview__card,
+  .product-overview__dot:focus-visible + .product-overview__card,
+  .product-overview__dot[aria-expanded="true"] + .product-overview__card {
+    opacity: 1;
+    visibility: visible;
+    transition:
+      opacity var(--duration-fast) var(--ease-out),
+      visibility 0s;
+  }
+
+  .product-overview__card p {
+    margin: 0;
+  }
+
+  .product-overview__card-title {
+    margin-block-end: 0.2em;
+    color: var(--color-accent);
+    font-family: var(--font-heading--family);
+    font-size: var(--font-size-body-lg);
+    line-height: 1.2;
+    text-shadow: 0 0 12px #ffffffb3;
+  }
+
+  .product-overview__card-text {
+    font-size: var(--font-size-small);
+    line-height: 1.5;
+    text-shadow: 0 1px 4px #00000059;
+  }
+
+  /* Bottom row: the quote (centre-left) and the figures (right) */
+  .product-overview__bottom {
+    display: grid;
+    grid-template-columns: minmax(0, 1210fr) minmax(0, 611fr);
+    align-items: start;
+    gap: max(var(--space-lg), calc(50 * var(--px, 0.0625rem)));
+    margin-block-start: max(var(--space-2xl, 4rem), calc(70 * var(--px, 0.0625rem)));
+  }
+
+  .product-overview__quote {
+    margin: 0;
+    padding-inline-start: calc(235 * var(--px, 0.0625rem));
+  }
+
+  .product-overview__quote p {
+    margin: 0;
+    font-family: var(--font-accent--family);
+    font-style: var(--font-accent--style);
+    font-weight: var(--font-accent--weight);
+    font-size: max(2rem, calc(56 * var(--px, 0.0625rem)));
+    line-height: 1.2;
+  }
+
+  /* The quote marks, drawn by CSS so the merchant types only the words */
+  .product-overview__quote p::before {
+    content: "“ ";
+  }
+
+  .product-overview__quote p::after {
+    content: " ”";
+  }
+
+  .product-overview__figures {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 max(var(--space-lg), calc(80 * var(--px, 0.0625rem)));
+    margin: 0;
+  }
+
+  /*
+    In a <dl> the label (<dt>) must come before its value (<dd>), so the HTML reads "Felt skin softer:
+    98%"; column-reverse shows the value on top, as in the Figma
+  */
+  .product-overview__figure {
+    display: flex;
+    flex-direction: column-reverse;
+    justify-content: flex-end;
+    gap: var(--space-xs);
+    padding-block: var(--space-md);
+  }
+
+  .product-overview__figure:nth-child(-n + 2) {
+    border-block-end: 1px solid var(--color-card-border);
+  }
+
+  .product-overview__figure-value {
+    margin: 0;
+    font-size: var(--font-size-h3);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .product-overview__figure-label {
+    font-size: var(--font-size-small);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  /* Tablets: heading + text side by side, the image full width under them, then quote and figures */
+  @media (max-width: 1199px) {
+    .product-overview__top {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .product-overview__media {
+      grid-column: 1 / -1;
+    }
+
+    .product-overview__bottom {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .product-overview__quote {
+      padding-inline-start: 0;
+    }
+  }
+
+  /* Phones (brief: the Overview drops the spec rows and the quote): one column */
+  @media (max-width: 749px) {
+    .product-overview__top {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .product-overview__body {
+      padding-block-start: 0;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <product-overview>: a tap or Enter on a hotspot opens its card (hover and focus open it with CSS);
+   * another tap, Escape or a click elsewhere closes it. One card open at a time.
+   */
+  class ProductOverview extends HTMLElement {
+    connectedCallback() {
+      this.addEventListener('click', (event) => {
+        const dot = event.target.closest('[data-hotspot]');
+        if (!dot) return;
+        const open = dot.getAttribute('aria-expanded') === 'true';
+        this.closeAll();
+        dot.setAttribute('aria-expanded', String(!open));
+      });
+      this.onOutside = (event) => {
+        if (!event.target.closest('[data-hotspot]')) this.closeAll();
+      };
+      this.onKey = (event) => {
+        if (event.key === 'Escape') this.closeAll();
+      };
+      document.addEventListener('click', this.onOutside);
+      this.addEventListener('keydown', this.onKey);
+    }
+
+    disconnectedCallback() {
+      document.removeEventListener('click', this.onOutside);
+    }
+
+    closeAll() {
+      this.querySelectorAll('[data-hotspot][aria-expanded="true"]').forEach((dot) => dot.setAttribute('aria-expanded', 'false'));
+    }
+  }
+
+  if (!customElements.get('product-overview')) customElements.define('product-overview', ProductOverview);
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.product_overview",
+  "tag": "section",
+  "class": "product-overview-section",
+  "enabled_on": { "templates": ["product"] },
+  "blocks": [
+    {
+      "type": "spec",
+      "name": "t:general.product_spec_row",
+      "settings": [
+        { "type": "text", "id": "label", "label": "t:labels.label", "default": "Texture" },
+        { "type": "text", "id": "value", "label": "t:labels.product_spec_value", "default": "Weightless oil-serum" }
+      ]
+    },
+    {
+      "type": "hotspot",
+      "name": "t:general.product_hotspot",
+      "settings": [
+        { "type": "range", "id": "x", "label": "t:labels.product_hotspot_x", "min": 0, "max": 100, "step": 1, "unit": "%", "default": 50 },
+        { "type": "range", "id": "y", "label": "t:labels.product_hotspot_y", "min": 0, "max": 100, "step": 1, "unit": "%", "default": 50 },
+        { "type": "text", "id": "title", "label": "t:labels.heading", "default": "Dew, not shine" },
+        { "type": "text", "id": "text", "label": "t:labels.text", "default": "A satin glow that settles in seconds." }
+      ]
+    },
+    {
+      "type": "figure",
+      "name": "t:general.product_figure",
+      "settings": [
+        { "type": "text", "id": "value", "label": "t:labels.product_figure_value", "default": "98%" },
+        { "type": "text", "id": "label", "label": "t:labels.label", "default": "Felt skin softer" }
+      ]
+    }
+  ],
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "t:labels.product_content_dynamic"
+    },
+    {
+      "type": "text",
+      "id": "anchor",
+      "label": "t:labels.product_section_anchor",
+      "info": "t:labels.product_section_anchor_info",
+      "default": "overview"
+    },
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "The object"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.accent_heading_info",
+      "default": "Written for <em>the senses,</em> not the spec sheet."
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "t:labels.text",
+      "default": "<p>The formula was built backwards — from the finish. We wanted the look of skin caught in late afternoon light, then reverse-engineered a lipid system that could hold it through a full day of wear.</p>"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.image",
+      "info": "t:labels.product_overview_image_info"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "quote",
+      "label": "t:labels.product_overview_quote",
+      "info": "t:labels.accent_heading_info",
+      "default": "It behaves less like a treatment and more like <em>a change of light</em>"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "options": [
+        { "value": "wide", "label": "t:options.section_width.wide" },
+        { "value": "widest", "label": "t:options.section_width.widest" },
+        { "value": "full", "label": "t:options.section_width.full" }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.product_overview",
+      "blocks": [
+        { "type": "spec", "settings": { "label": "Texture", "value": "Weightless oil-serum" } },
+        { "type": "spec", "settings": { "label": "Finish", "value": "Satin, non-shifting" } },
+        { "type": "spec", "settings": { "label": "Format", "value": "Apothecary glass, refillable" } },
+        { "type": "spec", "settings": { "label": "Origin", "value": "Compounded in Grasse" } },
+        { "type": "hotspot", "settings": { "x": 66, "y": 28, "title": "Dew, not shine", "text": "A satin glow that settles in seconds." } },
+        { "type": "hotspot", "settings": { "x": 55, "y": 40, "title": "Lipid veil", "text": "Ceramides hold water in through the day." } },
+        { "type": "hotspot", "settings": { "x": 45, "y": 72, "title": "Refillable glass", "text": "Keep the bottle; refill the serum." } },
+        { "type": "figure", "settings": { "value": "98%", "label": "Felt skin softer" } },
+        { "type": "figure", "settings": { "value": "14 Days", "label": "Visible barrier repair" } },
+        { "type": "figure", "settings": { "value": "0", "label": "Silicones" } },
+        { "type": "figure", "settings": { "value": "100%", "label": "Recyclable glass" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

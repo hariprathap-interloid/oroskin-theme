@@ -122,7 +122,14 @@
     "product_feature": "Feature badge",
     "product_videos": "Short videos",
     "product_payment": "Payment methods",
-    "product_pairs": "Pairs well with"
+    "product_pairs": "Pairs well with",
+    "product_tab_link": "Tab",
+    "product_overview": "Overview",
+    "product_spec_row": "Spec row",
+    "product_hotspot": "Hotspot",
+    "product_figure": "Figure",
+    "product_highlights": "Highlights",
+    "product_benefit": "Benefit"
   },
   "labels": {
     "alignment": "Alignment",
@@ -916,7 +923,25 @@
     "product_pairs_fallback_info": "Shown when the product has no complementary products. Leave empty to hide the section then.",
     "product_pairs_limit": "Products besides this one",
     "product_pairs_preselect": "Tick the other products at first",
-    "product_pairs_preselect_info": "Off: only this product is in the bundle until the visitor ticks more (as in the Figma)."
+    "product_pairs_preselect_info": "Off: only this product is in the bundle until the visitor ticks more (as in the Figma).",
+    "product_tabs_anchor": "Anchor",
+    "product_tabs_anchor_info": "The Anchor of the section this tab scrolls to (e.g. overview). Tabs whose section isn't on the page hide themselves.",
+    "product_tabs_top": "Show the back-to-top arrow",
+    "product_spec_value": "Value",
+    "product_hotspot_x": "Across",
+    "product_hotspot_y": "Down",
+    "product_figure_value": "Value",
+    "product_content_dynamic": "Each product can show its own text: next to a field, use \"Connect dynamic source\" and pick a product metafield. Empty fields hide their part.",
+    "product_section_anchor": "Anchor",
+    "product_section_anchor_info": "The word a section tab links to (#overview). Keep it the same as the tab's Anchor.",
+    "product_overview_image_info": "The hotspots are placed on this image, in % across and down.",
+    "product_overview_quote": "Quote",
+    "product_benefit_icon_image": "Custom icon",
+    "product_benefit_icon_image_info": "Replaces the chosen icon. An SVG or PNG line icon, about 56 x 56 px.",
+    "product_tabs_layout": "Layout",
+    "product_tabs_layout_info": "Tabbed: one section at a time, a tab swaps it in place. Stacked: every section on the page, a tab scrolls to it.",
+    "product_tabs_transition": "Transition between panels",
+    "product_tabs_transition_info": "How the next panel comes in when you scroll or click (Tabbed)."
   },
   "options": {
     "collection_list_header": {
@@ -1341,6 +1366,26 @@
       "cruelty_free": "Cruelty-free",
       "paraben_free": "Parabens free",
       "none": "None (a tick)"
+    },
+    "product_benefit_icon": {
+      "drop": "Drop",
+      "flask": "Flask",
+      "sparkles": "Sparkles",
+      "clock": "Clock",
+      "leaf": "Leaf",
+      "shield": "Shield",
+      "none": "None"
+    },
+    "product_tabs_layout": {
+      "tabbed": "Tabbed",
+      "stacked": "Stacked"
+    },
+    "product_tabs_transition": {
+      "up": "From the bottom",
+      "down": "From the top",
+      "left": "From the right",
+      "right": "From the left",
+      "fade": "Fade only"
     }
   },
   "color_scheme": {

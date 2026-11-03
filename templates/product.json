@@ -224,10 +224,296 @@
           "rose-eau-de-parfum"
         ]
       }
+    },
+    "tabs": {
+      "type": "product-tabs",
+      "blocks": {
+        "t1": {
+          "type": "tab",
+          "settings": {
+            "label": "Overview",
+            "anchor": "overview"
+          }
+        },
+        "t2": {
+          "type": "tab",
+          "settings": {
+            "label": "Highlights",
+            "anchor": "highlights"
+          }
+        },
+        "t3": {
+          "type": "tab",
+          "settings": {
+            "label": "How to use",
+            "anchor": "how-to-use"
+          }
+        },
+        "t4": {
+          "type": "tab",
+          "settings": {
+            "label": "Clinical results",
+            "anchor": "clinical-results"
+          }
+        },
+        "t5": {
+          "type": "tab",
+          "settings": {
+            "label": "Reviews",
+            "anchor": "reviews"
+          }
+        },
+        "t6": {
+          "type": "tab",
+          "settings": {
+            "label": "FAQ",
+            "anchor": "faq"
+          }
+        }
+      },
+      "block_order": [
+        "t1",
+        "t2",
+        "t3",
+        "t4",
+        "t5",
+        "t6"
+      ],
+      "settings": {
+        "show_top": true,
+        "layout": "tabbed",
+        "transition": "up",
+        "padding_top": 0,
+        "padding_bottom": 0
+      }
+    },
+    "overview": {
+      "type": "product-overview",
+      "blocks": {
+        "s1": {
+          "type": "spec",
+          "settings": {
+            "label": "Texture",
+            "value": "Weightless oil-serum"
+          }
+        },
+        "s2": {
+          "type": "spec",
+          "settings": {
+            "label": "Finish",
+            "value": "Satin, non-shifting"
+          }
+        },
+        "s3": {
+          "type": "spec",
+          "settings": {
+            "label": "Format",
+            "value": "Apothecary glass, refillable"
+          }
+        },
+        "s4": {
+          "type": "spec",
+          "settings": {
+            "label": "Origin",
+            "value": "Compounded in Grasse"
+          }
+        },
+        "h1": {
+          "type": "hotspot",
+          "settings": {
+            "x": 66,
+            "y": 28,
+            "title": "Dew, not shine",
+            "text": "A satin glow that settles in seconds."
+          }
+        },
+        "h2": {
+          "type": "hotspot",
+          "settings": {
+            "x": 55,
+            "y": 40,
+            "title": "Lipid veil",
+            "text": "Ceramides hold water in through the day."
+          }
+        },
+        "h3": {
+          "type": "hotspot",
+          "settings": {
+            "x": 45,
+            "y": 72,
+            "title": "Refillable glass",
+            "text": "Keep the bottle; refill the serum."
+          }
+        },
+        "f1": {
+          "type": "figure",
+          "settings": {
+            "value": "98%",
+            "label": "Felt skin softer"
+          }
+        },
+        "f2": {
+          "type": "figure",
+          "settings": {
+            "value": "14 Days",
+            "label": "Visible barrier repair"
+          }
+        },
+        "f3": {
+          "type": "figure",
+          "settings": {
+            "value": "0",
+            "label": "Silicones"
+          }
+        },
+        "f4": {
+          "type": "figure",
+          "settings": {
+            "value": "100%",
+            "label": "Recyclable glass"
+          }
+        }
+      },
+      "block_order": [
+        "s1",
+        "s2",
+        "s3",
+        "s4",
+        "h1",
+        "h2",
+        "h3",
+        "f1",
+        "f2",
+        "f3",
+        "f4"
+      ],
+      "settings": {
+        "anchor": "overview",
+        "eyebrow": "The object",
+        "heading": "Written for <em>the senses,</em> not the spec sheet.",
+        "quote": "It behaves less like a treatment and more like <em>a change of light</em>"
+      }
+    },
+    "highlights": {
+      "type": "product-highlights",
+      "blocks": {
+        "b1": {
+          "type": "benefit",
+          "settings": {
+            "icon": "drop",
+            "title": "72-hour hydration",
+            "text": "A lipid-mimicking veil of ceramide NP, squalane and glacial water holds moisture through three full days."
+          }
+        },
+        "b2": {
+          "type": "benefit",
+          "settings": {
+            "icon": "flask",
+            "title": "Small-batch craft",
+            "text": "Blended in Grasse in batches of 400, cold-filled into recyclable glass and numbered by hand."
+          }
+        },
+        "b3": {
+          "type": "benefit",
+          "settings": {
+            "icon": "sparkles",
+            "title": "Soft-focus finish",
+            "text": "Micronised pigment diffuses light across the skin — luminous in daylight, never glittering under flash."
+          }
+        },
+        "b4": {
+          "type": "benefit",
+          "settings": {
+            "icon": "hours",
+            "title": "12-hour wear",
+            "text": "Transfer-resistant through coffee, calls and closing hours. Removes cleanly with a single cleanse."
+          }
+        },
+        "b5": {
+          "type": "benefit",
+          "settings": {
+            "icon": "leaf",
+            "title": "Clean by omission",
+            "text": "No silicones, sulphates, parabens or mineral oil. Vegan, cruelty-free, Leaping Bunny certified."
+          }
+        },
+        "b6": {
+          "type": "benefit",
+          "settings": {
+            "icon": "shield-check",
+            "title": "Barrier-first formula",
+            "text": "Dermatologist tested on sensitive skin. Non-comedogenic, fragrance-optional, pH balanced at 5.5."
+          }
+        },
+        "p1": {
+          "type": "spec",
+          "settings": {
+            "label": "Skin type",
+            "value": "All types, including reactive"
+          }
+        },
+        "p2": {
+          "type": "spec",
+          "settings": {
+            "label": "Key actives",
+            "value": "Niacinamide 5%, Ceramide NP, Squalane"
+          }
+        },
+        "p3": {
+          "type": "spec",
+          "settings": {
+            "label": "Texture",
+            "value": "Weightless fluid-to-silk"
+          }
+        },
+        "p4": {
+          "type": "spec",
+          "settings": {
+            "label": "Finish",
+            "value": "Satin, buildable"
+          }
+        },
+        "p5": {
+          "type": "spec",
+          "settings": {
+            "label": "Free from",
+            "value": "Silicones • Sulphates • Parabens"
+          }
+        },
+        "p6": {
+          "type": "spec",
+          "settings": {
+            "label": "Certification",
+            "value": "Vegan • Leaping Bunny • Dermatologist tested"
+          }
+        }
+      },
+      "block_order": [
+        "b1",
+        "b2",
+        "b3",
+        "b4",
+        "b5",
+        "b6",
+        "p1",
+        "p2",
+        "p3",
+        "p4",
+        "p5",
+        "p6"
+      ],
+      "settings": {
+        "anchor": "highlights",
+        "eyebrow": "Highlights",
+        "heading": "<em>Six reasons</em> it earns its shelf."
+      }
     }
   },
   "order": [
     "main",
-    "pairs"
+    "pairs",
+    "tabs",
+    "overview",
+    "highlights"
   ]
 }

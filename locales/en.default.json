@@ -434,6 +434,10 @@
       "total": "Bundle total",
       "add_all": "Add all to cart",
       "added": "The bundle was added to your cart"
+    },
+    "tabs": {
+      "label": "Product sections",
+      "top": "Back to the top"
     }
   },
   "contact": {

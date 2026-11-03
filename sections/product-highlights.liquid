@@ -1,0 +1,372 @@
+{%- comment -%}
+  Highlights (M6.6, Figma PDP "Product details 7"): eyebrow, heading with an accent part and a
+  paragraph (left); a 3 x 2 grid of benefits (line icon, title, text) with hairline dividers (right);
+  under it a two-column spec table (SKIN TYPE · KEY ACTIVES · TEXTURE · FINISH · FREE FROM ·
+  CERTIFICATION).
+  - Content: the Figma text is the demo; every field can be connected to a product metafield in the
+    theme editor ("Connect dynamic source"). An empty field hides its part.
+  - Icons: one of the theme's line icons (assets/icon-drop, -flask, -sparkles, -hours, -leaf, -shield-check: the Figma ones, in the text colour) or the
+    merchant's own image.
+  - The tabs link here with the Anchor setting (#highlights).
+  The blocks are the section's own (benefit, spec row), drawn in their place by their type.
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+  assign anchor = section.settings.anchor | handleize | default: 'highlights'
+  assign benefits = section.blocks | where: 'type', 'benefit'
+  assign specs = section.blocks | where: 'type', 'spec'
+-%}
+
+<div
+  id="{{ anchor }}"
+  class="product-highlights full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
+>
+  <div class="product-highlights__inner">
+    <div class="product-highlights__intro" data-tab-item>
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="eyebrow product-highlights__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+      {%- endif -%}
+      {%- if section.settings.heading != blank -%}
+        <h2 class="product-highlights__heading">{{ section.settings.heading }}</h2>
+      {%- endif -%}
+      {%- if section.settings.text != blank -%}
+        <div class="product-highlights__text rte">{{ section.settings.text }}</div>
+      {%- endif -%}
+    </div>
+
+    <div class="product-highlights__main">
+      {%- if benefits.size > 0 -%}
+        {%- comment -%} <animate-on-scroll> reveals the [data-animate] benefits (without it they would stay hidden) {%- endcomment -%}
+        <animate-on-scroll>
+        <ul class="product-highlights__grid" role="list" data-tab-item>
+          {%- for block in benefits -%}
+            <li class="product-highlights__item" data-animate="fade-up" {{ block.shopify_attributes }}>
+              <span class="product-highlights__icon" aria-hidden="true">
+                {%- if block.settings.icon_image != blank -%}
+                  {{ block.settings.icon_image | image_url: width: 96 | image_tag: alt: '', loading: 'lazy', class: 'product-highlights__icon-image' }}
+                {%- elsif block.settings.icon != 'none' -%}
+                  {%- assign icon_file = 'icon-' | append: block.settings.icon | append: '.svg' -%}
+                  {{ icon_file | inline_asset_content }}
+                {%- endif -%}
+              </span>
+              {%- if block.settings.title != blank -%}
+                <h3 class="product-highlights__title">{{ block.settings.title | escape }}</h3>
+              {%- endif -%}
+              {%- if block.settings.text != blank -%}
+                <p class="product-highlights__item-text">{{ block.settings.text | escape }}</p>
+              {%- endif -%}
+            </li>
+          {%- endfor -%}
+        </ul>
+        </animate-on-scroll>
+      {%- endif -%}
+
+      {%- if specs.size > 0 -%}
+        <dl class="product-highlights__specs" data-tab-item>
+          {%- for block in specs -%}
+            {%- if block.settings.label != blank and block.settings.value != blank -%}
+              <div class="product-highlights__spec" {{ block.shopify_attributes }}>
+                <dt>{{ block.settings.label | escape }}</dt>
+                <dd>{{ block.settings.value | escape }}</dd>
+              </div>
+            {%- endif -%}
+          {%- endfor -%}
+        </dl>
+      {%- endif -%}
+    </div>
+  </div>
+</div>
+
+{% stylesheet %}
+  /*
+    Figma 1920 ("Product details 7"): intro x 50–500 (eyebrow y 212, heading ~70px 2 lines, the first
+    words accent, text ~22px); grid x 640–1870 in 3 columns (~410 each), 2 rows, 1px pale lines between
+    the columns and under the first row, cells padded ~32; icon ~28px accent; title ~22px; text ~17px
+    grey. Spec table x 645–1750, 2 columns of label caps ~15px + value ~18px, a hairline under each row.
+  */
+  .product-highlights {
+    display: block;
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+    background-color: var(--color-background);
+  }
+
+  .product-highlights__inner {
+    display: grid;
+    grid-template-columns: minmax(0, 450fr) minmax(0, 1230fr);
+    align-items: start;
+    gap: max(var(--space-xl), calc(140 * var(--px, 0.0625rem)));
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  .product-highlights__eyebrow {
+    margin: 0 0 var(--space-lg);
+  }
+
+  .product-highlights__heading {
+    margin: 0;
+    font-size: var(--font-size-h1);
+    font-weight: 400;
+    line-height: 1.1;
+  }
+
+  .product-highlights__heading em {
+    color: var(--color-accent);
+    font-style: normal;
+  }
+
+  .product-highlights__text {
+    margin-block-start: max(var(--space-lg), calc(70 * var(--px, 0.0625rem)));
+    font-size: var(--font-size-body-lg);
+    line-height: 1.65;
+  }
+
+  /* The grid: lines between the columns and under the first row, none on the outside edges */
+  .product-highlights__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .product-highlights__item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    padding: max(var(--space-lg), calc(32 * var(--px, 0.0625rem)));
+  }
+
+  .product-highlights__item:not(:nth-child(3n + 1)) {
+    border-inline-start: 1px solid var(--color-card-border);
+  }
+
+  .product-highlights__item:nth-child(-n + 3) {
+    border-block-end: 1px solid var(--color-card-border);
+  }
+
+  .product-highlights__icon {
+    display: inline-flex;
+    margin-block-end: var(--space-xs);
+    color: var(--color-accent);
+  }
+
+  .product-highlights__icon svg,
+  .product-highlights__icon-image {
+    inline-size: max(1.5rem, calc(28 * var(--px, 0.0625rem)));
+    block-size: max(1.5rem, calc(28 * var(--px, 0.0625rem)));
+    object-fit: contain;
+  }
+
+  .product-highlights__title {
+    margin: 0;
+    font-family: var(--font-body--family);
+    font-size: var(--font-size-body-lg);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.3;
+  }
+
+  .product-highlights__item-text {
+    margin: 0;
+    color: color-mix(in srgb, var(--color-text) 72%, var(--color-background));
+    font-size: var(--font-size-body-sm);
+    line-height: 1.6;
+  }
+
+  .product-highlights__specs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 max(var(--space-lg), calc(70 * var(--px, 0.0625rem)));
+    margin: max(var(--space-xl), calc(60 * var(--px, 0.0625rem))) 0 0;
+    padding-inline-start: max(var(--space-sm), calc(5 * var(--px, 0.0625rem)));
+  }
+
+  .product-highlights__spec {
+    display: grid;
+    grid-template-columns: minmax(7rem, 200fr) minmax(0, 330fr);
+    align-items: baseline;
+    gap: var(--space-md);
+    padding-block: var(--space-md);
+    border-block-end: 1px solid var(--color-card-border);
+  }
+
+  .product-highlights__spec dt {
+    font-size: var(--font-size-small);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  .product-highlights__spec dd {
+    margin: 0;
+    font-size: var(--font-size-body-sm);
+  }
+
+  /* Tablets: the intro above the grid */
+  @media (max-width: 1199px) {
+    .product-highlights__inner {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  /* Phones (brief): 2 columns of benefits, a 1-column spec table */
+  @media (max-width: 749px) {
+    .product-highlights__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .product-highlights__item {
+      padding: var(--space-md) var(--space-sm);
+      border: 0 !important; /* the 3-column lines don't fit a 2-column grid */
+      border-block-end: 1px solid var(--color-card-border) !important;
+    }
+
+    .product-highlights__specs {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.product_highlights",
+  "tag": "section",
+  "class": "product-highlights-section",
+  "enabled_on": { "templates": ["product"] },
+  "blocks": [
+    {
+      "type": "benefit",
+      "name": "t:general.product_benefit",
+      "settings": [
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "t:labels.icon",
+          "options": [
+            { "value": "drop", "label": "t:options.product_benefit_icon.drop" },
+            { "value": "flask", "label": "t:options.product_benefit_icon.flask" },
+            { "value": "sparkles", "label": "t:options.product_benefit_icon.sparkles" },
+            { "value": "hours", "label": "t:options.product_benefit_icon.clock" },
+            { "value": "leaf", "label": "t:options.product_benefit_icon.leaf" },
+            { "value": "shield-check", "label": "t:options.product_benefit_icon.shield" },
+            { "value": "none", "label": "t:options.product_benefit_icon.none" }
+          ],
+          "default": "drop"
+        },
+        {
+          "type": "image_picker",
+          "id": "icon_image",
+          "label": "t:labels.product_benefit_icon_image",
+          "info": "t:labels.product_benefit_icon_image_info"
+        },
+        { "type": "text", "id": "title", "label": "t:labels.heading", "default": "72-hour hydration" },
+        { "type": "textarea", "id": "text", "label": "t:labels.text", "default": "A lipid-mimicking veil of ceramide NP, squalane and glacial water holds moisture through three full days." }
+      ]
+    },
+    {
+      "type": "spec",
+      "name": "t:general.product_spec_row",
+      "settings": [
+        { "type": "text", "id": "label", "label": "t:labels.label", "default": "Skin type" },
+        { "type": "text", "id": "value", "label": "t:labels.product_spec_value", "default": "All types, including reactive" }
+      ]
+    }
+  ],
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "t:labels.product_content_dynamic"
+    },
+    {
+      "type": "text",
+      "id": "anchor",
+      "label": "t:labels.product_section_anchor",
+      "info": "t:labels.product_section_anchor_info",
+      "default": "highlights"
+    },
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "Highlights"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.accent_heading_info",
+      "default": "<em>Six reasons</em> it earns its shelf."
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "t:labels.text",
+      "default": "<p>Ritual Serum No. 01 was formulated backwards — from how skin feels at the end of the day, to the molecules that get it there.</p>"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "options": [
+        { "value": "wide", "label": "t:options.section_width.wide" },
+        { "value": "widest", "label": "t:options.section_width.widest" },
+        { "value": "full", "label": "t:options.section_width.full" }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.product_highlights",
+      "blocks": [
+        { "type": "benefit", "settings": { "icon": "drop", "title": "72-hour hydration", "text": "A lipid-mimicking veil of ceramide NP, squalane and glacial water holds moisture through three full days." } },
+        { "type": "benefit", "settings": { "icon": "flask", "title": "Small-batch craft", "text": "Blended in Grasse in batches of 400, cold-filled into recyclable glass and numbered by hand." } },
+        { "type": "benefit", "settings": { "icon": "sparkles", "title": "Soft-focus finish", "text": "Micronised pigment diffuses light across the skin — luminous in daylight, never glittering under flash." } },
+        { "type": "benefit", "settings": { "icon": "hours", "title": "12-hour wear", "text": "Transfer-resistant through coffee, calls and closing hours. Removes cleanly with a single cleanse." } },
+        { "type": "benefit", "settings": { "icon": "leaf", "title": "Clean by omission", "text": "No silicones, sulphates, parabens or mineral oil. Vegan, cruelty-free, Leaping Bunny certified." } },
+        { "type": "benefit", "settings": { "icon": "shield-check", "title": "Barrier-first formula", "text": "Dermatologist tested on sensitive skin. Non-comedogenic, fragrance-optional, pH balanced at 5.5." } },
+        { "type": "spec", "settings": { "label": "Skin type", "value": "All types, including reactive" } },
+        { "type": "spec", "settings": { "label": "Key actives", "value": "Niacinamide 5%, Ceramide NP, Squalane" } },
+        { "type": "spec", "settings": { "label": "Texture", "value": "Weightless fluid-to-silk" } },
+        { "type": "spec", "settings": { "label": "Finish", "value": "Satin, buildable" } },
+        { "type": "spec", "settings": { "label": "Free from", "value": "Silicones • Sulphates • Parabens" } },
+        { "type": "spec", "settings": { "label": "Certification", "value": "Vegan • Leaping Bunny • Dermatologist tested" } }
+      ]
+    }
+  ]
+}
+{% endschema %}
