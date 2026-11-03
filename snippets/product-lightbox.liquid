@@ -1,0 +1,708 @@
+{% doc %}
+  The product gallery's full-screen viewer (Figma PDP "Product details 14–27", phone "Variant89–104"):
+  a "1 / 7" counter, a close button, the current medium in the middle and every medium as a thumbnail
+  (3 masonry columns, the current one outlined). The image takes all the room left of the thumbnails.
+  Clicking (or tapping) the image shows it alone, whole, across the screen; clicking again goes back.
+  On touch screens a sideways swipe goes to the next / previous medium.
+
+  - A native <dialog> opened with showModal(): focus moves in, Tab stays inside, Escape closes (the first
+    Escape only leaves the full-screen image), the page behind can't be used, and focus returns to the
+    opener.
+  - It opens from any [data-lightbox-open="<index>"] button in the same section (index = the medium's
+    place in product.media). The images only download when the viewer is first opened (loading lazy
+    inside a closed dialog).
+  - Keys: ← / → previous / next; Enter or Space on the image = full screen on / off (it's a button).
+
+  @param {product} product - The product whose media to show
+
+  @example
+  {% render 'product-lightbox', product: product %}
+{% enddoc %}
+
+{%- liquid
+  assign media_count = product.media.size
+  assign lightbox_label = 'products.lightbox.label' | t: title: product.title
+  # "Image [index] of 7": translated once here, the script puts in the number
+  assign lightbox_status = 'products.lightbox.status' | t: index: '[index]', count: media_count
+-%}
+
+{%- if media_count > 0 -%}
+  <product-lightbox class="product-lightbox">
+    <dialog class="product-lightbox__dialog" aria-label="{{ lightbox_label | escape }}">
+      <div class="product-lightbox__inner">
+        <p class="product-lightbox__counter">
+          <span aria-hidden="true"><span data-lightbox-current>1</span> / {{ media_count }}</span>
+          {%- comment -%} Read out on every change: "Image 2 of 7" {%- endcomment -%}
+          <span
+            class="visually-hidden"
+            aria-live="polite"
+            data-lightbox-status
+            data-template="{{ lightbox_status | escape }}"
+          ></span>
+        </p>
+
+        <button type="button" class="product-lightbox__close" data-lightbox-close>
+          <span class="visually-hidden">{{ 'products.lightbox.close' | t }}</span>
+          <span class="product-lightbox__icon" aria-hidden="true">{{ 'icon-close.svg' | inline_asset_content }}</span>
+        </button>
+
+        <div class="product-lightbox__stage">
+          {%- for media in product.media -%}
+            <div
+              class="product-lightbox__slide product-lightbox__slide--{{ media.media_type }}"
+              data-lightbox-slide="{{ forloop.index0 }}"
+              data-media-type="{{ media.media_type }}"
+              style="--media-ratio: {{ media.preview_image.aspect_ratio | default: 1 }};"
+              {% unless forloop.first %}
+                hidden
+              {% endunless %}
+            >
+              {%- if media.media_type == 'image' -%}
+                {%- comment -%}
+                  A button, so full screen also works from the keyboard; aria-pressed tells a screen reader
+                  whether it's on. The image is large (up to 2400px) because full screen shows it big.
+                {%- endcomment -%}
+                <button
+                  type="button"
+                  class="product-lightbox__zoom"
+                  aria-pressed="false"
+                  aria-label="{{ 'products.lightbox.zoom' | t }}"
+                  data-lightbox-zoom
+                >
+                  {{
+                    media.preview_image
+                    | image_url: width: 2400
+                    | image_tag:
+                      loading: 'lazy',
+                      widths: '800, 1200, 1600, 2000, 2400',
+                      sizes: '100vw',
+                      alt: media.alt,
+                      class: 'product-lightbox__image',
+                      draggable: 'false'
+                  }}
+                  <span class="product-lightbox__hint" aria-hidden="true">
+                    <span class="product-lightbox__hint-text product-lightbox__hint-text--mouse">
+                      {{- 'products.lightbox.hint' | t -}}
+                    </span>
+                    <span class="product-lightbox__hint-text product-lightbox__hint-text--touch">
+                      {{- 'products.lightbox.hint_touch' | t -}}
+                    </span>
+                  </span>
+                </button>
+              {%- else -%}
+                <div class="product-lightbox__media" style="--media-ratio: {{ media.preview_image.aspect_ratio | default: 1.7778 }};">
+                  {% render 'product-media', media: media, sizes: '(min-width: 990px) 50vw, 100vw', loading: 'lazy' %}
+                </div>
+              {%- endif -%}
+            </div>
+          {%- endfor -%}
+
+          {%- if media_count > 1 -%}
+            <button type="button" class="product-lightbox__arrow product-lightbox__arrow--prev" data-lightbox-step="-1">
+              <span class="visually-hidden">{{ 'products.lightbox.previous' | t }}</span>
+              <span class="product-lightbox__icon" aria-hidden="true">{{ 'icon-chevron-left.svg' | inline_asset_content }}</span>
+            </button>
+            <button type="button" class="product-lightbox__arrow product-lightbox__arrow--next" data-lightbox-step="1">
+              <span class="visually-hidden">{{ 'products.lightbox.next' | t }}</span>
+              <span class="product-lightbox__icon" aria-hidden="true">{{ 'icon-chevron-right.svg' | inline_asset_content }}</span>
+            </button>
+          {%- endif -%}
+        </div>
+
+        {%- if media_count > 1 -%}
+          {%- comment -%} Thumbnails: dealt left → middle → right (1st left, 2nd middle, 3rd right, 4th left…) {%- endcomment -%}
+          <div class="product-lightbox__thumbs">
+            {%- for column in (0..2) -%}
+              <div class="product-lightbox__thumb-column product-lightbox__thumb-column--{{ forloop.index }}">
+                {%- for media in product.media -%}
+                  {%- assign slot = forloop.index0 | modulo: 3 -%}
+                  {%- if slot != column -%}
+                    {%- continue -%}
+                  {%- endif -%}
+                  <button
+                    type="button"
+                    class="product-lightbox__thumb"
+                    style="--media-ratio: {{ media.preview_image.aspect_ratio | default: 1 }};"
+                    data-lightbox-thumb="{{ forloop.index0 }}"
+                    aria-label="{{ 'products.media.show' | t: index: forloop.index, count: media_count }}"
+                    {% if forloop.first %}
+                      aria-current="true"
+                    {% endif %}
+                  >
+                    {%- if media.preview_image != blank -%}
+                      {{
+                        media.preview_image
+                        | image_url: width: 400
+                        | image_tag:
+                          loading: 'lazy',
+                          widths: '200, 300, 400',
+                          sizes: '(min-width: 990px) 10vw, 30vw',
+                          alt: '',
+                          class: 'product-lightbox__thumb-image'
+                      }}
+                    {%- endif -%}
+                  </button>
+                {%- endfor -%}
+              </div>
+            {%- endfor -%}
+          </div>
+        {%- endif -%}
+      </div>
+    </dialog>
+  </product-lightbox>
+{%- endif -%}
+
+{% stylesheet %}
+  /*
+    Figma 1920 ("Product details 14"): white, full screen. Counter pill x 50 y 44 (140 x 60, 1px pale
+    border, ~28px); close 60px circle top right; the image x 458–1416 (958 square, radius ~24) from y 36
+    to 995; the thumbnails x 1436–1870 in 3 columns (125 / 168 / 106, ~16px gaps, middle column 28px
+    higher than the left, the right 61px lower), the current one with a 2px accent outline.
+    Change from Figma (our choice): the image area also takes Figma's empty left column, so the image
+    grows to the screen height. Full screen: the image alone, whole, the counter and close turn to glass.
+  */
+  .product-lightbox__dialog {
+    inline-size: 100%;
+    max-inline-size: none;
+    block-size: 100%;
+    max-block-size: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background-color: var(--color-background);
+    color: var(--color-text);
+  }
+
+  .product-lightbox__dialog::backdrop {
+    background-color: var(--color-background);
+  }
+
+  /* The page behind doesn't scroll while the viewer is open */
+  html:has(.product-lightbox__dialog[open]) {
+    overflow: hidden;
+  }
+
+  .product-lightbox__inner {
+    position: relative;
+    display: grid;
+    /* The image area (from the left edge to the thumbnails) and the thumbnails (Figma 504px of 1920) */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 26.25%);
+    align-items: center;
+    padding-inline-start: max(var(--space-md), calc(50 * var(--px, 0.0625rem)));
+    block-size: 100%;
+    padding-block: var(--lightbox-padding);
+  }
+
+  /*
+    The image's height limit, from the screen height: a percentage height inside these grids has nothing
+    definite to measure against, so it would be ignored and the image would overflow
+  */
+  .product-lightbox {
+    --lightbox-padding: max(var(--space-md), calc(36 * var(--px, 0.0625rem)));
+    --lightbox-image-max: calc(100svh - var(--lightbox-padding) * 2);
+  }
+
+  .product-lightbox__counter {
+    position: absolute;
+    z-index: 2;
+    inset-block-start: max(var(--space-md), calc(44 * var(--px, 0.0625rem)));
+    inset-inline-start: max(var(--space-md), calc(50 * var(--px, 0.0625rem)));
+    margin: 0;
+    padding: 0.45em 1.1em;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-background);
+    font-size: var(--font-size-body); /* smaller than Figma's 28px (our choice) */
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+    transition: background-color var(--duration-fast) var(--ease-out);
+  }
+
+  .product-lightbox__close,
+  .product-lightbox__arrow {
+    display: grid;
+    place-items: center;
+    inline-size: 2.75rem; /* 44px: smaller than Figma's 60px (our choice), still a full touch target */
+    aspect-ratio: 1;
+    min-block-size: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background-color: var(--color-background);
+    box-shadow: var(--shadow-glass-edge);
+    color: var(--color-text);
+    cursor: pointer;
+    transition: background-color var(--duration-fast) var(--ease-out);
+  }
+
+  .product-lightbox__close {
+    position: absolute;
+    z-index: 2;
+    inset-block-start: max(var(--space-md), calc(44 * var(--px, 0.0625rem)));
+    inset-inline-end: max(var(--space-md), calc(50 * var(--px, 0.0625rem)));
+  }
+
+  .product-lightbox__close:hover,
+  .product-lightbox__arrow:hover {
+    background-color: color-mix(in srgb, var(--color-text) 6%, var(--color-background));
+  }
+
+  .product-lightbox__icon {
+    display: inline-flex;
+  }
+
+  .product-lightbox__icon svg {
+    inline-size: 0.875rem;
+    block-size: 0.875rem;
+  }
+
+  /* The image area: everything left of the thumbnails, as tall as the screen allows */
+  .product-lightbox__stage {
+    position: relative;
+    grid-column: 1;
+    display: grid;
+    place-items: center;
+    block-size: 100%;
+    min-block-size: 0;
+  }
+
+  .product-lightbox__slide {
+    display: grid;
+    place-items: center;
+    inline-size: 100%;
+    block-size: 100%;
+    min-block-size: 0;
+  }
+
+  .product-lightbox__slide[hidden] {
+    display: none;
+  }
+
+  /* The image keeps its shape, as large as fits; the rounded corners sit on the image itself */
+  /*
+    The button is as big as the image, so the hint sits on the photo. Its width comes from the image's
+    shape: as tall as the screen allows (height limit x ratio), never wider than the image area. This
+    also lets a smaller photo grow (auto sizing never draws an image larger than its own pixels).
+  */
+  .product-lightbox__zoom {
+    position: relative;
+    display: block;
+    inline-size: min(100%, calc(var(--lightbox-image-max) * var(--media-ratio, 1)));
+    min-block-size: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    cursor: zoom-in;
+    touch-action: pan-y; /* sideways finger moves are left to the script (swipe = next / previous) */
+  }
+
+  .product-lightbox__zoom:hover {
+    background: none;
+  }
+
+  .product-lightbox__zoom:focus-visible {
+    outline: none;
+  }
+
+  .product-lightbox__zoom:focus-visible .product-lightbox__image {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 4px;
+  }
+
+  .product-lightbox__image {
+    display: block;
+    inline-size: 100%;
+    block-size: auto;
+    border-radius: max(1rem, calc(24 * var(--px, 0.0625rem)));
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+
+  .product-lightbox__media {
+    inline-size: min(100%, calc(var(--lightbox-image-max) * var(--media-ratio, 1.7778)));
+    max-block-size: var(--lightbox-image-max);
+    aspect-ratio: var(--media-ratio, 1.7778);
+    overflow: hidden;
+    border-radius: max(1rem, calc(24 * var(--px, 0.0625rem)));
+  }
+
+  .product-lightbox__media .product-media {
+    border-radius: inherit;
+  }
+
+  /* "CLICK TO VIEW FULL SCREEN" at the bottom of the image */
+  .product-lightbox__hint {
+    position: absolute;
+    inset-block-end: max(var(--space-md), calc(20 * var(--px, 0.0625rem)));
+    inset-inline: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    color: #ffffff;
+    font-size: var(--font-size-small);
+    letter-spacing: var(--letter-spacing-label);
+    text-shadow: 0 1px 6px #00000059;
+    text-transform: uppercase;
+    pointer-events: none;
+    transition: opacity var(--duration-fast) var(--ease-out);
+  }
+
+  /* One hint per kind of screen: mouse "Click…", touch "Tap…" */
+  .product-lightbox__hint-text--touch {
+    display: none;
+  }
+
+  @media (hover: none) {
+    .product-lightbox__hint-text--mouse {
+      display: none;
+    }
+
+    .product-lightbox__hint-text--touch {
+      display: inline;
+    }
+  }
+
+  /* Previous / next: glass circles on the image's sides; shown on hover or keyboard focus (always on touch) */
+  .product-lightbox__arrow {
+    position: absolute;
+    z-index: 1;
+    inset-block-start: 50%;
+    translate: 0 -50%;
+    opacity: 0;
+    transition: opacity var(--duration-fast) var(--ease-out);
+  }
+
+  .product-lightbox__arrow--prev {
+    inset-inline-start: var(--space-md);
+  }
+
+  .product-lightbox__arrow--next {
+    inset-inline-end: var(--space-md);
+  }
+
+  .product-lightbox__stage:hover .product-lightbox__arrow,
+  .product-lightbox__arrow:focus-visible {
+    opacity: 1;
+  }
+
+  @media (hover: none) {
+    .product-lightbox__arrow {
+      opacity: 1;
+    }
+  }
+
+  /* Thumbnails: 3 columns of their own shapes, the middle one higher, the right one lower */
+  .product-lightbox__thumbs {
+    grid-column: 2;
+    display: grid;
+    grid-template-columns: 125fr 168fr 106fr;
+    align-items: start;
+    gap: max(var(--space-sm), calc(16 * var(--px, 0.0625rem)));
+    padding-inline: max(var(--space-md), calc(20 * var(--px, 0.0625rem))) max(var(--space-md), calc(50 * var(--px, 0.0625rem)));
+  }
+
+  .product-lightbox__thumb-column {
+    display: flex;
+    flex-direction: column;
+    gap: max(var(--space-sm), calc(16 * var(--px, 0.0625rem)));
+    min-inline-size: 0;
+  }
+
+  .product-lightbox__thumb-column--1 {
+    margin-block-start: calc(28 * var(--px, 0.0625rem));
+  }
+
+  .product-lightbox__thumb-column--3 {
+    margin-block-start: calc(61 * var(--px, 0.0625rem));
+  }
+
+  .product-lightbox__thumb {
+    display: block;
+    overflow: hidden;
+    inline-size: 100%;
+    min-block-size: 0;
+    aspect-ratio: var(--media-ratio, 1);
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: max(0.5rem, calc(10 * var(--px, 0.0625rem)));
+    background-color: var(--color-tint, color-mix(in srgb, var(--color-text) 5%, var(--color-background)));
+    box-shadow: none;
+    cursor: pointer;
+    transition: border-color var(--duration-fast) var(--ease-out);
+  }
+
+  .product-lightbox__thumb[aria-current="true"] {
+    border-color: var(--color-accent);
+  }
+
+  .product-lightbox__thumb:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  .product-lightbox__thumb-image {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  /*
+    Full screen: the image alone over the whole screen, whole (contain: never cropped), on the background
+    colour. Thumbnails, arrows and hint step aside; the counter and close turn to frosted glass.
+  */
+  .product-lightbox.is-full .product-lightbox__zoom {
+    position: fixed;
+    z-index: 1;
+    inset: 0;
+    inline-size: auto;
+    background-color: var(--color-background);
+    cursor: zoom-out;
+  }
+
+  .product-lightbox.is-full .product-lightbox__image {
+    inline-size: 100%;
+    block-size: 100%;
+    max-inline-size: none;
+    max-block-size: none;
+    object-fit: contain;
+    border-radius: 0;
+  }
+
+  .product-lightbox.is-full .product-lightbox__hint,
+  .product-lightbox.is-full .product-lightbox__arrow,
+  .product-lightbox.is-full .product-lightbox__thumbs {
+    visibility: hidden;
+    opacity: 0;
+  }
+
+  .product-lightbox.is-full .product-lightbox__counter,
+  .product-lightbox.is-full .product-lightbox__close {
+    border-color: transparent;
+    background-color: color-mix(in srgb, var(--color-background) 55%, transparent);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+
+  /* A short fade-in of the full-screen image */
+  @media (prefers-reduced-motion: no-preference) {
+    .product-lightbox.is-full .product-lightbox__image {
+      animation: product-lightbox-in var(--duration-normal) var(--ease-out);
+    }
+  }
+
+  @keyframes product-lightbox-in {
+    from {
+      opacity: 0;
+      scale: 0.97;
+    }
+  }
+
+  /*
+    Tablets and phones (Figma Variant89–104): counter and close on top, the image below at full width,
+    the thumbnails underneath.
+  */
+  @media (max-width: 989px) {
+    /* Phones: the image shares the height with the counter row and the thumbnails */
+    .product-lightbox {
+      --lightbox-image-max: 55svh;
+    }
+
+    .product-lightbox__inner {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      align-items: start;
+      gap: var(--space-lg);
+      padding: var(--space-md) var(--space-sm);
+    }
+
+    .product-lightbox__counter,
+    .product-lightbox__close {
+      position: static;
+      grid-row: 1;
+    }
+
+    .product-lightbox__counter {
+      justify-self: start;
+      padding: 0.4em 1em;
+    }
+
+    .product-lightbox__close {
+      grid-column: 1;
+      justify-self: end;
+      inline-size: 2.75rem;
+    }
+
+    .product-lightbox__stage {
+      grid-column: 1;
+      grid-row: 2;
+    }
+
+    .product-lightbox__thumbs {
+      grid-column: 1;
+      grid-row: 3;
+      justify-self: center;
+      inline-size: min(100%, 20rem);
+      padding: 0;
+    }
+
+    .product-lightbox__thumb-column--1 {
+      margin-block-start: 1.25rem;
+    }
+
+    .product-lightbox__thumb-column--3 {
+      margin-block-start: 2.5rem;
+    }
+
+    /* The counter and close stay above the full-screen photo */
+    .product-lightbox.is-full .product-lightbox__counter,
+    .product-lightbox.is-full .product-lightbox__close {
+      position: fixed;
+      z-index: 2;
+      inset-block-start: var(--space-md);
+    }
+
+    .product-lightbox.is-full .product-lightbox__counter {
+      inset-inline-start: var(--space-sm);
+    }
+
+    .product-lightbox.is-full .product-lightbox__close {
+      inset-inline-end: var(--space-sm);
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <product-lightbox>: the gallery's full-screen viewer.
+   * - Opens from [data-lightbox-open] buttons in its section, at that medium.
+   * - Thumbnails, ← / →, the arrow buttons and (touch) sideways swipes change the medium.
+   * - Clicking / tapping the image (or Enter / Space on it: it's a button) shows it alone across the
+   *   screen; again = back. Escape first leaves full screen, then closes.
+   */
+  class ProductLightbox extends HTMLElement {
+    connectedCallback() {
+      this.dialog = this.querySelector('dialog');
+      this.slides = [...this.querySelectorAll('[data-lightbox-slide]')];
+      this.thumbs = [...this.querySelectorAll('[data-lightbox-thumb]')];
+      this.current = 0;
+
+      // The opener buttons live in the gallery, outside this element: listen on the whole section
+      this.scope = this.closest('.shopify-section') || document;
+      this.onOpenClick = (event) => {
+        const opener = event.target.closest('[data-lightbox-open]');
+        if (!opener) return;
+        this.opener = opener;
+        this.open(Number(opener.dataset.lightboxOpen));
+      };
+      this.scope.addEventListener('click', this.onOpenClick);
+
+      this.dialog.addEventListener('click', (event) => {
+        const thumb = event.target.closest('[data-lightbox-thumb]');
+        const step = event.target.closest('[data-lightbox-step]');
+        if (thumb) this.show(Number(thumb.dataset.lightboxThumb));
+        else if (step) this.show(this.current + Number(step.dataset.lightboxStep));
+        else if (event.target.closest('[data-lightbox-close]')) this.dialog.close();
+        else if (event.target.closest('[data-lightbox-zoom]')) {
+          // A swipe also ends in a click: it already changed the image, so it doesn't toggle full screen
+          if (this.swiped) this.swiped = false;
+          else this.fullScreen(!this.classList.contains('is-full'));
+        }
+      });
+
+      this.dialog.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowRight') this.show(this.current + 1);
+        else if (event.key === 'ArrowLeft') this.show(this.current - 1);
+      });
+
+      // Escape: the dialog's "cancel" event. In full screen, the first Escape only leaves it
+      this.dialog.addEventListener('cancel', (event) => {
+        if (!this.classList.contains('is-full')) return;
+        event.preventDefault();
+        this.fullScreen(false);
+      });
+
+      this.dialog.addEventListener('close', () => {
+        this.fullScreen(false);
+        this.pauseMedia();
+        this.opener?.focus();
+      });
+
+      this.setUpSwipe();
+    }
+
+    disconnectedCallback() {
+      this.scope?.removeEventListener('click', this.onOpenClick);
+    }
+
+    open(index) {
+      this.show(index);
+      this.dialog.showModal();
+    }
+
+    /** Shows one medium (wrapping round at both ends), updates the counter and the outlined thumbnail */
+    show(index) {
+      const count = this.slides.length;
+      if (!count) return;
+      this.pauseMedia();
+      this.current = (index + count) % count;
+
+      this.slides.forEach((slide, i) => (slide.hidden = i !== this.current));
+      this.thumbs.forEach((thumb) => {
+        const isCurrent = Number(thumb.dataset.lightboxThumb) === this.current;
+        if (isCurrent) thumb.setAttribute('aria-current', 'true');
+        else thumb.removeAttribute('aria-current');
+      });
+      // In full screen, a non-image (video, 3D) goes back to the normal view
+      if (!this.slides[this.current].querySelector('[data-lightbox-zoom]')) this.fullScreen(false);
+      else if (this.classList.contains('is-full')) this.fullScreen(true);
+
+      const number = this.current + 1;
+      this.querySelector('[data-lightbox-current]').textContent = number;
+      // "Image 2 of 7" for screen readers (the visible counter is hidden from them)
+      const status = this.querySelector('[data-lightbox-status]');
+      if (this.dialog.open) status.textContent = status.dataset.template.replace('[index]', number);
+    }
+
+    /** Full screen on / off; only images have it */
+    fullScreen(on) {
+      this.querySelectorAll('[data-lightbox-zoom]').forEach((button) => button.setAttribute('aria-pressed', 'false'));
+      const button = this.slides[this.current]?.querySelector('[data-lightbox-zoom]');
+      this.classList.toggle('is-full', Boolean(on && button));
+      if (on && button) button.setAttribute('aria-pressed', 'true');
+    }
+
+    /** Touch / pen: a sideways swipe of more than 50px goes to the next / previous medium */
+    setUpSwipe() {
+      const stage = this.querySelector('.product-lightbox__stage');
+      let start = null;
+
+      stage.addEventListener('pointerdown', (event) => {
+        if (event.pointerType === 'mouse') return;
+        start = { x: event.clientX, y: event.clientY };
+      });
+
+      stage.addEventListener('pointerup', (event) => {
+        if (!start) return;
+        const dx = event.clientX - start.x;
+        const dy = event.clientY - start.y;
+        start = null;
+        if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return;
+        this.swiped = true;
+        setTimeout(() => (this.swiped = false), 400); // no click followed: forget it
+        this.show(this.current + (dx < 0 ? 1 : -1));
+      });
+
+      stage.addEventListener('pointercancel', () => (start = null));
+    }
+
+    /** Stops any playing video when the viewer moves on or closes */
+    pauseMedia() {
+      this.querySelectorAll('video').forEach((video) => video.pause());
+    }
+  }
+
+  if (!customElements.get('product-lightbox')) customElements.define('product-lightbox', ProductLightbox);
+{% endjavascript %}

@@ -95,6 +95,23 @@
                   style="--media-ratio: {{ media.preview_image.aspect_ratio | default: 1 }}; order: {{ place }};"
                 >
                   {% render 'product-media', media: media, sizes: gallery_sizes, loading: media_loading, priority: is_first %}
+                  {%- if section.settings.enable_lightbox -%}
+                    {%- comment -%}
+                      Opens the viewer at this medium. Images: the whole image is the button. Videos and 3D:
+                      a small corner button, so their own play / rotate controls stay usable.
+                    {%- endcomment -%}
+                    <button
+                      type="button"
+                      class="product__open{% unless media.media_type == 'image' %} product__open--corner{% endunless %}"
+                      data-lightbox-open="{{ forloop.index0 }}"
+                      aria-haspopup="dialog"
+                      aria-label="{{ 'products.lightbox.open' | t: index: forloop.index, count: media_count }}"
+                    >
+                      {%- unless media.media_type == 'image' -%}
+                        <span aria-hidden="true">⤢</span>
+                      {%- endunless -%}
+                    </button>
+                  {%- endif -%}
                 </div>
               {%- endfor -%}
             </div>
@@ -115,6 +132,10 @@
       </div>
     </div>
   </div>
+
+  {%- if section.settings.enable_lightbox -%}
+    {% render 'product-lightbox', product: product %}
+  {%- endif -%}
 </product-page>
 
 {% stylesheet %}
@@ -212,6 +233,47 @@
       opacity: 0.4;
       transform: scale(0.98);
     }
+  }
+
+  /* The viewer opener: invisible over the whole image (a zoom-in cursor), or a small glass corner button */
+  .product__open {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    min-block-size: 0;
+    padding: 0;
+    border: 0;
+    border-radius: inherit;
+    background: none;
+    box-shadow: none;
+    cursor: zoom-in;
+  }
+
+  .product__open:hover {
+    background: none;
+  }
+
+  .product__open:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -4px;
+  }
+
+  .product__open--corner {
+    inset: var(--space-sm) var(--space-sm) auto auto;
+    display: grid;
+    place-items: center;
+    inline-size: 2.75rem;
+    block-size: 2.75rem;
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--color-background) 70%, transparent);
+    color: var(--color-text);
+    font-size: 1.25rem;
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+
+  .product__open--corner:hover {
+    background-color: var(--color-background);
   }
 
   .product__placeholder {
@@ -326,6 +388,13 @@
       "type": "checkbox",
       "id": "show_breadcrumb",
       "label": "t:labels.show_breadcrumb",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_lightbox",
+      "label": "t:labels.enable_lightbox",
+      "info": "t:labels.enable_lightbox_info",
       "default": true
     },
     {

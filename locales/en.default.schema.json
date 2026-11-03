@@ -875,7 +875,9 @@
     "product_stock_label": "In stock label",
     "product_stock_label_info": "Leave empty for \"In stock\".",
     "product_stock_threshold": "Show the number from",
-    "product_stock_threshold_info": "Shows \"7 pieces left\" when this many or fewer are left. Only for products whose inventory Shopify tracks."
+    "product_stock_threshold_info": "Shows \"7 pieces left\" when this many or fewer are left. Only for products whose inventory Shopify tracks.",
+    "enable_lightbox": "Open images in a full-screen viewer",
+    "enable_lightbox_info": "Clicking a gallery image opens it full screen, with thumbnails and press-and-drag zoom."
   },
   "options": {
     "collection_list_header": {

@@ -377,6 +377,17 @@
       "perk": "Pause or cancel anytime",
       "one_time": "One time purchase",
       "one_time_note": "No commitment • Standard price"
+    },
+    "lightbox": {
+      "label": "{{ title }}: image viewer",
+      "open": "Open image {{ index }} of {{ count }} in the viewer",
+      "close": "Close the viewer",
+      "zoom": "View full screen",
+      "previous": "Previous image",
+      "next": "Next image",
+      "hint": "Click to view full screen",
+      "hint_touch": "Tap to view full screen",
+      "status": "Image {{ index }} of {{ count }}"
     }
   },
   "contact": {
