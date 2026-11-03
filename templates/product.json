@@ -12,66 +12,198 @@
     "main": {
       "type": "product",
       "blocks": {
-        "eyebrow": {
-          "type": "product-eyebrow",
+        "info_card": {
+          "type": "product-panel",
           "settings": {
-            "label": "type",
-            "show_badge": true,
-            "show_share": true
-          }
+            "style": "card",
+            "gap": 28
+          },
+          "blocks": {
+            "eyebrow": {
+              "type": "product-eyebrow",
+              "settings": {
+                "label": "type",
+                "show_badge": true,
+                "show_share": true
+              }
+            },
+            "title": {
+              "type": "product-title",
+              "settings": {
+                "size": "h2",
+                "tag": "h1",
+                "link_to_product": false
+              }
+            },
+            "price": {
+              "type": "product-price",
+              "settings": {
+                "size": "large",
+                "show_savings": true,
+                "show_rating": true,
+                "show_tax_note": true
+              }
+            },
+            "stock": {
+              "type": "product-stock",
+              "settings": {
+                "threshold": 10
+              }
+            },
+            "description": {
+              "type": "product-description",
+              "settings": {
+                "word_limit": 0
+              }
+            },
+            "buy_buttons": {
+              "type": "buy-buttons",
+              "settings": {
+                "layout": "inline",
+                "add_to_cart_style": "outline",
+                "show_dynamic_checkout": true,
+                "show_installments": true,
+                "show_swatches": true,
+                "show_price_difference": true,
+                "show_selling_plans": true,
+                "plan_default": "subscription",
+                "show_recommended": true,
+                "show_plan_perk": true
+              }
+            }
+          },
+          "block_order": [
+            "eyebrow",
+            "title",
+            "price",
+            "stock",
+            "description",
+            "buy_buttons"
+          ]
         },
-        "title": {
-          "type": "product-title",
+        "more_card": {
+          "type": "product-panel",
           "settings": {
-            "size": "h2",
-            "tag": "h1",
-            "link_to_product": false
-          }
-        },
-        "price": {
-          "type": "product-price",
-          "settings": {
-            "size": "large",
-            "show_savings": true,
-            "show_rating": true,
-            "show_tax_note": true
-          }
-        },
-        "stock": {
-          "type": "product-stock",
-          "settings": {
-            "threshold": 10
-          }
-        },
-        "description": {
-          "type": "product-description",
-          "settings": {
-            "word_limit": 0
-          }
-        },
-        "buy_buttons": {
-          "type": "buy-buttons",
-          "settings": {
-            "layout": "inline",
-            "add_to_cart_style": "outline",
-            "show_dynamic_checkout": true,
-            "show_installments": true,
-            "show_swatches": true,
-            "show_price_difference": true,
-            "show_selling_plans": true,
-            "plan_default": "subscription",
-            "show_recommended": true,
-            "show_plan_perk": true
-          }
+            "style": "card",
+            "gap": 40
+          },
+          "blocks": {
+            "offers": {
+              "type": "product-offers",
+              "settings": {},
+              "blocks": {
+                "o1": {
+                  "type": "_offer",
+                  "settings": {
+                    "bank": "Axis Bank",
+                    "offer": "10% instant discount",
+                    "detail": "Up to $60 • Credit cards",
+                    "code": "AXIS10"
+                  }
+                },
+                "o2": {
+                  "type": "_offer",
+                  "settings": {
+                    "bank": "ICICI Bank",
+                    "offer": "Flat $40 instant discount",
+                    "detail": "On orders above $300",
+                    "code": "ICICI40"
+                  }
+                },
+                "o3": {
+                  "type": "_offer",
+                  "settings": {
+                    "bank": "SBI Card",
+                    "offer": "3% off + 10% back",
+                    "detail": "Instant gift vouchers",
+                    "code": "SBI10"
+                  }
+                },
+                "o4": {
+                  "type": "_offer",
+                  "settings": {
+                    "bank": "HDFC Bank",
+                    "offer": "Flat $50 discount",
+                    "detail": "Using promo code HDFC6",
+                    "code": "HDFC6"
+                  }
+                }
+              },
+              "block_order": [
+                "o1",
+                "o2",
+                "o3",
+                "o4"
+              ]
+            },
+            "pickup": {
+              "type": "product-pickup",
+              "settings": {
+                "delivery_note": "Delivery in 2–3 business days",
+                "show_pickup": true
+              }
+            },
+            "features": {
+              "type": "product-features",
+              "settings": {},
+              "blocks": {
+                "f1": {
+                  "type": "_product-feature",
+                  "settings": {
+                    "label": "Recyclable",
+                    "builtin_icon": "recyclable"
+                  }
+                },
+                "f2": {
+                  "type": "_product-feature",
+                  "settings": {
+                    "label": "Vegan",
+                    "builtin_icon": "vegan"
+                  }
+                },
+                "f3": {
+                  "type": "_product-feature",
+                  "settings": {
+                    "label": "Cruelty-free",
+                    "builtin_icon": "cruelty-free"
+                  }
+                },
+                "f4": {
+                  "type": "_product-feature",
+                  "settings": {
+                    "label": "Parabens free",
+                    "builtin_icon": "paraben-free"
+                  }
+                }
+              },
+              "block_order": [
+                "f1",
+                "f2",
+                "f3",
+                "f4"
+              ]
+            },
+            "videos": {
+              "type": "product-videos",
+              "settings": {}
+            },
+            "payment": {
+              "type": "product-payment",
+              "settings": {}
+            }
+          },
+          "block_order": [
+            "offers",
+            "pickup",
+            "features",
+            "videos",
+            "payment"
+          ]
         }
       },
       "block_order": [
-        "eyebrow",
-        "title",
-        "price",
-        "stock",
-        "description",
-        "buy_buttons"
+        "info_card",
+        "more_card"
       ],
       "settings": {}
     }

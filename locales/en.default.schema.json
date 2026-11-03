@@ -113,7 +113,15 @@
     "returns_lists": "Returns lists",
     "cta_card": "Call to action card",
     "product_eyebrow": "Product eyebrow",
-    "product_stock": "Stock"
+    "product_stock": "Stock",
+    "product_panel": "Product card",
+    "product_offers": "Offers",
+    "offer": "Offer",
+    "product_pickup": "Delivery and pickup",
+    "product_features": "Feature badges",
+    "product_feature": "Feature badge",
+    "product_videos": "Short videos",
+    "product_payment": "Payment methods"
   },
   "labels": {
     "alignment": "Alignment",
@@ -877,7 +885,30 @@
     "product_stock_threshold": "Show the number from",
     "product_stock_threshold_info": "Shows \"7 pieces left\" when this many or fewer are left. Only for products whose inventory Shopify tracks.",
     "enable_lightbox": "Open images in a full-screen viewer",
-    "enable_lightbox_info": "Clicking a gallery image opens it full screen, with thumbnails and press-and-drag zoom."
+    "enable_lightbox_info": "Clicking a gallery image opens it full screen, with thumbnails and press-and-drag zoom.",
+    "product_panel_gap": "Space between blocks",
+    "product_offers_heading_info": "Leave empty for \"Bank offers\".",
+    "offer_bank": "Bank or provider",
+    "offer_text": "Offer",
+    "offer_detail": "Small line",
+    "offer_code": "Code",
+    "offer_code_info": "The code customers copy. Create it as a discount in Discounts so it works at checkout.",
+    "product_pickup_heading_info": "Leave empty for \"Delivery and pickup\".",
+    "product_pickup_note": "Delivery note",
+    "product_pickup_note_info": "Shown to everyone, e.g. how long delivery takes.",
+    "product_pickup_show": "Show pickup availability",
+    "product_pickup_show_info": "For the chosen variant, the first location with local pickup turned on (Settings > Locations).",
+    "product_feature_icon": "Icon",
+    "product_feature_icon_info": "Your own icon (SVG or PNG with a clear background, about 120 x 120 px). Replaces the built-in icon.",
+    "label": "Label",
+    "product_videos_heading_info": "Leave empty for \"Product short videos\".",
+    "product_videos_source": "The videos come from the product metafield \"Short videos\" (custom.short_videos: File, list, videos). Add them in each product's Metafields. The block hides when a product has none.",
+    "product_payment_heading_info": "Leave empty for \"We accept\".",
+    "product_payment_text_info": "Leave empty for \"Your payment information is processed securely.\" The icons are the methods turned on in Settings > Payments.",
+    "product_feature_builtin": "Built-in icon",
+    "product_feature_builtin_info": "Used when no icon image is chosen.",
+    "show_sticky_bar": "Show sticky add-to-cart bar",
+    "show_sticky_bar_info": "A bar at the bottom of the screen with the product, price, Add to cart and Buy now, once the page's own buttons scroll out of view."
   },
   "options": {
     "collection_list_header": {
@@ -1291,6 +1322,17 @@
       "type": "Product type",
       "vendor": "Vendor",
       "none": "None"
+    },
+    "product_panel_style": {
+      "card": "Card",
+      "plain": "Plain"
+    },
+    "product_feature_icon": {
+      "recyclable": "Recyclable",
+      "vegan": "Vegan",
+      "cruelty_free": "Cruelty-free",
+      "paraben_free": "Parabens free",
+      "none": "None (a tick)"
     }
   },
   "color_scheme": {

@@ -388,7 +388,45 @@
       "hint": "Click to view full screen",
       "hint_touch": "Tap to view full screen",
       "status": "Image {{ index }} of {{ count }}"
-    }
+    },
+    "offers": {
+      "heading": "Bank offers",
+      "empty": "Add offers to this block.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "copy_label": "Copy code {{ code }}"
+    },
+    "pickup": {
+      "heading": "Delivery and pickup",
+      "available_html": "Pickup available at <strong>{{ location }}</strong>",
+      "unavailable_html": "Pickup currently unavailable at <strong>{{ location }}</strong>"
+    },
+    "videos": {
+      "heading": "Product short videos",
+      "play": "Play video {{ index }} of {{ count }}",
+      "close": "Close video",
+      "empty": "This product has no short videos. Add them in the product's \"Short videos\" metafield."
+    },
+    "payment": {
+      "heading": "We accept",
+      "text": "Your payment information is processed securely."
+    },
+    "gift_card": {
+      "send_to_recipient": "I want to send this as a gift",
+      "email": "Recipient email",
+      "email_placeholder": "name@example.com",
+      "name": "Recipient name (optional)",
+      "message": "Message (optional)",
+      "message_hint": "Up to {{ count }} characters",
+      "send_on": "Send on (optional)",
+      "send_on_hint": "Leave empty to send it right away. Up to 90 days ahead."
+    },
+    "sticky_bar": {
+      "label": "{{ title }}: quick buy",
+      "quantity": "Qty {{ quantity }}",
+      "buy_now": "Buy now"
+    },
+    "added": "Added"
   },
   "contact": {
     "form": {

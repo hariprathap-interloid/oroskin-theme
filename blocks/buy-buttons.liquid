@@ -70,6 +70,9 @@
     data-label-add="{{ 'products.add_to_cart' | t }}"
     data-label-sold-out="{{ 'products.sold_out' | t }}"
     data-label-unavailable="{{ 'products.unavailable' | t }}"
+    data-label-added="{{ 'products.added' | t | escape }}"
+    data-label-added-status="{{ 'products.quick_add.added' | t: title: buy_product.title | escape }}"
+    data-label-error="{{ 'products.quick_add.error' | t | escape }}"
     {{ block.shopify_attributes }}
   >
     {%- form 'product', buy_product, class: 'buy-buttons__form' -%}
@@ -100,7 +103,8 @@
                   {%- liquid
                     assign input_id = block.id | append: '-' | append: option_index | append: '-' | append: forloop.index0
                     assign price_difference = 0
-                    if block.settings.show_price_difference and is_swatch == false
+                    # Not on gift cards: each denomination is its own price, "$25 (+$15)" would make no sense
+                    if block.settings.show_price_difference and is_swatch == false and buy_product.gift_card? == false
                       assign value_variants = buy_product.variants | where: option_key, value.name
                       assign value_min = value_variants | map: 'price' | sort | first
                       if value_min
@@ -312,6 +316,11 @@
         </script>
       {%- endif -%}
 
+      {%- if buy_product.gift_card? -%}
+        {%- comment -%} Gift cards: send it to someone else by email (Theme Store requirement) {%- endcomment -%}
+        {% render 'gift-card-recipient', id: block.id %}
+      {%- endif -%}
+
       {%- if block.settings.show_installments -%}
         {%- comment -%} Shop Pay Installments ("Pay in 4 interest-free..."), when the store offers it {%- endcomment -%}
         <div class="buy-buttons__installments">{{ form | payment_terms }}</div>
@@ -319,9 +328,13 @@
 
       {%- capture payment_buttons -%}
         {%- if block.settings.show_dynamic_checkout -%}
+          {%- comment -%} Hidden while the variant can't be bought (the script does the same on a change) {%- endcomment -%}
           <div
             class="buy-buttons__payment"
-            style="--icon-buy: url('{{ 'icon-buy.svg' | asset_url }}');"
+            style="--icon-buy: url('{{ 'icon-buy-now.svg' | asset_url }}');"
+            {% unless current_variant.available %}
+              hidden
+            {% endunless %}
           >
             {{ form | payment_button }}
           </div>
@@ -388,6 +401,12 @@
       {%- unless layout == 'inline' -%}
         {{ payment_buttons }}
       {%- endunless -%}
+
+      {%- comment -%}
+        After a background add: why it was refused (stock…), and "Serum added to your cart" for screen readers
+      {%- endcomment -%}
+      <p class="buy-buttons__message" role="alert" hidden data-buy-message></p>
+      <span class="visually-hidden" aria-live="polite" data-buy-status></span>
     {%- endform -%}
   </buy-buttons>
 {%- elsif request.design_mode -%}
@@ -860,6 +879,22 @@
     block-size: 1.125rem;
   }
 
+  /* "Added ✓" for 2s after a background add */
+  .buy-buttons__submit.is-added [data-submit-label]::after {
+    content: " ✓";
+  }
+
+  .buy-buttons__submit.is-adding {
+    cursor: progress;
+    opacity: 0.75;
+  }
+
+  .buy-buttons__message {
+    margin: 0;
+    color: var(--color-error);
+    font-size: var(--font-size-small);
+  }
+
   .buy-buttons__submit:disabled {
     cursor: not-allowed;
     opacity: 0.6;
@@ -901,12 +936,100 @@
       this.submit = this.querySelector('[data-submit]');
       this.setUpQuantity();
       this.setUpPlans();
+      this.setUpAdd();
       if (!this.select || !this.querySelector('[data-option]')) return;
 
       this.classList.add('is-enhanced');
       this.addEventListener('change', (event) => {
         if (event.target.matches('[data-option-input]')) this.onOptionChange();
       });
+    }
+
+    /**
+     * Add to cart without leaving the page: the form's own fields (variant, quantity, selling plan, gift
+     * card recipient) go to Shopify's Cart AJAX API (/cart/add.js) as FormData. Then "Added ✓" for 2s,
+     * the header's cart count, and a "product:added" event for the sticky bar. A refused add (stock…)
+     * shows Shopify's reason under the buttons. A form carrying return_to (the sticky bar's Buy now
+     * fallback) is sent normally, so it can go to checkout. Without JavaScript the form posts as before.
+     */
+    setUpAdd() {
+      this.form = this.querySelector('form');
+      this.form?.addEventListener('submit', (event) => {
+        if (this.form.querySelector('input[name="return_to"]')) return;
+        event.preventDefault();
+        this.add();
+      });
+    }
+
+    async add() {
+      if (this.busy || this.submit?.disabled) return;
+      this.busy = true;
+      const label = this.submit?.querySelector('[data-submit-label]');
+      const message = this.querySelector('[data-buy-message]');
+      const root = window.Shopify?.routes?.root || '/';
+      this.submit?.classList.add('is-adding');
+      if (message) message.hidden = true;
+
+      try {
+        const response = await fetch(`${root}cart/add.js`, {
+          method: 'POST',
+          headers: { Accept: 'application/json' },
+          body: new FormData(this.form),
+        });
+        const data = await response.json().catch(() => ({}));
+        // Shopify explains a refused add (e.g. not enough stock) in "description" or "message"
+        if (!response.ok) throw new Error(data.description || data.message || '');
+
+        if (label) {
+          label.textContent = this.dataset.labelAdded;
+          this.submit.classList.add('is-added');
+          clearTimeout(this.addedTimer);
+          this.addedTimer = setTimeout(() => {
+            this.submit.classList.remove('is-added');
+            if (!this.submit.disabled) label.textContent = this.dataset.labelAdd;
+          }, 2000);
+        }
+        this.announce(this.dataset.labelAddedStatus);
+        this.dispatchEvent(new CustomEvent('product:added', { bubbles: true, detail: { item: data } }));
+        this.updateCartCount(root);
+      } catch (error) {
+        const reason = error?.message || this.dataset.labelError;
+        if (message) {
+          message.textContent = reason;
+          message.hidden = false;
+        }
+        this.dispatchEvent(new CustomEvent('product:add-error', { bubbles: true, detail: { message: reason } }));
+      } finally {
+        this.submit?.classList.remove('is-adding');
+        this.busy = false;
+      }
+    }
+
+    announce(text) {
+      const status = this.querySelector('[data-buy-status]');
+      if (!status) return;
+      status.textContent = '';
+      requestAnimationFrame(() => (status.textContent = text));
+    }
+
+    /** Refreshes the red count bubble on the header's cart icon (creates it on the first item), as quick add does */
+    async updateCartCount(root) {
+      try {
+        const cart = await fetch(`${root}cart.js`, { headers: { Accept: 'application/json' } }).then((r) => r.json());
+        document.dispatchEvent(new CustomEvent('cart:updated', { detail: { cart } }));
+        const link = document.querySelector(`.header__icon-button[href="${root}cart"]`);
+        if (!link) return;
+        let bubble = link.querySelector('.header__count');
+        if (!bubble) {
+          bubble = document.createElement('span');
+          bubble.className = 'header__count';
+          bubble.setAttribute('aria-hidden', 'true');
+          link.append(bubble);
+        }
+        bubble.textContent = cart.item_count < 100 ? cart.item_count : '99+';
+      } catch (error) {
+        // The add worked; only the count refresh failed. The cart page shows the right total.
+      }
     }
 
     /** − / + change the number by one, never below 1 */

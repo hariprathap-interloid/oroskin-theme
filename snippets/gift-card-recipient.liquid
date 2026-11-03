@@ -1,0 +1,165 @@
+{% doc %}
+  The gift card recipient form (Theme Store requirement), inside the product form of a gift card
+  product: "I want to send this as a gift" opens fields for the recipient's email (required), name,
+  a message and a send date. Shopify reads them as line item properties with these exact names and
+  emails the gift card to the recipient (on the date, or right away).
+  - __shopify_send_gift_card_to_recipient = true tells Shopify to use the fields.
+  - __shopify_offset = the visitor's time zone offset in minutes, so "Send on" means their midnight.
+  While the box is unticked the fields are disabled, so nothing is sent; ticking makes the email
+  required (the browser checks it before the form is sent). Without JavaScript the fields stay open
+  and are sent only if filled in.
+
+  @param {string} id - A unique id for the inputs (the block id)
+
+  @example
+  {% render 'gift-card-recipient', id: block.id %}
+{% enddoc %}
+
+{%- liquid
+  assign today = 'now' | date: '%Y-%m-%d'
+  assign ninety_days = 'now' | date: '%s' | plus: 7776000 | date: '%Y-%m-%d'
+-%}
+
+<gift-card-recipient class="gift-card-recipient">
+  <label class="gift-card-recipient__toggle" for="GiftRecipient-{{ id }}">
+    <input
+      type="checkbox"
+      id="GiftRecipient-{{ id }}"
+      class="gift-card-recipient__checkbox"
+      name="properties[__shopify_send_gift_card_to_recipient]"
+      value="true"
+      data-recipient-toggle
+    >
+    <span>{{ 'products.gift_card.send_to_recipient' | t }}</span>
+  </label>
+
+  <div class="gift-card-recipient__fields" data-recipient-fields>
+    <div class="gift-card-recipient__field">
+      <label for="RecipientEmail-{{ id }}">{{ 'products.gift_card.email' | t }}</label>
+      <input
+        type="email"
+        id="RecipientEmail-{{ id }}"
+        name="properties[Recipient email]"
+        autocomplete="email"
+        placeholder="{{ 'products.gift_card.email_placeholder' | t }}"
+        data-recipient-input
+      >
+    </div>
+    <div class="gift-card-recipient__field">
+      <label for="RecipientName-{{ id }}">{{ 'products.gift_card.name' | t }}</label>
+      <input
+        type="text"
+        id="RecipientName-{{ id }}"
+        name="properties[Recipient name]"
+        autocomplete="name"
+        data-recipient-input
+      >
+    </div>
+    <div class="gift-card-recipient__field">
+      <label for="RecipientMessage-{{ id }}">{{ 'products.gift_card.message' | t }}</label>
+      <textarea
+        id="RecipientMessage-{{ id }}"
+        name="properties[Message]"
+        rows="3"
+        maxlength="200"
+        aria-describedby="RecipientMessageHint-{{ id }}"
+        data-recipient-input
+      ></textarea>
+      <p class="gift-card-recipient__hint" id="RecipientMessageHint-{{ id }}">
+        {{- 'products.gift_card.message_hint' | t: count: 200 -}}
+      </p>
+    </div>
+    <div class="gift-card-recipient__field">
+      <label for="RecipientSendOn-{{ id }}">{{ 'products.gift_card.send_on' | t }}</label>
+      <input
+        type="date"
+        id="RecipientSendOn-{{ id }}"
+        name="properties[Send on]"
+        min="{{ today }}"
+        max="{{ ninety_days }}"
+        aria-describedby="RecipientSendOnHint-{{ id }}"
+        data-recipient-input
+      >
+      <p class="gift-card-recipient__hint" id="RecipientSendOnHint-{{ id }}">
+        {{- 'products.gift_card.send_on_hint' | t -}}
+      </p>
+    </div>
+    <input type="hidden" name="properties[__shopify_offset]" value="" data-recipient-offset data-recipient-input>
+  </div>
+</gift-card-recipient>
+
+{% stylesheet %}
+  .gift-card-recipient {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .gift-card-recipient__toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    cursor: pointer;
+  }
+
+  .gift-card-recipient__checkbox {
+    inline-size: 1.125rem;
+    block-size: 1.125rem;
+    accent-color: var(--color-accent);
+  }
+
+  .gift-card-recipient__fields {
+    display: grid;
+    gap: var(--space-md);
+  }
+
+  /* With JavaScript the fields only show once the box is ticked */
+  gift-card-recipient.is-enhanced:not(:has([data-recipient-toggle]:checked)) .gift-card-recipient__fields {
+    display: none;
+  }
+
+  .gift-card-recipient__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .gift-card-recipient__field label {
+    font-size: var(--font-size-label);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  .gift-card-recipient__hint {
+    margin: 0;
+    color: color-mix(in srgb, var(--color-text) 65%, var(--color-background));
+    font-size: var(--font-size-small);
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <gift-card-recipient>: the fields are disabled (not sent) while the box is unticked; ticking enables
+   * them, makes the email required and fills in the time zone offset.
+   */
+  class GiftCardRecipient extends HTMLElement {
+    connectedCallback() {
+      this.toggle = this.querySelector('[data-recipient-toggle]');
+      this.classList.add('is-enhanced');
+      this.toggle.addEventListener('change', () => this.update());
+      this.update();
+    }
+
+    update() {
+      const on = this.toggle.checked;
+      this.querySelectorAll('[data-recipient-input]').forEach((input) => (input.disabled = !on));
+      const email = this.querySelector('input[type="email"]');
+      if (email) email.required = on;
+      const offset = this.querySelector('[data-recipient-offset]');
+      if (offset) offset.value = String(new Date().getTimezoneOffset());
+    }
+  }
+
+  if (!customElements.get('gift-card-recipient')) customElements.define('gift-card-recipient', GiftCardRecipient);
+{% endjavascript %}

@@ -1,0 +1,76 @@
+{% doc %}
+  A card that holds other blocks in the product page's info column (Figma PDP: the cream info card,
+  and the second card with offers, delivery, features, videos and "We accept"). The page has two by
+  default; the merchant can add, remove or reorder them and the blocks inside.
+  Style "Card": cream, pale border, rounded (the Figma look); "Plain": no frame.
+
+  @example
+  {% content_for 'block', type: 'product-panel', id: 'product-panel' %}
+{% enddoc %}
+
+<div
+  class="product-panel product-panel--{{ block.settings.style | default: 'card' }}"
+  style="--panel-gap: {{ block.settings.gap | default: 28 }};"
+  {{ block.shopify_attributes }}
+>
+  {% content_for 'blocks' %}
+</div>
+
+{% stylesheet %}
+  /* Figma: cream (the card colour on white), 1px pale border, radius ~24, padding ~55 */
+  .product-panel {
+    display: flex;
+    flex-direction: column;
+    gap: max(var(--space-md), calc(var(--panel-gap) * var(--px, 0.0625rem)));
+    min-inline-size: 0;
+  }
+
+  .product-panel--card {
+    padding: max(var(--space-lg), calc(55 * var(--px, 0.0625rem)));
+    border: 1px solid var(--color-card-border);
+    border-radius: max(1rem, calc(24 * var(--px, 0.0625rem)));
+    background-color: var(--color-card);
+  }
+
+  @media (max-width: 749px) {
+    .product-panel--card {
+      padding: var(--space-lg) var(--space-md);
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.product_panel",
+  "tag": null,
+  "blocks": [{ "type": "@theme" }, { "type": "@app" }],
+  "settings": [
+    {
+      "type": "select",
+      "id": "style",
+      "label": "t:labels.style",
+      "options": [
+        { "value": "card", "label": "t:options.product_panel_style.card" },
+        { "value": "plain", "label": "t:options.product_panel_style.plain" }
+      ],
+      "default": "card"
+    },
+    {
+      "type": "range",
+      "id": "gap",
+      "label": "t:labels.product_panel_gap",
+      "min": 8,
+      "max": 64,
+      "step": 4,
+      "unit": "px",
+      "default": 28
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.product_panel",
+      "category": "t:general.product"
+    }
+  ]
+}
+{% endschema %}

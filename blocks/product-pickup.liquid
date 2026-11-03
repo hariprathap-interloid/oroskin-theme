@@ -1,0 +1,177 @@
+{% doc %}
+  Delivery and pickup (Figma PDP "DELIVERY CHECK", replaced: Shopify has no delivery-date-by-postcode
+  API, so the brief chose a delivery note + Shopify's pickup availability):
+  - a delivery note with a truck icon (the merchant's text, e.g. "Delivery in 2–3 business days")
+  - pickup in store (Theme Store requirement): for the chosen variant, the first location that has
+    pickup turned on, with "Usually ready in 24 hours" (Settings > Locations > the location > pickup).
+    One line per variant, rendered by Liquid; the script shows the chosen variant's ("variant:change",
+    on its own section, as the Stock block). Nothing when no location offers pickup.
+
+  @example
+  {% content_for 'block', type: 'product-pickup', id: 'product-pickup' %}
+{% enddoc %}
+
+{%- liquid
+  assign pickup_product = closest.product
+  if pickup_product != blank
+    assign pickup_variant = pickup_product.selected_or_first_available_variant
+  endif
+  assign heading_default = 'products.pickup.heading' | t
+  assign pickup_heading = block.settings.heading | default: heading_default
+-%}
+
+<product-pickup class="product-pickup" {{ block.shopify_attributes }}>
+  {%- if pickup_heading != blank -%}
+    {% render 'product-block-heading', text: pickup_heading %}
+  {%- endif -%}
+
+  <ul class="product-pickup__list" role="list">
+    {%- if block.settings.delivery_note != blank -%}
+      <li class="product-pickup__line">
+        <span class="product-pickup__icon" aria-hidden="true">{{ 'icon-truck.svg' | inline_asset_content }}</span>
+        <span>{{ block.settings.delivery_note | escape }}</span>
+      </li>
+    {%- endif -%}
+
+    {%- if pickup_product != blank and block.settings.show_pickup -%}
+      {%- for variant in pickup_product.variants -%}
+        {%- liquid
+          # The first location with pickup turned on that stocks this variant (available or not)
+          assign pickup_place = nil
+          for availability in variant.store_availabilities
+            if availability.pick_up_enabled
+              assign pickup_place = availability
+              break
+            endif
+          endfor
+          # Escaped before it goes into the _html translation (a filter can't sit inside a filter argument)
+          assign pickup_location = pickup_place.location.name | escape
+        -%}
+        {%- if pickup_place -%}
+          <li
+            class="product-pickup__line"
+            data-variant-id="{{ variant.id }}"
+            {% unless variant == pickup_variant %}
+              hidden
+            {% endunless %}
+          >
+            <span class="product-pickup__icon" aria-hidden="true">{{ 'icon-box.svg' | inline_asset_content }}</span>
+            <span>
+              {%- if pickup_place.available -%}
+                {{ 'products.pickup.available_html' | t: location: pickup_location }}
+                {%- if pickup_place.pick_up_time != blank -%}
+                  <span class="product-pickup__time">{{ pickup_place.pick_up_time }}</span>
+                {%- endif -%}
+              {%- else -%}
+                {{ 'products.pickup.unavailable_html' | t: location: pickup_location }}
+              {%- endif -%}
+            </span>
+          </li>
+        {%- endif -%}
+      {%- endfor -%}
+    {%- endif -%}
+  </ul>
+</product-pickup>
+
+{% stylesheet %}
+  .product-pickup__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .product-pickup__line {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    font-size: var(--font-size-body-sm);
+  }
+
+  .product-pickup__line[hidden] {
+    display: none;
+  }
+
+  .product-pickup__icon {
+    display: inline-flex;
+    flex: none;
+    margin-block-start: 0.1em;
+    color: var(--color-accent);
+  }
+
+  .product-pickup__icon svg {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+  }
+
+  /* "Usually ready in 24 hours" on its own line, grey */
+  .product-pickup__time {
+    display: block;
+    color: color-mix(in srgb, var(--color-text) 65%, var(--color-background));
+    font-size: var(--font-size-small);
+  }
+
+  .product-pickup:not(:has(.product-pickup__line)) {
+    display: none;
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /** Shows the pickup line of the variant chosen in the Buy buttons block (same section only) */
+  class ProductPickup extends HTMLElement {
+    connectedCallback() {
+      this.scope = this.closest('.shopify-section') || document;
+      this.onChange = (event) => {
+        const id = event.detail?.variantId;
+        if (!id) return;
+        const lines = this.querySelectorAll('[data-variant-id]');
+        // A variant with no pickup location has no line: then hide them all
+        lines.forEach((line) => (line.hidden = line.dataset.variantId !== String(id)));
+      };
+      this.scope.addEventListener('variant:change', this.onChange);
+    }
+
+    disconnectedCallback() {
+      this.scope?.removeEventListener('variant:change', this.onChange);
+    }
+  }
+
+  if (!customElements.get('product-pickup')) customElements.define('product-pickup', ProductPickup);
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.product_pickup",
+  "tag": null,
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.product_pickup_heading_info"
+    },
+    {
+      "type": "text",
+      "id": "delivery_note",
+      "label": "t:labels.product_pickup_note",
+      "info": "t:labels.product_pickup_note_info",
+      "default": "Delivery in 2–3 business days"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_pickup",
+      "label": "t:labels.product_pickup_show",
+      "info": "t:labels.product_pickup_show_info",
+      "default": true
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.product_pickup",
+      "category": "t:general.product"
+    }
+  ]
+}
+{% endschema %}

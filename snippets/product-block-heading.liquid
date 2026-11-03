@@ -1,0 +1,31 @@
+{% doc %}
+  The small caps heading of the product page's info blocks ("BANK OFFERS", "WE ACCEPT", Figma PDP second
+  card): body font ~16px, medium, wide letter-spacing. One snippet so the blocks share one style.
+
+  @param {string} text - The heading text (escaped here)
+  @param {string} [id] - An id, for aria-labelledby
+
+  @example
+  {% render 'product-block-heading', text: offers_heading %}
+{% enddoc %}
+
+<h2
+  class="product-block-heading"
+  {% if id != blank %}
+    id="{{ id }}"
+  {% endif %}
+>
+  {{- text | escape -}}
+</h2>
+
+{% stylesheet %}
+  .product-block-heading {
+    margin: 0 0 var(--space-md);
+    font-family: var(--font-body--family);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.3;
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+{% endstylesheet %}

@@ -43,7 +43,7 @@
         data-share-title="{{ eyebrow_product.title | escape }}"
         data-copied="{{ 'blog.article.link_copied' | t | escape }}"
       >
-        <span class="product-eyebrow__share-icon" aria-hidden="true">{{ 'icon-share.svg' | inline_asset_content }}</span>
+        <span class="product-eyebrow__share-icon" aria-hidden="true">{{ 'icon-share-solid.svg' | inline_asset_content }}</span>
         <span data-share-label>{{ 'products.share' | t }}</span>
       </button>
     {%- endif -%}
@@ -53,7 +53,7 @@
 {% stylesheet %}
   /*
     Figma: "Skincare" heading font ~34px accent; a white "Trending" pill beside it; "SHARE" accent caps
-    ~15px with an arrow icon and an underline, at the right.
+    ~15px with a filled share arrow (assets/icon-share-solid.svg, the text colour) and an underline, at the right.
   */
   .product-eyebrow {
     display: flex;

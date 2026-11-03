@@ -1,0 +1,306 @@
+{% doc %}
+  "PRODUCT SHORT VIDEOS" (Figma PDP second card): round video thumbnails with a play mark; a click
+  plays the video in a pop-up player (a <dialog>: Escape or × closes it and stops the video).
+  The videos are the product's own: the metafield custom.short_videos (Settings > Custom data >
+  Products: "Short videos", type File, list, videos only). Hidden when the product has none; in the
+  theme editor four placeholder circles show where they go (they don't play), with a short hint.
+  Each video is kept in a <template>, so nothing downloads until a thumbnail is clicked.
+
+  @example
+  {% content_for 'block', type: 'product-videos', id: 'product-videos' %}
+{% enddoc %}
+
+{%- liquid
+  assign videos_product = closest.product
+  assign short_videos = videos_product.metafields.custom.short_videos.value
+  assign heading_default = 'products.videos.heading' | t
+  assign videos_heading = block.settings.heading | default: heading_default
+  assign videos_count = short_videos.size | default: 0
+-%}
+
+{%- if videos_count > 0 -%}
+  <product-videos class="product-videos" {{ block.shopify_attributes }}>
+    {%- if videos_heading != blank -%}
+      {% render 'product-block-heading', text: videos_heading %}
+    {%- endif -%}
+
+    <ul class="product-videos__list" role="list">
+      {%- for video in short_videos -%}
+        {%- if video.media_type != 'video' -%}
+          {%- continue -%}
+        {%- endif -%}
+        <li>
+          <button
+            type="button"
+            class="product-videos__thumb"
+            data-video="{{ forloop.index0 }}"
+            data-ratio="{{ video.aspect_ratio | default: 1.7778 }}"
+            aria-haspopup="dialog"
+            aria-label="{{ 'products.videos.play' | t: index: forloop.index, count: videos_count }}"
+          >
+            {%- if video.preview_image != blank -%}
+              {{
+                video.preview_image
+                | image_url: width: 240
+                | image_tag:
+                  loading: 'lazy',
+                  widths: '120, 180, 240',
+                  sizes: '7.5rem',
+                  alt: '',
+                  class: 'product-videos__image'
+              }}
+            {%- endif -%}
+            <span class="product-videos__play" aria-hidden="true">{{ 'icon-play.svg' | inline_asset_content }}</span>
+          </button>
+          <template data-video-template="{{ forloop.index0 }}">
+            {{ video | video_tag: controls: true, playsinline: true, preload: 'auto', class: 'product-videos__video' }}
+          </template>
+        </li>
+      {%- endfor -%}
+    </ul>
+
+    <dialog class="product-videos__dialog" aria-label="{{ videos_heading | escape }}">
+      <button type="button" class="product-videos__close" data-video-close>
+        <span class="visually-hidden">{{ 'products.videos.close' | t }}</span>
+        <span aria-hidden="true">{{ 'icon-close.svg' | inline_asset_content }}</span>
+      </button>
+      <div class="product-videos__player" data-video-player></div>
+    </dialog>
+  </product-videos>
+{%- elsif request.design_mode -%}
+  <div class="product-videos product-videos--placeholder" {{ block.shopify_attributes }}>
+    {%- if videos_heading != blank -%}
+      {% render 'product-block-heading', text: videos_heading %}
+    {%- endif -%}
+    <ul class="product-videos__list" role="list">
+      {%- for i in (1..4) -%}
+        <li class="product-videos__thumb">
+          {{ 'lifestyle-1' | placeholder_svg_tag: 'product-videos__image product-videos__placeholder' }}
+          <span class="product-videos__play" aria-hidden="true">{{ 'icon-play.svg' | inline_asset_content }}</span>
+        </li>
+      {%- endfor -%}
+    </ul>
+    <p class="product-videos__empty">{{ 'products.videos.empty' | t }}</p>
+  </div>
+{%- endif -%}
+
+{% stylesheet %}
+  /* Figma: 4 circles ~96px, ~26px apart, a small white play disc in the middle */
+  .product-videos__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: max(var(--space-md), calc(26 * var(--px, 0.0625rem)));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .product-videos__thumb {
+    position: relative;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    inline-size: max(4.5rem, calc(96 * var(--px, 0.0625rem)));
+    aspect-ratio: 1;
+    min-block-size: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background-color: var(--color-tint, color-mix(in srgb, var(--color-text) 6%, var(--color-background)));
+    box-shadow: none;
+    cursor: pointer;
+  }
+
+  .product-videos__thumb:hover {
+    background-color: var(--color-tint, color-mix(in srgb, var(--color-text) 6%, var(--color-background)));
+  }
+
+  .product-videos__thumb:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+  }
+
+  .product-videos__image {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    transition: scale var(--duration-normal) var(--ease-out);
+  }
+
+  .product-videos__thumb:hover .product-videos__image {
+    scale: 1.06;
+  }
+
+  /* The white play disc: 40px (bigger than Figma's ~24px, our choice, so it reads as a video) */
+  .product-videos__play {
+    position: relative;
+    display: grid;
+    place-items: center;
+    inline-size: 2.5rem;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background-color: #ffffff;
+    color: var(--color-text);
+  }
+
+  .product-videos__play svg {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+    margin-inline-start: 0.15rem; /* a triangle looks centred a touch right of the middle */
+  }
+
+  /* The player: the video as large as fits, on a dark see-through backdrop */
+  /*
+    margin: auto centres the dialog on the screen: that's how the browser centres a modal <dialog>, and the
+    theme's reset (margin: 0 on everything) had taken it away, leaving the player in the top-left corner
+  */
+  .product-videos__dialog {
+    margin: auto;
+    max-inline-size: min(90vw, 60rem);
+    max-block-size: 90svh;
+    padding: 0;
+    border: 0;
+    border-radius: max(1rem, calc(24 * var(--px, 0.0625rem)));
+    background: #000000;
+    overflow: hidden;
+  }
+
+  .product-videos__dialog::backdrop {
+    background-color: #000000b3;
+  }
+
+  html:has(.product-videos__dialog[open]) {
+    overflow: hidden;
+  }
+
+  /*
+    The player takes the video's shape (--video-ratio, set from the thumbnail) before the video has loaded,
+    as large as fits: 90% of the screen width, 90% of its height, at most 960px wide
+  */
+  .product-videos__player {
+    inline-size: min(90vw, 60rem, calc(90svh * var(--video-ratio, 1.7778)));
+    aspect-ratio: var(--video-ratio, 1.7778);
+  }
+
+  .product-videos__video {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: contain;
+  }
+
+  .product-videos__close {
+    position: absolute;
+    z-index: 1;
+    inset-block-start: var(--space-sm);
+    inset-inline-end: var(--space-sm);
+    display: grid;
+    place-items: center;
+    inline-size: 2.75rem;
+    min-block-size: 0;
+    aspect-ratio: 1;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--color-background) 80%, transparent);
+    box-shadow: none;
+    color: var(--color-text);
+  }
+
+  .product-videos__close:hover {
+    background-color: var(--color-background);
+  }
+
+  .product-videos__close svg {
+    inline-size: 0.875rem;
+    block-size: 0.875rem;
+  }
+
+  /* Editor placeholders: grey drawings in the circles, not clickable */
+  .product-videos--placeholder .product-videos__thumb {
+    cursor: default;
+  }
+
+  .product-videos__placeholder {
+    fill: color-mix(in srgb, var(--color-text) 35%, transparent);
+  }
+
+  .product-videos__empty {
+    margin: var(--space-sm) 0 0;
+    color: color-mix(in srgb, var(--color-text) 65%, var(--color-background));
+    font-size: var(--font-size-small);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .product-videos__image {
+      transition: none;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <product-videos>: a thumbnail click copies that video out of its <template> into the dialog and plays
+   * it (the click counts as the visitor's permission to play with sound). Closing empties the player,
+   * which stops the video, and returns focus to the thumbnail.
+   */
+  class ProductVideos extends HTMLElement {
+    connectedCallback() {
+      this.dialog = this.querySelector('dialog');
+      this.player = this.querySelector('[data-video-player]');
+      if (!this.dialog) return;
+
+      this.addEventListener('click', (event) => {
+        const thumb = event.target.closest('[data-video]');
+        if (thumb) this.play(thumb);
+        else if (event.target.closest('[data-video-close]') || event.target === this.dialog) this.dialog.close();
+      });
+
+      this.dialog.addEventListener('close', () => {
+        this.player.replaceChildren();
+        this.opener?.focus();
+      });
+    }
+
+    play(thumb) {
+      const template = this.querySelector(`[data-video-template="${thumb.dataset.video}"]`);
+      if (!template) return;
+      this.opener = thumb;
+      this.player.style.setProperty('--video-ratio', thumb.dataset.ratio || '1.7778');
+      this.player.replaceChildren(template.content.cloneNode(true));
+      this.dialog.showModal();
+      this.player.querySelector('video')?.play().catch(() => {
+        // The browser refused to start it: the visitor presses play in the controls
+      });
+    }
+  }
+
+  if (!customElements.get('product-videos')) customElements.define('product-videos', ProductVideos);
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.product_videos",
+  "tag": null,
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.product_videos_heading_info"
+    },
+    {
+      "type": "paragraph",
+      "content": "t:labels.product_videos_source"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.product_videos",
+      "category": "t:general.product"
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,129 @@
+{% doc %}
+  One feature badge (Figma PDP: an accent line icon ~44px with a pale accent circle behind its lower
+  right, and a label under it). The icon: the merchant's uploaded image if there is one, else the chosen
+  built-in icon (Recyclable, Vegan, Cruelty-free, Parabens free: the Figma icons, in assets/), else a tick.
+  The built-in icons are bitmaps inside SVG files (~25 KB each), so they load as <img> (lazy), not inlined.
+
+  @example
+  {% content_for 'block', type: '_product-feature', id: 'product-feature' %}
+{% enddoc %}
+
+{%- liquid
+  assign builtin_icon = block.settings.builtin_icon | default: 'none'
+-%}
+
+{%- if block.settings.label != blank or block.settings.icon != blank -%}
+  <div class="product-feature" role="listitem" {{ block.shopify_attributes }}>
+    <span class="product-feature__icon" aria-hidden="true">
+      {%- if block.settings.icon != blank -%}
+        {{ block.settings.icon | image_url: width: 120 | image_tag: alt: '', loading: 'lazy', class: 'product-feature__image' }}
+      {%- elsif builtin_icon != 'none' -%}
+        {%- assign builtin_file = 'icon-' | append: builtin_icon | append: '.svg' -%}
+        <img
+          src="{{ builtin_file | asset_url }}"
+          alt=""
+          width="53"
+          height="53"
+          loading="lazy"
+          class="product-feature__image"
+        >
+      {%- else -%}
+        {{ 'icon-check.svg' | inline_asset_content }}
+      {%- endif -%}
+    </span>
+    {%- if block.settings.label != blank -%}
+      <span class="product-feature__label">{{ block.settings.label | escape }}</span>
+    {%- endif -%}
+  </div>
+{%- endif -%}
+
+{% stylesheet %}
+  .product-feature {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-sm);
+  }
+
+  .product-feature__icon {
+    position: relative;
+    display: grid;
+    place-items: center;
+    inline-size: max(2.5rem, calc(44 * var(--px, 0.0625rem)));
+    aspect-ratio: 1;
+    color: var(--color-accent);
+  }
+
+  /* The pale accent circle behind the icon's lower right (Figma) */
+  .product-feature__icon::before {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    inset-block-end: 0;
+    inset-inline-end: -0.25rem;
+    inline-size: 55%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  }
+
+  .product-feature__icon > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .product-feature__image {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: contain;
+  }
+
+  .product-feature__icon svg {
+    inline-size: 55%;
+    block-size: auto;
+  }
+
+  .product-feature__label {
+    font-size: var(--font-size-body-sm);
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.product_feature",
+  "tag": null,
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "icon",
+      "label": "t:labels.product_feature_icon",
+      "info": "t:labels.product_feature_icon_info"
+    },
+    {
+      "type": "select",
+      "id": "builtin_icon",
+      "label": "t:labels.product_feature_builtin",
+      "info": "t:labels.product_feature_builtin_info",
+      "options": [
+        { "value": "recyclable", "label": "t:options.product_feature_icon.recyclable" },
+        { "value": "vegan", "label": "t:options.product_feature_icon.vegan" },
+        { "value": "cruelty-free", "label": "t:options.product_feature_icon.cruelty_free" },
+        { "value": "paraben-free", "label": "t:options.product_feature_icon.paraben_free" },
+        { "value": "none", "label": "t:options.product_feature_icon.none" }
+      ],
+      "default": "vegan"
+    },
+    {
+      "type": "text",
+      "id": "label",
+      "label": "t:labels.label",
+      "default": "Vegan"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.product_feature"
+    }
+  ]
+}
+{% endschema %}

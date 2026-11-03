@@ -1,0 +1,244 @@
+{% doc %}
+  One offer ticket inside "Bank offers" (Figma PDP): the bank in accent caps, the offer, a small grey
+  line, a dashed tear line with a half-circle notch on each side (circles in the card colour), then the code and COPY. COPY puts the
+  code on the clipboard and says "Copied" for 2 seconds; it shows on hover / keyboard focus (always on
+  touch screens).
+
+  @example
+  {% content_for 'block', type: '_offer', id: 'offer' %}
+{% enddoc %}
+
+{%- if block.settings.bank != blank or block.settings.offer != blank -%}
+  <offer-ticket
+    class="offer"
+    role="listitem"
+    {{ block.shopify_attributes }}
+  >
+    <div class="offer__top">
+      {%- if block.settings.bank != blank -%}
+        <p class="offer__bank">{{ block.settings.bank | escape }}</p>
+      {%- endif -%}
+      {%- if block.settings.offer != blank -%}
+        <p class="offer__text">{{ block.settings.offer | escape }}</p>
+      {%- endif -%}
+      {%- if block.settings.detail != blank -%}
+        <p class="offer__detail">{{ block.settings.detail | escape }}</p>
+      {%- endif -%}
+    </div>
+
+    {%- if block.settings.code != blank -%}
+      <div class="offer__bottom">
+        <span class="offer__code">{{ block.settings.code | escape }}</span>
+        <button
+          type="button"
+          class="offer__copy"
+          data-code="{{ block.settings.code | escape }}"
+          data-copied="{{ 'products.offers.copied' | t | escape }}"
+          aria-label="{{ 'products.offers.copy_label' | t: code: block.settings.code | escape }}"
+        >
+          <span data-copy-label>{{ 'products.offers.copy' | t }}</span>
+        </button>
+      </div>
+    {%- endif -%}
+  </offer-ticket>
+{%- endif -%}
+
+{% stylesheet %}
+  /*
+    Figma: white ticket, soft shadow, ~6px radius, 16px padding; bank accent caps ~15px with wide
+    spacing; offer ~15px; detail grey ~14px; a 1px dotted line with notches (the card colour shows
+    through); code caps letter-spaced; COPY accent caps.
+  */
+  .offer {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 0;
+    block-size: 100%;
+    border-radius: 0.375rem;
+    background-color: var(--color-background);
+    box-shadow: 0 2px 10px #0000001a;
+    rotate: var(--offer-tilt, 0deg); /* set per ticket by Bank offers */
+    transition: rotate var(--duration-fast) var(--ease-out);
+  }
+
+  /* Straightens up under the pointer, like a ticket picked up */
+  .offer:hover,
+  .offer:focus-within {
+    z-index: 1;
+    rotate: 0deg;
+  }
+
+  .offer__top {
+    flex: 1;
+    padding: var(--space-sm) var(--space-sm) var(--space-sm) var(--space-md);
+  }
+
+  .offer__bank {
+    margin: 0 0 var(--space-xs);
+    color: var(--color-accent);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  .offer__text {
+    margin: 0;
+    font-size: var(--font-size-caption);
+  }
+
+  .offer__detail {
+    margin: 0.15em 0 0;
+    color: color-mix(in srgb, var(--color-text) 60%, var(--color-background));
+    font-size: var(--font-size-small);
+  }
+
+  /* The tear line, with a notch cut from each edge (radial gradients in a mask) */
+  .offer__bottom {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-sm) var(--space-sm) var(--space-md);
+    border-block-start: 1px dashed color-mix(in srgb, var(--color-text) 30%, transparent);
+  }
+
+  /* The notches: two half-hidden circles in the card colour, centred on the tear line */
+  .offer__bottom::before,
+  .offer__bottom::after {
+    content: "";
+    position: absolute;
+    inset-block-start: calc(-0.375rem - 0.5px);
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
+    border-radius: 50%;
+    /* The card colour is see-through: lay it over the page background, as the card itself shows it */
+    background: linear-gradient(var(--color-card), var(--color-card)) var(--color-background);
+  }
+
+  .offer__bottom::before {
+    inset-inline-start: -0.375rem;
+  }
+
+  .offer__bottom::after {
+    inset-inline-end: -0.375rem;
+  }
+
+  .offer__code {
+    overflow: hidden;
+    font-size: var(--font-size-caption);
+    letter-spacing: var(--letter-spacing-label);
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .offer__copy {
+    flex: none;
+    min-block-size: 1.5rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+    color: var(--color-accent);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--duration-fast) var(--ease-out);
+  }
+
+  .offer__copy:hover {
+    background: none;
+    text-decoration: underline;
+  }
+
+  .offer:hover .offer__copy,
+  .offer:focus-within .offer__copy,
+  .offer__copy.is-copied {
+    opacity: 1;
+  }
+
+  @media (hover: none) {
+    .offer__copy {
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .offer {
+      transition: none;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /** COPY: the code to the clipboard, "Copied" for 2s */
+  class OfferTicket extends HTMLElement {
+    connectedCallback() {
+      const button = this.querySelector('.offer__copy');
+      if (!button) return;
+      button.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(button.dataset.code);
+        } catch (error) {
+          return; // no clipboard (an old browser or an insecure page): the code stays readable
+        }
+        const label = button.querySelector('[data-copy-label]');
+        const original = label.textContent;
+        label.textContent = button.dataset.copied;
+        button.classList.add('is-copied');
+        clearTimeout(this.timer);
+        this.timer = setTimeout(() => {
+          label.textContent = original;
+          button.classList.remove('is-copied');
+        }, 2000);
+      });
+    }
+  }
+
+  if (!customElements.get('offer-ticket')) customElements.define('offer-ticket', OfferTicket);
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.offer",
+  "tag": null,
+  "settings": [
+    {
+      "type": "text",
+      "id": "bank",
+      "label": "t:labels.offer_bank",
+      "default": "Axis Bank"
+    },
+    {
+      "type": "text",
+      "id": "offer",
+      "label": "t:labels.offer_text",
+      "default": "10% instant discount"
+    },
+    {
+      "type": "text",
+      "id": "detail",
+      "label": "t:labels.offer_detail",
+      "default": "Up to $60 • Credit cards"
+    },
+    {
+      "type": "text",
+      "id": "code",
+      "label": "t:labels.offer_code",
+      "info": "t:labels.offer_code_info",
+      "default": "AXIS10"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.offer"
+    }
+  ]
+}
+{% endschema %}

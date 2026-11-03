@@ -1,0 +1,89 @@
+{% doc %}
+  "WE ACCEPT" (Figma PDP second card): a heading, a short reassurance line and the store's payment
+  icons. The icons are the payment methods turned on in Settings > Payments (shop.enabled_payment_types),
+  so they always match what checkout accepts. Each icon is an <svg role="img"> with a <title> ("Visa").
+
+  @example
+  {% content_for 'block', type: 'product-payment', id: 'product-payment' %}
+{% enddoc %}
+
+{%- liquid
+  assign heading_default = 'products.payment.heading' | t
+  assign payment_heading = block.settings.heading | default: heading_default
+  assign text_default = 'products.payment.text' | t
+  assign payment_text = block.settings.text | default: text_default
+-%}
+
+<div class="product-payment" {{ block.shopify_attributes }}>
+  {%- if payment_heading != blank -%}
+    {%- assign payment_heading_id = 'PaymentHeading-' | append: block.id -%}
+    {% render 'product-block-heading', text: payment_heading, id: payment_heading_id %}
+  {%- endif -%}
+  {%- if payment_text != blank -%}
+    <p class="product-payment__text">{{ payment_text | escape }}</p>
+  {%- endif -%}
+  {%- if shop.enabled_payment_types.size > 0 -%}
+    <ul
+      class="product-payment__list"
+      role="list"
+      {% if payment_heading != blank %}
+        aria-labelledby="PaymentHeading-{{ block.id }}"
+      {% endif %}
+    >
+      {%- for type in shop.enabled_payment_types -%}
+        <li>{{ type | payment_type_svg_tag: class: 'product-payment__icon' }}</li>
+      {%- endfor -%}
+    </ul>
+  {%- endif -%}
+</div>
+
+{% stylesheet %}
+  /* Figma: grey line ~16px; icons ~38 x 24 in a row, ~6px apart */
+  .product-payment__text {
+    margin: 0 0 var(--space-md);
+    color: color-mix(in srgb, var(--color-text) 65%, var(--color-background));
+    font-size: var(--font-size-body-sm);
+  }
+
+  .product-payment__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .product-payment__icon {
+    display: block;
+    inline-size: 2.4rem;
+    block-size: auto;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.product_payment",
+  "tag": null,
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.product_payment_heading_info"
+    },
+    {
+      "type": "text",
+      "id": "text",
+      "label": "t:labels.text",
+      "info": "t:labels.product_payment_text_info"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.product_payment",
+      "category": "t:general.product"
+    }
+  ]
+}
+{% endschema %}

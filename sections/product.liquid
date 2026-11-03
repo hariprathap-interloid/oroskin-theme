@@ -1,7 +1,8 @@
 {%- comment -%}
   Product page, main section (M6.1, design/briefs/pdp.md, exports "Product details 1 / 2",
   "Variant64"): breadcrumb, a sticky masonry gallery on the left and a cream card of theme blocks on
-  the right (eyebrow, title, price + rating, stock, description, buy buttons… and app blocks).
+  the right (eyebrow, title, price + rating, stock, description, buy buttons… and app blocks), held by
+  "Product card" blocks: the info card and a second card (offers, delivery, features, videos, payment).
   - Gallery: every product medium (images, videos, YouTube / Vimeo, 3D) in 3 columns of different
     widths with offset tops (Figma 220 / 297 / 188); each keeps its own shape. The first medium
     (the LCP image) leads the middle column, loads eagerly with high priority. It stays in view
@@ -125,16 +126,22 @@
         {%- endif -%}
       </div>
 
+      {%- comment -%}
+        The info column: the blocks, usually two "Product card" blocks (product-panel) that hold the
+        others: the info card (title, price, buy buttons…) and the second card (offers, delivery…)
+      {%- endcomment -%}
       <div class="product__info">
-        <div class="product__card">
-          {% content_for 'blocks' %}
-        </div>
+        {% content_for 'blocks' %}
       </div>
     </div>
   </div>
 
   {%- if section.settings.enable_lightbox -%}
     {% render 'product-lightbox', product: product %}
+  {%- endif -%}
+
+  {%- if section.settings.show_sticky_bar -%}
+    {% render 'product-sticky-bar', product: product, type_label: product.type %}
   {%- endif -%}
 </product-page>
 
@@ -281,15 +288,12 @@
     block-size: 100%;
   }
 
-  /* The info card: cream, pale border, rounded; the blocks inside are spaced by the card */
-  .product__card {
+  /* The info column: the cards (product-panel blocks) one under the other, Figma gap ~15 */
+  .product__info {
     display: flex;
     flex-direction: column;
-    gap: max(var(--space-lg), calc(28 * var(--px, 0.0625rem)));
-    padding: max(var(--space-lg), calc(55 * var(--px, 0.0625rem)));
-    border: 1px solid var(--color-card-border);
-    border-radius: max(1rem, calc(24 * var(--px, 0.0625rem)));
-    background-color: var(--color-card);
+    gap: max(var(--space-sm), calc(15 * var(--px, 0.0625rem)));
+    min-inline-size: 0;
   }
 
   /* Tablets and phones (Variant96…): one column, the gallery not sticky, the masonry kept */
@@ -317,11 +321,6 @@
     }
   }
 
-  @media (max-width: 749px) {
-    .product__card {
-      padding: var(--space-lg) var(--space-md);
-    }
-  }
 {% endstylesheet %}
 
 {% javascript %}
@@ -388,6 +387,13 @@
       "type": "checkbox",
       "id": "show_breadcrumb",
       "label": "t:labels.show_breadcrumb",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_sticky_bar",
+      "label": "t:labels.show_sticky_bar",
+      "info": "t:labels.show_sticky_bar_info",
       "default": true
     },
     {

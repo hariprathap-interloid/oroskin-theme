@@ -1,0 +1,55 @@
+{% doc %}
+  The feature badges row (Figma PDP second card: Recyclable, Vegan, Cruelty-free, Parabens free): an
+  optional heading and the _product-feature blocks inside (icon + label), 4 in a row when there's room.
+  The same badges show on every product.
+
+  @example
+  {% content_for 'block', type: 'product-features', id: 'product-features' %}
+{% enddoc %}
+
+{%- if block.blocks.size > 0 -%}
+  <div class="product-features" {{ block.shopify_attributes }}>
+    {%- if block.settings.heading != blank -%}
+      {% render 'product-block-heading', text: block.settings.heading %}
+    {%- endif -%}
+    <div class="product-features__list" role="list">
+      {% content_for 'blocks' %}
+    </div>
+  </div>
+{%- endif -%}
+
+{% stylesheet %}
+  /* Figma: 4 badges spread across the card (~160px apart), icon above, label under */
+  .product-features__list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+    gap: var(--space-md);
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.product_features",
+  "tag": null,
+  "blocks": [{ "type": "_product-feature" }],
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.product_features",
+      "category": "t:general.product",
+      "blocks": [
+        { "type": "_product-feature", "settings": { "label": "Recyclable", "builtin_icon": "recyclable" } },
+        { "type": "_product-feature", "settings": { "label": "Vegan", "builtin_icon": "vegan" } },
+        { "type": "_product-feature", "settings": { "label": "Cruelty-free", "builtin_icon": "cruelty-free" } },
+        { "type": "_product-feature", "settings": { "label": "Parabens free", "builtin_icon": "paraben-free" } }
+      ]
+    }
+  ]
+}
+{% endschema %}
