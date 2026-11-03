@@ -10,6 +10,7 @@
   @param {media} media - One item from product.media
   @param {string} [sizes] - The image `sizes` attribute, e.g. '(min-width: 990px) 50vw, 100vw'
   @param {string} [loading] - 'lazy' to load the image only when scrolled near; empty = automatic
+  @param {boolean} [priority] - true for the page's main (LCP) image: eager + fetchpriority high
 
   @example
   {% render 'product-media', media: media, sizes: '(min-width: 990px) 50vw, 100vw' %}
@@ -18,7 +19,7 @@
 <div class="product-media product-media--{{ media.media_type }}">
   {%- case media.media_type -%}
     {%- when 'image' -%}
-      {% render 'image', image: media.preview_image, alt: media.alt, sizes: sizes, class: 'image--cover', loading: loading %}
+      {% render 'image', image: media.preview_image, alt: media.alt, sizes: sizes, class: 'image--cover', loading: loading, priority: priority %}
     {%- when 'video' -%}
       {{ media | video_tag: controls: true, preload: 'metadata' }}
     {%- when 'external_video' -%}

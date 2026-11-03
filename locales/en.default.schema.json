@@ -111,7 +111,9 @@
     "returns_steps": "Returns steps",
     "return_step": "Return step",
     "returns_lists": "Returns lists",
-    "cta_card": "Call to action card"
+    "cta_card": "Call to action card",
+    "product_eyebrow": "Product eyebrow",
+    "product_stock": "Stock"
   },
   "labels": {
     "alignment": "Alignment",
@@ -844,7 +846,36 @@
     "page_align": "Header alignment",
     "page_text_width": "Text width",
     "page_text_width_info": "The widest the page text gets, for comfortable reading.",
-    "password_heading_info": "Italic words show in the accent colour. The message under it comes from Online Store > Preferences."
+    "password_heading_info": "Italic words show in the accent colour. The message under it comes from Online Store > Preferences.",
+    "buy_buttons_layout": "Layout",
+    "add_to_cart_style": "Add to cart style",
+    "show_installments": "Show Shop Pay Installments",
+    "show_installments_info": "Shows \"Pay in 4 interest-free installments\" when the store offers Shop Pay Installments.",
+    "variant_picker": "Variant picker",
+    "show_swatches": "Show colour swatches",
+    "show_swatches_info": "Options whose values have a swatch (colour or image) show round swatches instead of pills.",
+    "show_price_difference": "Show price difference",
+    "show_price_difference_info": "Adds \"(+$10)\" to option values that cost more than the cheapest variant.",
+    "purchase_options": "Purchase options",
+    "purchase_options_info": "Subscribe or one time purchase. Shows only when the product has selling plans, made by a subscription app such as Shopify Subscriptions.",
+    "show_selling_plans": "Show purchase options",
+    "plan_default": "Chosen at first",
+    "show_recommended": "Show a label on the first subscription",
+    "recommended_label": "Label",
+    "recommended_label_info": "Leave empty for \"Recommended\".",
+    "show_plan_perk": "Show a perk under the frequency",
+    "plan_perk": "Perk",
+    "plan_perk_info": "Leave empty for \"Pause or cancel anytime\".",
+    "product_price_rating": "Show rating",
+    "product_price_rating_info": "Stars and review count from the product reviews.rating and reviews.rating_count metafields, filled by a review app.",
+    "product_eyebrow_label": "Label",
+    "product_eyebrow_badge": "Show badge",
+    "product_eyebrow_badge_info": "The first value of the product badges metafield (custom.badges), as on the product cards.",
+    "product_eyebrow_share": "Show share button",
+    "product_stock_label": "In stock label",
+    "product_stock_label_info": "Leave empty for \"In stock\".",
+    "product_stock_threshold": "Show the number from",
+    "product_stock_threshold_info": "Shows \"7 pieces left\" when this many or fewer are left. Only for products whose inventory Shopify tracks."
   },
   "options": {
     "collection_list_header": {
@@ -1241,6 +1272,23 @@
     "page_align": {
       "start": "Left",
       "center": "Centred"
+    },
+    "buy_buttons_layout": {
+      "stacked": "Buy now under Add to cart",
+      "inline": "All buttons in one row"
+    },
+    "add_to_cart_style": {
+      "solid": "Solid",
+      "outline": "Outline glass"
+    },
+    "plan_default": {
+      "subscription": "Subscription",
+      "one_time": "One time purchase"
+    },
+    "product_eyebrow_label": {
+      "type": "Product type",
+      "vendor": "Vendor",
+      "none": "None"
     }
   },
   "color_scheme": {

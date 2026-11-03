@@ -361,7 +361,23 @@
     "tab_fallback": "Tab {{ number }}",
     "previous": "Previous products",
     "next": "Next products",
-    "placeholder_title": "Product title"
+    "placeholder_title": "Product title",
+    "share": "Share",
+    "eyebrow_sample": "Skincare",
+    "in_stock": "In stock",
+    "pieces_left": {
+      "one": "{{ count }} piece left",
+      "other": "{{ count }} pieces left"
+    },
+    "price_difference": "(+{{ price }})",
+    "plans": {
+      "legend": "Purchase options",
+      "recommended": "Recommended",
+      "frequency": "Choose frequency",
+      "perk": "Pause or cancel anytime",
+      "one_time": "One time purchase",
+      "one_time_note": "No commitment • Standard price"
+    }
   },
   "contact": {
     "form": {

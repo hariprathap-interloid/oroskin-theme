@@ -1,0 +1,164 @@
+{% doc %}
+  The stock line under the price (Figma PDP "• IN OROSKIN STOCK —— 7 PIECES REMAINING"): an accent dot
+  and label, a thin line, and how many are left. The number shows only when it's low (at or under
+  "Show the number from"), so a well-stocked product just says "In stock". Products that Shopify
+  doesn't track, or that can be sold when out of stock, show the label only. Sold out: "Sold out".
+  It follows the chosen variant (the Buy buttons' "variant:change"). The product comes from
+  closest.product.
+
+  @example
+  {% content_for 'block', type: 'product-stock', id: 'product-stock' %}
+{% enddoc %}
+
+{%- liquid
+  assign stock_product = closest.product
+  if stock_product != blank
+    assign stock_variant = stock_product.selected_or_first_available_variant
+  endif
+  assign threshold = block.settings.threshold | default: 10
+  # Two steps: in one line, | t would also try to translate the merchant's own label
+  assign in_stock_default = 'products.in_stock' | t
+  assign in_stock_label = block.settings.label | default: in_stock_default
+-%}
+
+{%- if stock_product != blank -%}
+  <product-stock class="product-stock" data-threshold="{{ threshold }}" {{ block.shopify_attributes }}>
+    {%- comment -%} One line per variant, rendered by Liquid; the script shows the chosen variant's {%- endcomment -%}
+    {%- for variant in stock_product.variants -%}
+      {%- liquid
+        assign tracked = false
+        if variant.inventory_management == 'shopify' and variant.inventory_policy == 'deny'
+          assign tracked = true
+        endif
+      -%}
+      <p
+        class="product-stock__line{% unless variant.available %} product-stock__line--out{% endunless %}"
+        data-variant-id="{{ variant.id }}"
+        {% unless variant == stock_variant %}
+          hidden
+        {% endunless %}
+      >
+        <span class="product-stock__label">
+          {%- if variant.available -%}
+            {{- in_stock_label | escape -}}
+          {%- else -%}
+            {{- 'products.sold_out' | t -}}
+          {%- endif -%}
+        </span>
+        {%- if variant.available and tracked and variant.inventory_quantity <= threshold and variant.inventory_quantity > 0 -%}
+          <span class="product-stock__rule" aria-hidden="true"></span>
+          <span class="product-stock__count">{{ 'products.pieces_left' | t: count: variant.inventory_quantity }}</span>
+        {%- endif -%}
+      </p>
+    {%- endfor -%}
+  </product-stock>
+{%- elsif request.design_mode -%}
+  <p class="product-stock__line" {{ block.shopify_attributes }}>
+    <span class="product-stock__label">{{ 'products.in_stock' | t }}</span>
+  </p>
+{%- endif -%}
+
+{% stylesheet %}
+  /* Figma: accent caps ~15px with a dot; a 1px line ~45px; grey caps count */
+  .product-stock__line {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin: 0;
+    font-size: var(--font-size-small);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  .product-stock__line[hidden] {
+    display: none;
+  }
+
+  .product-stock__label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    color: var(--color-accent);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .product-stock__label::before {
+    content: "";
+    inline-size: 0.375rem;
+    block-size: 0.375rem;
+    border-radius: 50%;
+    background-color: currentcolor;
+  }
+
+  .product-stock__line--out .product-stock__label {
+    color: color-mix(in srgb, var(--color-text) 60%, var(--color-background));
+  }
+
+  .product-stock__rule {
+    inline-size: 2.75rem;
+    block-size: 1px;
+    background-color: color-mix(in srgb, var(--color-text) 25%, transparent);
+  }
+
+  .product-stock__count {
+    color: color-mix(in srgb, var(--color-text) 65%, var(--color-background));
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * Shows the line of the variant chosen in the Buy buttons block. Listens on its own section (as the
+   * Price block does) and ignores variants it has no line for, so another product on the same page
+   * can't hide this one's stock.
+   */
+  class ProductStock extends HTMLElement {
+    connectedCallback() {
+      this.scope = this.closest('.shopify-section') || document;
+      this.onChange = (event) => {
+        const id = event.detail?.variantId;
+        if (!id || !this.querySelector(`[data-variant-id="${id}"]`)) return;
+        this.querySelectorAll('[data-variant-id]').forEach((line) => {
+          line.hidden = line.dataset.variantId !== String(id);
+        });
+      };
+      this.scope.addEventListener('variant:change', this.onChange);
+    }
+
+    disconnectedCallback() {
+      this.scope?.removeEventListener('variant:change', this.onChange);
+    }
+  }
+
+  if (!customElements.get('product-stock')) customElements.define('product-stock', ProductStock);
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.product_stock",
+  "tag": null,
+  "settings": [
+    {
+      "type": "text",
+      "id": "label",
+      "label": "t:labels.product_stock_label",
+      "info": "t:labels.product_stock_label_info"
+    },
+    {
+      "type": "range",
+      "id": "threshold",
+      "label": "t:labels.product_stock_threshold",
+      "info": "t:labels.product_stock_threshold_info",
+      "min": 1,
+      "max": 50,
+      "step": 1,
+      "default": 10
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.product_stock",
+      "category": "t:general.product"
+    }
+  ]
+}
+{% endschema %}

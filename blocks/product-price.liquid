@@ -18,6 +18,17 @@
 {%- liquid
   assign price_product = closest.product
   assign shipping_link = shop.shipping_policy.url
+  # Rating (Figma PDP: stars, "4.9", "(213 reviews)" at the right of the price): Shopify's standard
+  # review fields, filled by a review app; hidden when empty. .value is a rating object (.rating, .scale_max)
+  assign rating = nil
+  if block.settings.show_rating and price_product != blank
+    assign rating = price_product.metafields.reviews.rating.value
+    assign rating_count = price_product.metafields.reviews.rating_count.value | default: 0
+  endif
+  if rating != blank
+    assign rating_max = rating.scale_max | round
+    assign rating_percent = rating.rating | times: 100.0 | divided_by: rating.scale_max | round: 1
+  endif
 -%}
 
 {%- if price_product != blank or request.design_mode -%}
@@ -25,6 +36,7 @@
     class="product-price product-price--{{ block.settings.size }}"
     {{ block.shopify_attributes }}
   >
+    <div class="product-price__row">
     <div data-price-current>
       {%- if price_product != blank -%}
         {% render 'price',
@@ -35,6 +47,18 @@
       {%- else -%}
         <div class="price"><span class="price__current">{{ 1999 | money }}</span></div>
       {%- endif -%}
+    </div>
+
+    {%- if rating != blank -%}
+      <p class="product-price__rating">
+        <span class="product-price__stars" style="--rating-percent: {{ rating_percent }}%;" aria-hidden="true">★★★★★</span>
+        <span class="product-price__score" aria-hidden="true">{{ rating.rating | round: 1 }}</span>
+        <span class="visually-hidden">{{ 'products.card.rating' | t: rating: rating.rating, max: rating_max }}</span>
+        {%- if rating_count > 0 -%}
+          <span class="product-price__reviews">({{ 'products.card.reviews_count' | t: count: rating_count }})</span>
+        {%- endif -%}
+      </p>
+    {%- endif -%}
     </div>
 
     {%- if price_product != blank and price_product.has_only_default_variant == false -%}
@@ -81,6 +105,42 @@
 
   .product-price--large .price__compare {
     font-size: var(--font-size-h3);
+  }
+
+  /* The price at the left, the rating at the right (Figma PDP) */
+  .product-price__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-xs) var(--space-lg);
+  }
+
+  .product-price__rating {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin: 0;
+    font-size: var(--font-size-caption);
+  }
+
+  /* Five stars filled up to the rating (e.g. 4.9 of 5 = 98%), the rest pale */
+  .product-price__stars {
+    background: linear-gradient(
+      90deg,
+      var(--color-rating) var(--rating-percent, 100%),
+      color-mix(in srgb, var(--color-text) 15%, transparent) var(--rating-percent, 100%)
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-size: 1.15em;
+    letter-spacing: 0.1em;
+  }
+
+  .product-price__reviews {
+    color: var(--color-accent);
+    font-size: var(--font-size-small);
   }
 
   /* "Shipping calculated at checkout": small uppercase label, softer colour */
@@ -142,6 +202,13 @@
       "type": "checkbox",
       "id": "show_savings",
       "label": "t:labels.show_savings",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_rating",
+      "label": "t:labels.product_price_rating",
+      "info": "t:labels.product_price_rating_info",
       "default": true
     },
     {

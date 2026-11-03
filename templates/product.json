@@ -11,6 +11,68 @@
   "sections": {
     "main": {
       "type": "product",
+      "blocks": {
+        "eyebrow": {
+          "type": "product-eyebrow",
+          "settings": {
+            "label": "type",
+            "show_badge": true,
+            "show_share": true
+          }
+        },
+        "title": {
+          "type": "product-title",
+          "settings": {
+            "size": "h2",
+            "tag": "h1",
+            "link_to_product": false
+          }
+        },
+        "price": {
+          "type": "product-price",
+          "settings": {
+            "size": "large",
+            "show_savings": true,
+            "show_rating": true,
+            "show_tax_note": true
+          }
+        },
+        "stock": {
+          "type": "product-stock",
+          "settings": {
+            "threshold": 10
+          }
+        },
+        "description": {
+          "type": "product-description",
+          "settings": {
+            "word_limit": 0
+          }
+        },
+        "buy_buttons": {
+          "type": "buy-buttons",
+          "settings": {
+            "layout": "inline",
+            "add_to_cart_style": "outline",
+            "show_dynamic_checkout": true,
+            "show_installments": true,
+            "show_swatches": true,
+            "show_price_difference": true,
+            "show_selling_plans": true,
+            "plan_default": "subscription",
+            "show_recommended": true,
+            "show_plan_perk": true
+          }
+        }
+      },
+      "block_order": [
+        "eyebrow",
+        "title",
+        "price",
+        "stock",
+        "description",
+        "buy_buttons"
+      ],
       "settings": {}
     }
   },

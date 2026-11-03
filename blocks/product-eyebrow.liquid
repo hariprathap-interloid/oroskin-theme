@@ -1,0 +1,180 @@
+{% doc %}
+  The line above the product title (Figma PDP "Skincare · Trending · SHARE"): a label (the product type,
+  its vendor, or nothing), the product's first badge (custom.badges, as on the product cards) and a
+  Share button. Share opens the phone's share sheet (Web Share API) or else copies the link and says
+  "Link copied". The product comes from closest.product.
+  Theme Store: the vendor can be shown here (Label = Vendor).
+
+  @example
+  {% content_for 'block', type: 'product-eyebrow', id: 'product-eyebrow' %}
+{% enddoc %}
+
+{%- liquid
+  assign eyebrow_product = closest.product
+  case block.settings.label
+    when 'vendor'
+      assign eyebrow_label = eyebrow_product.vendor
+    when 'none'
+      assign eyebrow_label = blank
+    else
+      assign eyebrow_label = eyebrow_product.type
+  endcase
+  assign eyebrow_badge = eyebrow_product.metafields.custom.badges.value | first
+-%}
+
+{%- if eyebrow_product != blank or request.design_mode -%}
+  <product-eyebrow class="product-eyebrow" {{ block.shopify_attributes }}>
+    <div class="product-eyebrow__start">
+      {%- if eyebrow_label != blank -%}
+        <p class="product-eyebrow__label">{{ eyebrow_label | escape }}</p>
+      {%- elsif eyebrow_product == blank -%}
+        <p class="product-eyebrow__label">{{ 'products.eyebrow_sample' | t }}</p>
+      {%- endif -%}
+      {%- if block.settings.show_badge and eyebrow_badge != blank -%}
+        <span class="product-eyebrow__badge">{% render 'product-badge', badge: eyebrow_badge %}</span>
+      {%- endif -%}
+    </div>
+
+    {%- if block.settings.show_share -%}
+      <button
+        type="button"
+        class="product-eyebrow__share"
+        data-share-url="{{ shop.url | append: eyebrow_product.url }}"
+        data-share-title="{{ eyebrow_product.title | escape }}"
+        data-copied="{{ 'blog.article.link_copied' | t | escape }}"
+      >
+        <span class="product-eyebrow__share-icon" aria-hidden="true">{{ 'icon-share.svg' | inline_asset_content }}</span>
+        <span data-share-label>{{ 'products.share' | t }}</span>
+      </button>
+    {%- endif -%}
+  </product-eyebrow>
+{%- endif -%}
+
+{% stylesheet %}
+  /*
+    Figma: "Skincare" heading font ~34px accent; a white "Trending" pill beside it; "SHARE" accent caps
+    ~15px with an arrow icon and an underline, at the right.
+  */
+  .product-eyebrow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm) var(--space-md);
+  }
+
+  .product-eyebrow__start {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-sm) var(--space-md);
+  }
+
+  .product-eyebrow__label {
+    margin: 0;
+    color: var(--color-accent);
+    font-family: var(--font-heading--family);
+    font-size: max(1.5rem, calc(34 * var(--px, 0.0625rem)));
+    line-height: 1.1;
+  }
+
+  .product-eyebrow__badge .product-badge,
+  .product-eyebrow__badge > * {
+    position: static;
+  }
+
+  .product-eyebrow__share {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    min-block-size: 2.75rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--color-accent);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-decoration: underline;
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 0.5em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  .product-eyebrow__share-icon {
+    display: inline-flex;
+  }
+
+  .product-eyebrow__share-icon svg {
+    inline-size: 1rem;
+    block-size: 1rem;
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /** Share: the phone's share sheet when there is one, else copy the link ("Link copied" for 2s) */
+  class ProductEyebrow extends HTMLElement {
+    connectedCallback() {
+      const button = this.querySelector('.product-eyebrow__share');
+      if (!button) return;
+      button.addEventListener('click', async () => {
+        const { shareUrl: url, shareTitle: title, copied } = button.dataset;
+        if (navigator.share) {
+          try {
+            await navigator.share({ url, title });
+          } catch (error) {
+            // The visitor closed the share sheet: nothing to do
+          }
+          return;
+        }
+        await navigator.clipboard?.writeText(url);
+        const label = button.querySelector('[data-share-label]');
+        const original = label.textContent;
+        label.textContent = copied;
+        setTimeout(() => (label.textContent = original), 2000);
+      });
+    }
+  }
+
+  if (!customElements.get('product-eyebrow')) customElements.define('product-eyebrow', ProductEyebrow);
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.product_eyebrow",
+  "tag": null,
+  "settings": [
+    {
+      "type": "select",
+      "id": "label",
+      "label": "t:labels.product_eyebrow_label",
+      "options": [
+        { "value": "type", "label": "t:options.product_eyebrow_label.type" },
+        { "value": "vendor", "label": "t:options.product_eyebrow_label.vendor" },
+        { "value": "none", "label": "t:options.product_eyebrow_label.none" }
+      ],
+      "default": "type"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_badge",
+      "label": "t:labels.product_eyebrow_badge",
+      "info": "t:labels.product_eyebrow_badge_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_share",
+      "label": "t:labels.product_eyebrow_share",
+      "default": true
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.product_eyebrow",
+      "category": "t:general.product"
+    }
+  ]
+}
+{% endschema %}

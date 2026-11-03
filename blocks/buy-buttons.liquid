@@ -1,18 +1,28 @@
 {% doc %}
-  Variant picker, quantity, Add to cart and the accelerated checkout buttons (Shop Pay, Apple Pay...),
-  for closest.product (Featured product section or the product page).
+  Variant picker, purchase options, quantity, Add to cart and the accelerated checkout buttons
+  (Shop Pay, Apple Pay...), for closest.product (Featured product section or the product page).
 
   The form is Shopify's product form: without JavaScript it posts to /cart/add and opens the cart, so
   buying always works. The Quick add AJAX (M4.5) will plug into this same form later.
 
-  Variant picker (Figma PDP "SIZE": pill buttons):
+  Variant picker (Figma PDP "SIZE": pill buttons, "COLOR": round swatches):
   - The real field is one <select name="id"> listing every variant: it is what the form sends.
     Without JavaScript it is the visible picker (sold-out variants can't be chosen).
   - With JavaScript the select is hidden and each option (Size, Colour...) gets its own row of pills.
     Picking pills finds the variant with exactly those values, selects it, updates the button
-    (Add to cart / Sold out / Unavailable) and sends "variant:change", which the Price block and
-    the section's media listen to.
-  Known limits until M6: no colour swatches, and a Liquid for loop stops at 50 variants.
+    (Add to cart / Sold out / Unavailable) and sends "variant:change", which the Price block, the
+    Stock block and the product section's gallery listen to.
+  - An option whose values have a swatch (Settings > Custom data > the option's category metafield,
+    or the product's option swatches) shows round colour / image swatches instead of pills.
+  - "(+$60)": how much more the cheapest variant with this value costs than the cheapest variant.
+  Known limit: a Liquid for loop stops at 50 variants.
+
+  Purchase options (Figma "SUBSCRIBE & SAVE 15%" / "ONE TIME PURCHASE"): only when the product has
+  selling plans (a subscription app such as Shopify Subscriptions creates them). Each selling plan
+  group is a radio card with its frequencies in a select; the chosen plan's id goes in the hidden
+  "selling_plan" field, which the cart needs to add the item as a subscription. One time purchase
+  sends no selling plan. Prices per variant and plan come from a JSON script, so they follow the
+  chosen variant.
 
   Without a product: a sample, disabled form in the theme editor, nothing on the live store.
 
@@ -25,11 +35,38 @@
   if buy_product != blank
     assign current_variant = buy_product.selected_or_first_available_variant
   endif
+
+  assign layout = block.settings.layout | default: 'stacked'
+  assign submit_class = 'button'
+  if block.settings.add_to_cart_style == 'outline'
+    assign submit_class = 'button button--secondary'
+  endif
+
+  # Purchase options: only when the product has selling plans. The plan chosen at first: the one in the
+  # URL (?selling_plan=), else the first plan when the product can only be bought as a subscription or
+  # the merchant chose "Subscription" as the default, else none (one time purchase)
+  assign show_plans = false
+  if block.settings.show_selling_plans and buy_product.selling_plan_groups.size > 0
+    assign show_plans = true
+  endif
+  assign selected_plan = buy_product.selected_selling_plan
+  if show_plans and selected_plan == blank
+    if buy_product.requires_selling_plan or block.settings.plan_default == 'subscription'
+      assign selected_plan = buy_product.selling_plan_groups.first.selling_plans.first
+    endif
+  endif
+
+  # Two steps for the texts with a locale fallback: in one line, | t would also try to translate the
+  # merchant's own text
+  assign recommended_default = 'products.plans.recommended' | t
+  assign recommended_label = block.settings.recommended_label | default: recommended_default
+  assign perk_default = 'products.plans.perk' | t
+  assign plan_perk = block.settings.plan_perk | default: perk_default
 -%}
 
 {%- if buy_product != blank -%}
   <buy-buttons
-    class="buy-buttons"
+    class="buy-buttons buy-buttons--{{ layout }}"
     data-label-add="{{ 'products.add_to_cart' | t }}"
     data-label-sold-out="{{ 'products.sold_out' | t }}"
     data-label-unavailable="{{ 'products.unavailable' | t }}"
@@ -42,12 +79,35 @@
         {%- comment -%} Pills: one group per option. Shown only once the script runs (see the CSS) {%- endcomment -%}
         <div class="buy-buttons__options">
           {%- for option in buy_product.options_with_values -%}
-            {%- assign option_index = forloop.index0 -%}
+            {%- liquid
+              assign option_index = forloop.index0
+              # Variants keep their values in option1 / option2 / option3: the key for this option
+              assign option_key = 'option' | append: forloop.index
+              assign is_swatch = false
+              if block.settings.show_swatches and option.values.first.swatch != blank
+                assign is_swatch = true
+              endif
+            -%}
             <fieldset class="buy-buttons__option" data-option>
-              <legend class="buy-buttons__label">{{ option.name | escape }}</legend>
-              <div class="buy-buttons__pills">
+              <legend class="buy-buttons__label">
+                {{- option.name | escape -}}
+                {%- if is_swatch -%}
+                  <span class="buy-buttons__chosen" data-option-chosen>{{ option.selected_value | escape }}</span>
+                {%- endif -%}
+              </legend>
+              <div class="buy-buttons__pills{% if is_swatch %} buy-buttons__pills--swatches{% endif %}">
                 {%- for value in option.values -%}
-                  {%- assign input_id = block.id | append: '-' | append: option_index | append: '-' | append: forloop.index0 -%}
+                  {%- liquid
+                    assign input_id = block.id | append: '-' | append: option_index | append: '-' | append: forloop.index0
+                    assign price_difference = 0
+                    if block.settings.show_price_difference and is_swatch == false
+                      assign value_variants = buy_product.variants | where: option_key, value.name
+                      assign value_min = value_variants | map: 'price' | sort | first
+                      if value_min
+                        assign price_difference = value_min | minus: buy_product.price_min
+                      endif
+                    endif
+                  -%}
                   <input
                     class="buy-buttons__pill-input"
                     type="radio"
@@ -59,7 +119,29 @@
                     {% endif %}
                     data-option-input
                   >
-                  <label class="buy-buttons__pill" for="{{ input_id }}">{{ value.name | escape }}</label>
+                  {%- if is_swatch -%}
+                    <label
+                      class="buy-buttons__swatch"
+                      for="{{ input_id }}"
+                      title="{{ value.name | escape }}"
+                      {% if value.swatch.color %}
+                        style="--swatch-color: {{ value.swatch.color }};"
+                      {% endif %}
+                    >
+                      {%- if value.swatch.image -%}
+                        {{ value.swatch.image | image_url: width: 80 | image_tag: alt: '', loading: 'lazy', class: 'buy-buttons__swatch-image' }}
+                      {%- endif -%}
+                      <span class="visually-hidden">{{ value.name | escape }}</span>
+                    </label>
+                  {%- else -%}
+                    <label class="buy-buttons__pill" for="{{ input_id }}">
+                      {{- value.name | escape -}}
+                      {%- if price_difference > 0 -%}
+                        {%- assign price_difference_money = price_difference | money -%}
+                        <span class="buy-buttons__pill-extra">{{ 'products.price_difference' | t: price: price_difference_money }}</span>
+                      {%- endif -%}
+                    </label>
+                  {%- endif -%}
                 {%- endfor -%}
               </div>
             </fieldset>
@@ -91,6 +173,160 @@
           </select>
         </div>
       {%- endif -%}
+
+      {%- if show_plans -%}
+        {%- comment -%}
+          Purchase options: one radio card per selling plan group (subscriptions), then One time
+          purchase (unless the product can only be bought as a subscription).
+        {%- endcomment -%}
+        <fieldset class="buy-buttons__plans" data-plans>
+          <legend class="visually-hidden">{{ 'products.plans.legend' | t }}</legend>
+
+          {%- for group in buy_product.selling_plan_groups -%}
+            {%- liquid
+              assign group_plan = group.selling_plans.first
+              assign group_selected = false
+              if selected_plan != blank and selected_plan.group_id == group.id
+                assign group_plan = selected_plan
+                assign group_selected = true
+              endif
+              # The price of this plan for the current variant (its "allocation")
+              assign group_price = current_variant.price
+              for allocation in current_variant.selling_plan_allocations
+                if allocation.selling_plan.id == group_plan.id
+                  assign group_price = allocation.price
+                endif
+              endfor
+              assign group_input_id = block.id | append: '-plan-' | append: forloop.index0
+            -%}
+            <div class="buy-buttons__plan" data-plan-card>
+              <input
+                class="buy-buttons__plan-input"
+                type="radio"
+                id="{{ group_input_id }}"
+                name="{{ block.id }}-purchase"
+                value="{{ group.id }}"
+                {% if group_selected %}
+                  checked
+                {% endif %}
+                data-plan-choice
+              >
+              <label class="buy-buttons__plan-head" for="{{ group_input_id }}">
+                <span class="buy-buttons__plan-mark" aria-hidden="true">
+                  {{- 'icon-check.svg' | inline_asset_content -}}
+                </span>
+                <span class="buy-buttons__plan-title">{{ group.name | escape }}</span>
+                {%- if forloop.first and block.settings.show_recommended -%}
+                  <span class="buy-buttons__plan-tag">{{ recommended_label | escape }}</span>
+                {%- endif -%}
+                <span class="buy-buttons__plan-price" data-plan-price>{{ group_price | money }}</span>
+              </label>
+
+              <div class="buy-buttons__plan-body">
+                {%- if group.selling_plans.size > 1 -%}
+                  <label class="buy-buttons__plan-label" for="{{ group_input_id }}-frequency">
+                    {{- 'products.plans.frequency' | t -}}
+                  </label>
+                  <select id="{{ group_input_id }}-frequency" class="buy-buttons__plan-select" data-plan-select>
+                    {%- for plan in group.selling_plans -%}
+                      {%- assign plan_delivery = plan.description | default: plan.name -%}
+                      <option
+                        value="{{ plan.id }}"
+                        data-delivery="{{ plan_delivery | escape }}"
+                        {% if plan.id == group_plan.id %}
+                          selected
+                        {% endif %}
+                      >
+                        {{ plan.name | escape }}
+                      </option>
+                    {%- endfor -%}
+                  </select>
+                {%- else -%}
+                  <input type="hidden" value="{{ group_plan.id }}" data-plan-select>
+                {%- endif -%}
+
+                {%- comment -%}
+                  First tick: the plan's description (set in the subscription app), else its name
+                  ("Delivered every month"); it follows the frequency select
+                {%- endcomment -%}
+                {%- assign group_delivery = group_plan.description | default: group_plan.name -%}
+                <ul class="buy-buttons__plan-perks" role="list">
+                  <li data-plan-delivery>{{ group_delivery | escape }}</li>
+                  {%- if block.settings.show_plan_perk -%}
+                    <li>{{ plan_perk | escape }}</li>
+                  {%- endif -%}
+                </ul>
+              </div>
+            </div>
+          {%- endfor -%}
+
+          {%- unless buy_product.requires_selling_plan -%}
+            {%- assign once_input_id = block.id | append: '-plan-once' -%}
+            <div class="buy-buttons__plan" data-plan-card>
+              <input
+                class="buy-buttons__plan-input"
+                type="radio"
+                id="{{ once_input_id }}"
+                name="{{ block.id }}-purchase"
+                value=""
+                {% if selected_plan == blank %}
+                  checked
+                {% endif %}
+                data-plan-choice
+              >
+              <label class="buy-buttons__plan-head" for="{{ once_input_id }}">
+                <span class="buy-buttons__plan-mark" aria-hidden="true">
+                  {{- 'icon-check.svg' | inline_asset_content -}}
+                </span>
+                <span class="buy-buttons__plan-title">{{ 'products.plans.one_time' | t }}</span>
+                <span class="buy-buttons__plan-price" data-plan-price>{{ current_variant.price | money }}</span>
+                <span class="buy-buttons__plan-note">{{ 'products.plans.one_time_note' | t }}</span>
+              </label>
+            </div>
+          {%- endunless -%}
+        </fieldset>
+
+        <input
+          type="hidden"
+          name="selling_plan"
+          value="{{ selected_plan.id }}"
+          {% if selected_plan == blank %}
+            disabled
+          {% endif %}
+          data-selling-plan
+        >
+
+        {%- comment -%} Every variant's price per plan ("" = one time), read by the script {%- endcomment -%}
+        <script type="application/json" data-plan-prices>
+          {
+            {%- for variant in buy_product.variants -%}
+              "{{ variant.id }}": {
+                "": {{ variant.price | money | json }}
+                {%- for allocation in variant.selling_plan_allocations -%}
+                  , "{{ allocation.selling_plan.id }}": {{ allocation.price | money | json }}
+                {%- endfor -%}
+              }
+              {%- unless forloop.last %},{% endunless -%}
+            {%- endfor -%}
+          }
+        </script>
+      {%- endif -%}
+
+      {%- if block.settings.show_installments -%}
+        {%- comment -%} Shop Pay Installments ("Pay in 4 interest-free..."), when the store offers it {%- endcomment -%}
+        <div class="buy-buttons__installments">{{ form | payment_terms }}</div>
+      {%- endif -%}
+
+      {%- capture payment_buttons -%}
+        {%- if block.settings.show_dynamic_checkout -%}
+          <div
+            class="buy-buttons__payment"
+            style="--icon-buy: url('{{ 'icon-buy.svg' | asset_url }}');"
+          >
+            {{ form | payment_button }}
+          </div>
+        {%- endif -%}
+      {%- endcapture -%}
 
       <div class="buy-buttons__row">
         <div class="buy-buttons__quantity">
@@ -125,29 +361,39 @@
 
         <button
           type="submit"
-          class="button buy-buttons__submit"
+          class="{{ submit_class }} buy-buttons__submit"
           {% unless current_variant.available %}
             disabled
           {% endunless %}
           data-submit
         >
-          {%- if current_variant.available -%}
-            {{ 'products.add_to_cart' | t }}
-          {%- else -%}
-            {{ 'products.sold_out' | t }}
+          {%- if layout == 'inline' -%}
+            <span class="buy-buttons__submit-icon" aria-hidden="true">{{ 'icon-cart.svg' | inline_asset_content }}</span>
           {%- endif -%}
+          <span data-submit-label>
+            {%- if current_variant.available -%}
+              {{ 'products.add_to_cart' | t }}
+            {%- else -%}
+              {{ 'products.sold_out' | t }}
+            {%- endif -%}
+          </span>
         </button>
+
+        {%- comment -%} Figma PDP: Buy now in the same row as Add to cart {%- endcomment -%}
+        {%- if layout == 'inline' -%}
+          {{ payment_buttons }}
+        {%- endif -%}
       </div>
 
-      {%- if block.settings.show_dynamic_checkout -%}
-        <div class="buy-buttons__payment">{{ form | payment_button }}</div>
-      {%- endif -%}
+      {%- unless layout == 'inline' -%}
+        {{ payment_buttons }}
+      {%- endunless -%}
     {%- endform -%}
   </buy-buttons>
 {%- elsif request.design_mode -%}
   <div class="buy-buttons" {{ block.shopify_attributes }}>
     <div class="buy-buttons__row">
-      <button type="button" class="button buy-buttons__submit" disabled>{{ 'products.add_to_cart' | t }}</button>
+      <button type="button" class="{{ submit_class }} buy-buttons__submit" disabled>{{ 'products.add_to_cart' | t }}</button>
     </div>
   </div>
 {%- endif -%}
@@ -159,6 +405,11 @@
     gap: var(--space-md);
   }
 
+  /* The product page: more air between the option groups, the purchase options and the buttons */
+  .buy-buttons--inline .buy-buttons__form {
+    gap: max(var(--space-lg), calc(28 * var(--px, 0.0625rem)));
+  }
+
   .buy-buttons__label {
     display: block;
     margin-block-end: var(--space-xs);
@@ -167,6 +418,15 @@
     font-weight: var(--font-weight-medium);
     letter-spacing: var(--letter-spacing-label);
     text-transform: uppercase;
+  }
+
+  /* The chosen swatch's name next to the option name ("COLOR  Rose") */
+  .buy-buttons__chosen {
+    margin-inline-start: var(--space-sm);
+    color: color-mix(in srgb, var(--color-text) 65%, var(--color-background));
+    font-weight: 400;
+    letter-spacing: normal;
+    text-transform: none;
   }
 
   /* Without JavaScript: the select is the picker, the pills stay hidden (they need the script) */
@@ -215,24 +475,215 @@
       color var(--duration-fast) var(--ease-out);
   }
 
+  .buy-buttons__pill-extra {
+    margin-inline-start: 0.35em;
+    opacity: 0.75;
+  }
+
   .buy-buttons__pill-input:checked + .buy-buttons__pill {
     border-color: var(--color-accent);
     background-color: var(--color-accent);
     color: var(--color-button-text);
   }
 
-  .buy-buttons__pill-input:focus-visible + .buy-buttons__pill {
+  .buy-buttons__pill-input:focus-visible + .buy-buttons__pill,
+  .buy-buttons__pill-input:focus-visible + .buy-buttons__swatch {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
+  }
+
+  /* Figma Variant64: ~34px circles, a ring around the chosen one */
+  .buy-buttons__pills--swatches {
+    gap: var(--space-sm);
+  }
+
+  .buy-buttons__swatch {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    inline-size: max(2rem, calc(34 * var(--px, 0.0625rem)));
+    aspect-ratio: 1;
+    border: 1px solid color-mix(in srgb, var(--color-text) 15%, transparent);
+    border-radius: 50%;
+    background-color: var(--swatch-color, var(--color-background));
+    cursor: pointer;
+  }
+
+  .buy-buttons__swatch-image {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .buy-buttons__pill-input:checked + .buy-buttons__swatch {
+    box-shadow:
+      0 0 0 2px var(--color-card, var(--color-background)),
+      0 0 0 3px var(--color-accent);
   }
 
   .buy-buttons__select select {
     inline-size: 100%;
   }
 
+  /*
+    Purchase options (Figma PDP): two cards ~700px wide, cream with a pale border, radius ~12; the
+    chosen one has a 1px accent border. A round mark at the left: empty ring, or an accent circle with
+    a white tick when chosen.
+  */
+  .buy-buttons__plans {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    max-inline-size: 43.75rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .buy-buttons__plan {
+    border: 1px solid var(--color-card-border);
+    border-radius: max(0.75rem, calc(12 * var(--px, 0.0625rem)));
+    background-color: color-mix(in srgb, var(--color-background) 60%, transparent);
+    transition: border-color var(--duration-fast) var(--ease-out);
+  }
+
+  .buy-buttons__plan:has(.buy-buttons__plan-input:checked) {
+    border-color: var(--color-accent);
+  }
+
+  .buy-buttons__plan:has(.buy-buttons__plan-input:focus-visible) {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  .buy-buttons__plan-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .buy-buttons__plan-head {
+    display: grid;
+    grid-template-columns: auto auto 1fr auto;
+    align-items: center;
+    gap: var(--space-xs) var(--space-md);
+    padding: var(--space-lg) max(var(--space-lg), calc(34 * var(--px, 0.0625rem)));
+    cursor: pointer;
+  }
+
+  .buy-buttons__plan-mark {
+    display: grid;
+    place-items: center;
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    border: 1px solid color-mix(in srgb, var(--color-text) 25%, transparent);
+    border-radius: 50%;
+    color: transparent;
+    transition:
+      background-color var(--duration-fast) var(--ease-out),
+      border-color var(--duration-fast) var(--ease-out);
+  }
+
+  .buy-buttons__plan-mark svg {
+    inline-size: 0.75rem;
+    block-size: auto;
+  }
+
+  .buy-buttons__plan-input:checked + .buy-buttons__plan-head .buy-buttons__plan-mark {
+    border-color: var(--color-accent);
+    background-color: var(--color-accent);
+    color: var(--color-button-text);
+  }
+
+  .buy-buttons__plan-title {
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  /* "RECOMMENDED": a pale accent pill */
+  .buy-buttons__plan-tag {
+    justify-self: start;
+    padding: 0.3em 0.9em;
+    border-radius: var(--radius-pill);
+    background-color: color-mix(in srgb, var(--color-accent) 18%, transparent);
+    color: var(--color-accent);
+    font-size: var(--font-size-label);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  .buy-buttons__plan-price {
+    grid-column: 4;
+    grid-row: 1;
+    font-size: var(--font-size-h3); /* Figma ~24px */
+    font-weight: var(--font-weight-medium);
+  }
+
+  /* "No commitment • Standard price" under the title */
+  .buy-buttons__plan-note {
+    grid-column: 2 / 4;
+    color: color-mix(in srgb, var(--color-text) 65%, var(--color-background));
+  }
+
+  .buy-buttons__plan-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    padding: 0 max(var(--space-lg), calc(34 * var(--px, 0.0625rem))) var(--space-lg);
+    padding-inline-start: calc(max(var(--space-lg), calc(34 * var(--px, 0.0625rem))) + 1.5rem + var(--space-md));
+  }
+
+  .buy-buttons__plan-label {
+    font-size: var(--font-size-label);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--color-text) 70%, var(--color-background));
+  }
+
+  .buy-buttons__plan-select {
+    max-inline-size: 28rem;
+    border-radius: var(--radius-pill);
+  }
+
+  .buy-buttons__plan-perks {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    margin: var(--space-sm) 0 0;
+    padding: 0;
+    list-style: none;
+    color: color-mix(in srgb, var(--color-text) 70%, var(--color-background));
+  }
+
+  /* A small accent tick before each perk */
+  .buy-buttons__plan-perks li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .buy-buttons__plan-perks li::before {
+    content: "✓";
+    color: var(--color-accent);
+  }
+
   .buy-buttons__row {
     display: flex;
     gap: var(--space-sm);
+  }
+
+  /* Figma PDP: stepper at the left, Add to cart and Buy now side by side; they wrap on narrow cards */
+  /*
+    Top-aligned: with a subscription Shopify adds its legal text ("This item is a recurring purchase...")
+    under Buy now; it must stay visible, and the other buttons stay level with Buy now.
+  */
+  .buy-buttons--inline .buy-buttons__row {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--space-md) max(var(--space-md), calc(40 * var(--px, 0.0625rem)));
   }
 
   /*
@@ -246,6 +697,11 @@
     border: 1px solid var(--color-border);
     border-radius: var(--radius-pill);
     background-color: #ffffff;
+  }
+
+  .buy-buttons--inline .buy-buttons__quantity {
+    border-color: transparent;
+    box-shadow: var(--shadow-glass-edge);
   }
 
   .buy-buttons__step {
@@ -272,7 +728,8 @@
     color: var(--color-accent);
   }
 
-  .buy-buttons__quantity-input {
+  /* .buy-buttons in front: the global input[type] rule (element + attribute) beats one class */
+  .buy-buttons .buy-buttons__quantity-input {
     inline-size: 3rem;
     min-block-size: 0;
     padding: 0;
@@ -298,10 +755,20 @@
     outline-offset: 2px;
   }
 
+  /* Shop Pay Installments: Shopify's own banner, in our text colour */
+  .buy-buttons__installments:empty {
+    display: none;
+  }
+
+  .buy-buttons__installments shopify-payment-terms {
+    color: color-mix(in srgb, var(--color-text) 75%, var(--color-background));
+    font-size: var(--font-size-small);
+  }
+
   /*
     Accelerated checkout (Shopify's own buttons). Branded ones (Shop Pay, Apple Pay...) take their size
     and corner radius from Shopify's CSS variables; the plain "Buy it now" is styled like our buttons:
-    a full-width dark pill, the same height as Add to cart.
+    a dark pill under Add to cart, or (product page, "inline") the red pill with the buy icon.
   */
   .buy-buttons__payment {
     --shopify-accelerated-checkout-button-block-size: 3.125rem;
@@ -331,13 +798,94 @@
     font-size: var(--font-size-small);
   }
 
+  .buy-buttons--inline .buy-buttons__payment {
+    flex: 1 1 12rem;
+  }
+
+  .buy-buttons--inline .buy-buttons__payment .shopify-payment-button__button--unbranded {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    background-color: var(--color-button);
+    color: var(--color-button-text);
+    box-shadow: var(--shadow-button);
+    font-size: var(--font-size-caption);
+    letter-spacing: var(--letter-spacing-nav);
+  }
+
+  .buy-buttons--inline .buy-buttons__payment .shopify-payment-button__button--unbranded:hover:not([disabled]) {
+    background-color: color-mix(in srgb, var(--color-button) 88%, #000000);
+  }
+
+  /* The buy icon, drawn in the text colour through a mask (Shopify's button has no room for an <svg>) */
+  .buy-buttons--inline .buy-buttons__payment .shopify-payment-button__button--unbranded::before {
+    content: "";
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    background-color: currentcolor;
+    -webkit-mask: var(--icon-buy) center / contain no-repeat;
+    mask: var(--icon-buy) center / contain no-repeat;
+  }
+
   .buy-buttons__submit {
     flex: 1;
+  }
+
+  .buy-buttons--inline .buy-buttons__submit {
+    flex: 1 1 12rem;
+  }
+
+  /*
+    "Outline glass" Add to cart (Figma PDP: a white glass pill, accent text). Restates .button--secondary
+    because the global button[type="submit"] rule (element + attribute) beats that one class.
+  */
+  .buy-buttons .buy-buttons__submit.button--secondary {
+    border-color: var(--color-secondary-button-border);
+    background-color: var(--color-secondary-button);
+    color: var(--color-secondary-button-text);
+    box-shadow: var(--shadow-glass-edge);
+  }
+
+  .buy-buttons .buy-buttons__submit.button--secondary:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--color-secondary-button-text) 8%, var(--color-secondary-button));
+  }
+
+  .buy-buttons__submit-icon {
+    display: inline-flex;
+  }
+
+  .buy-buttons__submit-icon svg {
+    inline-size: 1.125rem;
+    block-size: 1.125rem;
   }
 
   .buy-buttons__submit:disabled {
     cursor: not-allowed;
     opacity: 0.6;
+  }
+
+  @media (max-width: 749px) {
+    .buy-buttons__plan-head,
+    .buy-buttons__plan-body {
+      padding-inline: var(--space-md);
+    }
+
+    .buy-buttons__plan-head {
+      grid-template-columns: auto 1fr auto;
+    }
+
+    .buy-buttons__plan-tag {
+      grid-column: 2;
+    }
+
+    .buy-buttons__plan-price {
+      grid-column: 3;
+    }
+
+    .buy-buttons__plan-note {
+      grid-column: 2 / -1;
+    }
   }
 {% endstylesheet %}
 
@@ -345,12 +893,14 @@
   /**
    * <buy-buttons>: turns the option pills into a variant choice. The hidden <select name="id"> stays the
    * field the form sends; the pills only decide which of its options is selected.
+   * Purchase options: the chosen card decides the hidden "selling_plan" field (empty = one time).
    */
   class BuyButtons extends HTMLElement {
     connectedCallback() {
       this.select = this.querySelector('select[name="id"]');
       this.submit = this.querySelector('[data-submit]');
       this.setUpQuantity();
+      this.setUpPlans();
       if (!this.select || !this.querySelector('[data-option]')) return;
 
       this.classList.add('is-enhanced');
@@ -373,11 +923,56 @@
       });
     }
 
+    /** Purchase options: choosing a card or a frequency updates the prices and the selling plan field */
+    setUpPlans() {
+      this.plans = this.querySelector('[data-plans]');
+      if (!this.plans) return;
+      this.sellingPlan = this.querySelector('[data-selling-plan]');
+      try {
+        this.planPrices = JSON.parse(this.querySelector('[data-plan-prices]')?.textContent || '{}');
+      } catch (error) {
+        this.planPrices = {};
+      }
+
+      this.plans.addEventListener('change', (event) => {
+        const frequency = event.target.closest('select[data-plan-select]');
+        if (frequency) {
+          // Picking a frequency also picks its card, and updates the first tick
+          const card = frequency.closest('[data-plan-card]');
+          card.querySelector('[data-plan-choice]').checked = true;
+          const delivery = card.querySelector('[data-plan-delivery]');
+          if (delivery) delivery.textContent = frequency.selectedOptions[0]?.dataset.delivery || '';
+        }
+        this.updatePlans();
+      });
+    }
+
+    /** Each card's price for the current variant, and the chosen card's plan into "selling_plan" */
+    updatePlans() {
+      if (!this.plans) return;
+      const variantId = this.querySelector('[name="id"]')?.value;
+      const prices = this.planPrices[variantId] || {};
+      let planId = '';
+
+      this.plans.querySelectorAll('[data-plan-card]').forEach((card) => {
+        const id = card.querySelector('[data-plan-select]')?.value || '';
+        const price = card.querySelector('[data-plan-price]');
+        if (price && prices[id]) price.textContent = prices[id];
+        if (card.querySelector('[data-plan-choice]').checked) planId = id;
+      });
+
+      this.sellingPlan.value = planId;
+      this.sellingPlan.disabled = !planId;
+    }
+
     /** Finds the variant whose option values match the checked pills ("15ml||Rose" etc.) */
     onOptionChange() {
-      const chosen = [...this.querySelectorAll('[data-option]')].map(
-        (group) => group.querySelector('input:checked')?.value
-      );
+      const chosen = [...this.querySelectorAll('[data-option]')].map((group) => {
+        const value = group.querySelector('input:checked')?.value;
+        const label = group.querySelector('[data-option-chosen]');
+        if (label) label.textContent = value || '';
+        return value;
+      });
       const match = [...this.select.options].find((option) => option.dataset.options === chosen.join('||'));
 
       if (!match) {
@@ -388,8 +983,11 @@
       }
 
       this.select.value = match.value;
+      // Tells Shopify's own elements in the form (Shop Pay Installments...) that the variant changed
+      this.select.dispatchEvent(new Event('change', { bubbles: true }));
       const available = match.dataset.available === 'true';
       this.updateButton(available, available ? this.dataset.labelAdd : this.dataset.labelSoldOut);
+      this.updatePlans();
       this.notify(match.value, match.dataset.mediaId);
     }
 
@@ -400,13 +998,14 @@
     updateButton(enabled, label) {
       if (this.submit) {
         this.submit.disabled = !enabled;
-        this.submit.textContent = label;
+        const text = this.submit.querySelector('[data-submit-label]') || this.submit;
+        text.textContent = label;
       }
       const payment = this.querySelector('.buy-buttons__payment');
       if (payment) payment.hidden = !enabled;
     }
 
-    /** Tells the Price block and the section's media which variant is now chosen */
+    /** Tells the Price block, the Stock block and the section's gallery which variant is now chosen */
     notify(variantId, mediaId) {
       this.dispatchEvent(new CustomEvent('variant:change', { bubbles: true, detail: { variantId, mediaId } }));
     }
@@ -423,11 +1022,106 @@
   "tag": null,
   "settings": [
     {
+      "type": "select",
+      "id": "layout",
+      "label": "t:labels.buy_buttons_layout",
+      "options": [
+        { "value": "stacked", "label": "t:options.buy_buttons_layout.stacked" },
+        { "value": "inline", "label": "t:options.buy_buttons_layout.inline" }
+      ],
+      "default": "stacked"
+    },
+    {
+      "type": "select",
+      "id": "add_to_cart_style",
+      "label": "t:labels.add_to_cart_style",
+      "options": [
+        { "value": "solid", "label": "t:options.add_to_cart_style.solid" },
+        { "value": "outline", "label": "t:options.add_to_cart_style.outline" }
+      ],
+      "default": "solid"
+    },
+    {
       "type": "checkbox",
       "id": "show_dynamic_checkout",
       "label": "t:labels.show_dynamic_checkout",
       "info": "t:labels.show_dynamic_checkout_info",
       "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_installments",
+      "label": "t:labels.show_installments",
+      "info": "t:labels.show_installments_info",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.variant_picker"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_swatches",
+      "label": "t:labels.show_swatches",
+      "info": "t:labels.show_swatches_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_price_difference",
+      "label": "t:labels.show_price_difference",
+      "info": "t:labels.show_price_difference_info",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.purchase_options",
+      "info": "t:labels.purchase_options_info"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_selling_plans",
+      "label": "t:labels.show_selling_plans",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "plan_default",
+      "label": "t:labels.plan_default",
+      "options": [
+        { "value": "subscription", "label": "t:options.plan_default.subscription" },
+        { "value": "one_time", "label": "t:options.plan_default.one_time" }
+      ],
+      "default": "subscription",
+      "visible_if": "{{ block.settings.show_selling_plans }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_recommended",
+      "label": "t:labels.show_recommended",
+      "default": true,
+      "visible_if": "{{ block.settings.show_selling_plans }}"
+    },
+    {
+      "type": "text",
+      "id": "recommended_label",
+      "label": "t:labels.recommended_label",
+      "info": "t:labels.recommended_label_info",
+      "visible_if": "{{ block.settings.show_selling_plans and block.settings.show_recommended }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_plan_perk",
+      "label": "t:labels.show_plan_perk",
+      "default": true,
+      "visible_if": "{{ block.settings.show_selling_plans }}"
+    },
+    {
+      "type": "text",
+      "id": "plan_perk",
+      "label": "t:labels.plan_perk",
+      "info": "t:labels.plan_perk_info",
+      "visible_if": "{{ block.settings.show_selling_plans and block.settings.show_plan_perk }}"
     }
   ],
   "presets": [

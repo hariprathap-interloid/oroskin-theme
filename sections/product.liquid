@@ -1,66 +1,407 @@
-{% comment %}
-  This section is used in the product template to render product page with
-  media, content, and add-to-cart form.
+{%- comment -%}
+  Product page, main section (M6.1, design/briefs/pdp.md, exports "Product details 1 / 2",
+  "Variant64"): breadcrumb, a sticky masonry gallery on the left and a cream card of theme blocks on
+  the right (eyebrow, title, price + rating, stock, description, buy buttons… and app blocks).
+  - Gallery: every product medium (images, videos, YouTube / Vimeo, 3D) in 3 columns of different
+    widths with offset tops (Figma 220 / 297 / 188); each keeps its own shape. The first medium
+    (the LCP image) leads the middle column, loads eagerly with high priority. It stays in view
+    (sticky) while the info column scrolls.
+  - Choosing a variant (the Buy buttons block sends "variant:change") moves that variant's image to
+    the top of the middle column and updates the URL (?variant=), so the link can be shared.
+  The product blocks read the product through closest.product, as in the Featured product section.
+{%- endcomment -%}
 
-  https://shopify.dev/docs/storefronts/themes/architecture/templates/product
-{% endcomment %}
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+  assign media_count = product.media.size
+  assign parent_collection = product.collections.first
+  assign gallery_sizes = '(min-width: 990px) 18vw, 33vw'
+  # A link with ?variant= opens with that variant's image first (top of the middle column).
+  # selected_variant is only set by the URL (?variant=), so a plain product link keeps the merchant's order
+  assign lead_media = product.selected_variant.featured_media
+  assign lead_index = -1
+  if lead_media != blank
+    assign lead_index = lead_media.position | minus: 1
+  endif
+-%}
 
-<div class="product-images">
-  {% for image in product.images %}
-    {% render 'image', class: 'product-image', image: image %}
-  {% endfor %}
-</div>
+{% render 'screen-scale' %}
 
-<div class="product-info">
-  <h1>{{ product.title }}</h1>
-  {% render 'price', product: product, variant: product.selected_or_first_available_variant %}
-  <p>{{ product.description }}</p>
-</div>
-
-<div class="product-form">
-  {% form 'product', product %}
-    {% assign current_variant = product.selected_or_first_available_variant %}
-
-    {%- comment -%}
-      Temporary stock fix until the M6 product page: sold-out variants are marked and can't be picked
-      (a disabled <option>), so they can't reach the cart and fail at checkout. When nothing is
-      available, the buttons say "Sold out" and are disabled. selected_or_first_available_variant
-      already starts on an available variant.
-    {%- endcomment -%}
-    <select name="id">
-      {% for variant in product.variants %}
-        <option
-          value="{{ variant.id }}"
-          {% if variant == current_variant %}
-            selected="selected"
-          {% endif %}
-          {% unless variant.available %}
-            disabled
-          {% endunless %}
-        >
-          {{ variant.title }} - {{ variant.price | money }}
-          {%- unless variant.available %} ({{ 'products.sold_out' | t }}){% endunless %}
-        </option>
-      {% endfor %}
-    </select>
-
-    <input type="text" name="quantity" min="1" value="1">
-
-    {%- if current_variant.available -%}
-      <button type="submit">{{ 'products.add_to_cart' | t }}</button>
-      {{ form | payment_button }}
-    {%- else -%}
-      <button type="submit" disabled>{{ 'products.sold_out' | t }}</button>
+<product-page
+  class="product full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 100 | divided_by: 100.0 }};"
+  data-product-url="{{ product.url }}"
+>
+  <div class="product__inner">
+    {%- if section.settings.show_breadcrumb -%}
+      {%- if parent_collection != blank -%}
+        {% render 'breadcrumb', current: product.title, parent_title: parent_collection.title, parent_url: parent_collection.url, class: 'product__breadcrumb' %}
+      {%- else -%}
+        {% render 'breadcrumb', current: product.title, class: 'product__breadcrumb' %}
+      {%- endif -%}
     {%- endif -%}
-  {% endform %}
-</div>
+
+    <div class="product__layout">
+      {%- comment -%}
+        The gallery: 3 columns. The media go round the columns middle → left → right (1st in the middle,
+        2nd left, 3rd right, 4th middle…), so the first image leads the widest column.
+        "place" = the medium's place in that round: the lead (variant) image is 0, the ones before it
+        move one place down, the rest keep theirs. CSS order keeps each column in place order.
+      {%- endcomment -%}
+      <div class="product__gallery{% if media_count < 3 %} product__gallery--few{% endif %}" data-gallery>
+        {%- if media_count > 0 -%}
+          {%- liquid
+            assign column_order = '1,0,2' | split: ','
+            if media_count < 3
+              assign column_order = '0' | split: ','
+            endif
+          -%}
+          {%- for column in column_order -%}
+            {%- assign column_number = column | plus: 0 -%}
+            <div class="product__column product__column--{{ forloop.index }}" data-gallery-column="{{ column_number }}">
+              {%- for media in product.media -%}
+                {%- liquid
+                  assign place = forloop.index0
+                  if lead_index >= 0
+                    if forloop.index0 == lead_index
+                      assign place = 0
+                    elsif forloop.index0 < lead_index
+                      assign place = forloop.index0 | plus: 1
+                    endif
+                  endif
+                  assign slot = place | modulo: 3
+                  if media_count < 3
+                    assign slot = 0
+                  endif
+                  if slot != column_number
+                    continue
+                  endif
+                  # Loading: only the lead image (the LCP) gets high priority. The image snippet would give
+                  # every image of the page's first section high priority, so the others say it themselves:
+                  # the first two rows (in view at first) eager, the rest lazy
+                  assign is_first = false
+                  if place == 0
+                    assign is_first = true
+                  endif
+                  assign media_loading = 'lazy'
+                  if place < 6
+                    assign media_loading = 'eager'
+                  endif
+                -%}
+                <div
+                  class="product__media product__media--{{ media.media_type }}"
+                  data-media-id="{{ media.id }}"
+                  data-media-index="{{ forloop.index0 }}"
+                  style="--media-ratio: {{ media.preview_image.aspect_ratio | default: 1 }}; order: {{ place }};"
+                >
+                  {% render 'product-media', media: media, sizes: gallery_sizes, loading: media_loading, priority: is_first %}
+                </div>
+              {%- endfor -%}
+            </div>
+          {%- endfor -%}
+        {%- else -%}
+          <div class="product__column product__column--1">
+            <div class="product__media" style="--media-ratio: 0.75;">
+              {{ 'product-1' | placeholder_svg_tag: 'product__placeholder' }}
+            </div>
+          </div>
+        {%- endif -%}
+      </div>
+
+      <div class="product__info">
+        <div class="product__card">
+          {% content_for 'blocks' %}
+        </div>
+      </div>
+    </div>
+  </div>
+</product-page>
+
+{% stylesheet %}
+  /*
+    Figma 1920 ("Product details 1"): breadcrumb y 150; gallery x 50–816 (766), 3 columns
+    220 / 297 / 188 with ~30px gaps, column tops at y 241 / 190 / 298, images radius ~16; the info card
+    x 898–1870 (972, gap 82), cream (the card colour on white), 1px pale border, radius ~24, padding ~55.
+  */
+  .product {
+    display: block;
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+    background-color: var(--color-background);
+  }
+
+  .product__inner {
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  .product__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 766fr) minmax(0, 972fr);
+    align-items: start;
+    gap: max(var(--space-xl), calc(82 * var(--px, 0.0625rem)));
+    margin-block-start: max(var(--space-lg), calc(30 * var(--px, 0.0625rem)));
+  }
+
+  /* The gallery stays in view under the header while the info column scrolls (when it fits the screen) */
+  .product__gallery {
+    position: sticky;
+    inset-block-start: 7rem;
+    display: grid;
+    grid-template-columns: 220fr 297fr 188fr;
+    align-items: start;
+    gap: max(var(--space-sm), calc(30 * var(--px, 0.0625rem)));
+  }
+
+  .product__gallery--few {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .product__column {
+    display: flex;
+    flex-direction: column;
+    gap: max(var(--space-sm), calc(30 * var(--px, 0.0625rem)));
+    min-inline-size: 0;
+  }
+
+  /* Offset tops (Figma): the left column 51px lower than the middle one, the right 108px */
+  .product__column--1 {
+    margin-block-start: calc(51 * var(--px, 0.0625rem));
+  }
+
+  .product__column--3 {
+    margin-block-start: calc(108 * var(--px, 0.0625rem));
+  }
+
+  .product__gallery--few .product__column--1 {
+    margin-block-start: 0;
+  }
+
+  .product__media {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: var(--media-ratio, 1);
+    border-radius: max(0.75rem, calc(16 * var(--px, 0.0625rem)));
+  }
+
+  /*
+    The product-media snippet has its own (larger) radius and tint: it takes this frame's radius, so the
+    corners match and nothing shows behind the image (its tint still shows while the image loads)
+  */
+  .product__media > * {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  /* Two classes: the snippet's own .product-media radius has the same weight as one class */
+  .product__media .product-media {
+    border-radius: inherit;
+  }
+
+  /* The variant's image, just moved to the top: a short highlight */
+  @media (prefers-reduced-motion: no-preference) {
+    .product__media.is-variant {
+      animation: product-media-in var(--duration-normal) var(--ease-out);
+    }
+  }
+
+  @keyframes product-media-in {
+    from {
+      opacity: 0.4;
+      transform: scale(0.98);
+    }
+  }
+
+  .product__placeholder {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  /* The info card: cream, pale border, rounded; the blocks inside are spaced by the card */
+  .product__card {
+    display: flex;
+    flex-direction: column;
+    gap: max(var(--space-lg), calc(28 * var(--px, 0.0625rem)));
+    padding: max(var(--space-lg), calc(55 * var(--px, 0.0625rem)));
+    border: 1px solid var(--color-card-border);
+    border-radius: max(1rem, calc(24 * var(--px, 0.0625rem)));
+    background-color: var(--color-card);
+  }
+
+  /* Tablets and phones (Variant96…): one column, the gallery not sticky, the masonry kept */
+  @media (max-width: 989px) {
+    .product__layout {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-lg);
+    }
+
+    .product__gallery {
+      position: static;
+      gap: var(--space-xs);
+    }
+
+    .product__column {
+      gap: var(--space-xs);
+    }
+
+    .product__column--1 {
+      margin-block-start: 1.25rem;
+    }
+
+    .product__column--3 {
+      margin-block-start: 2.5rem;
+    }
+  }
+
+  @media (max-width: 749px) {
+    .product__card {
+      padding: var(--space-lg) var(--space-md);
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <product-page>: follows the chosen variant.
+   * - Puts the variant's image first and deals every medium round the columns again (middle → left →
+   *   right, as Liquid does), so it leads the middle column and the columns stay balanced. Moving only
+   *   that one image would empty the side columns little by little.
+   * - Puts ?variant=ID in the address (replaceState: no new history step), so the link opens on it.
+   */
+  class ProductPage extends HTMLElement {
+    connectedCallback() {
+      // Every medium in the merchant's order (data-media-index), whatever column it is in now
+      this.media = [...this.querySelectorAll('[data-media-index]')].sort(
+        (a, b) => a.dataset.mediaIndex - b.dataset.mediaIndex
+      );
+      this.onVariantChange = (event) => this.showVariant(event.detail || {});
+      this.addEventListener('variant:change', this.onVariantChange);
+    }
+
+    disconnectedCallback() {
+      this.removeEventListener('variant:change', this.onVariantChange);
+    }
+
+    showVariant({ variantId, mediaId }) {
+      if (variantId) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('variant', variantId);
+        history.replaceState(history.state, '', url);
+      }
+
+      const media = mediaId && this.media.find((item) => item.dataset.mediaId === String(mediaId));
+      if (!media || media === this.lead) return;
+      this.lead = media;
+      this.layOut([media, ...this.media.filter((item) => item !== media)]);
+      media.classList.remove('is-variant');
+      void media.offsetWidth; // replay the highlight
+      media.classList.add('is-variant');
+    }
+
+    /** Deals the media round the columns: place 0 → column 0 (middle), 1 → left, 2 → right, 3 → middle… */
+    layOut(order) {
+      const columns = [...this.querySelectorAll('[data-gallery-column]')];
+      const byNumber = Object.fromEntries(columns.map((column) => [column.dataset.galleryColumn, column]));
+      order.forEach((item, place) => {
+        const column = columns.length < 3 ? byNumber[0] : byNumber[place % 3];
+        item.style.order = ''; // the DOM order now matches, the Liquid order is no longer needed
+        column.append(item);
+      });
+    }
+  }
+
+  if (!customElements.get('product-page')) customElements.define('product-page', ProductPage);
+{% endjavascript %}
 
 {% schema %}
 {
   "name": "t:general.product",
-  "settings": [],
-  "disabled_on": {
-    "groups": ["header", "footer"]
-  }
+  "tag": "section",
+  "class": "product-section",
+  "blocks": [{ "type": "@theme" }, { "type": "@app" }],
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_breadcrumb",
+      "label": "t:labels.show_breadcrumb",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "checkbox",
+      "id": "scale_screen",
+      "label": "t:labels.scale_screen",
+      "info": "t:labels.scale_screen_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "text_scale",
+      "label": "t:labels.text_scale",
+      "info": "t:labels.text_scale_info",
+      "min": 100,
+      "max": 130,
+      "step": 5,
+      "unit": "%",
+      "default": 100,
+      "visible_if": "{{ section.settings.scale_screen }}"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    }
+  ]
 }
 {% endschema %}
