@@ -141,7 +141,7 @@
   {%- endif -%}
 
   {%- if section.settings.show_sticky_bar -%}
-    {% render 'product-sticky-bar', product: product, type_label: product.type %}
+    {% render 'product-sticky-bar', product: product, type_label: product.type, minimize: section.settings.sticky_minimize %}
   {%- endif -%}
 </product-page>
 
@@ -395,6 +395,14 @@
       "label": "t:labels.show_sticky_bar",
       "info": "t:labels.show_sticky_bar_info",
       "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "sticky_minimize",
+      "label": "t:labels.sticky_minimize",
+      "info": "t:labels.sticky_minimize_info",
+      "default": true,
+      "visible_if": "{{ section.settings.show_sticky_bar }}"
     },
     {
       "type": "checkbox",

@@ -457,25 +457,39 @@
    */
   class ProductOverview extends HTMLElement {
     connectedCallback() {
-      this.addEventListener('click', (event) => {
-        const dot = event.target.closest('[data-hotspot]');
-        if (!dot) return;
-        const open = dot.getAttribute('aria-expanded') === 'true';
-        this.closeAll();
-        dot.setAttribute('aria-expanded', String(!open));
-      });
-      this.onOutside = (event) => {
-        if (!event.target.closest('[data-hotspot]')) this.closeAll();
-      };
-      this.onKey = (event) => {
-        if (event.key === 'Escape') this.closeAll();
-      };
-      document.addEventListener('click', this.onOutside);
-      this.addEventListener('keydown', this.onKey);
+      // All listeners through one signal, removed when the element leaves the page (the tabs' pinned
+      // track moves it, which runs connectedCallback again: without this a tap opened and closed a card)
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+      this.addEventListener(
+        'click',
+        (event) => {
+          const dot = event.target.closest('[data-hotspot]');
+          if (!dot) return;
+          const open = dot.getAttribute('aria-expanded') === 'true';
+          this.closeAll();
+          dot.setAttribute('aria-expanded', String(!open));
+        },
+        { signal }
+      );
+      document.addEventListener(
+        'click',
+        (event) => {
+          if (!event.target.closest('[data-hotspot]')) this.closeAll();
+        },
+        { signal }
+      );
+      this.addEventListener(
+        'keydown',
+        (event) => {
+          if (event.key === 'Escape') this.closeAll();
+        },
+        { signal }
+      );
     }
 
     disconnectedCallback() {
-      document.removeEventListener('click', this.onOutside);
+      this.controller?.abort();
     }
 
     closeAll() {

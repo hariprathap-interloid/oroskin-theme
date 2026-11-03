@@ -138,7 +138,8 @@
     display: flex;
     flex: 1 0 auto;
     flex-direction: column;
-    justify-content: center;
+    /* Centred under the tabs when it fits; a taller panel starts at the top ("safe": never pushed out) */
+    justify-content: safe center;
     /* The stage starts at the top of the screen (so the panel's own colour fills behind the header and
        tabs): the content starts below the tabs */
     padding-block-start: calc(var(--stage-offset) + var(--section-padding-top, 0px));
@@ -300,8 +301,8 @@
    *     panel the page carries on.
    *   - Click: a tab scrolls to its panel's part of the track.
    *   - Each panel fills the screen under the tabs; a taller one slides up while pinned until its bottom
-   *     shows. Pinning needs motion allowed and the storefront (not the theme editor, where moving
-   *     sections around could confuse it). Otherwise a click swaps the panel in place and the others are
+   *     shows. Pinning needs a screen at least 990px wide, motion allowed and the storefront (not the
+   *     theme editor, where moving sections around could confuse it). Otherwise a click swaps the panel in place and the others are
    *     hidden (.is-tab-hidden, still in the HTML).
    *   The URL hash follows (#highlights) and a link to /products/x#highlights opens that tab.
    * - "stacked": all sections on the page; a click scrolls to one and the tab of the section crossing a
@@ -401,14 +402,39 @@
     /** A tab was chosen (click or editor): scroll to the start of its part of the track, or swap it in place */
     select(id, fromClick) {
       if (this.track) {
+        // A click jumps straight to the chosen panel: it shows at once, and while the page scrolls to
+        // its part of the track the panels in between are skipped (they used to show one by one)
         const index = this.ids.indexOf(id);
         const top = this.track.getBoundingClientRect().top + window.scrollY + this.starts[index] + 1;
+        this.jumpTo = id;
+        this.show(id);
         window.scrollTo({ top, behavior: this.reducedMotion() ? 'auto' : 'smooth' });
+        this.endJump(top);
       } else {
         this.show(id);
         if (fromClick) this.bringIntoView();
       }
       if (fromClick) history.replaceState(history.state, '', `#${id}`);
+    }
+
+    /**
+     * The jump is over once the page stops scrolling ("scrollend"; older browsers: when the page reaches
+     * the spot, or after 1.5s at the latest); then normal scrolling switches the panels again
+     */
+    endJump(top) {
+      clearTimeout(this.jumpTimer);
+      const finish = () => {
+        clearTimeout(this.jumpTimer);
+        window.removeEventListener('scrollend', finish);
+        this.jumpTo = null;
+        this.onScroll?.();
+      };
+      window.addEventListener('scrollend', finish, { once: true });
+      const check = () => {
+        if (Math.abs(window.scrollY - top) < 2) finish();
+      };
+      this.jumpTimer = setTimeout(finish, 1500);
+      requestAnimationFrame(check);
     }
 
     /** Shows one panel, hides (or, pinned, fades out) the others, fills its tab */
@@ -436,7 +462,9 @@
      * scroll the panel slides up inside the stage until its bottom shows, then the next panel comes in.
      */
     tryPin(current) {
-      if (window.Shopify?.designMode || this.reducedMotion() || this.ids.length < 2) return;
+      // Pinning needs a desktop-sized screen; smaller screens switch panels by tapping the tabs
+      const wide = window.matchMedia('(min-width: 990px)').matches;
+      if (!wide || window.Shopify?.designMode || this.reducedMotion() || this.ids.length < 2) return;
       const bar = this.closest('.shopify-section') || this;
       const barBottom = parseFloat(getComputedStyle(bar).top || 0) + bar.offsetHeight;
       // The stage is the whole screen; the content starts below the tabs (barBottom)
@@ -477,9 +505,11 @@
           const passed = Math.max(0, -this.track.getBoundingClientRect().top);
           let index = this.starts.length - 1;
           while (index > 0 && passed < this.starts[index]) index -= 1;
+          // During a tab click's jump the chosen panel stays (no panels in between)
+          if (this.jumpTo) index = this.ids.indexOf(this.jumpTo);
           // A tall panel slides up over its extra scroll; the others sit at the top of the stage
           this.wrappers.forEach((wrapper, i) => {
-            const slide = i === index ? Math.min(this.overflows[i], passed - this.starts[i]) : 0;
+            const slide = i === index ? Math.min(this.overflows[i], Math.max(0, passed - this.starts[i] - this.holdStart)) : 0;
             wrapper.style.transform = slide > 0 ? `translateY(${-slide}px)` : '';
           });
           if (this.ids[index] !== this.activeId) this.show(this.ids[index]);
@@ -490,18 +520,22 @@
     }
 
     /**
-     * Each panel's part of the track: one stage height plus its extra height (measured in the stage, where
-     * each panel is at least one stage tall). The last panel then holds one more screen before the pinned
+     * Each panel's part of the track: a hold at the start, its extra height (measured in the stage, where
+     * each panel is at least one stage tall), a hold at the end. The last panel then holds one more screen before the pinned
      * block lets go (it has to, so the rest of the page and the footer can be reached).
      */
     measure() {
       if (!this.track) return;
+      // Reading time: a hold at the start (the panel stays still: read the beginning), the slide-up of a
+      // taller panel, a hold at the end before the next panel comes in
+      this.holdStart = Math.round(this.room * 0.5);
+      this.holdEnd = Math.round(this.room * 0.75);
       this.overflows = this.wrappers.map((wrapper) => Math.max(0, wrapper.offsetHeight - this.room));
       this.starts = [];
       let total = 0;
       this.overflows.forEach((overflow) => {
         this.starts.push(total);
-        total += this.room + overflow;
+        total += this.holdStart + overflow + this.holdEnd;
       });
       this.track.style.blockSize = `${total + this.room}px`;
     }

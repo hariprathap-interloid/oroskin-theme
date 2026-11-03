@@ -424,7 +424,9 @@
     "sticky_bar": {
       "label": "{{ title }}: quick buy",
       "quantity": "Qty {{ quantity }}",
-      "buy_now": "Buy now"
+      "buy_now": "Buy now",
+      "minimize": "Minimise the quick buy bar",
+      "expand": "Open the quick buy bar"
     },
     "added": "Added",
     "pairs": {
@@ -438,6 +440,9 @@
     "tabs": {
       "label": "Product sections",
       "top": "Back to the top"
+    },
+    "clinical": {
+      "compare": "Compare {{ before }} and {{ after }}"
     }
   },
   "contact": {

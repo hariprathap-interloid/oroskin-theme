@@ -129,7 +129,11 @@
     "product_hotspot": "Hotspot",
     "product_figure": "Figure",
     "product_highlights": "Highlights",
-    "product_benefit": "Benefit"
+    "product_benefit": "Benefit",
+    "product_how_to": "How to use",
+    "product_how_to_step": "Step",
+    "product_clinical": "Clinical results",
+    "product_clinical_result": "Result"
   },
   "labels": {
     "alignment": "Alignment",
@@ -941,7 +945,21 @@
     "product_tabs_layout": "Layout",
     "product_tabs_layout_info": "Tabbed: one section at a time, a tab swaps it in place. Stacked: every section on the page, a tab scrolls to it.",
     "product_tabs_transition": "Transition between panels",
-    "product_tabs_transition_info": "How the next panel comes in when you scroll or click (Tabbed)."
+    "product_tabs_transition_info": "How the next panel comes in when you scroll or click (Tabbed).",
+    "product_how_to_caption": "Caption on the image",
+    "product_how_to_seconds": "Seconds per step",
+    "product_how_to_seconds_info": "The steps play on their own while the section is in view; a click on a step opens it.",
+    "product_clinical_value": "Result",
+    "product_clinical_compare": "Before / after",
+    "product_clinical_before": "Before image",
+    "product_clinical_before_label": "Before label",
+    "product_clinical_after": "After image",
+    "product_clinical_after_label": "After label",
+    "product_clinical_start": "Slider starts at",
+    "product_clinical_ring_label": "Ring label",
+    "product_clinical_ring_label_info": "Under the first result in the middle of the rings (e.g. Radiance).",
+    "sticky_minimize": "Let visitors minimise the bar",
+    "sticky_minimize_info": "A − button shrinks the bar to a round cart button in the corner; a click opens it again."
   },
   "options": {
     "collection_list_header": {

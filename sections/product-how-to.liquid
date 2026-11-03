@@ -1,0 +1,601 @@
+{%- comment -%}
+  How to use (M6.7, Figma PDP "Product details 13"): eyebrow, a heading with accent words, a vertical
+  timeline of steps (01 Cleanse & Press Dry…) on the left and a media panel on the right: the step's
+  image with its caption, "01/04" and a red progress line.
+  - The steps play on their own once the section is in view (the line fills over "Seconds per step",
+    then the next step), and a click on a step jumps to it. Keyboard focus on a step pauses; reduced
+    motion: no autoplay (click only). Inside the tabs' pinned block it only plays while its panel shows.
+  - The open step shows its text; the others show their number and title. The steps are buttons
+    (aria-expanded) controlling their text.
+  - Static content (connectable to metafields later). The tabs link here with the Anchor (#how-to-use).
+  The timer is the progress line's CSS animation: when it ends ("animationend") the next step opens,
+  and pausing the animation pauses the steps.
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+  assign anchor = section.settings.anchor | handleize | default: 'how-to-use'
+  assign steps_count = section.blocks.size
+  assign seconds = section.settings.seconds | default: 5
+-%}
+
+<product-how-to
+  id="{{ anchor }}"
+  class="product-how-to full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --step-duration: {{ seconds }}s;"
+>
+  <div class="product-how-to__inner">
+    <div class="product-how-to__content">
+      <div class="product-how-to__intro" data-tab-item>
+        {%- if section.settings.eyebrow != blank -%}
+          <p class="eyebrow product-how-to__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+        {%- endif -%}
+        {%- if section.settings.heading != blank -%}
+          <h2 class="product-how-to__heading">{{ section.settings.heading }}</h2>
+        {%- endif -%}
+      </div>
+
+      {%- if steps_count > 0 -%}
+        <ol class="product-how-to__steps" role="list" data-tab-item>
+          {%- for block in section.blocks -%}
+            {%- assign step_number = forloop.index | prepend: '0' | slice: -2, 2 -%}
+            <li class="product-how-to__step{% if forloop.first %} is-active{% endif %}" {{ block.shopify_attributes }}>
+              <button
+                type="button"
+                class="product-how-to__step-button"
+                aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}"
+                aria-controls="StepText-{{ block.id }}"
+                data-step="{{ forloop.index0 }}"
+              >
+                <span class="product-how-to__dot" aria-hidden="true"></span>
+                <span class="product-how-to__number">{{ step_number }}</span>
+                <span class="product-how-to__title">{{ block.settings.title | escape }}</span>
+              </button>
+              {%- if block.settings.text != blank -%}
+                <p class="product-how-to__text" id="StepText-{{ block.id }}">{{ block.settings.text | escape }}</p>
+              {%- endif -%}
+            </li>
+          {%- endfor -%}
+        </ol>
+      {%- endif -%}
+    </div>
+
+    {%- if steps_count > 0 -%}
+      <div class="product-how-to__media" data-tab-item>
+        {%- for block in section.blocks -%}
+          <figure class="product-how-to__slide{% if forloop.first %} is-active{% endif %}" data-slide="{{ forloop.index0 }}">
+            {%- if block.settings.image != blank -%}
+              {{
+                block.settings.image
+                | image_url: width: 1400
+                | image_tag:
+                  loading: 'lazy',
+                  widths: '500, 800, 1100, 1400',
+                  sizes: '(min-width: 990px) 35vw, 100vw',
+                  alt: block.settings.title,
+                  class: 'product-how-to__image'
+              }}
+            {%- else -%}
+              {{ 'lifestyle-2' | placeholder_svg_tag: 'product-how-to__image product-how-to__placeholder' }}
+            {%- endif -%}
+            {%- if block.settings.caption != blank -%}
+              <figcaption class="product-how-to__caption">{{ block.settings.caption | escape }}</figcaption>
+            {%- endif -%}
+          </figure>
+        {%- endfor -%}
+        <p class="product-how-to__counter" aria-hidden="true">
+          <span data-step-current>01</span>/{{ steps_count | prepend: '0' | slice: -2, 2 }}
+        </p>
+        <span class="product-how-to__progress" aria-hidden="true"><span data-step-progress></span></span>
+      </div>
+    {%- endif -%}
+  </div>
+</product-how-to>
+
+{% stylesheet %}
+  /*
+    Figma 1920 ("Product details 13"): eyebrow y 211; heading x 50–870, ~70px, 2 lines, the last words
+    accent; timeline x 50–665: a 1px pale line with dots (active: accent ~22px with a pale ring; others
+    pale ~18px), number accent caps ~16px, title heading font ~28px, the open step's text ~18px; media
+    x 1158–1825 (667 x 546), square corners, caption white ~18px bottom left on a dark fade, "01/04"
+    caps bottom right, a 2px line under them (accent fill over pale).
+  */
+  .product-how-to {
+    display: block;
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+    background-color: var(--color-background);
+  }
+
+  .product-how-to__inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1000fr) minmax(0, 667fr);
+    align-items: start; /* the text starts at the top; the image is centred beside it (below) */
+    gap: max(var(--space-xl), calc(110 * var(--px, 0.0625rem)));
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  .product-how-to__eyebrow {
+    margin: 0 0 var(--space-lg);
+  }
+
+  .product-how-to__heading {
+    margin: 0;
+    max-inline-size: 20ch; /* Figma: 2 lines */
+    font-size: var(--font-size-h1);
+    font-weight: 400;
+    line-height: 1.1;
+  }
+
+  .product-how-to__heading em {
+    color: var(--color-accent);
+    font-style: normal;
+  }
+
+  /* The timeline: a pale line down the dots */
+  .product-how-to__steps {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: max(var(--space-md), calc(26 * var(--px, 0.0625rem)));
+    margin: max(var(--space-xl), calc(44 * var(--px, 0.0625rem))) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .product-how-to__steps::before {
+    content: "";
+    position: absolute;
+    inset-block: 0.75rem 0;
+    inset-inline-start: 0.8125rem;
+    inline-size: 1px;
+    background-color: var(--color-card-border);
+  }
+
+  .product-how-to__step-button {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1.625rem minmax(0, 1fr);
+    column-gap: max(var(--space-md), calc(24 * var(--px, 0.0625rem)));
+    align-items: start;
+    inline-size: 100%;
+    min-block-size: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+    color: inherit;
+    text-align: start;
+    text-transform: none;
+    letter-spacing: normal;
+    cursor: pointer;
+  }
+
+  .product-how-to__step-button:hover {
+    background: none;
+  }
+
+  .product-how-to__step-button:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 4px;
+  }
+
+  .product-how-to__dot {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    justify-self: center;
+    margin-block-start: 0.3rem;
+    inline-size: 1.125rem;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--color-accent) 14%, var(--color-background));
+    transition:
+      background-color var(--duration-fast) var(--ease-out),
+      box-shadow var(--duration-fast) var(--ease-out);
+  }
+
+  .product-how-to__step.is-active .product-how-to__dot {
+    background-color: var(--color-accent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 16%, var(--color-background));
+  }
+
+  /* The "ping" on the current step: a ring grows out of the dot and fades, like a notification */
+  .product-how-to__dot {
+    position: relative;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .product-how-to__step.is-active .product-how-to__dot::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background-color: var(--color-accent);
+      animation: product-how-to-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+    }
+  }
+
+  @keyframes product-how-to-ping {
+    75%,
+    100% {
+      opacity: 0;
+      scale: 2.4;
+    }
+  }
+
+  .product-how-to__number {
+    grid-column: 2;
+    color: var(--color-accent);
+    font-size: var(--font-size-small);
+    letter-spacing: var(--letter-spacing-label);
+  }
+
+  .product-how-to__title {
+    grid-column: 2;
+    font-family: var(--font-heading--family);
+    font-size: var(--font-size-h3);
+    line-height: 1.25;
+  }
+
+  /* Only the open step shows its text (it opens with a short fade) */
+  .product-how-to__text {
+    display: none;
+    margin: var(--space-sm) 0 0 calc(1.625rem + max(var(--space-md), calc(24 * var(--px, 0.0625rem))));
+    font-size: var(--font-size-body-sm);
+    line-height: 1.6;
+  }
+
+  .product-how-to__step.is-active .product-how-to__text {
+    display: block;
+    animation: product-how-to-text var(--duration-normal) var(--ease-out);
+  }
+
+  @keyframes product-how-to-text {
+    from {
+      opacity: 0;
+      translate: 0 0.5rem;
+    }
+  }
+
+  /* The media panel: the slides stacked, the open one shown */
+  .product-how-to__media {
+    align-self: center;
+    position: relative;
+    display: grid;
+    overflow: hidden;
+    aspect-ratio: 667 / 546;
+    background-color: var(--color-tint, color-mix(in srgb, var(--color-text) 6%, var(--color-background)));
+    color: #ffffff;
+  }
+
+  .product-how-to__slide {
+    grid-area: 1 / 1;
+    margin: 0;
+    opacity: 0;
+    transition: opacity 0.6s var(--ease-out);
+  }
+
+  .product-how-to__slide.is-active {
+    opacity: 1;
+  }
+
+  .product-how-to__image {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .product-how-to__placeholder {
+    fill: color-mix(in srgb, var(--color-text) 30%, transparent);
+  }
+
+  /* A dark fade at the bottom, so the white caption and counter stay readable on any photo */
+  .product-how-to__media::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0;
+    block-size: 30%;
+    background: linear-gradient(to top, #00000080, transparent);
+    pointer-events: none;
+  }
+
+  .product-how-to__caption {
+    position: absolute;
+    z-index: 1;
+    inset-block-end: max(var(--space-lg), calc(28 * var(--px, 0.0625rem)));
+    inset-inline: max(var(--space-md), calc(20 * var(--px, 0.0625rem))) 6rem;
+    margin: 0;
+    font-size: var(--font-size-body);
+  }
+
+  .product-how-to__counter {
+    position: absolute;
+    z-index: 1;
+    inset-block-end: max(var(--space-lg), calc(24 * var(--px, 0.0625rem)));
+    inset-inline-end: max(var(--space-md), calc(20 * var(--px, 0.0625rem)));
+    margin: 0;
+    font-size: var(--font-size-small);
+    letter-spacing: var(--letter-spacing-label);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The progress line: its fill is the step timer (the script moves on when the animation ends) */
+  .product-how-to__progress {
+    position: absolute;
+    z-index: 1;
+    inset-block-end: max(var(--space-sm), calc(12 * var(--px, 0.0625rem)));
+    inset-inline: max(var(--space-md), calc(20 * var(--px, 0.0625rem)));
+    block-size: 2px;
+    background-color: #ffffff59;
+  }
+
+  .product-how-to__progress > span {
+    display: block;
+    inline-size: 0;
+    block-size: 100%;
+    background-color: var(--color-accent);
+  }
+
+  .product-how-to.is-playing .product-how-to__progress > span {
+    animation: product-how-to-progress var(--step-duration) linear forwards;
+  }
+
+  .product-how-to.is-paused .product-how-to__progress > span {
+    animation-play-state: paused;
+  }
+
+  /* Without autoplay (click only / reduced motion): the line shows which step of how many is open */
+  .product-how-to:not(.is-playing) .product-how-to__progress > span {
+    inline-size: var(--step-fill, 25%);
+    transition: inline-size var(--duration-normal) var(--ease-out);
+  }
+
+  @keyframes product-how-to-progress {
+    from {
+      inline-size: 0;
+    }
+
+    to {
+      inline-size: 100%;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .product-how-to__slide,
+    .product-how-to__dot {
+      transition: none;
+    }
+
+    .product-how-to__step.is-active .product-how-to__text {
+      animation: none;
+    }
+  }
+
+  /* Tablets and phones (brief: small media beside the timeline): one column, the media first */
+  @media (max-width: 989px) {
+    .product-how-to__inner {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .product-how-to__media {
+      order: -1;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <product-how-to>: opens one step at a time. Autoplay: the progress line's CSS animation is the timer;
+   * when it ends, the next step opens and the line starts again. It plays only while the section is on
+   * screen (and, inside the tabs' pinned block, while its panel shows); hover and keyboard focus pause it;
+   * reduced motion: no autoplay. A click on a step opens it (and restarts the timer).
+   */
+  class ProductHowTo extends HTMLElement {
+    connectedCallback() {
+      // Every listener goes through this signal and is removed in disconnectedCallback. The tabs' pinned
+      // track moves this section in the page, which runs connectedCallback again: without this, the
+      // listeners were added twice and each finished line opened two steps (01 → 03)
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+      this.steps = [...this.querySelectorAll('.product-how-to__step')];
+      this.slides = [...this.querySelectorAll('[data-slide]')];
+      this.progress = this.querySelector('[data-step-progress]');
+      // The step that is open now (after a move in the page it isn't always the first)
+      this.index = Math.max(0, this.steps.findIndex((step) => step.classList.contains('is-active')));
+      if (this.steps.length < 2) return;
+
+      this.addEventListener(
+        'click',
+        (event) => {
+          const button = event.target.closest('[data-step]');
+          if (button) this.open(Number(button.dataset.step));
+        },
+        { signal }
+      );
+
+      this.autoplay = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      this.updateFill();
+      if (!this.autoplay) return;
+
+      this.progress?.addEventListener('animationend', () => this.open(this.index + 1), { signal });
+      this.inView = false;
+      this.hovered = false;
+      this.observer = new IntersectionObserver(([entry]) => {
+        this.inView = entry.isIntersecting;
+        this.updatePlay();
+      }, { threshold: 0.35 });
+      this.observer.observe(this);
+
+      // Pause while a keyboard user is on a step (focus-visible), so the text doesn't change under them.
+      // Not after a mouse click (the button keeps focus, which used to pause it for good) or on hover.
+      const onFocus = () => {
+        this.hovered = Boolean(this.querySelector(':focus-visible'));
+        this.updatePlay();
+      };
+      this.addEventListener('focusin', onFocus, { signal });
+      this.addEventListener('focusout', () => requestAnimationFrame(onFocus), { signal });
+
+      // Inside the tabs' pinned block: hidden panels (is-tab-faded / is-tab-hidden) don't play
+      const wrapper = this.closest('.shopify-section');
+      if (wrapper) {
+        this.classObserver = new MutationObserver(() => this.updatePlay());
+        this.classObserver.observe(wrapper, { attributes: true, attributeFilter: ['class'] });
+      }
+    }
+
+    disconnectedCallback() {
+      this.controller?.abort();
+      this.observer?.disconnect();
+      this.classObserver?.disconnect();
+    }
+
+    panelHidden() {
+      return Boolean(this.closest('.is-tab-faded, .is-tab-hidden'));
+    }
+
+    updatePlay() {
+      const play = this.inView && !this.panelHidden();
+      this.classList.toggle('is-playing', play);
+      this.classList.toggle('is-paused', play && this.hovered);
+    }
+
+    /** Opens step i (wrapping round), shows its slide, restarts the timer */
+    open(i) {
+      const count = this.steps.length;
+      this.index = (i + count) % count;
+      this.steps.forEach((step, n) => {
+        const active = n === this.index;
+        step.classList.toggle('is-active', active);
+        step.querySelector('[data-step]')?.setAttribute('aria-expanded', String(active));
+      });
+      this.slides.forEach((slide, n) => slide.classList.toggle('is-active', n === this.index));
+      const current = this.querySelector('[data-step-current]');
+      if (current) current.textContent = String(this.index + 1).padStart(2, '0');
+      this.updateFill();
+      // Restart the line: remove the animation, force a reflow, put it back
+      if (this.progress && this.classList.contains('is-playing')) {
+        this.progress.style.animation = 'none';
+        void this.progress.offsetWidth;
+        this.progress.style.animation = '';
+      }
+    }
+
+    /** Click-only: the line shows how far through the steps the open one is (1 of 4 = 25%) */
+    updateFill() {
+      this.style.setProperty('--step-fill', `${((this.index + 1) / this.steps.length) * 100}%`);
+    }
+  }
+
+  if (!customElements.get('product-how-to')) customElements.define('product-how-to', ProductHowTo);
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.product_how_to",
+  "tag": "section",
+  "class": "product-how-to-section",
+  "enabled_on": { "templates": ["product"] },
+  "max_blocks": 6,
+  "blocks": [
+    {
+      "type": "step",
+      "name": "t:general.product_how_to_step",
+      "settings": [
+        { "type": "text", "id": "title", "label": "t:labels.heading", "default": "Cleanse & press dry" },
+        { "type": "textarea", "id": "text", "label": "t:labels.text", "default": "Begin on skin still faintly damp — the serum travels further on moisture." },
+        { "type": "image_picker", "id": "image", "label": "t:labels.image" },
+        { "type": "text", "id": "caption", "label": "t:labels.product_how_to_caption", "default": "Blot with linen — never wipe." }
+      ]
+    }
+  ],
+  "settings": [
+    {
+      "type": "text",
+      "id": "anchor",
+      "label": "t:labels.product_section_anchor",
+      "info": "t:labels.product_section_anchor_info",
+      "default": "how-to-use"
+    },
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "How to use"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.accent_heading_info",
+      "default": "Four minutes, performed the same way, <em>every evening.</em>"
+    },
+    {
+      "type": "range",
+      "id": "seconds",
+      "label": "t:labels.product_how_to_seconds",
+      "info": "t:labels.product_how_to_seconds_info",
+      "min": 3,
+      "max": 12,
+      "step": 1,
+      "unit": "s",
+      "default": 5
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "options": [
+        { "value": "wide", "label": "t:options.section_width.wide" },
+        { "value": "widest", "label": "t:options.section_width.widest" },
+        { "value": "full", "label": "t:options.section_width.full" }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.product_how_to",
+      "blocks": [
+        { "type": "step", "settings": { "title": "Cleanse & press dry", "text": "Begin on skin still faintly damp — the serum travels further on moisture.", "caption": "Blot with linen — never wipe." } },
+        { "type": "step", "settings": { "title": "Four drops, warmed", "text": "Warm four drops between your palms for a few seconds.", "caption": "Body heat opens the oils." } },
+        { "type": "step", "settings": { "title": "Press, never rub", "text": "Press your palms to the cheeks, forehead and neck, holding each for a breath.", "caption": "Pressure, not friction." } },
+        { "type": "step", "settings": { "title": "Seal & rest", "text": "Finish with your moisturiser and let it settle before bed.", "caption": "Let the night do the rest." } }
+      ]
+    }
+  ]
+}
+{% endschema %}

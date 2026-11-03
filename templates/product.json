@@ -25,7 +25,8 @@
                 "label": "type",
                 "show_badge": true,
                 "show_share": true
-              }
+              },
+              "blocks": {}
             },
             "title": {
               "type": "product-title",
@@ -33,7 +34,8 @@
                 "size": "h2",
                 "tag": "h1",
                 "link_to_product": false
-              }
+              },
+              "blocks": {}
             },
             "price": {
               "type": "product-price",
@@ -42,19 +44,23 @@
                 "show_savings": true,
                 "show_rating": true,
                 "show_tax_note": true
-              }
+              },
+              "blocks": {}
             },
             "stock": {
               "type": "product-stock",
               "settings": {
+                "label": "",
                 "threshold": 10
-              }
+              },
+              "blocks": {}
             },
             "description": {
               "type": "product-description",
               "settings": {
                 "word_limit": 0
-              }
+              },
+              "blocks": {}
             },
             "buy_buttons": {
               "type": "buy-buttons",
@@ -68,8 +74,11 @@
                 "show_selling_plans": true,
                 "plan_default": "subscription",
                 "show_recommended": true,
-                "show_plan_perk": true
-              }
+                "recommended_label": "",
+                "show_plan_perk": true,
+                "plan_perk": ""
+              },
+              "blocks": {}
             }
           },
           "block_order": [
@@ -90,7 +99,9 @@
           "blocks": {
             "offers": {
               "type": "product-offers",
-              "settings": {},
+              "settings": {
+                "heading": ""
+              },
               "blocks": {
                 "o1": {
                   "type": "_offer",
@@ -99,7 +110,8 @@
                     "offer": "10% instant discount",
                     "detail": "Up to $60 • Credit cards",
                     "code": "AXIS10"
-                  }
+                  },
+                  "blocks": {}
                 },
                 "o2": {
                   "type": "_offer",
@@ -108,7 +120,8 @@
                     "offer": "Flat $40 instant discount",
                     "detail": "On orders above $300",
                     "code": "ICICI40"
-                  }
+                  },
+                  "blocks": {}
                 },
                 "o3": {
                   "type": "_offer",
@@ -117,7 +130,8 @@
                     "offer": "3% off + 10% back",
                     "detail": "Instant gift vouchers",
                     "code": "SBI10"
-                  }
+                  },
+                  "blocks": {}
                 },
                 "o4": {
                   "type": "_offer",
@@ -126,7 +140,8 @@
                     "offer": "Flat $50 discount",
                     "detail": "Using promo code HDFC6",
                     "code": "HDFC6"
-                  }
+                  },
+                  "blocks": {}
                 }
               },
               "block_order": [
@@ -139,41 +154,49 @@
             "pickup": {
               "type": "product-pickup",
               "settings": {
+                "heading": "",
                 "delivery_note": "Delivery in 2–3 business days",
                 "show_pickup": true
-              }
+              },
+              "blocks": {}
             },
             "features": {
               "type": "product-features",
-              "settings": {},
+              "settings": {
+                "heading": ""
+              },
               "blocks": {
                 "f1": {
                   "type": "_product-feature",
                   "settings": {
-                    "label": "Recyclable",
-                    "builtin_icon": "recyclable"
-                  }
+                    "builtin_icon": "recyclable",
+                    "label": "Recyclable"
+                  },
+                  "blocks": {}
                 },
                 "f2": {
                   "type": "_product-feature",
                   "settings": {
-                    "label": "Vegan",
-                    "builtin_icon": "vegan"
-                  }
+                    "builtin_icon": "vegan",
+                    "label": "Vegan"
+                  },
+                  "blocks": {}
                 },
                 "f3": {
                   "type": "_product-feature",
                   "settings": {
-                    "label": "Cruelty-free",
-                    "builtin_icon": "cruelty-free"
-                  }
+                    "builtin_icon": "cruelty-free",
+                    "label": "Cruelty-free"
+                  },
+                  "blocks": {}
                 },
                 "f4": {
                   "type": "_product-feature",
                   "settings": {
-                    "label": "Parabens free",
-                    "builtin_icon": "paraben-free"
-                  }
+                    "builtin_icon": "paraben-free",
+                    "label": "Parabens free"
+                  },
+                  "blocks": {}
                 }
               },
               "block_order": [
@@ -185,11 +208,18 @@
             },
             "videos": {
               "type": "product-videos",
-              "settings": {}
+              "settings": {
+                "heading": ""
+              },
+              "blocks": {}
             },
             "payment": {
               "type": "product-payment",
-              "settings": {}
+              "settings": {
+                "heading": "",
+                "text": ""
+              },
+              "blocks": {}
             }
           },
           "block_order": [
@@ -205,24 +235,34 @@
         "info_card",
         "more_card"
       ],
-      "settings": {}
+      "settings": {
+        "show_breadcrumb": true,
+        "show_sticky_bar": true,
+        "enable_lightbox": true,
+        "section_width": "widest",
+        "scale_screen": true,
+        "text_scale": 100,
+        "color_scheme": "",
+        "padding_top": 24,
+        "padding_bottom": 64
+      }
     },
     "pairs": {
       "type": "product-pairs",
       "settings": {
         "eyebrow": "Bought together",
         "heading": "Pairs <em>well with</em>",
+        "products": [
+          "radiance-vitamin-c-serum",
+          "magnolia-bloom-body-oil",
+          "rose-eau-de-parfum"
+        ],
         "limit": 3,
         "preselect": false,
         "section_width": "widest",
         "color_scheme": "scheme-2",
         "padding_top": 64,
-        "padding_bottom": 64,
-        "products": [
-          "radiance-vitamin-c-serum",
-          "magnolia-bloom-body-oil",
-          "rose-eau-de-parfum"
-        ]
+        "padding_bottom": 64
       }
     },
     "tabs": {
@@ -280,9 +320,11 @@
         "t6"
       ],
       "settings": {
-        "show_top": true,
         "layout": "tabbed",
         "transition": "up",
+        "show_top": true,
+        "section_width": "widest",
+        "color_scheme": "",
         "padding_top": 0,
         "padding_bottom": 0
       }
@@ -391,7 +433,13 @@
         "anchor": "overview",
         "eyebrow": "The object",
         "heading": "Written for <em>the senses,</em> not the spec sheet.",
-        "quote": "It behaves less like a treatment and more like <em>a change of light</em>"
+        "text": "<p>The formula was built backwards — from the finish. We wanted the look of skin caught in late afternoon light, then reverse-engineered a lipid system that could hold it through a full day of wear.</p>",
+        "image": "shopify://shop_images/d25e9d3b6caacff864387637efd0c84e17cf417b.png",
+        "quote": "It behaves less like a treatment and more like <em>a change of light</em>",
+        "section_width": "widest",
+        "color_scheme": "",
+        "padding_top": 64,
+        "padding_bottom": 64
       }
     },
     "highlights": {
@@ -505,7 +553,123 @@
       "settings": {
         "anchor": "highlights",
         "eyebrow": "Highlights",
-        "heading": "<em>Six reasons</em> it earns its shelf."
+        "heading": "<em>Six reasons</em> it earns its shelf.",
+        "text": "<p>Ritual Serum No. 01 was formulated backwards — from how skin feels at the end of the day, to the molecules that get it there.</p>",
+        "section_width": "widest",
+        "color_scheme": "",
+        "padding_top": 64,
+        "padding_bottom": 64
+      }
+    },
+    "how_to": {
+      "type": "product-how-to",
+      "blocks": {
+        "s1": {
+          "type": "step",
+          "settings": {
+            "title": "Cleanse & press dry",
+            "text": "Begin on skin still faintly damp — the serum travels further on moisture.",
+            "image": "shopify://shop_images/image_667.jpg",
+            "caption": "Blot with linen — never wipe."
+          }
+        },
+        "s2": {
+          "type": "step",
+          "settings": {
+            "title": "Four drops, warmed",
+            "text": "Warm four drops between your palms for a few seconds.",
+            "image": "shopify://shop_images/image_670.jpg",
+            "caption": "Body heat opens the oils."
+          }
+        },
+        "s3": {
+          "type": "step",
+          "settings": {
+            "title": "Press, never rub",
+            "text": "Press your palms to the cheeks, forehead and neck, holding each for a breath.",
+            "image": "shopify://shop_images/image_669.jpg",
+            "caption": "Pressure, not friction."
+          }
+        },
+        "s4": {
+          "type": "step",
+          "settings": {
+            "title": "Seal & rest",
+            "text": "Finish with your moisturiser and let it settle before bed.",
+            "image": "shopify://shop_images/Component_1639.jpg",
+            "caption": "Let the night do the rest."
+          }
+        }
+      },
+      "block_order": [
+        "s1",
+        "s2",
+        "s3",
+        "s4"
+      ],
+      "settings": {
+        "anchor": "how-to-use",
+        "eyebrow": "How to use",
+        "heading": "Four minutes, performed the same way, <em>every evening.</em>",
+        "seconds": 5,
+        "section_width": "widest",
+        "color_scheme": "",
+        "padding_top": 64,
+        "padding_bottom": 64
+      }
+    },
+    "clinical": {
+      "type": "product-clinical",
+      "blocks": {
+        "r1": {
+          "type": "result",
+          "settings": {
+            "label": "reported visibly brighter skin",
+            "value": 94
+          }
+        },
+        "r2": {
+          "type": "result",
+          "settings": {
+            "label": "measured improved elasticity",
+            "value": 88
+          }
+        },
+        "r3": {
+          "type": "result",
+          "settings": {
+            "label": "saw reduced pigmentation",
+            "value": 79
+          }
+        },
+        "r4": {
+          "type": "result",
+          "settings": {
+            "label": "found it comfortable daily",
+            "value": 97
+          }
+        }
+      },
+      "block_order": [
+        "r1",
+        "r2",
+        "r3",
+        "r4"
+      ],
+      "settings": {
+        "anchor": "clinical-results",
+        "eyebrow": "Clinical results",
+        "heading": "Twelve weeks, 142 participants, <em>no retouching.</em>",
+        "before": "shopify://shop_images/1894ec2e516c8ad0a7fc78817f607230629fa0c2.png",
+        "before_label": "Week 0",
+        "after": "shopify://shop_images/81ac94d9974a1d94cc98afcdf48e6c63991272a9.png",
+        "after_label": "Week 12",
+        "start": 50,
+        "ring_label": "Radiance",
+        "section_width": "widest",
+        "color_scheme": "",
+        "padding_top": 64,
+        "padding_bottom": 64
       }
     }
   },
@@ -514,6 +678,8 @@
     "pairs",
     "tabs",
     "overview",
-    "highlights"
+    "highlights",
+    "how_to",
+    "clinical"
   ]
 }

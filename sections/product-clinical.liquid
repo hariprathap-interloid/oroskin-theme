@@ -1,0 +1,579 @@
+{%- comment -%}
+  Clinical results (M6.7, Figma PDP "Product details 9"): eyebrow, a heading with accent words, then a
+  before / after slider (WEEK 0 | WEEK 12), rings of the results (the first one's figure in the middle:
+  "94% RADIANCE") and the results as rows ("reported visibly brighter skin … 94%").
+  - Before / after: the "after" image lies over the "before" one and is cut at the slider position
+    (clip-path). The control is a real range input over the images (drag, tap, or ← / → from the
+    keyboard), labelled for screen readers.
+  - Rings: one per result block (up to 4), drawn with SVG circles of pathLength 100, so a dash of 94
+    is 94% of the ring. They draw once the section is in view (not with reduced motion).
+  - Static content (connectable to metafields later). The tabs link here with the Anchor
+    (#clinical-results).
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+  assign anchor = section.settings.anchor | handleize | default: 'clinical-results'
+  assign results = section.blocks
+  assign lead = results.first
+  assign start = section.settings.start | default: 50
+-%}
+
+<product-clinical
+  id="{{ anchor }}"
+  class="product-clinical full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
+>
+  <div class="product-clinical__inner">
+    <div class="product-clinical__intro" data-tab-item>
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="eyebrow product-clinical__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+      {%- endif -%}
+      {%- if section.settings.heading != blank -%}
+        <h2 class="product-clinical__heading">{{ section.settings.heading }}</h2>
+      {%- endif -%}
+    </div>
+
+    <div class="product-clinical__layout">
+      {%- comment -%} Before / after {%- endcomment -%}
+      <div class="product-clinical__compare" style="--pos: {{ start }}%;" data-compare data-tab-item>
+        <div class="product-clinical__frame">
+          {%- if section.settings.before != blank -%}
+            {{
+              section.settings.before
+              | image_url: width: 1400
+              | image_tag:
+                loading: 'lazy',
+                widths: '500, 800, 1100, 1400',
+                sizes: '(min-width: 990px) 38vw, 100vw',
+                class: 'product-clinical__image'
+            }}
+          {%- else -%}
+            {{ 'detailed-apparel-1' | placeholder_svg_tag: 'product-clinical__image product-clinical__placeholder' }}
+          {%- endif -%}
+        </div>
+        <div class="product-clinical__frame product-clinical__frame--after">
+          {%- if section.settings.after != blank -%}
+            {{
+              section.settings.after
+              | image_url: width: 1400
+              | image_tag:
+                loading: 'lazy',
+                widths: '500, 800, 1100, 1400',
+                sizes: '(min-width: 990px) 38vw, 100vw',
+                class: 'product-clinical__image'
+            }}
+          {%- else -%}
+            {{ 'detailed-apparel-1' | placeholder_svg_tag: 'product-clinical__image product-clinical__placeholder product-clinical__placeholder--after' }}
+          {%- endif -%}
+        </div>
+
+        {%- if section.settings.before_label != blank -%}
+          <span class="product-clinical__tag product-clinical__tag--before" aria-hidden="true">{{ section.settings.before_label | escape }}</span>
+        {%- endif -%}
+        {%- if section.settings.after_label != blank -%}
+          <span class="product-clinical__tag product-clinical__tag--after" aria-hidden="true">{{ section.settings.after_label | escape }}</span>
+        {%- endif -%}
+
+        <span class="product-clinical__line" aria-hidden="true">
+          <span class="product-clinical__handle">
+            <span class="product-clinical__handle-icon">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+            <span class="product-clinical__handle-icon product-clinical__handle-icon--right">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+          </span>
+        </span>
+
+        {%- assign compare_label = 'products.clinical.compare' | t: before: section.settings.before_label, after: section.settings.after_label -%}
+        <input
+          class="product-clinical__range"
+          type="range"
+          min="0"
+          max="100"
+          step="1"
+          value="{{ start }}"
+          aria-label="{{ compare_label | escape }}"
+          data-compare-range
+        >
+      </div>
+
+      {%- if results.size > 0 -%}
+        {%- comment -%} The rings: the first result outermost in the accent colour, the others pale inside {%- endcomment -%}
+        <div class="product-clinical__rings" data-tab-item>
+          <svg class="product-clinical__svg" viewBox="0 0 100 100" aria-hidden="true">
+            {%- for block in results limit: 4 -%}
+              {%- assign ring_r = forloop.index0 | times: 7.5 | minus: 47 | abs -%}
+              <circle class="product-clinical__track" cx="50" cy="50" r="{{ ring_r }}" pathLength="100"></circle>
+              <circle
+                class="product-clinical__arc{% if forloop.first %} product-clinical__arc--lead{% endif %}"
+                cx="50"
+                cy="50"
+                r="{{ ring_r }}"
+                pathLength="100"
+                style="--value: {{ block.settings.value }};"
+              ></circle>
+            {%- endfor -%}
+          </svg>
+          {%- if lead -%}
+            <p class="product-clinical__centre">
+              <span class="product-clinical__centre-value">{{ lead.settings.value }}%</span>
+              {%- if section.settings.ring_label != blank -%}
+                <span class="product-clinical__centre-label">{{ section.settings.ring_label | escape }}</span>
+              {%- endif -%}
+            </p>
+          {%- endif -%}
+        </div>
+
+        <dl class="product-clinical__results" data-tab-item>
+          {%- for block in results -%}
+            <div class="product-clinical__result{% if forloop.first %} product-clinical__result--lead{% endif %}" {{ block.shopify_attributes }}>
+              <dt>{{ block.settings.label | escape }}</dt>
+              <dd>{{ block.settings.value }}%</dd>
+            </div>
+          {%- endfor -%}
+        </dl>
+      {%- endif -%}
+    </div>
+  </div>
+</product-clinical>
+
+{% stylesheet %}
+  /*
+    Figma 1920 ("Product details 9"): eyebrow y 211; heading x 54–845, ~70px, 2 lines, accent words;
+    before / after x 56–791 (735 x 455), square corners: a 1px white line with a 56px white circle (◂ ▸)
+    at the middle; frosted pills "WEEK 0" (top left) and "WEEK 12" (top right). Rings x 907–1226 (~320):
+    the outer ring accent ~3px, three pale ones inside; "94%" ~26px medium and "RADIANCE" caps in the
+    middle. Results x 1303–1837: label ~18px (the first dark, the others grey), value caps ~15px right,
+    a hairline under each row.
+  */
+  .product-clinical {
+    display: block;
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+    background-color: var(--color-background);
+  }
+
+  .product-clinical__inner {
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  .product-clinical__eyebrow {
+    margin: 0 0 var(--space-lg);
+  }
+
+  .product-clinical__heading {
+    margin: 0;
+    max-inline-size: 26ch; /* Figma: 2 lines */
+    font-size: var(--font-size-h1);
+    font-weight: 400;
+    line-height: 1.1;
+  }
+
+  .product-clinical__heading em {
+    color: var(--color-accent);
+    font-style: normal;
+  }
+
+  .product-clinical__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 735fr) minmax(0, 320fr) minmax(0, 534fr);
+    align-items: center;
+    gap: max(var(--space-xl), calc(90 * var(--px, 0.0625rem)));
+    margin-block-start: max(var(--space-xl), calc(44 * var(--px, 0.0625rem)));
+  }
+
+  /* Before / after: both frames on top of each other; the "after" one is cut at --pos */
+  .product-clinical__compare {
+    position: relative;
+    display: grid;
+    overflow: hidden;
+    aspect-ratio: 735 / 455;
+    background-color: var(--color-tint, color-mix(in srgb, var(--color-text) 6%, var(--color-background)));
+    user-select: none;
+  }
+
+  .product-clinical__frame {
+    grid-area: 1 / 1;
+  }
+
+  .product-clinical__frame--after {
+    clip-path: inset(0 0 0 var(--pos));
+  }
+
+  .product-clinical__image {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .product-clinical__placeholder {
+    fill: color-mix(in srgb, var(--color-text) 30%, transparent);
+  }
+
+  .product-clinical__placeholder--after {
+    background-color: color-mix(in srgb, var(--color-accent) 10%, var(--color-background));
+  }
+
+  .product-clinical__tag {
+    position: absolute;
+    z-index: 2;
+    inset-block-start: max(var(--space-sm), calc(20 * var(--px, 0.0625rem)));
+    padding: 0.45em 1.25em;
+    border-radius: var(--radius-pill);
+    background-color: #00000040;
+    color: #ffffff;
+    font-size: var(--font-size-small);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+    pointer-events: none;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+
+  .product-clinical__tag--before {
+    inset-inline-start: max(var(--space-sm), calc(25 * var(--px, 0.0625rem)));
+  }
+
+  .product-clinical__tag--after {
+    inset-inline-end: max(var(--space-sm), calc(25 * var(--px, 0.0625rem)));
+  }
+
+  /* The divider at --pos, with the round handle in the middle */
+  .product-clinical__line {
+    position: absolute;
+    z-index: 2;
+    inset-block: 0;
+    inset-inline-start: var(--pos);
+    inline-size: 1px;
+    background-color: #ffffffcc;
+    pointer-events: none;
+  }
+
+  .product-clinical__handle {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.125rem;
+    inline-size: max(2.75rem, calc(56 * var(--px, 0.0625rem)));
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background-color: #ffffff;
+    box-shadow: 0 2px 10px #00000026;
+    color: var(--color-text);
+    translate: -50% -50%;
+  }
+
+  .product-clinical__handle-icon {
+    display: inline-flex;
+    rotate: 180deg; /* icon-arrow.svg points right: the first one points left */
+  }
+
+  .product-clinical__handle-icon--right {
+    rotate: 0deg;
+  }
+
+  .product-clinical__handle-icon svg {
+    inline-size: 0.625rem;
+    block-size: auto;
+  }
+
+  /* The real control: an invisible range input over the whole image (drag, tap, ← / →) */
+  .product-clinical .product-clinical__range {
+    position: absolute;
+    z-index: 3;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    min-block-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    opacity: 0;
+    cursor: ew-resize;
+    appearance: none;
+  }
+
+  .product-clinical__compare:has(.product-clinical__range:focus-visible) .product-clinical__handle {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+  }
+
+  /* The rings */
+  .product-clinical__rings {
+    position: relative;
+    display: grid;
+    place-items: center;
+    aspect-ratio: 1;
+  }
+
+  .product-clinical__svg {
+    grid-area: 1 / 1;
+    inline-size: 100%;
+    block-size: 100%;
+    rotate: -90deg; /* the rings start at the top */
+  }
+
+  .product-clinical__track,
+  .product-clinical__arc {
+    fill: none;
+    stroke-width: 1.6;
+  }
+
+  .product-clinical__track {
+    stroke: color-mix(in srgb, var(--color-accent) 7%, var(--color-background));
+  }
+
+  .product-clinical__arc {
+    stroke: color-mix(in srgb, var(--color-accent) 30%, var(--color-background));
+    stroke-dasharray: var(--value) 100;
+    stroke-linecap: round;
+  }
+
+  .product-clinical__arc--lead {
+    stroke: var(--color-accent);
+    stroke-width: 2;
+  }
+
+  /* Drawn when in view (the script adds is-drawn); before that the arcs are empty */
+  @media (prefers-reduced-motion: no-preference) {
+    .product-clinical:not(.is-drawn) .product-clinical__arc {
+      stroke-dasharray: 0 100;
+    }
+
+    .product-clinical__arc {
+      transition: stroke-dasharray 1.4s var(--ease-out);
+    }
+
+    .product-clinical__track + .product-clinical__arc {
+      transition-delay: 0.1s;
+    }
+  }
+
+  .product-clinical__centre {
+    grid-area: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-xs);
+    margin: 0;
+    text-align: center;
+  }
+
+  .product-clinical__centre-value {
+    font-size: var(--font-size-h3);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .product-clinical__centre-label {
+    font-size: var(--font-size-small);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  .product-clinical__results {
+    margin: 0;
+  }
+
+  .product-clinical__result {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-md);
+    padding-block: var(--space-md);
+    border-block-end: 1px solid var(--color-card-border);
+    color: color-mix(in srgb, var(--color-text) 62%, var(--color-background));
+  }
+
+  .product-clinical__result--lead {
+    color: var(--color-text);
+  }
+
+  .product-clinical__result dt {
+    font-size: var(--font-size-body-sm);
+  }
+
+  .product-clinical__result dd {
+    margin: 0;
+    font-size: var(--font-size-small);
+    letter-spacing: var(--letter-spacing-label);
+  }
+
+  /* Tablets: the slider full width, rings and results side by side under it (brief, phone) */
+  @media (max-width: 1199px) {
+    .product-clinical__layout {
+      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    }
+
+    .product-clinical__compare {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (max-width: 749px) {
+    .product-clinical__layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .product-clinical__rings {
+      max-inline-size: 16rem;
+      justify-self: center;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <product-clinical>: the before / after range moves the cut (--pos); the rings draw once the section is
+   * in view (is-drawn).
+   */
+  class ProductClinical extends HTMLElement {
+    connectedCallback() {
+      const compare = this.querySelector('[data-compare]');
+      const range = this.querySelector('[data-compare-range]');
+      // Through a signal, removed when the element leaves the page (the tabs' pinned track moves it)
+      this.controller = new AbortController();
+      range?.addEventListener('input', () => compare.style.setProperty('--pos', `${range.value}%`), {
+        signal: this.controller.signal,
+      });
+
+      this.observer = new IntersectionObserver(([entry]) => {
+        if (!entry.isIntersecting) return;
+        this.classList.add('is-drawn');
+        this.observer.disconnect();
+      }, { threshold: 0.3 });
+      this.observer.observe(this);
+    }
+
+    disconnectedCallback() {
+      this.controller?.abort();
+      this.observer?.disconnect();
+    }
+  }
+
+  if (!customElements.get('product-clinical')) customElements.define('product-clinical', ProductClinical);
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.product_clinical",
+  "tag": "section",
+  "class": "product-clinical-section",
+  "enabled_on": { "templates": ["product"] },
+  "max_blocks": 6,
+  "blocks": [
+    {
+      "type": "result",
+      "name": "t:general.product_clinical_result",
+      "settings": [
+        { "type": "text", "id": "label", "label": "t:labels.label", "default": "reported visibly brighter skin" },
+        { "type": "range", "id": "value", "label": "t:labels.product_clinical_value", "min": 0, "max": 100, "step": 1, "unit": "%", "default": 94 }
+      ]
+    }
+  ],
+  "settings": [
+    {
+      "type": "text",
+      "id": "anchor",
+      "label": "t:labels.product_section_anchor",
+      "info": "t:labels.product_section_anchor_info",
+      "default": "clinical-results"
+    },
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "Clinical results"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.accent_heading_info",
+      "default": "Twelve weeks, 142 participants, <em>no retouching.</em>"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.product_clinical_compare"
+    },
+    { "type": "image_picker", "id": "before", "label": "t:labels.product_clinical_before" },
+    { "type": "text", "id": "before_label", "label": "t:labels.product_clinical_before_label", "default": "Week 0" },
+    { "type": "image_picker", "id": "after", "label": "t:labels.product_clinical_after" },
+    { "type": "text", "id": "after_label", "label": "t:labels.product_clinical_after_label", "default": "Week 12" },
+    {
+      "type": "range",
+      "id": "start",
+      "label": "t:labels.product_clinical_start",
+      "min": 10,
+      "max": 90,
+      "step": 5,
+      "unit": "%",
+      "default": 50
+    },
+    {
+      "type": "text",
+      "id": "ring_label",
+      "label": "t:labels.product_clinical_ring_label",
+      "info": "t:labels.product_clinical_ring_label_info",
+      "default": "Radiance"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "options": [
+        { "value": "wide", "label": "t:options.section_width.wide" },
+        { "value": "widest", "label": "t:options.section_width.widest" },
+        { "value": "full", "label": "t:options.section_width.full" }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.product_clinical",
+      "blocks": [
+        { "type": "result", "settings": { "label": "reported visibly brighter skin", "value": 94 } },
+        { "type": "result", "settings": { "label": "measured improved elasticity", "value": 88 } },
+        { "type": "result", "settings": { "label": "saw reduced pigmentation", "value": 79 } },
+        { "type": "result", "settings": { "label": "found it comfortable daily", "value": 97 } }
+      ]
+    }
+  ]
+}
+{% endschema %}
