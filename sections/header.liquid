@@ -89,15 +89,26 @@
         {% render 'search-popup' %}
       {%- endif -%}
 
-      <a class="header__icon-button" href="{{ routes.cart_url }}">
-        {{ 'icon-cart.svg' | inline_asset_content }}
-        <span class="visually-hidden">{{ 'header.cart_count' | t: count: cart.item_count }}</span>
-        {%- if cart.item_count > 0 -%}
-          <span class="header__count" aria-hidden="true">
-            {%- if cart.item_count < 100 -%}{{ cart.item_count }}{%- else -%}99+{%- endif -%}
-          </span>
-        {%- endif -%}
-      </a>
+      {%- comment -%}
+        <cart-count> keeps the bubble and the hidden "Cart, 3 items" up to date after a background add
+        (quick add, Buy buttons, Pairs well with send "cart:changed"). The three wordings are rendered
+        here, so the script picks the right one: 999999 stands in for the number.
+      {%- endcomment -%}
+      <cart-count
+        data-label-zero="{{ 'header.cart_count' | t: count: 0 | escape_once }}"
+        data-label-one="{{ 'header.cart_count' | t: count: 1 | escape_once }}"
+        data-label-other="{{ 'header.cart_count' | t: count: 999999 | escape_once }}"
+      >
+        <a class="header__icon-button" href="{{ routes.cart_url }}">
+          {{ 'icon-cart.svg' | inline_asset_content }}
+          <span class="visually-hidden" data-cart-count-label>{{ 'header.cart_count' | t: count: cart.item_count }}</span>
+          {%- if cart.item_count > 0 -%}
+            <span class="header__count" aria-hidden="true">
+              {%- if cart.item_count < 100 -%}{{ cart.item_count }}{%- else -%}99+{%- endif -%}
+            </span>
+          {%- endif -%}
+        </a>
+      </cart-count>
 
       {%- comment -%}
         Customer accounts are Shopify's own pages (decision 6). <shopify-account> is Shopify's web component:
@@ -317,6 +328,11 @@
     --icon-size: 1.25rem;
   }
 
+  /* The cart link's wrapper adds no box of its own: the link stays a direct flex item of the icon row */
+  cart-count {
+    display: contents;
+  }
+
   .header__icon-button {
     position: relative;
     display: inline-grid;
@@ -503,6 +519,64 @@
   }
 
   if (!customElements.get('sticky-header')) customElements.define('sticky-header', StickyHeader);
+
+  /**
+   * <cart-count>: the one place that refreshes the header's cart count.
+   * - "cart:changed" (sent by quick add, Buy buttons and Pairs well with after a background add): fetch
+   *   /cart.js once, update the bubble and the hidden label, then send "cart:updated" with the cart (the
+   *   cart page listens to it and redraws itself).
+   * - "cart:updated" from the cart page itself already carries the cart: just update the bubble.
+   */
+  class CartCount extends HTMLElement {
+    connectedCallback() {
+      this.root = window.Shopify?.routes?.root || '/';
+      this.onChanged = () => this.refresh();
+      this.onUpdated = (event) => {
+        if (event.detail?.source !== 'header' && event.detail?.cart) this.show(event.detail.cart.item_count);
+      };
+      document.addEventListener('cart:changed', this.onChanged);
+      document.addEventListener('cart:updated', this.onUpdated);
+    }
+
+    disconnectedCallback() {
+      document.removeEventListener('cart:changed', this.onChanged);
+      document.removeEventListener('cart:updated', this.onUpdated);
+    }
+
+    async refresh() {
+      try {
+        const cart = await fetch(`${this.root}cart.js`, { headers: { Accept: 'application/json' } }).then((r) => r.json());
+        this.show(cart.item_count);
+        document.dispatchEvent(new CustomEvent('cart:updated', { detail: { cart, source: 'header' } }));
+      } catch (error) {
+        // The add itself worked; only the count is stale. The cart page shows the right total.
+      }
+    }
+
+    /** The red bubble (created on the first item, removed at 0) and "Cart, 3 items" for screen readers */
+    show(count) {
+      const link = this.querySelector('.header__icon-button');
+      if (!link) return;
+      let bubble = link.querySelector('.header__count');
+      if (count > 0 && !bubble) {
+        bubble = document.createElement('span');
+        bubble.className = 'header__count';
+        bubble.setAttribute('aria-hidden', 'true');
+        link.append(bubble);
+      }
+      if (bubble) {
+        if (count > 0) bubble.textContent = count < 100 ? count : '99+';
+        else bubble.remove();
+      }
+      const label = this.querySelector('[data-cart-count-label]');
+      if (label) {
+        const wording = count === 0 ? this.dataset.labelZero : count === 1 ? this.dataset.labelOne : this.dataset.labelOther;
+        label.textContent = (wording || '').replace('999999', count);
+      }
+    }
+  }
+
+  if (!customElements.get('cart-count')) customElements.define('cart-count', CartCount);
 {% endjavascript %}
 
 {% schema %}

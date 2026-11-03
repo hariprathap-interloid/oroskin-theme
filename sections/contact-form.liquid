@@ -576,8 +576,10 @@
     margin: 0;
   }
 
+  /* margin 0: the global form rule (input + label) would push each topic pill 12px down */
   .contact-form__pill {
     display: inline-flex;
+    margin: 0;
     align-items: center;
     min-block-size: max(2.5625rem, calc(41 * var(--px, 0.0625rem))); /* 41px */
     padding-inline: var(--space-sm);

@@ -70,9 +70,9 @@
     data-label-add="{{ 'products.add_to_cart' | t }}"
     data-label-sold-out="{{ 'products.sold_out' | t }}"
     data-label-unavailable="{{ 'products.unavailable' | t }}"
-    data-label-added="{{ 'products.added' | t | escape }}"
+    data-label-added="{{ 'products.added' | t | escape_once }}"
     data-label-added-status="{{ 'products.quick_add.added' | t: title: buy_product.title | escape }}"
-    data-label-error="{{ 'products.quick_add.error' | t | escape }}"
+    data-label-error="{{ 'products.quick_add.error' | t | escape_once }}"
     {{ block.shopify_attributes }}
   >
     {%- form 'product', buy_product, class: 'buy-buttons__form' -%}
@@ -483,7 +483,12 @@
   }
 
   /* Figma PDP: outlined grey pill; the chosen one filled with the accent colour */
+  /*
+    margin 0 on the labels that follow their radio (pill, swatch, purchase card): the global form rule
+    (input + label: margin-block-start) would push each one 12px down
+  */
   .buy-buttons__pill {
+    margin: 0;
     padding: 0.55em 1.25em;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-pill);
@@ -519,6 +524,7 @@
   .buy-buttons__swatch {
     position: relative;
     display: block;
+    margin: 0;
     overflow: hidden;
     inline-size: max(2rem, calc(34 * var(--px, 0.0625rem)));
     aspect-ratio: 1;
@@ -583,6 +589,7 @@
 
   .buy-buttons__plan-head {
     display: grid;
+    margin: 0;
     grid-template-columns: auto auto 1fr auto;
     align-items: center;
     gap: var(--space-xs) var(--space-md);
@@ -991,7 +998,8 @@
         }
         this.announce(this.dataset.labelAddedStatus);
         this.dispatchEvent(new CustomEvent('product:added', { bubbles: true, detail: { item: data } }));
-        this.updateCartCount(root);
+        // The header's <cart-count> refreshes the count (and tells the cart page)
+        document.dispatchEvent(new CustomEvent('cart:changed'));
       } catch (error) {
         const reason = error?.message || this.dataset.labelError;
         if (message) {
@@ -1012,25 +1020,6 @@
       requestAnimationFrame(() => (status.textContent = text));
     }
 
-    /** Refreshes the red count bubble on the header's cart icon (creates it on the first item), as quick add does */
-    async updateCartCount(root) {
-      try {
-        const cart = await fetch(`${root}cart.js`, { headers: { Accept: 'application/json' } }).then((r) => r.json());
-        document.dispatchEvent(new CustomEvent('cart:updated', { detail: { cart } }));
-        const link = document.querySelector(`.header__icon-button[href="${root}cart"]`);
-        if (!link) return;
-        let bubble = link.querySelector('.header__count');
-        if (!bubble) {
-          bubble = document.createElement('span');
-          bubble.className = 'header__count';
-          bubble.setAttribute('aria-hidden', 'true');
-          link.append(bubble);
-        }
-        bubble.textContent = cart.item_count < 100 ? cart.item_count : '99+';
-      } catch (error) {
-        // The add worked; only the count refresh failed. The cart page shows the right total.
-      }
-    }
 
     /** − / + change the number by one, never below 1 */
     setUpQuantity() {

@@ -29,10 +29,10 @@
   class="product-sticky-bar"
   role="region"
   aria-label="{{ bar_label | escape }}"
-  data-label-add="{{ 'products.add_to_cart' | t | escape }}"
-  data-label-sold-out="{{ 'products.sold_out' | t | escape }}"
-  data-label-unavailable="{{ 'products.unavailable' | t | escape }}"
-  data-label-added="{{ 'products.added' | t | escape }}"
+  data-label-add="{{ 'products.add_to_cart' | t | escape_once }}"
+  data-label-sold-out="{{ 'products.sold_out' | t | escape_once }}"
+  data-label-unavailable="{{ 'products.unavailable' | t | escape_once }}"
+  data-label-added="{{ 'products.added' | t | escape_once }}"
   data-quantity-label="{{ 'products.sticky_bar.quantity' | t: quantity: '[quantity]' | escape }}"
   inert
 >

@@ -41,7 +41,7 @@
         class="product-eyebrow__share"
         data-share-url="{{ shop.url | append: eyebrow_product.url }}"
         data-share-title="{{ eyebrow_product.title | escape }}"
-        data-copied="{{ 'blog.article.link_copied' | t | escape }}"
+        data-copied="{{ 'blog.article.link_copied' | t | escape_once }}"
       >
         <span class="product-eyebrow__share-icon" aria-hidden="true">{{ 'icon-share-solid.svg' | inline_asset_content }}</span>
         <span data-share-label>{{ 'products.share' | t }}</span>

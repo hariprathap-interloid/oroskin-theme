@@ -33,7 +33,7 @@
           type="button"
           class="offer__copy"
           data-code="{{ block.settings.code | escape }}"
-          data-copied="{{ 'products.offers.copied' | t | escape }}"
+          data-copied="{{ 'products.offers.copied' | t | escape_once }}"
           aria-label="{{ 'products.offers.copy_label' | t: code: block.settings.code | escape }}"
         >
           <span data-copy-label>{{ 'products.offers.copy' | t }}</span>

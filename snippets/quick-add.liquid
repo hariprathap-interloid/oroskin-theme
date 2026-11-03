@@ -487,7 +487,8 @@
         await Promise.all([request, drive]);
         this.classList.replace('is-adding', 'is-added');
         this.announce(this.dataset.labelAdded);
-        this.updateCartCount(root);
+        // The header's <cart-count> refreshes the count (and tells the cart page)
+        document.dispatchEvent(new CustomEvent('cart:changed'));
         // Stays in the final state (upright cart + gold tick): the product is in the cart. Clicking
         // again adds one more and plays the animation again.
       } catch (error) {
@@ -522,25 +523,6 @@
       });
     }
 
-    /** Refreshes the red count bubble on the header's cart icon (creates it on the first item) */
-    async updateCartCount(root) {
-      try {
-        const cart = await fetch(`${root}cart.js`, { headers: { Accept: 'application/json' } }).then((r) => r.json());
-        document.dispatchEvent(new CustomEvent('cart:updated', { detail: { cart } }));
-        const link = document.querySelector(`.header__icon-button[href="${root}cart"]`);
-        if (!link) return;
-        let bubble = link.querySelector('.header__count');
-        if (!bubble) {
-          bubble = document.createElement('span');
-          bubble.className = 'header__count';
-          bubble.setAttribute('aria-hidden', 'true');
-          link.append(bubble);
-        }
-        bubble.textContent = cart.item_count < 100 ? cart.item_count : '99+';
-      } catch (error) {
-        // The add worked; only the count refresh failed. The cart page shows the right total.
-      }
-    }
   }
 
   if (!customElements.get('quick-add')) {

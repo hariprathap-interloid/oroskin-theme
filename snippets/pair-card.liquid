@@ -1,0 +1,210 @@
+{% doc %}
+  One product in "Pairs well with" (Figma PDP "Product details 5"): the image (4:5, radius ~16) with a
+  round tick at its top right, the title (heading font) and the price. Ticked = in the bundle (full
+  strength); unticked = faded.
+  Clicking the image (or its tick) ticks / unticks the card: the image is the <label> of a real
+  checkbox, so it also works with the keyboard (Tab, then Space) and a screen reader reads "Add Serum to
+  the bundle, checked". The title is the link to the product page.
+  It carries what the script needs: the variant to add (the first one in stock), its price in cents and
+  the title. The current product's card also lists every variant's price, so it can follow the variant
+  chosen above (the "variant:change" event).
+
+  @param {product} product - The product
+  @param {string} id - A unique id for the checkbox
+  @param {boolean} [checked] - Ticked at first
+  @param {boolean} [current] - The product of this page (follows the chosen variant)
+
+  @example
+  {% render 'pair-card', product: product, id: 'Pair-1', checked: true, current: true %}
+{% enddoc %}
+
+{%- liquid
+  assign pair_variant = product.selected_or_first_available_variant
+  assign pair_image = pair_variant.featured_image | default: product.featured_image
+  assign toggle_label = 'products.pairs.toggle' | t: title: product.title
+-%}
+
+<div
+  class="pair-card"
+  role="listitem"
+  data-pair-card
+  data-variant-id="{{ pair_variant.id }}"
+  data-price="{{ pair_variant.price }}"
+  data-title="{{ product.title | escape }}"
+  {% if current %}
+    data-pair-current
+  {% endif %}
+>
+  <div class="pair-card__media">
+    <input
+      type="checkbox"
+      class="pair-card__input"
+      id="{{ id }}"
+      aria-label="{{ toggle_label | escape }}"
+      data-pair-toggle
+      {% if checked %}
+        checked
+      {% endif %}
+    >
+    <label class="pair-card__toggle" for="{{ id }}">
+      {%- if pair_image != blank -%}
+        {{
+          pair_image
+          | image_url: width: 600
+          | image_tag:
+            loading: 'lazy',
+            widths: '300, 450, 600',
+            sizes: '(min-width: 990px) 14vw, 45vw',
+            alt: '',
+            class: 'pair-card__image'
+        }}
+      {%- else -%}
+        {{ 'product-1' | placeholder_svg_tag: 'pair-card__image pair-card__placeholder' }}
+      {%- endif -%}
+      <span class="pair-card__tick" aria-hidden="true">
+        {{- 'icon-check.svg' | inline_asset_content -}}
+      </span>
+    </label>
+  </div>
+  <a href="{{ product.url }}" class="pair-card__title">{{ product.title | escape }}</a>
+  <p class="pair-card__price" data-pair-price>{{ pair_variant.price | money }}</p>
+
+  {%- if current -%}
+    <script type="application/json" data-pair-variants>
+      {
+        {%- for variant in product.variants -%}
+          "{{ variant.id }}": {{ variant.price | json }}{% unless forloop.last %},{% endunless %}
+        {%- endfor -%}
+      }
+    </script>
+  {%- endif -%}
+</div>
+
+{% stylesheet %}
+  /*
+    Figma: cards ~254 wide, images 254 x 318 (4:5), radius ~16; a 40px white circle with an accent tick
+    at the top right (empty white circle when unticked); title heading font ~22px; price ~22px medium.
+    Unticked cards fade to ~45%.
+  */
+  .pair-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    min-inline-size: 0;
+    opacity: 0.45;
+    transition: opacity var(--duration-fast) var(--ease-out);
+  }
+
+  /* Hover or keyboard focus brings an unticked card up a little, so it reads as clickable */
+  .pair-card:hover,
+  .pair-card:focus-within {
+    opacity: 0.75;
+  }
+
+  /* Ticked: full strength (same weight as the hover rule, and after it, so it wins) */
+  .pair-card:has(.pair-card__input:checked) {
+    opacity: 1;
+  }
+
+  .pair-card__media {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 4 / 5;
+    margin-block-end: var(--space-sm);
+    border-radius: max(0.75rem, calc(16 * var(--px, 0.0625rem)));
+    background-color: var(--color-tint, color-mix(in srgb, var(--color-text) 5%, var(--color-background)));
+  }
+
+  /*
+    The checkbox itself: invisible, still in the Tab order (its focus ring shows on the tick). Two
+    classes: the global input[type="checkbox"] rule (element + attribute) outweighs one class.
+  */
+  .pair-card .pair-card__input {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /*
+    The whole image is the checkbox's label: a click anywhere on it ticks / unticks the card.
+    margin 0: the global form rule (input + label: margin-block-start) pushed the image 12px down, and
+    the card's pale background showed as a strip at the top.
+  */
+  .pair-card__toggle {
+    position: relative;
+    display: block;
+    margin: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    cursor: pointer;
+  }
+
+  .pair-card__image {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .pair-card__placeholder {
+    fill: color-mix(in srgb, var(--color-text) 30%, transparent);
+  }
+
+  .pair-card__tick {
+    position: absolute;
+    inset-block-start: max(0.5rem, calc(10 * var(--px, 0.0625rem)));
+    inset-inline-end: max(0.5rem, calc(10 * var(--px, 0.0625rem)));
+    display: grid;
+    place-items: center;
+    inline-size: max(2.5rem, calc(40 * var(--px, 0.0625rem)));
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background-color: var(--color-background);
+    box-shadow: 0 2px 8px #0000001f;
+    color: transparent;
+    transition: color var(--duration-fast) var(--ease-out);
+  }
+
+  .pair-card__tick svg {
+    inline-size: 0.9rem;
+    block-size: auto;
+  }
+
+  .pair-card__input:checked + .pair-card__toggle .pair-card__tick {
+    color: var(--color-accent);
+  }
+
+  .pair-card__input:focus-visible + .pair-card__toggle .pair-card__tick {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  .pair-card__title {
+    color: inherit;
+    font-family: var(--font-heading--family);
+    font-size: var(--font-size-body-lg);
+    line-height: 1.3;
+    text-decoration: none;
+  }
+
+  .pair-card__title:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .pair-card__price {
+    margin: 0;
+    font-size: var(--font-size-body-lg);
+    font-weight: var(--font-weight-medium);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pair-card,
+    .pair-card__tick {
+      transition: none;
+    }
+  }
+{% endstylesheet %}

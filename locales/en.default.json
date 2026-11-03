@@ -426,7 +426,15 @@
       "quantity": "Qty {{ quantity }}",
       "buy_now": "Buy now"
     },
-    "added": "Added"
+    "added": "Added",
+    "pairs": {
+      "toggle": "Add {{ title }} to the bundle",
+      "your_products": "Your products",
+      "none": "Tick the products you want in the bundle.",
+      "total": "Bundle total",
+      "add_all": "Add all to cart",
+      "added": "The bundle was added to your cart"
+    }
   },
   "contact": {
     "form": {

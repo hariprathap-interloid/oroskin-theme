@@ -206,9 +206,28 @@
         "more_card"
       ],
       "settings": {}
+    },
+    "pairs": {
+      "type": "product-pairs",
+      "settings": {
+        "eyebrow": "Bought together",
+        "heading": "Pairs <em>well with</em>",
+        "limit": 3,
+        "preselect": false,
+        "section_width": "widest",
+        "color_scheme": "scheme-2",
+        "padding_top": 64,
+        "padding_bottom": 64,
+        "products": [
+          "radiance-vitamin-c-serum",
+          "magnolia-bloom-body-oil",
+          "rose-eau-de-parfum"
+        ]
+      }
     }
   },
   "order": [
-    "main"
+    "main",
+    "pairs"
   ]
 }

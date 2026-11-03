@@ -1,0 +1,548 @@
+{%- comment -%}
+  "Pairs well with" (M6.5, Figma PDP "Product details 5", phone "Variant97"): an eyebrow ("BOUGHT
+  TOGETHER"), a heading with an accent part, this product + up to 3 that go with it as cards with a
+  tick, and a summary card: "YOUR PRODUCTS" (the ticked ones and their prices), the bundle total and
+  ADD ALL TO CART (one Cart AJAX request for all the ticked products; the visitor stays on the page).
+
+  Which products: Shopify's complementary recommendations, set per product in the Search & Discovery
+  app (Product recommendations > Complementary products). They're only available from Shopify's
+  recommendations URL, so the page first shows the merchant's fallback products (section setting),
+  then the script asks /recommendations/products?intent=complementary for this same section and swaps
+  in the complementary ones when the product has some. In that response recommendations.performed? is
+  true and only the product cards matter. No complementary and no fallback products: the section hides.
+
+  This product's card follows the variant chosen in the main section ("variant:change").
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+  assign pairs_limit = section.settings.limit | default: 3
+
+  if recommendations.performed?
+    assign pair_items = recommendations.products
+    assign pair_source = 'complementary'
+  else
+    assign pair_items = section.settings.products
+    assign pair_source = 'fallback'
+  endif
+-%}
+
+{%- if recommendations.performed? -%}
+  {%- comment -%} The recommendations response: only the cards, read by the script {%- endcomment -%}
+  <div data-pairs-response data-pairs-source="{{ pair_source }}">
+    {%- for item in pair_items limit: pairs_limit -%}
+      {%- if item.available -%}
+        {%- assign item_id = 'Pair-' | append: section.id | append: '-' | append: item.id -%}
+        {% render 'pair-card', product: item, id: item_id, checked: section.settings.preselect %}
+      {%- endif -%}
+    {%- endfor -%}
+  </div>
+{%- elsif product != blank -%}
+  {%- liquid
+    assign recommendations_url = routes.product_recommendations_url | append: '?product_id=' | append: product.id | append: '&section_id=' | append: section.id | append: '&limit=' | append: pairs_limit | append: '&intent=complementary'
+    assign current_id = 'Pair-' | append: section.id | append: '-current'
+    assign fallback_count = 0
+    for item in pair_items limit: pairs_limit
+      if item.available and item.id != product.id
+        assign fallback_count = fallback_count | plus: 1
+      endif
+    endfor
+  -%}
+
+  <product-pairs
+    class="product-pairs full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
+    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
+    data-url="{{ recommendations_url }}"
+    data-money-format="{{ shop.money_format | strip_html | escape }}"
+    data-label-add="{{ 'products.pairs.add_all' | t | escape_once }}"
+    data-label-added="{{ 'products.added' | t | escape_once }}"
+    data-label-status="{{ 'products.pairs.added' | t | escape_once }}"
+    data-label-error="{{ 'products.quick_add.error' | t | escape_once }}"
+    {% if fallback_count == 0 %}
+      data-empty
+    {% endif %}
+  >
+    <div class="product-pairs__inner">
+      <div class="product-pairs__header">
+        {%- if section.settings.eyebrow != blank -%}
+          <p class="eyebrow product-pairs__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+        {%- endif -%}
+        {%- if section.settings.heading != blank -%}
+          <h2 class="product-pairs__heading">{{ section.settings.heading }}</h2>
+        {%- endif -%}
+      </div>
+
+      <div class="product-pairs__layout">
+        <div class="product-pairs__list" role="list" data-pairs-list>
+          {% render 'pair-card', product: product, id: current_id, checked: true, current: true %}
+          {%- for item in pair_items limit: pairs_limit -%}
+            {%- if item.available and item.id != product.id -%}
+              {%- assign item_id = 'Pair-' | append: section.id | append: '-' | append: item.id -%}
+              {% render 'pair-card', product: item, id: item_id, checked: section.settings.preselect %}
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+
+        {%- comment -%} The summary: filled by the script from the ticked cards (this product at first) {%- endcomment -%}
+        <div class="product-pairs__summary">
+          <p class="product-pairs__label">{{ 'products.pairs.your_products' | t }}</p>
+          <ul class="product-pairs__lines" role="list" data-pairs-lines>
+            <li class="product-pairs__line">
+              <span>{{ product.title | escape }}</span>
+              <span>{{ product.selected_or_first_available_variant.price | money }}</span>
+            </li>
+          </ul>
+          <p class="product-pairs__none" hidden data-pairs-none>{{ 'products.pairs.none' | t }}</p>
+          <div class="product-pairs__total">
+            <p class="product-pairs__total-label">{{ 'products.pairs.total' | t }}</p>
+            <p class="product-pairs__total-price" data-pairs-total>
+              {{- product.selected_or_first_available_variant.price | money -}}
+            </p>
+          </div>
+          <button type="button" class="button product-pairs__add" data-pairs-add>
+            <span class="product-pairs__add-icon" aria-hidden="true">{{ 'icon-cart.svg' | inline_asset_content }}</span>
+            <span data-pairs-add-label>{{ 'products.pairs.add_all' | t }}</span>
+          </button>
+          <p class="product-pairs__message" role="alert" hidden data-pairs-message></p>
+          <span class="visually-hidden" aria-live="polite" data-pairs-status></span>
+        </div>
+      </div>
+    </div>
+  </product-pairs>
+{%- endif -%}
+
+{% stylesheet %}
+  /*
+    Figma 1920 ("Product details 5"): eyebrow y 143 (66px rule + accent caps); heading ~64px, "well with"
+    in the accent colour; 4 cards x 63 / 357 / 649 / 943 (~254 wide, ~40px apart; the 2nd and 4th 40px
+    lower); the summary card x 1305–1857 (552 wide), white, pale border, radius ~16, padding ~32:
+    "YOUR PRODUCTS" grey caps, one line per product (name left, price right), a hairline, "Bundle Total",
+    the total ~28px, ADD ALL TO CART full-width red pill.
+  */
+  .product-pairs {
+    display: block;
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+    background-color: var(--color-background);
+  }
+
+  /* No products to pair with (no complementary ones and no fallback): nothing to show */
+  .product-pairs[data-empty] {
+    display: none;
+  }
+
+  .product-pairs__inner {
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  .product-pairs__header {
+    margin-block-end: max(var(--space-xl), calc(40 * var(--px, 0.0625rem)));
+  }
+
+  .product-pairs__eyebrow {
+    margin: 0 0 var(--space-md);
+  }
+
+  .product-pairs__heading {
+    margin: 0;
+    font-size: var(--font-size-h1);
+    font-weight: 400;
+    line-height: 1.1;
+  }
+
+  .product-pairs__heading em {
+    color: var(--color-accent);
+    font-style: normal;
+  }
+
+  .product-pairs__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1180fr) minmax(18rem, 552fr);
+    align-items: start;
+    gap: max(var(--space-xl), calc(110 * var(--px, 0.0625rem)));
+  }
+
+  /* The cards: up to 4 in a row; the 2nd and 4th sit 40px lower (Figma) */
+  .product-pairs__list {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: max(var(--space-md), calc(40 * var(--px, 0.0625rem)));
+  }
+
+  .product-pairs__list > :nth-child(even) {
+    margin-block-start: max(var(--space-lg), calc(40 * var(--px, 0.0625rem)));
+  }
+
+  .product-pairs__summary {
+    display: flex;
+    flex-direction: column;
+    padding: max(var(--space-lg), calc(32 * var(--px, 0.0625rem)));
+    border: 1px solid var(--color-card-border);
+    border-radius: max(0.75rem, calc(16 * var(--px, 0.0625rem)));
+    background-color: var(--color-background);
+    box-shadow: 0 4px 30px #0000000d;
+  }
+
+  .product-pairs__label {
+    margin: 0 0 var(--space-md);
+    color: color-mix(in srgb, var(--color-text) 60%, var(--color-background));
+    font-size: var(--font-size-small);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  .product-pairs__lines {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    margin: 0;
+    padding: 0 0 var(--space-lg);
+    border-block-end: 1px solid var(--color-card-border);
+    list-style: none;
+  }
+
+  .product-pairs__line {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-md);
+    font-size: var(--font-size-body-sm);
+  }
+
+  .product-pairs__none {
+    margin: 0;
+    padding-block-end: var(--space-lg);
+    border-block-end: 1px solid var(--color-card-border);
+    color: color-mix(in srgb, var(--color-text) 60%, var(--color-background));
+    font-size: var(--font-size-small);
+  }
+
+  .product-pairs__total {
+    margin-block: var(--space-lg);
+  }
+
+  .product-pairs__total p {
+    margin: 0;
+  }
+
+  .product-pairs__total-label {
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .product-pairs__total-price {
+    margin-block-start: var(--space-xs);
+    font-size: var(--font-size-h3);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .product-pairs .product-pairs__add {
+    inline-size: 100%;
+    margin: 0;
+  }
+
+  .product-pairs__add-icon {
+    display: inline-flex;
+  }
+
+  .product-pairs__add-icon svg {
+    inline-size: 1.125rem;
+    block-size: 1.125rem;
+  }
+
+  .product-pairs__add.is-added [data-pairs-add-label]::after {
+    content: " ✓";
+  }
+
+  .product-pairs__add.is-adding {
+    cursor: progress;
+    opacity: 0.75;
+  }
+
+  .product-pairs__add:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .product-pairs__message {
+    margin: var(--space-sm) 0 0;
+    color: var(--color-error);
+    font-size: var(--font-size-small);
+  }
+
+  /* Tablets: the summary under the cards */
+  @media (max-width: 989px) {
+    .product-pairs__layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  /* Phones (Variant97): 2 cards a row */
+  @media (max-width: 749px) {
+    .product-pairs__list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .product-pairs__list > :nth-child(even) {
+      margin-block-start: var(--space-lg);
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <product-pairs>: swaps in Shopify's complementary products (when the product has some), keeps the
+   * summary in step with the ticked cards, and adds all the ticked ones to the cart in one request.
+   */
+  class ProductPairs extends HTMLElement {
+    connectedCallback() {
+      this.list = this.querySelector('[data-pairs-list]');
+      this.button = this.querySelector('[data-pairs-add]');
+      this.addEventListener('change', (event) => {
+        if (event.target.matches('[data-pair-toggle]')) this.update();
+      });
+      this.button?.addEventListener('click', () => this.addAll());
+
+      // This product's card follows the variant chosen in the main section (any section on the page)
+      this.onVariantChange = (event) => this.followVariant(event.detail?.variantId);
+      document.addEventListener('variant:change', this.onVariantChange);
+
+      this.loadComplementary();
+      this.update();
+    }
+
+    disconnectedCallback() {
+      document.removeEventListener('variant:change', this.onVariantChange);
+    }
+
+    /** Asks Shopify for this section with the complementary products; uses them if there are any */
+    async loadComplementary() {
+      if (!this.dataset.url) return;
+      try {
+        const html = await fetch(this.dataset.url).then((response) => response.text());
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const cards = doc.querySelectorAll('[data-pairs-source="complementary"] [data-pair-card]');
+        if (!cards.length) return;
+        this.list.querySelectorAll('[data-pair-card]:not([data-pair-current])').forEach((card) => card.remove());
+        this.list.append(...cards);
+        this.removeAttribute('data-empty');
+        this.update();
+      } catch (error) {
+        // No complementary products this time: the fallback products stay
+      }
+    }
+
+    followVariant(variantId) {
+      const card = this.list.querySelector('[data-pair-current]');
+      if (!card || !variantId) return;
+      let prices = {};
+      try {
+        prices = JSON.parse(card.querySelector('[data-pair-variants]')?.textContent || '{}');
+      } catch (error) {
+        return;
+      }
+      if (!(variantId in prices)) return;
+      card.dataset.variantId = variantId;
+      card.dataset.price = prices[variantId];
+      card.querySelector('[data-pair-price]').textContent = this.money(prices[variantId]);
+      this.update();
+    }
+
+    ticked() {
+      return [...this.list.querySelectorAll('[data-pair-card]')].filter((card) => card.querySelector('[data-pair-toggle]')?.checked);
+    }
+
+    /** "Your products": one line per ticked card, the total, and the button (off when nothing is ticked) */
+    update() {
+      const ticked = this.ticked();
+      const lines = this.querySelector('[data-pairs-lines]');
+      lines.replaceChildren(
+        ...ticked.map((card) => {
+          const line = document.createElement('li');
+          line.className = 'product-pairs__line';
+          const name = document.createElement('span');
+          name.textContent = card.dataset.title;
+          const price = document.createElement('span');
+          price.textContent = this.money(Number(card.dataset.price));
+          line.append(name, price);
+          return line;
+        })
+      );
+      lines.hidden = ticked.length === 0;
+      this.querySelector('[data-pairs-none]').hidden = ticked.length > 0;
+      const total = ticked.reduce((sum, card) => sum + Number(card.dataset.price), 0);
+      this.querySelector('[data-pairs-total]').textContent = this.money(total);
+      if (this.button) this.button.disabled = ticked.length === 0;
+    }
+
+    /** All the ticked products in one Cart AJAX request; then "Added ✓", the header count, a live message */
+    async addAll() {
+      const ticked = this.ticked();
+      if (!ticked.length || this.busy) return;
+      this.busy = true;
+      const root = window.Shopify?.routes?.root || '/';
+      const label = this.querySelector('[data-pairs-add-label]');
+      const message = this.querySelector('[data-pairs-message]');
+      this.button.classList.add('is-adding');
+      message.hidden = true;
+
+      try {
+        const response = await fetch(`${root}cart/add.js`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ items: ticked.map((card) => ({ id: Number(card.dataset.variantId), quantity: 1 })) }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.description || data.message || '');
+
+        label.textContent = this.dataset.labelAdded;
+        this.button.classList.add('is-added');
+        clearTimeout(this.addedTimer);
+        this.addedTimer = setTimeout(() => {
+          this.button.classList.remove('is-added');
+          label.textContent = this.dataset.labelAdd;
+        }, 2000);
+        const status = this.querySelector('[data-pairs-status]');
+        status.textContent = '';
+        requestAnimationFrame(() => (status.textContent = this.dataset.labelStatus));
+        // The header's <cart-count> refreshes the count (and tells the cart page)
+        document.dispatchEvent(new CustomEvent('cart:changed'));
+      } catch (error) {
+        message.textContent = error?.message || this.dataset.labelError;
+        message.hidden = false;
+      } finally {
+        this.button.classList.remove('is-adding');
+        this.busy = false;
+      }
+    }
+
+
+    /**
+     * Cents → the store's money format (Settings > General > Store currency, passed in data-money-format),
+     * e.g. "$" + the amount placeholder → "$185.00". Covers Shopify's usual amount placeholders.
+     */
+    money(cents) {
+      const format = this.dataset.moneyFormat || '';
+      if (!format) return (cents / 100).toFixed(2);
+      const group = (value, decimals, thousands, decimal) => {
+        const [whole, fraction] = (value / 100).toFixed(decimals).split('.');
+        return whole.replace(/\B(?=(\d{3})+(?!\d))/g, thousands) + (fraction ? decimal + fraction : '');
+      };
+      return format.replace(/\{\{\s*(\w+)\s*\}\}/, (match, key) => {
+        switch (key) {
+          case 'amount_no_decimals':
+            return group(cents, 0, ',', '.');
+          case 'amount_with_comma_separator':
+            return group(cents, 2, '.', ',');
+          case 'amount_no_decimals_with_comma_separator':
+            return group(cents, 0, '.', ',');
+          case 'amount_with_apostrophe_separator':
+            return group(cents, 2, "'", '.');
+          default:
+            return group(cents, 2, ',', '.');
+        }
+      });
+    }
+  }
+
+  if (!customElements.get('product-pairs')) customElements.define('product-pairs', ProductPairs);
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.product_pairs",
+  "tag": "section",
+  "class": "product-pairs-section",
+  "enabled_on": { "templates": ["product"] },
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "Bought together"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.accent_heading_info",
+      "default": "Pairs <em>well with</em>"
+    },
+    {
+      "type": "paragraph",
+      "content": "t:labels.product_pairs_source"
+    },
+    {
+      "type": "product_list",
+      "id": "products",
+      "label": "t:labels.product_pairs_fallback",
+      "info": "t:labels.product_pairs_fallback_info",
+      "limit": 3
+    },
+    {
+      "type": "range",
+      "id": "limit",
+      "label": "t:labels.product_pairs_limit",
+      "min": 1,
+      "max": 3,
+      "step": 1,
+      "default": 3
+    },
+    {
+      "type": "checkbox",
+      "id": "preselect",
+      "label": "t:labels.product_pairs_preselect",
+      "info": "t:labels.product_pairs_preselect_info",
+      "default": false
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "options": [
+        { "value": "wide", "label": "t:options.section_width.wide" },
+        { "value": "widest", "label": "t:options.section_width.widest" },
+        { "value": "full", "label": "t:options.section_width.full" }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.product_pairs"
+    }
+  ]
+}
+{% endschema %}

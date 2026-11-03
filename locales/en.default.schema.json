@@ -121,7 +121,8 @@
     "product_features": "Feature badges",
     "product_feature": "Feature badge",
     "product_videos": "Short videos",
-    "product_payment": "Payment methods"
+    "product_payment": "Payment methods",
+    "product_pairs": "Pairs well with"
   },
   "labels": {
     "alignment": "Alignment",
@@ -908,7 +909,14 @@
     "product_feature_builtin": "Built-in icon",
     "product_feature_builtin_info": "Used when no icon image is chosen.",
     "show_sticky_bar": "Show sticky add-to-cart bar",
-    "show_sticky_bar_info": "A bar at the bottom of the screen with the product, price, Add to cart and Buy now, once the page's own buttons scroll out of view."
+    "show_sticky_bar_info": "A bar at the bottom of the screen with the product, price, Add to cart and Buy now, once the page's own buttons scroll out of view.",
+    "accent_heading_info": "Use italic for the words in the accent colour.",
+    "product_pairs_source": "The products come from Shopify's complementary recommendations: set them per product in the Search & Discovery app (Product recommendations > Complementary products). Until a product has some, the fallback products below show.",
+    "product_pairs_fallback": "Fallback products",
+    "product_pairs_fallback_info": "Shown when the product has no complementary products. Leave empty to hide the section then.",
+    "product_pairs_limit": "Products besides this one",
+    "product_pairs_preselect": "Tick the other products at first",
+    "product_pairs_preselect_info": "Off: only this product is in the bundle until the visitor ticks more (as in the Figma)."
   },
   "options": {
     "collection_list_header": {
