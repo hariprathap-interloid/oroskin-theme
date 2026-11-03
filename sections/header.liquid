@@ -193,18 +193,28 @@
     transparent top border of the same height: a background paints under the border, so the section's
     colour reaches the top of the page, while its content still starts below the pill. Its own padding is
     left alone. Skipped where the first section already does this: the transparent header (home hero) and
-    the collection banner's "Under the header" option.
+    the collection banner's "Under the header" option, and on pages without the header (the password
+    layout: this CSS is bundled into every page, so it has to check that the header is there).
   */
   :root {
     --header-space: 6.0625rem; /* 20px gap + 77px pill */
   }
 
-  body:not(:has(.header--transparent)) #MainContent > .shopify-section:first-child:not(:has(.collection-banner--under-header)) {
+  body:has(sticky-header):not(:has(.header--transparent)) #MainContent > .shopify-section:first-child:not(:has(.collection-banner--under-header)) {
     margin-block-start: calc(var(--header-space) * -1);
   }
 
-  body:not(:has(.header--transparent)) #MainContent > .shopify-section:first-child:not(:has(.collection-banner--under-header)) > * {
+  body:has(sticky-header):not(:has(.header--transparent)) #MainContent > .shopify-section:first-child:not(:has(.collection-banner--under-header)) > * {
     border-block-start: var(--header-space) solid transparent;
+  }
+
+  /*
+    A first section set to "Fill the screen height" (404, About hero): it already slides up under the
+    header (above), so it is exactly one screen tall. The older rule (critical.css / screen-scale,
+    100svh minus the header) subtracted the header a second time, and the footer showed at the bottom.
+  */
+  body:has(sticky-header):not(:has(.header--transparent)) #MainContent > .shopify-section:first-child:not(:has(.collection-banner--under-header)) .section--fill-screen {
+    min-block-size: 100svh;
   }
 
   /*

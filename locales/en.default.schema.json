@@ -834,7 +834,17 @@
     "returns_items_info": "One item per line.",
     "cta_card_link_info": "Empty = the customer account, where customers see their orders and start a return.",
     "cta_card_style": "Card style",
-    "policy_heading_tag_info": "Heading 1 when this is the page's main heading; Heading 2 when it sits under another section's heading (e.g. on the returns page)."
+    "policy_heading_tag_info": "Heading 1 when this is the page's main heading; Heading 2 when it sits under another section's heading (e.g. on the returns page).",
+    "not_found_show_search": "Show the search bar",
+    "not_found_placeholder": "Search placeholder",
+    "not_found_menu": "Links",
+    "not_found_menu_info": "Optional: a menu whose links show as pills (e.g. your main categories).",
+    "not_found_links_heading": "Links heading",
+    "page_heading_info": "Italic words show in the accent colour. Empty = the page title.",
+    "page_align": "Header alignment",
+    "page_text_width": "Text width",
+    "page_text_width_info": "The widest the page text gets, for comfortable reading.",
+    "password_heading_info": "Italic words show in the accent colour. The message under it comes from Online Store > Preferences."
   },
   "options": {
     "collection_list_header": {
@@ -1227,6 +1237,10 @@
     "cta_card_style": {
       "tinted": "Tinted (pale accent)",
       "glass": "Glass (soft shadow)"
+    },
+    "page_align": {
+      "start": "Left",
+      "center": "Centred"
     }
   },
   "color_scheme": {

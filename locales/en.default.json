@@ -2,7 +2,10 @@
   "404": {
     "title": "404",
     "not_found": "Page not found.",
-    "back_to_shopping": "Back to shopping"
+    "back_to_shopping": "Back to shopping",
+    "back_home": "Back to home",
+    "search_submit": "Search",
+    "links": "Popular links"
   },
   "blog": {
     "related": {
@@ -158,7 +161,15 @@
     "card": "Gift card",
     "expired": "This gift card has expired",
     "expires_on": "Expires on {{ expires_on }}",
-    "use_at_checkout": "Use this gift card at checkout"
+    "use_at_checkout": "Use this gift card at checkout",
+    "title": "Your {{ shop }} gift card",
+    "initial_value": "Of {{ value }}",
+    "copy": "Copy",
+    "copied": "Code copied",
+    "qr_alt": "QR code of this gift card",
+    "qr_label": "Show this code in our ateliers",
+    "shop_now": "Start shopping",
+    "print": "Print"
   },
   "pagination": {
     "page_of": "Page {{ current }} of {{ total }}",
@@ -167,7 +178,10 @@
   "password": {
     "title": "This shop is private",
     "password": "Password",
-    "enter": "Enter"
+    "enter": "Enter",
+    "wrong": "That password isn’t right. Please try again.",
+    "owner": "Are you the store owner?",
+    "owner_link": "Log in here"
   },
   "search": {
     "title": "Search",
@@ -419,5 +433,8 @@
   },
   "returns": {
     "steps_empty": "Add Return step blocks: one per step, numbered automatically."
+  },
+  "page": {
+    "empty": "This page has no content yet. Write it in Online Store > Pages."
   }
 }

@@ -1,23 +1,400 @@
-{% comment %}
-  This section is used in the 404 template to render page shown when customers
-  enter an invalid store URL.
-
+{%- comment -%}
+  404 page (M8.7, no Figma: the M5 pages' style). Shown when a visitor opens an address that doesn't
+  exist (a mistyped link, a deleted product). Theme Store: a clear message, a search bar and a way
+  home. A big pale "404", an eyebrow, a heading with an accent word, a line of text, a search form
+  (to the search page, like the search page's own field), two buttons and optional link pills from
+  a menu ("Popular right now").
   https://shopify.dev/docs/storefronts/themes/architecture/templates/404
-{% endcomment %}
+{%- endcomment -%}
 
-<h1>{{ '404.title' | t }}</h1>
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+  assign search_placeholder = 'search.popup.placeholder' | t
+-%}
 
-<p>
-  {{ '404.not_found' | t }}
-</p>
+{% render 'screen-scale' %}
 
-<a href="{{ routes.all_products_collection_url }}">
-  {{ '404.back_to_shopping' | t }}
-</a>
+{%- comment -%} The big "404" uses the heading font's thin weight {%- endcomment -%}
+{% style %}
+  {{ settings.type_heading_font | font_modify: 'weight', '200' | font_face: font_display: 'swap' }}
+{% endstyle %}
+
+<div
+  class="not-found full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.fill_screen %} section--fill-screen{% endif %}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 100 | divided_by: 100.0 }};"
+>
+  <div class="not-found__inner">
+    <p class="not-found__code" aria-hidden="true">404</p>
+
+    {%- if section.settings.eyebrow != blank -%}
+      <p class="eyebrow eyebrow--center not-found__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+    {%- endif -%}
+
+    <h1 class="not-found__heading">
+      {%- if section.settings.heading != blank -%}
+        {{ section.settings.heading }}
+      {%- else -%}
+        {{ '404.not_found' | t }}
+      {%- endif -%}
+    </h1>
+
+    {%- if section.settings.text != blank -%}
+      <div class="not-found__text">{{ section.settings.text }}</div>
+    {%- endif -%}
+
+    {%- if section.settings.show_search -%}
+      <form class="not-found__search" action="{{ routes.search_url }}" method="get" role="search">
+        <label class="visually-hidden" for="NotFoundSearch-{{ section.id }}">{{ 'search.popup.label' | t }}</label>
+        {%- comment -%} options[prefix]=last: an unfinished last word still matches ("ros" finds "rose") {%- endcomment -%}
+        <input type="hidden" name="options[prefix]" value="last">
+        <input
+          class="not-found__search-input"
+          id="NotFoundSearch-{{ section.id }}"
+          type="search"
+          name="q"
+          placeholder="{{ section.settings.search_placeholder | default: search_placeholder | escape }}"
+          autocomplete="off"
+        >
+        <button type="submit" class="not-found__search-submit">
+          <span class="visually-hidden">{{ '404.search_submit' | t }}</span>
+          {{- 'icon-search.svg' | inline_asset_content -}}
+        </button>
+      </form>
+    {%- endif -%}
+
+    <div class="not-found__actions">
+      <a class="button" href="{{ routes.root_url }}">{{ '404.back_home' | t }}</a>
+      <a class="button button--secondary" href="{{ routes.all_products_collection_url }}">{{ '404.back_to_shopping' | t }}</a>
+    </div>
+
+    {%- if section.settings.menu.links.size > 0 -%}
+      {%- assign links_label = '404.links' | t -%}
+      <nav class="not-found__links" aria-label="{{ section.settings.links_heading | default: links_label | escape }}">
+        {%- if section.settings.links_heading != blank -%}
+          <p class="not-found__links-heading">{{ section.settings.links_heading | escape }}</p>
+        {%- endif -%}
+        <ul class="not-found__links-list" role="list">
+          {%- for link in section.settings.menu.links -%}
+            <li><a class="not-found__link" href="{{ link.url }}">{{ link.title | escape }}</a></li>
+          {%- endfor -%}
+        </ul>
+      </nav>
+    {%- endif -%}
+  </div>
+</div>
+
+{% stylesheet %}
+  /*
+    No Figma frame: built from the M5 pages (collection banner / search hero): centred, the eyebrow
+    with rules, a heading-font h1 with an accent word, a pill search field (the search page's),
+    .button + .button--secondary, pills like the category pills. The "404" is decorative (the
+    FAQ numbers' style: heading font thin, accent 15%).
+  */
+  .not-found {
+    display: block;
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+    background-color: var(--color-background);
+  }
+
+  .not-found__inner {
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+    text-align: center;
+  }
+
+  .not-found__code {
+    margin: 0;
+    color: color-mix(in srgb, var(--color-accent) 15%, transparent);
+    font-family: var(--font-heading--family);
+    font-size: clamp(7rem, 4rem + 14vw, 17rem);
+    font-weight: 200;
+    line-height: 0.85;
+    letter-spacing: -0.02em;
+  }
+
+  .not-found__eyebrow {
+    margin-block-start: var(--space-lg);
+  }
+
+  .not-found__heading {
+    max-inline-size: 18em;
+    margin: var(--space-lg) auto 0;
+    font-size: max(2rem, calc(64 * var(--px, 0.0625rem)));
+    font-weight: 400;
+    line-height: 1.1;
+  }
+
+  .not-found__heading em {
+    color: var(--color-accent);
+    font-style: normal;
+  }
+
+  .not-found__text {
+    max-inline-size: 36rem;
+    margin: var(--space-lg) auto 0;
+    font-size: var(--font-size-body);
+    line-height: 1.7;
+  }
+
+  .not-found__text > * {
+    margin: 0;
+  }
+
+  /* The search field: one pill with the button inside (as on the search page) */
+  /* A fixed-height pill; the round button sits in its middle (6px all round), without a shadow */
+  .not-found__search {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    block-size: 3.5rem;
+    box-sizing: border-box;
+    max-inline-size: 36rem;
+    margin: var(--space-xl) auto 0;
+    padding: 0.375rem 0.375rem 0.375rem var(--space-lg);
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-card);
+    box-shadow: var(--shadow-card);
+  }
+
+  .not-found__search:focus-within {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  .not-found .not-found__search-input {
+    flex: 1;
+    align-self: stretch;
+    min-inline-size: 0;
+    min-block-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--color-text);
+    font-size: var(--font-size-body);
+  }
+
+  .not-found .not-found__search-input:focus-visible {
+    outline: none;
+  }
+
+  .not-found__search-input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+  }
+
+  .not-found .not-found__search-submit {
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    inline-size: 2.75rem;
+    block-size: 2.75rem;
+    min-block-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background-color: var(--color-button);
+    box-shadow: none;
+    color: var(--color-button-text);
+  }
+
+  .not-found__search-submit svg {
+    inline-size: 1.1rem;
+    block-size: 1.1rem;
+  }
+
+  .not-found__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-sm) var(--space-md);
+    margin-block-start: var(--space-xl);
+  }
+
+  .not-found__links {
+    margin-block-start: var(--space-2xl);
+  }
+
+  .not-found__links-heading {
+    margin: 0;
+    color: var(--color-accent);
+    font-size: var(--font-size-small);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  .not-found__links-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-xs) var(--space-sm);
+    margin: var(--space-md) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .not-found__link {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 2.75rem;
+    padding: 0 var(--space-md);
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-pill);
+    color: var(--color-text);
+    font-size: var(--font-size-caption);
+    text-decoration: none;
+    transition:
+      border-color var(--duration-fast) var(--ease-out),
+      color var(--duration-fast) var(--ease-out);
+  }
+
+  .not-found__link:hover {
+    border-color: color-mix(in srgb, var(--color-accent) 35%, transparent);
+    color: var(--color-accent);
+  }
+
+  /* Phones: full-width buttons, easy to tap */
+  @media (max-width: 749px) {
+    .not-found__actions > .button {
+      flex: 1 1 100%;
+    }
+  }
+{% endstylesheet %}
 
 {% schema %}
 {
   "name": "t:general.404",
-  "settings": []
+  "tag": "section",
+  "class": "not-found-section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "Page not found"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.italic_accent_info",
+      "default": "This page has <em>wandered off.</em>"
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "t:labels.text",
+      "default": "<p>The link may be old, or the piece may have moved. Search for it, or start again from the home page.</p>"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_search",
+      "label": "t:labels.not_found_show_search",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "search_placeholder",
+      "label": "t:labels.not_found_placeholder",
+      "visible_if": "{{ section.settings.show_search }}"
+    },
+    {
+      "type": "link_list",
+      "id": "menu",
+      "label": "t:labels.not_found_menu",
+      "info": "t:labels.not_found_menu_info"
+    },
+    {
+      "type": "text",
+      "id": "links_heading",
+      "label": "t:labels.not_found_links_heading",
+      "default": "Popular right now"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "checkbox",
+      "id": "fill_screen",
+      "label": "t:labels.fill_screen",
+      "info": "t:labels.fill_screen_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "scale_screen",
+      "label": "t:labels.scale_screen",
+      "info": "t:labels.scale_screen_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "text_scale",
+      "label": "t:labels.text_scale",
+      "info": "t:labels.text_scale_info",
+      "min": 100,
+      "max": 130,
+      "step": 5,
+      "unit": "%",
+      "default": 100,
+      "visible_if": "{{ section.settings.scale_screen }}"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 80
+    }
+  ]
 }
 {% endschema %}

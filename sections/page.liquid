@@ -1,27 +1,276 @@
-{% comment %}
-  This section is used in the page template to render store pages like About us
-  or Contact us.
-
+{%- comment -%}
+  Generic page (M8.7, no Figma: the M5 pages' style). Any page without its own template (Online
+  Store > Pages, template "Default page") shows here: breadcrumb, an optional eyebrow, the page
+  title with an optional accent word, and the page's own text (written in the admin) at a
+  comfortable reading width, styled by .rte.
   https://shopify.dev/docs/storefronts/themes/architecture/templates/page
-{% endcomment %}
+{%- endcomment -%}
 
-<h1 class="page__title">{{ page.title }}</h1>
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+-%}
 
-<div class="rte">
-  {{ page.content }}
+{% render 'screen-scale' %}
+
+<div
+  class="page-main full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 100 | divided_by: 100.0 }}; --page-text-width: {{ section.settings.text_width | default: 760 }}px;"
+>
+  <div class="page-main__inner">
+    {%- if section.settings.show_breadcrumb -%}
+      {% render 'breadcrumb', current: page.title, class: 'page-main__breadcrumb' %}
+    {%- endif -%}
+
+    <header class="page-main__header{% if section.settings.align == 'center' %} page-main__header--center{% endif %}">
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="eyebrow{% if section.settings.align == 'center' %} eyebrow--center{% endif %}">{{ section.settings.eyebrow | escape }}</p>
+      {%- endif -%}
+      <h1 class="page-main__title">
+        {%- if section.settings.heading != blank -%}
+          {{ section.settings.heading }}
+        {%- else -%}
+          {{ page.title | escape }}
+        {%- endif -%}
+      </h1>
+    </header>
+
+    {%- if page.content != blank -%}
+      <div class="page-main__content rte">
+        {{ page.content }}
+      </div>
+    {%- elsif request.design_mode -%}
+      <p class="page-main__empty">{{ 'page.empty' | t }}</p>
+    {%- endif -%}
+  </div>
 </div>
 
 {% stylesheet %}
-  /* padding, not margin: Skeleton's reset removes the top margin of a first child */
-  .page__title {
-    padding-block-start: var(--space-section);
-    margin-block-end: var(--space-xl);
+  /*
+    No Figma frame: the M5 pages' header (breadcrumb, eyebrow, heading-font h1 ~64px with an accent
+    word, a 3px rule under it, as the policy pages) and a reading column for the text (~760px).
+  */
+  .page-main {
+    display: block;
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+    background-color: var(--color-background);
+  }
+
+  .page-main__inner {
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  .page-main__header {
+    margin-block-start: max(var(--space-xl), calc(45 * var(--px, 0.0625rem)));
+    padding-block-end: max(var(--space-xl), calc(39 * var(--px, 0.0625rem)));
+    border-block-end: 3px solid var(--color-card-border);
+  }
+
+  .page-main__header--center {
+    text-align: center;
+  }
+
+  .page-main__title {
+    margin: max(var(--space-lg), calc(42 * var(--px, 0.0625rem))) 0 0;
+    font-size: max(2.25rem, calc(64 * var(--px, 0.0625rem)));
+    font-weight: 400;
+    line-height: 1.1;
+  }
+
+  .page-main__header > .page-main__title:first-child {
+    margin-block-start: 0;
+  }
+
+  .page-main__title em {
+    color: var(--color-accent);
+    font-style: normal;
+  }
+
+  /* The page's text: a reading column, headings in the heading font, links and italic accent */
+  .page-main__content {
+    max-inline-size: var(--page-text-width, 760px);
+    margin-block-start: max(var(--space-xl), calc(48 * var(--px, 0.0625rem)));
+    font-size: var(--font-size-body);
+    line-height: 1.75;
+  }
+
+  .page-main__header--center + .page-main__content {
+    margin-inline: auto;
+  }
+
+  .page-main__content :is(h2, h3) {
+    font-weight: 400;
+    line-height: 1.3;
+  }
+
+  .page-main__content h2 {
+    font-size: max(1.5rem, calc(32 * var(--px, 0.0625rem)));
+  }
+
+  .page-main__content h3 {
+    font-size: max(1.25rem, calc(24 * var(--px, 0.0625rem)));
+  }
+
+  .page-main__content a {
+    color: var(--color-accent);
+  }
+
+  .page-main__content img {
+    max-inline-size: 100%;
+    block-size: auto;
+    border-radius: var(--radius-sm);
+  }
+
+  .page-main__content table {
+    inline-size: 100%;
+    border-collapse: collapse;
+  }
+
+  .page-main__content :is(th, td) {
+    padding: var(--space-sm) var(--space-md) var(--space-sm) 0;
+    border-block-end: 1px solid var(--color-card-border);
+    text-align: start;
+    vertical-align: top;
+  }
+
+  .page-main__empty {
+    margin: var(--space-xl) 0 0;
+  }
+
+  @media (max-width: 749px) {
+    .page-main__content {
+      font-size: var(--font-size-body-sm);
+      line-height: 1.7;
+    }
+
+    .page-main__content table {
+      display: block;
+      overflow-x: auto;
+    }
   }
 {% endstylesheet %}
 
 {% schema %}
 {
   "name": "t:general.page",
-  "settings": []
+  "tag": "section",
+  "class": "page-main-section",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_breadcrumb",
+      "label": "t:labels.show_breadcrumb",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.page_heading_info"
+    },
+    {
+      "type": "select",
+      "id": "align",
+      "label": "t:labels.page_align",
+      "options": [
+        { "value": "start", "label": "t:options.page_align.start" },
+        { "value": "center", "label": "t:options.page_align.center" }
+      ],
+      "default": "start"
+    },
+    {
+      "type": "range",
+      "id": "text_width",
+      "label": "t:labels.page_text_width",
+      "info": "t:labels.page_text_width_info",
+      "min": 560,
+      "max": 1200,
+      "step": 20,
+      "unit": "px",
+      "default": 760
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "checkbox",
+      "id": "scale_screen",
+      "label": "t:labels.scale_screen",
+      "info": "t:labels.scale_screen_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "text_scale",
+      "label": "t:labels.text_scale",
+      "info": "t:labels.text_scale_info",
+      "min": 100,
+      "max": 130,
+      "step": 5,
+      "unit": "%",
+      "default": 100,
+      "visible_if": "{{ section.settings.scale_screen }}"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 96
+    }
+  ]
 }
 {% endschema %}
