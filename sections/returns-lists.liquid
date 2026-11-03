@@ -1,0 +1,307 @@
+{%- comment -%}
+  Returns lists (M8.6 part 2, Figma 1:18125): two cards side by side, "Always returnable" (a solid
+  tick circle, ✓ items) and "The few exceptions" (a pale "!" circle, ✕ items, dashed border). Each
+  card's items come from a textarea, one per line.
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+-%}
+
+{% render 'screen-scale' %}
+
+<div
+  class="returns-lists full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 100 | divided_by: 100.0 }};"
+>
+  <animate-on-scroll class="returns-lists__inner">
+    {%- for card in (1..2) -%}
+      {%- liquid
+        if card == 1
+          assign card_title = section.settings.yes_title
+          assign card_items = section.settings.yes_items | newline_to_br | split: '<br />'
+          assign card_icon = 'icon-check.svg'
+          assign item_icon = 'icon-check.svg'
+          assign card_class = 'returns-lists__card--yes'
+        else
+          assign card_title = section.settings.no_title
+          assign card_items = section.settings.no_items | newline_to_br | split: '<br />'
+          assign card_icon = 'icon-exclamation.svg'
+          assign item_icon = 'icon-close.svg'
+          assign card_class = 'returns-lists__card--no'
+        endif
+      -%}
+      {%- if card_title != blank or card_items.size > 0 -%}
+        <div class="returns-lists__card {{ card_class }}" data-animate="fade-up">
+          {%- if card_title != blank -%}
+            <h2 class="returns-lists__title">
+              <span class="returns-lists__icon" aria-hidden="true">{{ card_icon | inline_asset_content }}</span>
+              {{- card_title | escape -}}
+            </h2>
+          {%- endif -%}
+          <ul class="returns-lists__items" role="list">
+            {%- for item in card_items -%}
+              {%- assign item_text = item | strip -%}
+              {%- if item_text != blank -%}
+                <li class="returns-lists__item">
+                  <span class="returns-lists__mark" aria-hidden="true">{{ item_icon | inline_asset_content }}</span>
+                  <span>{{ item_text | escape }}</span>
+                </li>
+              {%- endif -%}
+            {%- endfor -%}
+          </ul>
+        </div>
+      {%- endif -%}
+    {%- endfor -%}
+  </animate-on-scroll>
+</div>
+
+{% stylesheet %}
+  /*
+    Figma 1920: two cards 795 x 345 at x 135 / 990 (gap 60) from y 1018; radius ~16, 1px pale border
+    (the second dashed), white; icon 40 + title heading font ~30px; items ~20 / 35, one every ~45px,
+    a 24px tick / cross.
+  */
+  .returns-lists {
+    display: block;
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+    background-color: var(--color-background);
+  }
+
+  .returns-lists__inner {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: max(var(--space-lg), calc(60 * var(--px, 0.0625rem)));
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  .returns-lists__card {
+    box-sizing: border-box;
+    padding: max(var(--space-lg), calc(44 * var(--px, 0.0625rem))) max(var(--space-lg), calc(33 * var(--px, 0.0625rem)));
+    border: 1px solid var(--color-card-border);
+    border-radius: max(0.75rem, calc(16 * var(--px, 0.0625rem)));
+    background-color: color-mix(in srgb, var(--color-accent) 1%, var(--color-background));
+  }
+
+  .returns-lists__card--no {
+    border-style: dashed;
+    border-color: color-mix(in srgb, var(--color-accent) 22%, transparent);
+  }
+
+  .returns-lists__card:nth-child(2) {
+    --animate-delay: 100ms;
+  }
+
+  .returns-lists__title {
+    display: flex;
+    align-items: center;
+    gap: max(var(--space-sm), calc(18 * var(--px, 0.0625rem)));
+    margin: 0;
+    font-size: max(1.375rem, calc(30 * var(--px, 0.0625rem)));
+    font-weight: 400;
+    line-height: 1.25;
+  }
+
+  /* The title's circle: solid accent with a white ✓, or pale accent with an accent "!" */
+  .returns-lists__icon {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    inline-size: max(2.25rem, calc(40 * var(--px, 0.0625rem)));
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background-color: var(--color-accent);
+    color: var(--color-background);
+  }
+
+  .returns-lists__card--no .returns-lists__icon {
+    background-color: color-mix(in srgb, var(--color-accent) 12%, var(--color-background));
+    color: var(--color-accent);
+  }
+
+  .returns-lists__icon svg {
+    inline-size: 45%;
+    block-size: auto;
+  }
+
+  .returns-lists__items {
+    display: flex;
+    flex-direction: column;
+    gap: max(var(--space-xs), calc(10 * var(--px, 0.0625rem)));
+    margin: max(var(--space-lg), calc(34 * var(--px, 0.0625rem))) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .returns-lists__item {
+    display: flex;
+    align-items: baseline;
+    gap: max(var(--space-md), calc(26 * var(--px, 0.0625rem)));
+    font-size: var(--font-size-body);
+    line-height: 1.75;
+  }
+
+  .returns-lists__mark {
+    display: inline-grid;
+    flex-shrink: 0;
+    place-items: center;
+    inline-size: 1.25rem;
+    color: var(--color-accent);
+    transform: translateY(0.15em);
+  }
+
+  .returns-lists__mark svg {
+    inline-size: 0.875rem;
+    block-size: auto;
+  }
+
+  /* Phones and small tablets: the cards stack, full width */
+  @media (max-width: 989px) {
+    .returns-lists__inner {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-md);
+    }
+
+    .returns-lists__card:nth-child(2) {
+      --animate-delay: 0ms;
+    }
+  }
+
+  @media (max-width: 749px) {
+    .returns-lists__card {
+      padding: var(--space-lg) var(--space-md);
+    }
+
+    .returns-lists__title {
+      font-size: 1.25rem;
+    }
+
+    .returns-lists__item {
+      gap: var(--space-sm);
+      font-size: var(--font-size-body-sm);
+      line-height: 1.6;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.returns_lists",
+  "tag": "section",
+  "class": "returns-lists-section",
+  "enabled_on": {
+    "templates": ["page"]
+  },
+  "settings": [
+    {
+      "type": "text",
+      "id": "yes_title",
+      "label": "t:labels.returns_yes_title",
+      "default": "Always returnable"
+    },
+    {
+      "type": "textarea",
+      "id": "yes_items",
+      "label": "t:labels.returns_items",
+      "info": "t:labels.returns_items_info",
+      "default": "Opened and part-used formulas\nA shade that turned out wrong\nGifts, refunded to the giver or as credit\nAnything damaged in transit, replaced first"
+    },
+    {
+      "type": "text",
+      "id": "no_title",
+      "label": "t:labels.returns_no_title",
+      "default": "The few exceptions"
+    },
+    {
+      "type": "textarea",
+      "id": "no_items",
+      "label": "t:labels.returns_items",
+      "info": "t:labels.returns_items_info",
+      "default": "Pieces redeemed entirely with Circle points — returned as points\nEngraved or personalised commissions\nAnything sent back after the sixtieth day"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "checkbox",
+      "id": "scale_screen",
+      "label": "t:labels.scale_screen",
+      "info": "t:labels.scale_screen_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "text_scale",
+      "label": "t:labels.text_scale",
+      "info": "t:labels.text_scale_info",
+      "min": 100,
+      "max": 130,
+      "step": 5,
+      "unit": "%",
+      "default": 100,
+      "visible_if": "{{ section.settings.scale_screen }}"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 32
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 48
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.returns_lists"
+    }
+  ]
+}
+{% endschema %}

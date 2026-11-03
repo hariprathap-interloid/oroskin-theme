@@ -1,0 +1,200 @@
+{%- comment -%}
+  Call-to-action card (M8.6 part 2, Figma 1:18125 "Ready to send something back?"): a wide card with
+  a title and a line on the left and one or two buttons on the right. Reusable on any page; it draws
+  the same card as the FAQ's "Still unanswered?" (snippets/faq-contact.liquid), in the glass or the
+  tinted style. The first button's link: empty = the customer account (orders, returns).
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+  assign first_link = section.settings.button_link | default: routes.account_url
+-%}
+
+{% render 'screen-scale' %}
+
+{%- comment -%} The title is semibold (600): the page only loads regular and bold {%- endcomment -%}
+{% style %}
+  {{ settings.type_heading_font | font_modify: 'weight', '600' | font_face: font_display: 'swap' }}
+{% endstyle %}
+
+<div
+  class="cta-card full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 100 | divided_by: 100.0 }};"
+>
+  <div class="cta-card__inner">
+    {% render 'faq-contact',
+      heading: section.settings.heading,
+      text: section.settings.text,
+      button_label: section.settings.button_label,
+      button_link: first_link,
+      second_label: section.settings.second_label,
+      second_link: section.settings.second_link,
+      style: section.settings.style,
+      class: 'cta-card__card'
+    %}
+  </div>
+</div>
+
+{% stylesheet %}
+  /* Figma 1920: the card 1649 x 136 at x 136, the page column's full width */
+  .cta-card {
+    display: block;
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+    background-color: var(--color-background);
+  }
+
+  .cta-card__inner {
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  /*
+    As wide as the column, with no top margin (the FAQ card is 1418 wide and sits 90px under the
+    questions). Two classes, so this wins over the snippet's .faq-contact whatever order Shopify
+    puts the section and snippet stylesheets in.
+  */
+  .cta-card .cta-card__card {
+    margin-block-start: 0;
+  }
+
+  .cta-card__card .faq-contact__card {
+    inline-size: 100%;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.cta_card",
+  "tag": "section",
+  "class": "cta-card-section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "Ready to send something back?"
+    },
+    {
+      "type": "text",
+      "id": "text",
+      "label": "t:labels.text",
+      "default": "Open the order in your archive and we will book the courier — no printer, no queue."
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "t:labels.button_label",
+      "default": "Start a return"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "t:labels.button_link",
+      "info": "t:labels.cta_card_link_info"
+    },
+    {
+      "type": "text",
+      "id": "second_label",
+      "label": "t:labels.faq_second_label"
+    },
+    {
+      "type": "url",
+      "id": "second_link",
+      "label": "t:labels.faq_second_link",
+      "info": "t:labels.faq_second_link_info"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "style",
+      "label": "t:labels.cta_card_style",
+      "options": [
+        { "value": "tinted", "label": "t:options.cta_card_style.tinted" },
+        { "value": "glass", "label": "t:options.cta_card_style.glass" }
+      ],
+      "default": "tinted"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "checkbox",
+      "id": "scale_screen",
+      "label": "t:labels.scale_screen",
+      "info": "t:labels.scale_screen_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "text_scale",
+      "label": "t:labels.text_scale",
+      "info": "t:labels.text_scale_info",
+      "min": 100,
+      "max": 130,
+      "step": 5,
+      "unit": "%",
+      "default": 100,
+      "visible_if": "{{ section.settings.scale_screen }}"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 48
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 96
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.cta_card"
+    }
+  ]
+}
+{% endschema %}

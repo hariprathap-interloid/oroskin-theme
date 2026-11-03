@@ -78,6 +78,11 @@
       {{ content_for_layout }}
     </main>
 
+    {%- comment -%} Shopify's own policy pages (/policies/*) have no template: their look comes from this snippet (its rules only match their classes) {%- endcomment -%}
+    {%- if request.page_type == 'policy' -%}
+      {% render 'policy-page-styles' %}
+    {%- endif -%}
+
     {% sections 'footer-group' %}
   </body>
 </html>

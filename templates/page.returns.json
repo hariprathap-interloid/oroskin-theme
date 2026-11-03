@@ -1,0 +1,139 @@
+{
+  "sections": {
+    "hero": {
+      "type": "returns-hero",
+      "settings": {
+        "show_breadcrumb": true,
+        "badge_number": "60",
+        "badge_label": "Days",
+        "eyebrow": "Returns & refunds",
+        "heading": "No questions. Not <em>one.</em>",
+        "text": "<p>If a formula is not right for your skin we collect it from your door and refund in full — even if the bottle is half empty. Skin is personal; a return is not a failure.</p>",
+        "section_width": "widest",
+        "scale_screen": true,
+        "text_scale": 100,
+        "color_scheme": "scheme-2",
+        "padding_top": 24,
+        "padding_bottom": 80
+      }
+    },
+    "steps": {
+      "type": "returns-steps",
+      "blocks": {
+        "open": {
+          "type": "_return-step",
+          "settings": {
+            "title": "Open the order",
+            "text": "<p>Find it in your archive and choose Return. Tell us which pieces and, if you like, why.</p>",
+            "label": "Within 60 days"
+          }
+        },
+        "courier": {
+          "type": "_return-step",
+          "settings": {
+            "title": "We book the courier",
+            "text": "<p>A collection slot is offered for the next working day. No printer, no label, no queue.</p>",
+            "label": "Same day"
+          }
+        },
+        "hand": {
+          "type": "_return-step",
+          "settings": {
+            "title": "Hand it over",
+            "text": "<p>Reuse the original box or any box. The courier scans it at your door and that is your proof.</p>",
+            "label": "At your door"
+          }
+        },
+        "refund": {
+          "type": "_return-step",
+          "settings": {
+            "title": "Refunded in full",
+            "text": "<p>We release the refund the moment it is collected — not when it reaches us.</p>",
+            "label": "2–3 days to your bank"
+          }
+        }
+      },
+      "block_order": [
+        "open",
+        "courier",
+        "hand",
+        "refund"
+      ],
+      "settings": {
+        "heading": "",
+        "section_width": "widest",
+        "scale_screen": true,
+        "text_scale": 100,
+        "color_scheme": "scheme-2",
+        "padding_top": 40,
+        "padding_bottom": 56
+      }
+    },
+    "lists": {
+      "type": "returns-lists",
+      "settings": {
+        "yes_title": "Always returnable",
+        "yes_items": "Opened and part-used formulas\nA shade that turned out wrong\nGifts, refunded to the giver or as credit\nAnything damaged in transit, replaced first",
+        "no_title": "The few exceptions",
+        "no_items": "Pieces redeemed entirely with Circle points — returned as points\nEngraved or personalised commissions\nAnything sent back after the sixtieth day",
+        "section_width": "widest",
+        "scale_screen": true,
+        "text_scale": 100,
+        "color_scheme": "scheme-2",
+        "padding_top": 32,
+        "padding_bottom": 48
+      }
+    },
+    "cta": {
+      "type": "cta-card",
+      "settings": {
+        "heading": "Ready to send something back?",
+        "text": "Open the order in your archive and we will book the courier — no printer, no queue.",
+        "button_label": "Start a return",
+        "button_link": "",
+        "second_label": "",
+        "second_link": "",
+        "style": "tinted",
+        "section_width": "widest",
+        "scale_screen": true,
+        "text_scale": 100,
+        "color_scheme": "scheme-2",
+        "padding_top": 48,
+        "padding_bottom": 96
+      }
+    },
+    "policy": {
+      "type": "policy",
+      "settings": {
+        "policy": "refund",
+        "layout": "rows",
+        "show_breadcrumb": false,
+        "eyebrow": "Refund policy",
+        "heading": "The full refund <em>policy</em>",
+        "heading_tag": "h2",
+        "intro": "<p>The exact terms, as they apply to every order.</p>",
+        "in_force_label": "",
+        "in_force_date": "",
+        "in_force_meta": "",
+        "show_cta": false,
+        "cta_heading": "",
+        "cta_text": "",
+        "cta_label": "",
+        "cta_link": "",
+        "section_width": "widest",
+        "scale_screen": true,
+        "text_scale": 100,
+        "color_scheme": "scheme-2",
+        "padding_top": 48,
+        "padding_bottom": 32
+      }
+    }
+  },
+  "order": [
+    "hero",
+    "steps",
+    "lists",
+    "policy",
+    "cta"
+  ]
+}

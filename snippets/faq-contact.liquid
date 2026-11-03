@@ -11,6 +11,9 @@
   @param {string} [button_link] - Its link, usually the contact page. Empty = an email to the shop (shop.email)
   @param {string} [second_label] - Second button (glass pill)
   @param {string} [second_link] - Its link. Empty = the customer account (routes.account_url)
+  @param {string} [style] - 'glass' (default: the FAQ card, soft shadow and a glow circle) or 'tinted'
+    (the returns card: pale accent fill and border, no glow)
+  @param {string} [class] - Extra class on the wrapper, e.g. to drop the FAQ's top margin
 
   @example
   {% render 'faq-contact',
@@ -30,7 +33,7 @@
   assign button_url = button_link | default: shop_mail
 -%}
 
-<div class="faq-contact">
+<div class="faq-contact faq-contact--{{ style | default: 'glass' }} {{ class }}">
   <div class="faq-contact__card">
     <div class="faq-contact__copy">
       {%- if heading != blank -%}
@@ -164,6 +167,17 @@
     box-shadow: var(--shadow-header);
   }
 
+  /* Tinted (returns): pale accent fill and border, no glow circle, no shadow */
+  .faq-contact--tinted .faq-contact__card {
+    border: 1px solid color-mix(in srgb, var(--color-accent) 15%, transparent);
+    background-color: color-mix(in srgb, var(--color-accent) 5%, var(--color-background));
+    box-shadow: none;
+  }
+
+  .faq-contact--tinted .faq-contact__card::before {
+    content: none;
+  }
+
   @media (max-width: 749px) {
     .faq-contact {
       margin-block-start: var(--space-xl);
@@ -187,8 +201,20 @@
 
     .faq-contact__button,
     .faq-contact__second {
-      min-block-size: 2.5rem;
+      min-block-size: 2.75rem;
       padding-inline: var(--space-md);
+    }
+
+    /*
+      Phones, tinted card (returns): the button takes the full width (easy to tap). The FAQ's glass
+      card keeps its two buttons side by side, as in its phone export (Variant10).
+    */
+    .faq-contact--tinted .faq-contact__actions {
+      inline-size: 100%;
+    }
+
+    .faq-contact--tinted .faq-contact__actions > * {
+      flex: 1 1 100%;
     }
   }
 {% endstylesheet %}

@@ -1,0 +1,204 @@
+{% doc %}
+  Styles for Shopify's own policy pages (/policies/privacy-policy, /terms-of-service,
+  /refund-policy, /shipping-policy, /contact-information: M8.6 part 3, design/briefs/policies.md).
+  Shopify builds those pages itself (Settings > Policies), so there's no section or template to
+  edit: only their fixed classes (.shopify-policy__container / __title / __body) can be styled.
+  Shopify bundles every {% stylesheet %} of the theme into one compiled file (checked: the same
+  styles.css, with these rules, on the home page and a policy page), so these rules are on every
+  page; they only match Shopify's policy classes, which exist only on /policies/* pages. The layout
+  renders the snippet on policy pages, so it's clear where it belongs.
+
+  The look follows the policy section (sections/policy.liquid, "Rows" layout): the page width of
+  the other pages, the heading style, every H2 a numbered row (title left, text right), a table
+  as the register, H4–H6 as accent group labels, italic and links in the accent colour.
+
+  @example
+  {%- if request.page_type == 'policy' -%}
+    {% render 'policy-page-styles' %}
+  {%- endif -%}
+{% enddoc %}
+
+{% stylesheet %}
+  /* The page column: the "Widest" width of the other pages, under the header */
+  .shopify-policy__container {
+    --policy-title-column: max(14rem, calc(418 / 1920 * 100vw));
+
+    box-sizing: border-box;
+    inline-size: min(calc(100vw - clamp(4rem, 8vw, 10rem)), calc(100% - var(--page-margin) * 2));
+    max-inline-size: none;
+    margin: 0 auto;
+    padding-block: var(--space-xl) var(--space-3xl, 6rem);
+  }
+
+  /* The title, as the policy section's heading (Figma ~64px, a 3px rule under it) */
+  .shopify-policy__title {
+    padding-block-end: var(--space-xl);
+    border-block-end: 3px solid var(--color-card-border);
+    text-align: start;
+  }
+
+  .shopify-policy__title h1 {
+    margin: 0;
+    font-size: clamp(2.25rem, 1.5rem + 2.4vw, 4rem);
+    font-weight: 400;
+    line-height: 1.1;
+  }
+
+  /* The text: Shopify wraps it in .rte > div; the div steps out so its children are the grid items */
+  .shopify-policy__body {
+    margin-block-start: var(--space-xl);
+    font-size: var(--font-size-body);
+    line-height: 1.75;
+  }
+
+  .shopify-policy__body .rte {
+    counter-reset: policy-item;
+    display: grid;
+    grid-template-columns: var(--policy-title-column) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .shopify-policy__body .rte > div {
+    display: contents;
+  }
+
+  .shopify-policy__body .rte :is(p, ul, ol, h3, table, h4, h5, h6) {
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+
+  .shopify-policy__body .rte :is(p, ul, ol) + :is(p, ul, ol) {
+    margin-block-start: var(--space-sm);
+  }
+
+  /* Each H2: a numbered row title ("01 Returns"), with the row line above it */
+  .shopify-policy__body .rte h2 {
+    counter-increment: policy-item;
+    grid-column: 1;
+    display: flex;
+    gap: var(--space-md);
+    margin: 0;
+    padding: var(--space-xl) var(--space-lg) 0 0;
+    border-block-start: 1px solid var(--color-card-border);
+    font-size: clamp(1.25rem, 1.1rem + 0.45vw, 1.625rem);
+    font-weight: 400;
+    line-height: 1.35;
+  }
+
+  .shopify-policy__body .rte h2::before {
+    content: counter(policy-item, decimal-leading-zero);
+    flex-shrink: 0;
+    color: var(--color-accent);
+    font-size: 0.85em;
+    line-height: 1.6;
+  }
+
+  /* The text after an H2 (until the next one) sits in the text column; the first piece draws the line */
+  .shopify-policy__body .rte h2 ~ :is(p, ul, ol, h3) {
+    grid-column: 2;
+  }
+
+  .shopify-policy__body .rte h2 + :is(p, ul, ol, h3) {
+    padding-block-start: var(--space-xl);
+    border-block-start: 1px solid var(--color-card-border);
+  }
+
+  .shopify-policy__body .rte h2 ~ :is(p, ul, ol):has(+ h2) {
+    padding-block-end: var(--space-xl);
+  }
+
+  .shopify-policy__body .rte h3 {
+    margin-block-start: var(--space-md);
+    font-size: var(--font-size-body-lg);
+    font-weight: 400;
+  }
+
+  /* An H4–H6: an accent group label; the numbering restarts */
+  .shopify-policy__body .rte :is(h4, h5, h6) {
+    counter-reset: policy-item;
+    margin-block-start: var(--space-2xl);
+    margin-block-end: var(--space-md);
+    color: var(--color-accent);
+    font-family: var(--font-body--family);
+    font-size: var(--font-size-label);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  .shopify-policy__body .rte a,
+  .shopify-policy__body .rte em {
+    color: var(--color-accent);
+  }
+
+  .shopify-policy__body .rte em {
+    font-style: normal;
+  }
+
+  /* A table: the register (accent header labels, heading-font first column, accent last column) */
+  .shopify-policy__body .rte table {
+    inline-size: 100%;
+    border-collapse: collapse;
+  }
+
+  .shopify-policy__body .rte th {
+    padding: 0 var(--space-md) var(--space-md) 0;
+    border-block-end: 1px solid var(--color-card-border);
+    color: var(--color-accent);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-align: start;
+    text-transform: uppercase;
+  }
+
+  .shopify-policy__body .rte td {
+    padding: var(--space-lg) var(--space-md) var(--space-lg) 0;
+    border-block-end: 1px solid var(--color-card-border);
+    vertical-align: top;
+  }
+
+  .shopify-policy__body .rte td:first-child {
+    font-family: var(--font-heading--family);
+    font-size: clamp(1.125rem, 1rem + 0.45vw, 1.5rem);
+  }
+
+  .shopify-policy__body .rte td:last-child {
+    color: var(--color-accent);
+  }
+
+  /* Phones: one column (the number + title, then the text); the table scrolls sideways */
+  @media (max-width: 749px) {
+    .shopify-policy__container {
+      inline-size: calc(100% - var(--page-margin) * 2);
+    }
+
+    .shopify-policy__body {
+      font-size: var(--font-size-body-sm);
+      line-height: 1.7;
+    }
+
+    .shopify-policy__body .rte {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .shopify-policy__body .rte h2,
+    .shopify-policy__body .rte h2 ~ :is(p, ul, ol, h3) {
+      grid-column: 1;
+    }
+
+    .shopify-policy__body .rte h2 {
+      padding-inline-end: 0;
+    }
+
+    .shopify-policy__body .rte h2 + :is(p, ul, ol, h3) {
+      padding-block-start: var(--space-sm);
+      border-block-start: 0;
+    }
+
+    .shopify-policy__body .rte table {
+      display: block;
+      overflow-x: auto;
+    }
+  }
+{% endstylesheet %}

@@ -1,0 +1,32 @@
+{
+  "sections": {
+    "policy": {
+      "type": "policy",
+      "settings": {
+        "show_breadcrumb": true,
+        "in_force_label": "In force",
+        "show_cta": true,
+        "cta_label": "Write message",
+        "cta_link": "",
+        "section_width": "widest",
+        "scale_screen": true,
+        "text_scale": 100,
+        "color_scheme": "scheme-2",
+        "padding_top": 24,
+        "padding_bottom": 96,
+        "policy": "privacy",
+        "layout": "rows",
+        "eyebrow": "Privacy policy",
+        "heading": "Everything we hold, <em>and why.</em>",
+        "intro": "<p>We collect four things. Each has a reason, a lifespan and a switch. We have never sold data, and the company is structured so that we cannot.</p>",
+        "in_force_date": "1 August 2026",
+        "in_force_meta": "Version 4 · Grasse, France",
+        "cta_heading": "Exercise any of these in one message.",
+        "cta_text": "<p>Our data steward answers within one working day — no forms, no ticket numbers. Write to <a href=\"mailto:privacy@oroskin.com\">privacy@oroskin.com</a>, or ask the concierge to pass it on.</p>"
+      }
+    }
+  },
+  "order": [
+    "policy"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "sections": {
+    "policy": {
+      "type": "policy",
+      "settings": {
+        "show_breadcrumb": true,
+        "in_force_label": "In force",
+        "show_cta": false,
+        "cta_label": "Write message",
+        "cta_link": "",
+        "section_width": "widest",
+        "scale_screen": true,
+        "text_scale": 100,
+        "color_scheme": "scheme-2",
+        "padding_top": 24,
+        "padding_bottom": 96,
+        "policy": "terms",
+        "layout": "contents",
+        "eyebrow": "Terms of use",
+        "heading": "The agreement, <em>in plain words.</em>",
+        "intro": "<p>Nine clauses. Written to be read once and understood — not to be survived. In force from 1 August 2026.</p>",
+        "in_force_date": "",
+        "in_force_meta": "",
+        "cta_heading": "Exercise any of these in one message.",
+        "cta_text": ""
+      }
+    }
+  },
+  "order": [
+    "policy"
+  ]
+}

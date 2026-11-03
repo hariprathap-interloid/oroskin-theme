@@ -1,0 +1,144 @@
+{%- comment -%}
+  One step of the returns steps (Figma 1:18125): a numbered circle (01 …, a CSS counter from the
+  section) with a line towards the next step, a title, a text and an accent label ("Within 60 days").
+  A div with role="listitem" (Shopify wraps each block in a div, which a real <ol> can't hold). The
+  line to the next step is drawn by the section, which can tell the last step (the wrappers).
+{%- endcomment -%}
+
+<div class="return-step" role="listitem" data-animate="fade-up" {{ block.shopify_attributes }}>
+  <span class="return-step__marker" aria-hidden="true"></span>
+  <div class="return-step__body">
+    {%- if block.settings.title != blank -%}
+      <h3 class="return-step__title">{{ block.settings.title | escape }}</h3>
+    {%- endif -%}
+    {%- if block.settings.text != blank -%}
+      <div class="return-step__text">{{ block.settings.text }}</div>
+    {%- endif -%}
+    {%- if block.settings.label != blank -%}
+      <p class="return-step__label">{{ block.settings.label | escape }}</p>
+    {%- endif -%}
+  </div>
+</div>
+
+{% stylesheet %}
+  /*
+    Figma 1920: circles 73 x 73 (1px accent ring, white, "01" body ~20px accent) every 410px; a 1px
+    pale line from 8px after the circle to the next one (319 wide, at the circle's middle); title
+    heading font ~30px ~58px under the circle; text ~20 / 35, 318 wide; label accent caps ~16px.
+    Phones: a vertical timeline (circle left, the line running down to the next circle).
+  */
+  .return-step {
+    counter-increment: return-step;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .return-step__marker {
+    position: relative;
+    display: grid;
+    place-items: center;
+    inline-size: var(--step-marker, max(3.25rem, calc(73 * var(--px, 0.0625rem))));
+    aspect-ratio: 1;
+    box-sizing: border-box;
+    border: 1px solid var(--color-accent);
+    border-radius: 50%;
+    background-color: var(--color-background);
+    color: var(--color-accent);
+    font-size: var(--font-size-body);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .return-step__marker::before {
+    content: counter(return-step, decimal-leading-zero);
+  }
+
+  .return-step__body {
+    max-inline-size: max(16rem, calc(320 * var(--px, 0.0625rem)));
+  }
+
+  .return-step__title {
+    margin: max(var(--space-lg), calc(40 * var(--px, 0.0625rem))) 0 0;
+    font-size: max(1.375rem, calc(30 * var(--px, 0.0625rem)));
+    font-weight: 400;
+    line-height: 1.25;
+  }
+
+  .return-step__text {
+    margin-block-start: max(var(--space-sm), calc(16 * var(--px, 0.0625rem)));
+    font-size: var(--font-size-body);
+    line-height: 1.75;
+  }
+
+  .return-step__text > * {
+    margin: 0;
+  }
+
+  .return-step__label {
+    margin: max(var(--space-md), calc(21 * var(--px, 0.0625rem))) 0 0;
+    color: var(--color-accent);
+    font-size: var(--font-size-small);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  /* Phones: a vertical timeline */
+  @media (max-width: 749px) {
+    .return-step {
+      display: grid;
+      grid-template-columns: 3rem minmax(0, 1fr);
+      column-gap: var(--space-md);
+      padding-block-end: var(--space-xl);
+    }
+
+    .return-step__marker {
+      inline-size: 3rem;
+      font-size: var(--font-size-caption);
+    }
+
+    .return-step__body {
+      max-inline-size: none;
+    }
+
+    .return-step__title {
+      margin-block-start: var(--space-sm);
+      font-size: 1.25rem;
+    }
+
+    .return-step__text {
+      font-size: var(--font-size-body-sm);
+      line-height: 1.7;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.return_step",
+  "settings": [
+    {
+      "type": "text",
+      "id": "title",
+      "label": "t:labels.title",
+      "default": "Open the order"
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "t:labels.text",
+      "default": "<p>Find it in your archive and choose Return.</p>"
+    },
+    {
+      "type": "text",
+      "id": "label",
+      "label": "t:labels.returns_step_label",
+      "default": "Within 60 days"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.return_step"
+    }
+  ]
+}
+{% endschema %}

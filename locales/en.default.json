@@ -412,5 +412,12 @@
       "other": "{{ count }} answers"
     },
     "search_clear": "Clear the search"
+  },
+  "policy": {
+    "contents": "Contents",
+    "empty": "This policy is empty. Write it in Settings > Policies: use Heading 2 for each numbered item, a table for the register, and Heading 4 for a group label such as \"Your rights\"."
+  },
+  "returns": {
+    "steps_empty": "Add Return step blocks: one per step, numbered automatically."
   }
 }

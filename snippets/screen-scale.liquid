@@ -1,7 +1,8 @@
 {% doc %}
   Screen-sized sections, the hero's way (Figma frames are 1920 x 1031 screens). Outputs nothing: it
-  only loads the CSS below, and a snippet's stylesheet loads only on pages that render it, so this
-  never affects other pages or the header and footer. Used by the contact page sections.
+  holds the CSS below. (Shopify bundles every {% stylesheet %} of the theme into one file, so the
+  rules exist on every page; they only act on sections that add the classes, so the header, footer
+  and other sections are never affected.) Used by the contact, about, FAQ and policy sections.
 
   The section adds the classes itself:
   - section--fill-screen: at least one screen tall, content centred vertically

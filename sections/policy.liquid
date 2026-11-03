@@ -1,0 +1,932 @@
+{%- comment -%}
+  Policy page (M8.6, design/briefs/policies.md, Figma 1:18280 privacy, 1:18208 terms). Shows one of
+  the store's policies from Settings > Policies (the text lives there once, so this page and the
+  links in checkout always say the same thing), styled into the Figma layout:
+  - each <h2> of the policy is a numbered item: a row (title left, text right) in the "Rows"
+    layout (privacy), or a clause listed in a sticky contents column in the "Contents" layout (terms);
+  - a <table> is "The register"; a small heading (H4–H6) is an accent group label ("In detail",
+    "Your rights") that restarts the numbering.
+  Above: breadcrumb, eyebrow, heading, the "In force" block, the intro. Below: a "write to us" call.
+  Templates: page.privacy.json and page.terms.json (a template's settings are shared by all the
+  pages that use it, so each policy has its own).
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+  case section.settings.policy
+    when 'terms'
+      assign policy = shop.terms_of_service
+    when 'refund'
+      assign policy = shop.refund_policy
+    when 'shipping'
+      assign policy = shop.shipping_policy
+    else
+      assign policy = shop.privacy_policy
+  endcase
+  assign policy_layout = section.settings.layout | default: 'rows'
+  assign title = page.title | default: policy.title
+  assign shop_mail = 'mailto:' | append: shop.email
+  assign cta_url = section.settings.cta_link | default: shop_mail
+  # h1 on its own page; h2 when it sits under another section's h1 (e.g. on the returns page)
+  assign heading_tag = section.settings.heading_tag | default: 'h1'
+-%}
+
+{% render 'screen-scale' %}
+
+<policy-page
+  class="policy policy--{{ policy_layout }} full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};"
+  data-label-contents="{{ 'policy.contents' | t | escape }}"
+>
+  <div class="policy__inner">
+    {%- if section.settings.show_breadcrumb -%}
+      {% render 'breadcrumb', current: title, class: 'policy__breadcrumb' %}
+    {%- endif -%}
+
+    <header class="policy__header">
+      <div class="policy__title-block">
+        {%- if section.settings.eyebrow != blank -%}
+          <p class="eyebrow policy__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+        {%- endif -%}
+        <{{ heading_tag }} class="policy__heading">
+          {%- if section.settings.heading != blank -%}
+            {{ section.settings.heading }}
+          {%- else -%}
+            {{ title | escape }}
+          {%- endif -%}
+        </{{ heading_tag }}>
+      </div>
+
+      {%- if section.settings.in_force_date != blank -%}
+        <div class="policy__in-force">
+          {%- if section.settings.in_force_label != blank -%}
+            <p class="policy__in-force-label">{{ section.settings.in_force_label | escape }}</p>
+          {%- endif -%}
+          <p class="policy__in-force-date">{{ section.settings.in_force_date | escape }}</p>
+          {%- if section.settings.in_force_meta != blank -%}
+            <p class="policy__in-force-meta">{{ section.settings.in_force_meta | escape }}</p>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+    </header>
+
+    {%- if section.settings.intro != blank -%}
+      <div class="policy__intro">{{ section.settings.intro }}</div>
+    {%- endif -%}
+
+    {%- if policy.body != blank -%}
+      <div class="policy__layout">
+        {%- if policy_layout == 'contents' -%}
+          {%- comment -%} Built by the script from the policy's headings (01 …); hidden without JS {%- endcomment -%}
+          <nav class="policy__contents" aria-label="{{ 'policy.contents' | t | escape }}" hidden>
+            <p class="policy__label">{{ 'policy.contents' | t }}</p>
+            <ol class="policy__contents-list" role="list" data-policy-contents></ol>
+          </nav>
+        {%- endif -%}
+        <div class="policy__body rte" data-policy-body>
+          {{ policy.body }}
+        </div>
+      </div>
+    {%- elsif request.design_mode -%}
+      <p class="policy__empty">{{ 'policy.empty' | t }}</p>
+    {%- endif -%}
+
+    {%- if section.settings.show_cta -%}
+      <div class="policy__cta">
+        <div class="policy__cta-copy">
+          {%- if section.settings.cta_heading != blank -%}
+            <h2 class="policy__cta-heading">{{ section.settings.cta_heading | escape }}</h2>
+          {%- endif -%}
+          {%- if section.settings.cta_text != blank -%}
+            <div class="policy__cta-text">{{ section.settings.cta_text }}</div>
+          {%- endif -%}
+        </div>
+        {%- if section.settings.cta_label != blank -%}
+          <a class="button policy__cta-button" href="{{ cta_url }}">
+            {{- section.settings.cta_label | escape -}}
+            <span class="policy__cta-icon" aria-hidden="true">{{ 'icon-send.svg' | inline_asset_content }}</span>
+          </a>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+  </div>
+</policy-page>
+
+{% stylesheet %}
+  /*
+    Figma 1920 (privacy 1:18280, terms 1:18208): content x 135–1785 at 1920, the Widest width (as the other pages).
+    Header: eyebrow y 212, heading ~64px y 278; privacy "In force" right-aligned (label y 288, date
+    ~24px y 333, meta y 376); a 3px rule y 461; intro ~20px / 35, max 954 (y 501).
+    Rows (privacy): title column 418 (number x 135, title x 191, heading font ~26px), text from
+    x 553 (~20 / 35), 1px rules, ~136px per row. Register: columns 418 / 591 / 374 / 267, header
+    labels accent caps, Basis accent.
+    Contents (terms): a 466px contents column (rows 70 tall, 3px rail), clauses 1107 wide, gap 77.
+    CTA: a 3px rule ~100px under the last row, heading ~40px, text, button 259 x 50 at the right.
+  */
+  .policy {
+    display: block;
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+    background-color: var(--color-background);
+  }
+
+  .policy__inner {
+    --policy-title-column: max(14rem, calc(418 * var(--px, 0.0625rem)));
+
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  /* ---------- Header ---------- */
+  .policy__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-lg) var(--space-2xl);
+    margin-block-start: max(var(--space-xl), calc(45 * var(--px, 0.0625rem)));
+    padding-block-end: max(var(--space-xl), calc(39 * var(--px, 0.0625rem)));
+    border-block-end: 3px solid var(--color-card-border);
+  }
+
+  .policy__heading {
+    max-inline-size: 16em;
+    margin: max(var(--space-lg), calc(42 * var(--px, 0.0625rem))) 0 0;
+    font-size: max(2.25rem, calc(64 * var(--px, 0.0625rem)));
+    font-weight: 400;
+    line-height: 1.1;
+  }
+
+  .policy__heading em {
+    color: var(--color-accent);
+    font-style: normal;
+  }
+
+  .policy__in-force {
+    text-align: end;
+  }
+
+  .policy__in-force > * {
+    margin: 0;
+  }
+
+  .policy__in-force-label,
+  .policy__label {
+    color: var(--color-accent);
+    font-size: var(--font-size-small);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  .policy__in-force-date {
+    margin-block-start: var(--space-sm);
+    font-family: var(--font-heading--family);
+    font-size: max(1.25rem, calc(24 * var(--px, 0.0625rem)));
+  }
+
+  .policy__in-force-meta {
+    margin-block-start: var(--space-xs);
+    font-size: var(--font-size-body-sm);
+  }
+
+  .policy__intro {
+    max-inline-size: max(20rem, calc(954 * var(--px, 0.0625rem)));
+    margin-block-start: max(var(--space-lg), calc(37 * var(--px, 0.0625rem)));
+    font-size: var(--font-size-body);
+    line-height: 1.75;
+  }
+
+  .policy__intro > * {
+    margin: 0;
+  }
+
+  /* ---------- The policy text (Settings > Policies) ---------- */
+  .policy__layout {
+    margin-block-start: max(var(--space-xl), calc(48 * var(--px, 0.0625rem)));
+  }
+
+  .policy__body {
+    counter-reset: policy-item;
+    font-size: var(--font-size-body);
+    line-height: 1.75;
+  }
+
+  /* Shopify's generated policies wrap the text in one <div>: let its children join the layout */
+  .policy__body > div {
+    display: contents;
+  }
+
+  .policy__body :is(p, ul, ol) {
+    margin: 0;
+  }
+
+  /* An H4–H6: the accent group label ("The register", "In detail"); the numbering restarts */
+  .policy__body :is(h4, h5, h6) {
+    counter-reset: policy-item;
+    margin: max(var(--space-2xl), calc(72 * var(--px, 0.0625rem))) 0 0;
+    color: var(--color-accent);
+    font-family: var(--font-body--family);
+    font-size: var(--font-size-label);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  .policy__body > :first-child,
+  .policy__body > div > :first-child {
+    margin-block-start: 0;
+  }
+
+  /* Each H2: a numbered item ("01 Who we are") */
+  .policy__body h2 {
+    counter-increment: policy-item;
+    display: flex;
+    gap: max(var(--space-sm), calc(30 * var(--px, 0.0625rem)));
+    margin: 0;
+    font-size: max(1.25rem, calc(26 * var(--px, 0.0625rem)));
+    font-weight: 400;
+    line-height: 1.35;
+    scroll-margin-block-start: 8rem;
+  }
+
+  .policy__body h2::before {
+    content: counter(policy-item, decimal-leading-zero);
+    flex-shrink: 0;
+    color: var(--color-accent);
+    font-size: 0.85em;
+    line-height: 1.6;
+  }
+
+  .policy__body h3 {
+    margin: var(--space-md) 0 0;
+    font-size: var(--font-size-body-lg);
+    font-weight: 400;
+  }
+
+  .policy__body a {
+    color: var(--color-accent);
+  }
+
+  /* Italic = the accent colour, upright (the terms' closing "Governed by the laws of France…" line) */
+  .policy__body em {
+    color: var(--color-accent);
+    font-style: normal;
+  }
+
+  /* "The register": a table with accent header labels, heading-font first column, accent last column */
+  .policy__body table {
+    inline-size: 100%;
+    margin-block-start: var(--space-lg);
+    border-collapse: collapse;
+  }
+
+  .policy__body th {
+    padding: 0 var(--space-md) max(var(--space-md), calc(22 * var(--px, 0.0625rem))) 0;
+    border-block-end: 1px solid var(--color-card-border);
+    color: var(--color-accent);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-align: start;
+    text-transform: uppercase;
+  }
+
+  .policy__body td {
+    padding: max(var(--space-lg), calc(33 * var(--px, 0.0625rem))) var(--space-md) max(var(--space-lg), calc(33 * var(--px, 0.0625rem))) 0;
+    border-block-end: 1px solid var(--color-card-border);
+    vertical-align: top;
+  }
+
+  .policy__body td:first-child {
+    font-family: var(--font-heading--family);
+    font-size: max(1.25rem, calc(26 * var(--px, 0.0625rem)));
+    line-height: 1.35;
+  }
+
+  .policy__body td:last-child {
+    color: var(--color-accent);
+  }
+
+  /*
+    Rows (privacy): the policy text becomes a 2-column grid. Every H2 takes the title column and the
+    text after it (until the next H2) takes the text column; a 1px rule above each H2 and its first
+    paragraph draws the row line. Everything else (labels, tables, an intro) spans both columns.
+  */
+  .policy--rows .policy__body {
+    display: grid;
+    grid-template-columns: var(--policy-title-column) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .policy--rows .policy__body > *,
+  .policy--rows .policy__body > div > * {
+    grid-column: 1 / -1;
+  }
+
+  .policy--rows .policy__body h2 {
+    grid-column: 1;
+    padding-block-start: max(var(--space-lg), calc(33 * var(--px, 0.0625rem)));
+    padding-inline-end: var(--space-lg);
+    border-block-start: 1px solid var(--color-card-border);
+  }
+
+  .policy--rows .policy__body h2 ~ :is(p, ul, ol, h3) {
+    grid-column: 2;
+    padding-block-end: var(--space-sm);
+  }
+
+  .policy--rows .policy__body h2 + :is(p, ul, ol, h3) {
+    padding-block-start: max(var(--space-lg), calc(33 * var(--px, 0.0625rem)));
+    border-block-start: 1px solid var(--color-card-border);
+  }
+
+  .policy--rows .policy__body h2 ~ :is(p, ul, ol) + :is(p, ul, ol) {
+    margin-block-start: var(--space-sm);
+  }
+
+  /* The row ends with space before the next one */
+  .policy--rows .policy__body h2 ~ :is(p, ul, ol):has(+ h2) {
+    padding-block-end: max(var(--space-lg), calc(33 * var(--px, 0.0625rem)));
+  }
+
+  /* Contents (terms): the contents column (sticky) + the clauses, each with a rule under it */
+  .policy--contents .policy__layout {
+    display: grid;
+    grid-template-columns: max(14rem, calc(466 * var(--px, 0.0625rem))) minmax(0, 1fr);
+    align-items: start;
+    gap: max(var(--space-xl), calc(77 * var(--px, 0.0625rem)));
+  }
+
+  .policy--contents .policy__layout:not(:has(.policy__contents:not([hidden]))) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .policy--contents .policy__body h2 {
+    padding-block-start: max(var(--space-lg), calc(38 * var(--px, 0.0625rem)));
+    border-block-start: 1px solid var(--color-card-border);
+    font-size: max(1.375rem, calc(30 * var(--px, 0.0625rem)));
+  }
+
+  .policy--contents .policy__body > h2:first-child,
+  .policy--contents .policy__body > div > h2:first-child {
+    padding-block-start: 0;
+    border-block-start: 0;
+  }
+
+  .policy--contents .policy__body h2 + * {
+    margin-block-start: max(var(--space-md), calc(22 * var(--px, 0.0625rem)));
+  }
+
+  .policy--contents .policy__body :is(p, ul, ol) + :is(p, ul, ol) {
+    margin-block-start: var(--space-sm);
+  }
+
+  .policy--contents .policy__body :is(p, ul, ol):has(+ h2) {
+    padding-block-end: max(var(--space-lg), calc(38 * var(--px, 0.0625rem)));
+  }
+
+  .policy__contents {
+    position: sticky;
+    inset-block-start: 8rem;
+  }
+
+  .policy__contents[hidden] {
+    display: none;
+  }
+
+  .policy__contents-list {
+    margin: max(var(--space-lg), calc(38 * var(--px, 0.0625rem))) 0 0;
+    padding: 0;
+    border-inline-start: 3px solid var(--color-card-border);
+    list-style: none;
+  }
+
+  .policy__contents-link {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    min-block-size: max(2.75rem, calc(70 * var(--px, 0.0625rem)));
+    box-sizing: border-box;
+    margin-inline-start: -3px;
+    padding: var(--space-xs) var(--space-md);
+    border-inline-start: 3px solid transparent;
+    color: var(--color-text);
+    font-size: var(--font-size-body);
+    line-height: 1.35;
+    text-decoration: none;
+    transition:
+      background-color var(--duration-fast) var(--ease-out),
+      color var(--duration-fast) var(--ease-out);
+  }
+
+  .policy__contents-number {
+    color: var(--color-accent);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .policy__contents-link:hover,
+  .policy__contents-link[aria-current="true"] {
+    border-inline-start-color: var(--color-accent);
+    background-color: color-mix(in srgb, var(--color-accent) 5%, transparent);
+    color: var(--color-accent);
+  }
+
+  /* ---------- Call to action (privacy "Exercise any of these in one message.") ---------- */
+  .policy__cta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-lg) var(--space-2xl);
+    margin-block-start: max(var(--space-2xl), calc(100 * var(--px, 0.0625rem)));
+    padding-block-start: max(var(--space-xl), calc(76 * var(--px, 0.0625rem)));
+    border-block-start: 3px solid var(--color-card-border);
+  }
+
+  .policy__cta-copy {
+    flex: 1 1 24rem;
+    max-inline-size: max(24rem, calc(855 * var(--px, 0.0625rem)));
+  }
+
+  .policy__cta-heading {
+    margin: 0;
+    font-size: max(1.75rem, calc(40 * var(--px, 0.0625rem)));
+    font-weight: 400;
+    line-height: 1.2;
+  }
+
+  .policy__cta-text {
+    margin-block-start: var(--space-md);
+    font-size: var(--font-size-body);
+    line-height: 1.75;
+  }
+
+  .policy__cta-text > * {
+    margin: 0;
+  }
+
+  .policy__cta-button {
+    min-block-size: max(2.75rem, calc(50 * var(--px, 0.0625rem)));
+    padding-inline: max(1.25rem, calc(35 * var(--px, 0.0625rem)));
+    font-size: max(var(--font-size-caption), calc(16.5 * var(--px, 0.0625rem)));
+  }
+
+  .policy__cta-icon {
+    display: inline-flex;
+  }
+
+  .policy__cta-icon svg {
+    inline-size: max(1.125rem, calc(19 * var(--px, 0.0625rem)));
+    block-size: auto;
+  }
+
+  .policy__empty {
+    margin: var(--space-xl) 0 0;
+  }
+
+  /* ---------- Tablets: one column for the contents layout, the contents as chips ---------- */
+  @media (max-width: 989px) {
+    .policy--contents .policy__layout {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-lg);
+    }
+
+    /*
+      The contents become a row of chips that scrolls sideways and stays under the header while
+      reading (touch targets 44px).
+    */
+    .policy__contents {
+      z-index: 2;
+      inset-block-start: 5.5rem;
+      margin-inline: calc(var(--page-margin) * -1);
+      padding: var(--space-sm) var(--page-margin);
+      background-color: color-mix(in srgb, var(--color-background) 92%, transparent);
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+    }
+
+    .policy__contents .policy__label {
+      display: none;
+    }
+
+    .policy__contents-list {
+      display: flex;
+      gap: var(--space-xs);
+      margin: 0;
+      overflow-x: auto;
+      border: 0;
+      scroll-snap-type: x proximity;
+      scrollbar-width: none;
+    }
+
+    .policy__contents-list::-webkit-scrollbar {
+      display: none;
+    }
+
+    .policy__contents-list li {
+      flex-shrink: 0;
+      scroll-snap-align: start;
+    }
+
+    .policy__contents-link {
+      min-block-size: 2.75rem;
+      margin: 0;
+      padding: 0 var(--space-md);
+      border: 1px solid var(--color-card-border);
+      border-radius: var(--radius-pill);
+      font-size: var(--font-size-caption);
+      white-space: nowrap;
+    }
+
+    .policy__contents-link[aria-current="true"] {
+      border-color: var(--color-accent);
+    }
+  }
+
+  /* ---------- Phones: rows stack, the register becomes labelled cards ---------- */
+  @media (max-width: 749px) {
+    .policy__header {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .policy__in-force {
+      text-align: start;
+    }
+
+    .policy--rows .policy__body {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .policy--rows .policy__body h2,
+    .policy--rows .policy__body h2 ~ :is(p, ul, ol, h3) {
+      grid-column: 1;
+    }
+
+    .policy--rows .policy__body h2 {
+      padding-inline-end: 0;
+    }
+
+    .policy--rows .policy__body h2 + :is(p, ul, ol, h3) {
+      padding-block-start: var(--space-sm);
+      border-block-start: 0;
+    }
+
+    .policy__body,
+    .policy__intro,
+    .policy__cta-text {
+      font-size: var(--font-size-body-sm);
+      line-height: 1.7;
+    }
+
+    /* The register: one card per row, each value with its column's label (the script adds data-label) */
+    .policy__body table,
+    .policy__body tbody,
+    .policy__body tr,
+    .policy__body td {
+      display: block;
+    }
+
+    .policy__body thead {
+      display: none;
+    }
+
+    .policy__body tbody {
+      display: grid;
+      gap: var(--space-sm);
+    }
+
+    .policy__body tr {
+      padding: var(--space-md);
+      border: 1px solid var(--color-card-border);
+      border-radius: var(--radius-sm);
+      background-color: color-mix(in srgb, var(--color-accent) 2%, var(--color-background));
+    }
+
+    .policy__body tr:has(th) {
+      display: none;
+    }
+
+    .policy__body td {
+      padding: 0;
+      border: 0;
+    }
+
+    .policy__body td + td {
+      margin-block-start: var(--space-sm);
+    }
+
+    .policy__body td[data-label]::before {
+      content: attr(data-label);
+      display: block;
+      color: var(--color-accent);
+      font-family: var(--font-body--family);
+      font-size: 0.6875rem;
+      letter-spacing: var(--letter-spacing-label);
+      text-transform: uppercase;
+    }
+
+    .policy__body td:first-child[data-label]::before {
+      display: none;
+    }
+
+    .policy__cta {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .policy__cta-button {
+      inline-size: 100%;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <policy-page>:
+   * - Contents layout: builds the contents list from the policy's H2s (01 …, each with an id), marks
+   *   the clause being read (IntersectionObserver with a thin band near the top) and keeps the
+   *   current chip in view on phones.
+   * - The register on phones: gives each cell its column's label (data-label, from the table's
+   *   header row), so a row can be shown as a labelled card.
+   */
+  class PolicyPage extends HTMLElement {
+    connectedCallback() {
+      this.body = this.querySelector('[data-policy-body]');
+      if (!this.body) return;
+      this.labelTables();
+      this.buildContents();
+    }
+
+    disconnectedCallback() {
+      this.observer?.disconnect();
+    }
+
+    labelTables() {
+      this.body.querySelectorAll('table').forEach((table) => {
+        const headers = [...table.querySelectorAll('tr:first-child th, thead th')].map((th) => th.textContent.trim());
+        if (!headers.length) return;
+        table.querySelectorAll('tr').forEach((row) => {
+          [...row.children].forEach((cell, index) => {
+            if (cell.tagName === 'TD' && headers[index]) cell.dataset.label = headers[index];
+          });
+        });
+      });
+    }
+
+    buildContents() {
+      const nav = this.querySelector('.policy__contents');
+      const list = this.querySelector('[data-policy-contents]');
+      const headings = [...this.body.querySelectorAll('h2')];
+      if (!nav || !list || !headings.length) return;
+
+      const links = headings.map((heading, index) => {
+        const number = String(index + 1).padStart(2, '0');
+        heading.id ||= `PolicyClause-${number}`;
+        const item = document.createElement('li');
+        const link = document.createElement('a');
+        link.className = 'policy__contents-link';
+        link.href = `#${heading.id}`;
+        const numberSpan = document.createElement('span');
+        numberSpan.className = 'policy__contents-number';
+        numberSpan.textContent = number;
+        link.append(numberSpan, heading.textContent.trim());
+        item.append(link);
+        list.append(item);
+        return link;
+      });
+      nav.hidden = false;
+
+      // The clause whose heading has passed a band 25–30% down the screen is the current one
+      this.observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            const index = headings.indexOf(entry.target);
+            links.forEach((link, i) => link.setAttribute('aria-current', String(i === index)));
+            // Phones: keep the current chip in view in the sideways list
+            const link = links[index];
+            if (list.scrollWidth > list.clientWidth) {
+              list.scrollTo({ left: link.parentElement.offsetLeft - 16, behavior: 'smooth' });
+            }
+          });
+        },
+        { rootMargin: '-25% 0px -70% 0px' }
+      );
+      headings.forEach((heading) => this.observer.observe(heading));
+      links[0].setAttribute('aria-current', 'true');
+    }
+  }
+
+  if (!customElements.get('policy-page')) customElements.define('policy-page', PolicyPage);
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.policy",
+  "tag": "section",
+  "class": "policy-section",
+  "enabled_on": {
+    "templates": ["page"]
+  },
+  "settings": [
+    {
+      "type": "select",
+      "id": "policy",
+      "label": "t:labels.policy_source",
+      "info": "t:labels.policy_source_info",
+      "options": [
+        { "value": "privacy", "label": "t:options.policy_source.privacy" },
+        { "value": "terms", "label": "t:options.policy_source.terms" },
+        { "value": "refund", "label": "t:options.policy_source.refund" },
+        { "value": "shipping", "label": "t:options.policy_source.shipping" }
+      ],
+      "default": "privacy"
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "t:labels.policy_layout",
+      "info": "t:labels.policy_layout_info",
+      "options": [
+        { "value": "rows", "label": "t:options.policy_layout.rows" },
+        { "value": "contents", "label": "t:options.policy_layout.contents" }
+      ],
+      "default": "rows"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_breadcrumb",
+      "label": "t:labels.show_breadcrumb",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "Privacy policy"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.policy_heading_info",
+      "default": "Everything we hold, <em>and why.</em>"
+    },
+    {
+      "type": "select",
+      "id": "heading_tag",
+      "label": "t:labels.heading_tag",
+      "info": "t:labels.policy_heading_tag_info",
+      "options": [
+        { "value": "h1", "label": "t:options.heading_tag.h1" },
+        { "value": "h2", "label": "t:options.heading_tag.h2" }
+      ],
+      "default": "h1"
+    },
+    {
+      "type": "richtext",
+      "id": "intro",
+      "label": "t:labels.policy_intro"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.policy_in_force"
+    },
+    {
+      "type": "text",
+      "id": "in_force_label",
+      "label": "t:labels.policy_in_force_label",
+      "default": "In force"
+    },
+    {
+      "type": "text",
+      "id": "in_force_date",
+      "label": "t:labels.policy_in_force_date",
+      "info": "t:labels.policy_in_force_date_info"
+    },
+    {
+      "type": "text",
+      "id": "in_force_meta",
+      "label": "t:labels.policy_in_force_meta"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.policy_cta"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_cta",
+      "label": "t:labels.policy_show_cta",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "cta_heading",
+      "label": "t:labels.heading",
+      "default": "Exercise any of these in one message.",
+      "visible_if": "{{ section.settings.show_cta }}"
+    },
+    {
+      "type": "richtext",
+      "id": "cta_text",
+      "label": "t:labels.text",
+      "visible_if": "{{ section.settings.show_cta }}"
+    },
+    {
+      "type": "text",
+      "id": "cta_label",
+      "label": "t:labels.button_label",
+      "default": "Write message",
+      "visible_if": "{{ section.settings.show_cta }}"
+    },
+    {
+      "type": "url",
+      "id": "cta_link",
+      "label": "t:labels.button_link",
+      "info": "t:labels.faq_contact_link_info"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "checkbox",
+      "id": "scale_screen",
+      "label": "t:labels.scale_screen",
+      "info": "t:labels.scale_screen_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "text_scale",
+      "label": "t:labels.text_scale",
+      "info": "t:labels.text_scale_info",
+      "min": 100,
+      "max": 130,
+      "step": 5,
+      "unit": "%",
+      "default": 100,
+      "visible_if": "{{ section.settings.scale_screen }}"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 96
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.policy"
+    }
+  ]
+}
+{% endschema %}

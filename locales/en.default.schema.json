@@ -105,7 +105,13 @@
     "marquee": "Marquee",
     "faq": "FAQ",
     "faq_topic": "FAQ topic",
-    "faq_question": "Question"
+    "faq_question": "Question",
+    "policy": "Policy",
+    "returns_hero": "Returns hero",
+    "returns_steps": "Returns steps",
+    "return_step": "Return step",
+    "returns_lists": "Returns lists",
+    "cta_card": "Call to action card"
   },
   "labels": {
     "alignment": "Alignment",
@@ -803,7 +809,32 @@
     "faq_question_radius_info": "The corners of the question rows and the search results (19px in the design).",
     "faq_contact_header": "\"Still unanswered?\" card",
     "faq_contact_header_info": "Shown under the questions in a topic and under the search results (not on the overview, as in the design).",
-    "faq_show_contact": "Show the card"
+    "faq_show_contact": "Show the card",
+    "policy_source": "Policy",
+    "policy_source_info": "The text comes from Settings > Policies, so this page and the links in checkout always match.",
+    "policy_layout": "Layout",
+    "policy_layout_info": "Rows: each Heading 2 is a numbered row (title left, text right). Contents: a contents list beside the clauses. In both, a table is shown as \"The register\" and a Heading 4 as a group label.",
+    "policy_heading_info": "Italic words show in the accent colour. Empty = the page title.",
+    "policy_intro": "Intro",
+    "policy_in_force": "\"In force\" block",
+    "policy_in_force_label": "Label",
+    "policy_in_force_date": "Date",
+    "policy_in_force_date_info": "Shopify policies have no date of their own: type the date this version applies from. Empty = no block.",
+    "policy_in_force_meta": "Line under the date",
+    "policy_cta": "Call to action",
+    "policy_show_cta": "Show the call to action",
+    "returns_badge_number": "Badge number",
+    "returns_badge_number_info": "The big number in the circle, e.g. your return window in days. Empty = no badge.",
+    "returns_badge_label": "Badge label",
+    "returns_steps_heading_info": "Optional; the design shows the steps without a heading.",
+    "returns_step_label": "Label",
+    "returns_yes_title": "First card title",
+    "returns_no_title": "Second card title",
+    "returns_items": "Items",
+    "returns_items_info": "One item per line.",
+    "cta_card_link_info": "Empty = the customer account, where customers see their orders and start a return.",
+    "cta_card_style": "Card style",
+    "policy_heading_tag_info": "Heading 1 when this is the page's main heading; Heading 2 when it sits under another section's heading (e.g. on the returns page)."
   },
   "options": {
     "collection_list_header": {
@@ -1182,6 +1213,20 @@
       "truck": "Truck",
       "heart": "Heart",
       "none": "None"
+    },
+    "policy_source": {
+      "privacy": "Privacy policy",
+      "terms": "Terms of service",
+      "refund": "Refund policy",
+      "shipping": "Shipping policy"
+    },
+    "policy_layout": {
+      "rows": "Rows (privacy)",
+      "contents": "Contents (terms)"
+    },
+    "cta_card_style": {
+      "tinted": "Tinted (pale accent)",
+      "glass": "Glass (soft shadow)"
     }
   },
   "color_scheme": {
