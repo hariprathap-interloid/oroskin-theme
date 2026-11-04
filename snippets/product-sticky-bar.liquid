@@ -534,6 +534,11 @@
 
       this.onVariantChange = (event) => this.showVariant(event.detail?.variantId);
       this.scope.addEventListener('variant:change', this.onVariantChange);
+      // Purchase options: a subscription plan's price is the price shown (Buy buttons, "plan:change")
+      this.scope.addEventListener('plan:change', (event) => {
+        this.plan = event.detail;
+        this.showPrice(event.detail.variantId);
+      });
 
       this.quantity = this.form.querySelector('input[name="quantity"]');
       this.onQuantity = () => this.showQuantity();
@@ -603,6 +608,16 @@
       this.add(true);
     }
 
+    /** The variant's price, or the chosen subscription plan's price for it */
+    showPrice(variantId) {
+      const variant = variantId && this.variants[variantId];
+      const price = this.querySelector('[data-sticky-price]');
+      if (!variant || !price) return;
+      const plan = this.plan;
+      const planPrice = plan?.planId && String(plan.variantId) === String(variantId) ? plan.price : '';
+      price.textContent = planPrice || variant.price;
+    }
+
     /** The chosen variant's name, price, image and state ("Sold out", "Unavailable") */
     showVariant(variantId) {
       const variant = variantId && this.variants[variantId];
@@ -617,7 +632,7 @@
       }
       const name = this.querySelector('[data-sticky-variant]');
       if (name) name.textContent = variant.title;
-      this.querySelector('[data-sticky-price]').textContent = variant.price;
+      this.showPrice(variantId);
       const image = this.querySelector('.product-sticky-bar__image');
       if (image && variant.image) {
         image.removeAttribute('srcset');

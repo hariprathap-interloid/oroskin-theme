@@ -1103,7 +1103,8 @@
       "h1": "Heading 1 (60px)",
       "h2": "Heading 2 (40px)",
       "h3": "Heading 3 (26px)",
-      "h4": "Heading 4 (22px)"
+      "h4": "Heading 4 (22px)",
+      "product": "Product page (46px)"
     },
     "heading_tag": {
       "h1": "H1",

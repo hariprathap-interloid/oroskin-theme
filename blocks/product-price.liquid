@@ -34,6 +34,8 @@
 {%- if price_product != blank or request.design_mode -%}
   <product-price
     class="product-price product-price--{{ block.settings.size }}"
+    data-label-plan="{{ 'products.price.subscription' | t | escape_once }}"
+    data-label-regular="{{ 'products.price.regular' | t | escape_once }}"
     {{ block.shopify_attributes }}
   >
     <div class="product-price__row">
@@ -165,16 +167,58 @@
   class ProductPrice extends HTMLElement {
     connectedCallback() {
       this.scope = this.closest('.shopify-section') || document;
-      this.onVariantChange = (event) => {
-        const template = this.querySelector(`template[data-variant-id="${event.detail.variantId}"]`);
-        const current = this.querySelector('[data-price-current]');
-        if (template && current) current.replaceChildren(template.content.cloneNode(true));
+      this.current = this.querySelector('[data-price-current]');
+      // A one-variant product has no templates: its own first content is the "template"
+      this.base = this.current?.innerHTML;
+      this.onVariantChange = (event) => this.show(event.detail.variantId);
+      // Purchase options (Buy buttons): a subscription plan's price replaces the price shown
+      this.onPlanChange = (event) => {
+        this.plan = event.detail;
+        this.show(event.detail.variantId);
       };
       this.scope.addEventListener('variant:change', this.onVariantChange);
+      this.scope.addEventListener('plan:change', this.onPlanChange);
     }
 
     disconnectedCallback() {
       this.scope?.removeEventListener('variant:change', this.onVariantChange);
+      this.scope?.removeEventListener('plan:change', this.onPlanChange);
+    }
+
+    /** The variant's price (its template), then the chosen plan's price over it */
+    show(variantId) {
+      if (!this.current) return;
+      const template = variantId && this.querySelector(`template[data-variant-id="${variantId}"]`);
+      if (template) this.current.replaceChildren(template.content.cloneNode(true));
+      else if (!this.querySelector('template[data-variant-id]')) this.current.innerHTML = this.base;
+      this.applyPlan(variantId);
+    }
+
+    /**
+     * A chosen plan: its price becomes the price. Only when it is cheaper than buying once (not a prepaid
+     * plan) is the one-time price shown struck through beside it, unless the variant is on sale (its
+     * compare-at price is already there)
+     */
+    applyPlan(variantId) {
+      const plan = this.plan;
+      if (!plan?.planId || !plan.price || plan.price === plan.regular) return;
+      if (variantId && String(plan.variantId) !== String(variantId)) return;
+      const amount = this.current.querySelector('[data-price-amount]');
+      if (!amount) return;
+      amount.textContent = plan.price;
+      const label = amount.parentElement.querySelector('.visually-hidden');
+      if (label) label.textContent = this.dataset.labelPlan;
+      const price = amount.closest('.price');
+      if (!plan.cheaper || !price || price.querySelector('.price__compare')) return;
+      const regular = document.createElement('span');
+      regular.className = 'price__compare';
+      const hidden = document.createElement('span');
+      hidden.className = 'visually-hidden';
+      hidden.textContent = this.dataset.labelRegular;
+      const struck = document.createElement('s');
+      struck.textContent = plan.regular;
+      regular.append(hidden, struck);
+      amount.parentElement.after(regular);
     }
   }
 

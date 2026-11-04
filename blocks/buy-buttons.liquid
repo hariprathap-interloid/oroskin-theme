@@ -52,7 +52,12 @@
   assign selected_plan = buy_product.selected_selling_plan
   if show_plans and selected_plan == blank
     if buy_product.requires_selling_plan or block.settings.plan_default == 'subscription'
-      assign selected_plan = buy_product.selling_plan_groups.first.selling_plans.first
+      # The first plan THIS variant has: plans can belong to some variants only (Shopify refuses a plan
+      # the variant doesn't have: "Cannot apply selling plan to variant")
+      assign first_allocation = current_variant.selling_plan_allocations.first
+      if first_allocation
+        assign selected_plan = first_allocation.selling_plan
+      endif
     endif
   endif
 
@@ -188,7 +193,19 @@
 
           {%- for group in buy_product.selling_plan_groups -%}
             {%- liquid
+              # Does the current variant have a plan of this group? Plans can belong to some variants only:
+              # the card is hidden for the others (the script shows / hides it when the variant changes)
               assign group_plan = group.selling_plans.first
+              assign group_available = false
+              for allocation in current_variant.selling_plan_allocations
+                if allocation.selling_plan.group_id == group.id
+                  if group_available == false
+                    assign group_plan = allocation.selling_plan
+                  endif
+                  assign group_available = true
+                endif
+              endfor
+
               assign group_selected = false
               if selected_plan != blank and selected_plan.group_id == group.id
                 assign group_plan = selected_plan
@@ -203,7 +220,7 @@
               endfor
               assign group_input_id = block.id | append: '-plan-' | append: forloop.index0
             -%}
-            <div class="buy-buttons__plan" data-plan-card>
+            <div class="buy-buttons__plan" data-plan-card {% unless group_available %}hidden{% endunless %}>
               <input
                 class="buy-buttons__plan-input"
                 type="radio"
@@ -213,6 +230,9 @@
                 {% if group_selected %}
                   checked
                 {% endif %}
+                {% unless group_available %}
+                  disabled
+                {% endunless %}
                 data-plan-choice
               >
               <label class="buy-buttons__plan-head" for="{{ group_input_id }}">
@@ -305,9 +325,11 @@
           {
             {%- for variant in buy_product.variants -%}
               "{{ variant.id }}": {
-                "": {{ variant.price | money | json }}
+                "": {{ variant.price | money | json }},
+                ":cents": {{ variant.price | json }}
                 {%- for allocation in variant.selling_plan_allocations -%}
                   , "{{ allocation.selling_plan.id }}": {{ allocation.price | money | json }}
+                  , "{{ allocation.selling_plan.id }}:cents": {{ allocation.price | json }}
                 {%- endfor -%}
               }
               {%- unless forloop.last %},{% endunless -%}
@@ -563,6 +585,11 @@
     margin: 0;
     padding: 0;
     border: 0;
+  }
+
+  /* A plan card the chosen variant has no plan for (the class's display would beat [hidden]) */
+  .buy-buttons__plan[hidden] {
+    display: none;
   }
 
   .buy-buttons__plan {
@@ -944,12 +971,31 @@
       this.setUpQuantity();
       this.setUpPlans();
       this.setUpAdd();
+      this.onPageShow = () => this.syncFromForm();
+      window.addEventListener('pageshow', this.onPageShow);
       if (!this.select || !this.querySelector('[data-option]')) return;
 
       this.classList.add('is-enhanced');
       this.addEventListener('change', (event) => {
         if (event.target.matches('[data-option-input]')) this.onOptionChange();
       });
+    }
+
+    disconnectedCallback() {
+      window.removeEventListener('pageshow', this.onPageShow);
+    }
+
+    /**
+     * Back / forward: the browser puts the visitor's earlier choices back into the form (the ticked plan,
+     * the variant pills) without any change event, after this script has run, so the price showed the
+     * one-time price under a ticked plan and the hidden selling_plan field was empty (what you saw and
+     * what would be bought no longer matched). "pageshow" fires after that restore, and also when the
+     * page comes back from the back-forward cache: read the form again, so everything follows what is
+     * ticked
+     */
+    syncFromForm() {
+      if (this.classList.contains('is-enhanced')) this.onOptionChange();
+      else this.updatePlans();
     }
 
     /**
@@ -1057,6 +1103,9 @@
         }
         this.updatePlans();
       });
+      // A plan chosen on load (?selling_plan= or a subscription-only product): announce it once the rest
+      // of the section (Price block, sticky bar) is on the page and listening
+      requestAnimationFrame(() => this.updatePlans());
     }
 
     /** Each card's price for the current variant, and the chosen card's plan into "selling_plan" */
@@ -1065,6 +1114,8 @@
       const variantId = this.querySelector('[name="id"]')?.value;
       const prices = this.planPrices[variantId] || {};
       let planId = '';
+
+      this.filterPlans(prices);
 
       this.plans.querySelectorAll('[data-plan-card]').forEach((card) => {
         const id = card.querySelector('[data-plan-select]')?.value || '';
@@ -1075,6 +1126,64 @@
 
       this.sellingPlan.value = planId;
       this.sellingPlan.disabled = !planId;
+      // Tells the Price block and the sticky bar which price the chosen option costs (the plan's price,
+      // already formatted by Liquid's money filter) and the one-time price to compare it with. The cents
+      // say which is cheaper: a prepaid plan (several deliveries at once) costs more than one bottle
+      this.dispatchEvent(new CustomEvent('plan:change', {
+        bubbles: true,
+        detail: {
+          variantId,
+          planId,
+          price: prices[planId] || '',
+          regular: prices[''] || '',
+          cheaper: planId !== '' && prices[`${planId}:cents`] < prices[':cents'],
+        },
+      }));
+    }
+
+    /**
+     * Only the plans the chosen variant has: a plan can belong to some variants only, and Shopify refuses
+     * a plan the variant doesn't have ("Cannot apply selling plan to variant"). The variant's plans are the
+     * keys of its prices (from its selling plan allocations). A card with none of them hides; in a
+     * frequency select, the other options hide. If the ticked card hides, One time purchase (or the
+     * first card left) is ticked instead
+     */
+    filterPlans(prices) {
+      let lostChoice = false;
+      this.plans.querySelectorAll('[data-plan-card]').forEach((card) => {
+        const choice = card.querySelector('[data-plan-choice]');
+        if (!choice || choice.value === '') return; // One time purchase: always there
+        const select = card.querySelector('[data-plan-select]');
+        let available = false;
+        if (select?.tagName === 'SELECT') {
+          [...select.options].forEach((option) => {
+            option.hidden = option.disabled = !(option.value in prices);
+          });
+          if (!(select.value in prices)) {
+            const first = [...select.options].find((option) => option.value in prices);
+            if (first) select.value = first.value;
+          }
+          available = select.value in prices;
+          const delivery = card.querySelector('[data-plan-delivery]');
+          if (delivery && available) delivery.textContent = select.selectedOptions[0]?.dataset.delivery || '';
+        } else {
+          available = Boolean(select) && select.value in prices;
+        }
+        card.hidden = !available;
+        choice.disabled = !available;
+        if (!available && choice.checked) {
+          choice.checked = false;
+          lostChoice = true;
+        }
+      });
+
+      const anyChecked = this.plans.querySelector('[data-plan-choice]:checked');
+      if (lostChoice || !anyChecked) {
+        const fallback =
+          this.plans.querySelector('[data-plan-choice][value=""]') ||
+          this.plans.querySelector('[data-plan-card]:not([hidden]) [data-plan-choice]');
+        if (fallback) fallback.checked = true;
+      }
     }
 
     /** Finds the variant whose option values match the checked pills ("15ml||Rose" etc.) */

@@ -63,7 +63,8 @@
     {%- if show_from -%}
       {{ 'products.price.from_html' | t: price: price_money }}
     {%- else -%}
-      {{ price_money }}
+      {%- comment -%} data-price-amount: the product page swaps in a subscription plan's price here {%- endcomment -%}
+      <span data-price-amount>{{ price_money }}</span>
     {%- endif -%}
   </span>
 

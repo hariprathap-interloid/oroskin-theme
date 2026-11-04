@@ -322,7 +322,8 @@
       "percent_off": "{{ percent }}% off",
       "taxes_included": "Taxes included.",
       "shipping": "Shipping calculated at checkout.",
-      "shipping_html": "<a href=\"{{ link }}\">Shipping</a> calculated at checkout."
+      "shipping_html": "<a href=\"{{ link }}\">Shipping</a> calculated at checkout.",
+      "subscription": "Subscription price"
     },
     "add_to_cart": "Add to cart",
     "sold_out": "Sold out",

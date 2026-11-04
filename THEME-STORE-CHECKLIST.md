@@ -113,7 +113,7 @@ Why first: every later section reads these settings, CSS variables and base styl
 - [ ] ❌ **Shop Pay Installments** banner. *§4*
 - [ ] ❌ **Pickup availability**. *§4*
 - [x] ✅ **Related** and **complementary** product recommendations. *§4* (M6.5 complementary: sections/product-pairs.liquid; M6.9 related: sections/product-related.liquid, both via routes.product_recommendations_url)
-- [ ] ❌ Gift card recipient fields: email, name, message and send date. *§7*
+- [x] ✅ Gift card recipient fields: email, name, message and send date. *§7* (M6.3 snippets/gift-card-recipient.liquid in Buy buttons; 2026-11-04: fields render with Shopify's property names, kept on the cart line, test checkout order #1005 on the dev store. The gift card email itself is Shopify's: confirm it arrives.)
 - [ ] ❌ "Add to cart" text moved to locales. It's currently hard-coded.
 
 ---
