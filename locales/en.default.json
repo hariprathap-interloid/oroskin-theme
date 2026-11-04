@@ -443,6 +443,25 @@
     },
     "clinical": {
       "compare": "Compare {{ before }} and {{ after }}"
+    },
+    "reviews": {
+      "label": "Customer reviews",
+      "carousel": "carousel",
+      "previous": "Previous review",
+      "next": "Next review",
+      "pause": "Pause reviews",
+      "play": "Play reviews",
+      "empty": "Add Review blocks, or a reviews app block, to show reviews here."
+    },
+    "faq": {
+      "form_name": "Name",
+      "form_email": "Email",
+      "form_message": "Message",
+      "form_product": "Product",
+      "empty": "Add Question blocks to start the conversation."
+    },
+    "related": {
+      "empty": "Shopify shows related products here once it has worked them out for this product. Add fallback products in the section settings to show some now."
     }
   },
   "contact": {

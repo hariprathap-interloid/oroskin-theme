@@ -133,7 +133,11 @@
     "product_how_to": "How to use",
     "product_how_to_step": "Step",
     "product_clinical": "Clinical results",
-    "product_clinical_result": "Result"
+    "product_clinical_result": "Result",
+    "product_reviews": "Reviews",
+    "product_faq": "Product FAQ",
+    "product_faq_question": "Question",
+    "product_related": "You may also love"
   },
   "labels": {
     "alignment": "Alignment",
@@ -424,6 +428,7 @@
     "avatar": "Avatar",
     "avatar_info": "A square photo of the reviewer. Without one, their initial is shown.",
     "reviewer_name": "Name",
+    "reviewer_place": "Place",
     "review_date": "Date",
     "rating": "Rating (stars)",
     "review_text": "Review",
@@ -959,7 +964,41 @@
     "product_clinical_ring_label": "Ring label",
     "product_clinical_ring_label_info": "Under the first result in the middle of the rings (e.g. Radiance).",
     "sticky_minimize": "Let visitors minimise the bar",
-    "sticky_minimize_info": "A − button shrinks the bar to a round cart button in the corner; a click opens it again."
+    "sticky_minimize_info": "A − button shrinks the bar to a round cart button in the corner; a click opens it again.",
+    "product_reviews_info": "Review blocks are featured reviews you type in, shown as the sliding cards on every product. To collect real reviews, install a reviews app (e.g. Judge.me) and add its block here: it shows under the cards and fills the star rating by the price.",
+    "product_reviews_write_label": "\"Write a review\" label",
+    "product_reviews_write_link": "\"Write a review\" link",
+    "product_reviews_write_link_info": "Empty: goes to the reviews app block in this section, if there is one; otherwise the button is hidden.",
+    "product_reviews_cards": "Cards",
+    "product_reviews_visible": "Cards shown at a time",
+    "product_reviews_decoration": "Decoration",
+    "product_reviews_float_image": "Floating product image",
+    "product_reviews_float_image_info": "A cut-out on a transparent background (PNG or WebP) works best. It rises up the left side to the tabs bar, then slips under it. Desktop only.",
+    "product_reviews_word": "Background word",
+    "product_faq_form": "Contact form",
+    "product_faq_show_form": "Show the contact form",
+    "product_faq_show_form_info": "Sends the message to the store's email with the product's name (Settings > Notifications > Staff notifications).",
+    "product_faq_tint": "Tinted background",
+    "product_faq_tint_info": "A pale wash of the colour scheme's accent colour.",
+    "product_faq_decorations": "Show question mark doodles",
+    "product_reviews_float_motion": "Floating image motion",
+    "product_reviews_float_size": "Floating image size",
+    "product_reviews_float_size_info": "Width at a 1920px screen; it scales with the screen.",
+    "product_reviews_motion": "Card motion",
+    "product_reviews_motion_info": "Used when there are more reviews than cards shown. On scroll: the cards and the floating image move as visitors scroll, and back when they scroll up.",
+    "product_tabs_panel_scroll": "Scroll per panel",
+    "product_tabs_panel_scroll_info": "How far visitors scroll (in % of a screen) while a pinned panel stays still before the next one comes in. Lower switches faster.",
+    "product_related_info": "Shows Shopify's related products for each product. Shopify works them out from your catalogue and orders, or you can set them in the Search & Discovery app.",
+    "product_related_heading_info": "Optional. Empty: the eyebrow is the section's title (as in the design). Wrap words in italics to show them in the accent colour.",
+    "product_related_link_label": "\"View all\" label",
+    "product_related_link_url": "\"View all\" link",
+    "product_related_link_url_info": "Empty: the product's first collection, or all products.",
+    "product_related_products": "Products",
+    "product_related_limit": "Number of products",
+    "product_related_columns": "Products per row on desktop",
+    "product_related_card_shape": "Card shape",
+    "product_related_fallback": "Fallback products",
+    "product_related_fallback_info": "Shown when Shopify has no related products for a product yet."
   },
   "options": {
     "collection_list_header": {
@@ -1404,6 +1443,21 @@
       "left": "From the right",
       "right": "From the left",
       "fade": "Fade only"
+    },
+    "product_reviews_float_motion": {
+      "hide": "Rise, then hide",
+      "repeat": "Rise and repeat from the bottom"
+    },
+    "product_reviews_motion": {
+      "scroll": "On scroll",
+      "auto": "Automatic (timer, with a pause button)",
+      "buttons": "Arrows only"
+    },
+    "product_related_card_shape": {
+      "wide": "Wide (as the design)",
+      "landscape": "Landscape (4:3)",
+      "square": "Square",
+      "portrait": "Portrait (4:5)"
     }
   },
   "color_scheme": {

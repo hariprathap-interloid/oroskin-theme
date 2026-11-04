@@ -1,0 +1,419 @@
+{%- comment -%}
+  You may also love (M6.9, Figma PDP "Variant31", phone "Variant97-3"): an eyebrow on the left ("YOU MAY
+  ALSO LOVE", the section's heading), "VIEW ALL →" on the right, then wide product tiles (Figma: 2 cards
+  of 890 x 398 at 1920, the photo filling the card, a glass strip with the title, subtitle and price;
+  snippets/product-card.liquid, style 'tile').
+
+  Which products: Shopify's related recommendations (worked out by Shopify from the catalogue and
+  orders, or set by the merchant in the Search & Discovery app). The recommendations object is only
+  filled when this section is asked for through routes.product_recommendations_url, so:
+  1. the page shows the merchant's fallback products (setting), or nothing (hidden);
+  2. when the section comes near the screen, the script asks /recommendations/products?intent=related
+     for this same section; in that response recommendations.performed? is true and the cards are
+     Shopify's related products;
+  3. it swaps those cards in. No related and no fallback products: the section stays hidden.
+  The tabs bar above leaves with the end of the FAQ (product-tabs followEnd), so it never covers this.
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+  assign related_limit = section.settings.limit | default: 2
+  assign columns = section.settings.columns | default: 2
+
+  if recommendations.performed?
+    assign related_items = recommendations.products
+  else
+    assign related_items = section.settings.products
+  endif
+
+  # Cards to show (never this product itself)
+  assign related_count = 0
+  for item in related_items limit: related_limit
+    if item.id != product.id
+      assign related_count = related_count | plus: 1
+    endif
+  endfor
+
+  assign animation = section.settings.animation
+  if section.index == 1
+    assign animation = 'none'
+  endif
+
+  # Image sizes: one column of the grid on desktop, the full width on phones
+  assign column_vw = 100 | divided_by: columns
+  assign card_sizes = '(min-width: 990px) ' | append: column_vw | append: 'vw, 100vw'
+
+  # "View all": the link setting, else this product's first collection, else all products
+  assign view_all_url = section.settings.link_url
+  if view_all_url == blank
+    assign view_all_url = product.collections.first.url | default: routes.all_products_collection_url
+  endif
+-%}
+
+{%- capture related_grid -%}
+  {%- comment -%}
+    Its own <animate-on-scroll>: when the script swaps in the related cards, the new element starts
+    watching them (it reads its [data-animate] children when it's added to the page)
+  {%- endcomment -%}
+  <animate-on-scroll class="product-related__grid" data-related-grid>
+    {%- for item in related_items limit: related_limit -%}
+      {%- if item.id != product.id -%}
+        <div
+          class="product-related__item"
+          {% if animation != 'none' %}
+            data-animate="{{ animation }}"
+            style="--animate-delay: {{ forloop.index0 | times: 120 }}ms;"
+          {% endif %}
+        >
+          {% render 'product-card', product: item, style: 'tile', sizes: card_sizes %}
+        </div>
+      {%- endif -%}
+    {%- endfor -%}
+  </animate-on-scroll>
+{%- endcapture -%}
+
+{%- if recommendations.performed? -%}
+  {%- comment -%} The recommendations response: only the grid matters, read by the script {%- endcomment -%}
+  <div data-related-response data-count="{{ related_count }}">{{ related_grid }}</div>
+{%- elsif product != blank -%}
+  {%- assign related_url = routes.product_recommendations_url | append: '?product_id=' | append: product.id | append: '&section_id=' | append: section.id | append: '&limit=' | append: related_limit | append: '&intent=related' -%}
+  <product-related
+    class="product-related full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
+    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --columns: {{ columns }}; --tile-ratio: {{ section.settings.card_shape | default: '890 / 398' }};"
+    data-url="{{ related_url }}"
+    {% if related_count == 0 and request.design_mode == false %}
+      hidden
+    {% endif %}
+  >
+    <div class="product-related__inner">
+      <div class="product-related__header">
+        {%- if section.settings.heading != blank -%}
+          {%- if section.settings.eyebrow != blank -%}
+            <p class="eyebrow">{{ section.settings.eyebrow | escape }}</p>
+          {%- endif -%}
+          <h2 class="product-related__heading">{{ section.settings.heading }}</h2>
+        {%- elsif section.settings.eyebrow != blank -%}
+          {%- comment -%} Figma: the eyebrow is the section's only title, so it is the heading {%- endcomment -%}
+          <h2 class="eyebrow product-related__eyebrow">{{ section.settings.eyebrow | escape }}</h2>
+        {%- endif -%}
+
+        {%- if section.settings.link_label != blank -%}
+          <a class="product-related__all" href="{{ view_all_url }}">
+            {{- section.settings.link_label | escape -}}
+            <span class="product-related__arrow" aria-hidden="true">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+          </a>
+        {%- endif -%}
+      </div>
+
+      <div data-related-slot>
+        {%- if related_count > 0 -%}
+          {{ related_grid }}
+        {%- elsif request.design_mode -%}
+          <p class="product-related__empty">{{ 'products.related.empty' | t }}</p>
+        {%- endif -%}
+      </div>
+    </div>
+  </product-related>
+{%- endif -%}
+
+{% stylesheet %}
+  /*
+    Figma 1920 ("Variant31"): eyebrow x 50 (rule 66 + "YOU MAY ALSO LOVE" accent caps ~18px) at y 226;
+    "VIEW ALL →" grey caps, wide spacing, right (x ~1730–1870); cards from y 292: 2 tiles 890 x 398
+    (x 50–940 / 980–1868, gap ~40), the photo filling the tile, a glass strip ~103 tall at the bottom
+    (title ~22px, "Eau de Parfum · 50ml" ~18px, price accent ~28px bold right), "Trending" badge top
+    left. The heart is the parked wishlist (hidden).
+  */
+  .product-related {
+    display: block;
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+    background-color: var(--color-background);
+  }
+
+  /* The hidden attribute (no products yet): the class's display: block would otherwise win */
+  product-related[hidden] {
+    display: none;
+  }
+
+  .product-related__inner {
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  .product-related__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md) var(--space-lg);
+    margin-block-end: max(var(--space-xl), calc(56 * var(--px, 0.0625rem)));
+  }
+
+  .product-related__eyebrow {
+    margin: 0;
+  }
+
+  .product-related__heading {
+    flex-basis: 100%;
+    order: 1;
+    margin: 0;
+    font-size: var(--font-size-h1);
+    font-weight: 400;
+    line-height: 1.1;
+  }
+
+  .product-related__heading em {
+    color: var(--color-accent);
+    font-style: normal;
+  }
+
+  .product-related__all {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    color: color-mix(in srgb, var(--color-text) 62%, var(--color-background));
+    font-size: var(--font-size-label);
+    letter-spacing: var(--letter-spacing-label);
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: color var(--duration-fast) var(--ease-out);
+  }
+
+  .product-related__all:hover {
+    color: var(--color-accent);
+  }
+
+  .product-related__arrow {
+    display: inline-flex;
+    transition: translate var(--duration-fast) var(--ease-out);
+  }
+
+  .product-related__arrow svg {
+    inline-size: 1rem;
+    block-size: auto;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .product-related__all:hover .product-related__arrow {
+      translate: 0.25rem 0;
+    }
+  }
+
+  /* Desktop: --columns tiles in a row (Figma 2, ~40px apart); each tile is as tall as its shape setting */
+  .product-related__grid {
+    display: grid;
+    grid-template-columns: repeat(var(--columns, 2), minmax(0, 1fr));
+    gap: max(var(--space-lg), calc(40 * var(--px, 0.0625rem)));
+  }
+
+  .product-related__item {
+    aspect-ratio: var(--tile-ratio, 890 / 398);
+  }
+
+  .product-related__empty {
+    margin: 0;
+  }
+
+  /* Tablets: two in a row at most. Phones: one under the other, a little taller so the strip fits */
+  @media (max-width: 989px) {
+    .product-related__grid {
+      grid-template-columns: repeat(min(var(--columns, 2), 2), minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 749px) {
+    .product-related__grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .product-related__item {
+      aspect-ratio: 4 / 3;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <product-related>: when the section comes near the screen, asks Shopify for this same section with
+   * the related products (data-url, intent=related) and swaps in its grid. Nothing related: the
+   * fallback products stay (or the section stays hidden).
+   */
+  class ProductRelated extends HTMLElement {
+    connectedCallback() {
+      if (this.started || !this.dataset.url) return;
+      // Only when it's close (no request for visitors who never scroll this far, none during page load).
+      // A hidden section has no box to watch: its Shopify wrapper stays in the page with zero height, and
+      // an IntersectionObserver still reports a zero-height element once it is in range
+      const watched = this.closest('.shopify-section') || this;
+      this.observer = new IntersectionObserver(([entry]) => {
+        if (entry.isIntersecting) this.start();
+      }, { rootMargin: '0px 0px 600px 0px' });
+      this.observer.observe(watched);
+    }
+
+    disconnectedCallback() {
+      this.observer?.disconnect();
+    }
+
+    async start() {
+      if (this.started) return;
+      this.started = true;
+      this.observer?.disconnect();
+      try {
+        const response = await fetch(this.dataset.url);
+        if (!response.ok) return;
+        const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
+        const result = doc.querySelector('[data-related-response]');
+        const grid = result?.querySelector('[data-related-grid]');
+        if (!grid || Number(result.dataset.count) === 0) return;
+        this.querySelector('[data-related-slot]').replaceChildren(grid);
+        this.hidden = false;
+      } catch (error) {
+        // No related products this time: the fallback products (or nothing) stay
+      }
+    }
+  }
+
+  if (!customElements.get('product-related')) customElements.define('product-related', ProductRelated);
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.product_related",
+  "tag": "section",
+  "class": "product-related-section",
+  "enabled_on": { "templates": ["product"] },
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "t:labels.product_related_info"
+    },
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "You may also love"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.product_related_heading_info"
+    },
+    {
+      "type": "text",
+      "id": "link_label",
+      "label": "t:labels.product_related_link_label",
+      "default": "View all"
+    },
+    {
+      "type": "url",
+      "id": "link_url",
+      "label": "t:labels.product_related_link_url",
+      "info": "t:labels.product_related_link_url_info"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.product_related_products"
+    },
+    {
+      "type": "range",
+      "id": "limit",
+      "label": "t:labels.product_related_limit",
+      "min": 2,
+      "max": 8,
+      "step": 1,
+      "default": 2
+    },
+    {
+      "type": "range",
+      "id": "columns",
+      "label": "t:labels.product_related_columns",
+      "min": 2,
+      "max": 4,
+      "step": 1,
+      "default": 2
+    },
+    {
+      "type": "select",
+      "id": "card_shape",
+      "label": "t:labels.product_related_card_shape",
+      "options": [
+        { "value": "890 / 398", "label": "t:options.product_related_card_shape.wide" },
+        { "value": "4 / 3", "label": "t:options.product_related_card_shape.landscape" },
+        { "value": "1 / 1", "label": "t:options.product_related_card_shape.square" },
+        { "value": "4 / 5", "label": "t:options.product_related_card_shape.portrait" }
+      ],
+      "default": "890 / 398"
+    },
+    {
+      "type": "product_list",
+      "id": "products",
+      "label": "t:labels.product_related_fallback",
+      "info": "t:labels.product_related_fallback_info",
+      "limit": 8
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "animation",
+      "label": "t:labels.animation",
+      "info": "t:labels.animation_info",
+      "options": [
+        { "value": "none", "label": "t:options.animation.none" },
+        { "value": "fade-up", "label": "t:options.animation.fade_up" },
+        { "value": "zoom-in", "label": "t:options.animation.zoom_in" }
+      ],
+      "default": "fade-up"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "options": [
+        { "value": "wide", "label": "t:options.section_width.wide" },
+        { "value": "widest", "label": "t:options.section_width.widest" },
+        { "value": "full", "label": "t:options.section_width.full" }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 96
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.product_related"
+    }
+  ]
+}
+{% endschema %}

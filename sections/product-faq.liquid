@@ -1,0 +1,764 @@
+{%- comment -%}
+  Product FAQ (M6.8, Figma PDP "Product details 11"): a centred eyebrow (FAQ) and heading ("A short
+  conversation."), then a chat: the questions are dark bubbles on the right and the open question's
+  answer is a white bubble on the left under it. Beside it a card with Shopify's contact form ("Ask us
+  anything / Didn't find your answer?"). Pale question marks and chat doodles in the background.
+  - Each Question block is a <details name="…">: the browser opens one at a time (opening one closes
+    the others with the same name) and it works without JavaScript. The first one starts open.
+  - FAQPage microdata (itemscope / itemprop), as on the FAQ page (sections/faq.liquid).
+  - Form: {% form 'contact' %} emails the message to the store (Settings > Notifications > Staff
+    notifications > Contact form), with the product's name as an extra field. After sending, Shopify
+    reloads the page at the form (#id) with a thank-you or an error; the tabs open this panel for that
+    hash and the script moves focus to the message.
+  - Static content (connectable to metafields later). The tabs link here with the Anchor (#faq).
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+  assign anchor = section.settings.anchor | handleize | default: 'faq'
+  assign questions = section.blocks | where: 'type', 'question'
+  assign group_name = 'product-faq-' | append: section.id
+
+  # ids: unique per section
+  assign form_id = 'ProductFaqForm-' | append: section.id
+  assign error_id = form_id | append: '-error'
+  assign success_id = form_id | append: '-success'
+
+  # Field names = the headings in the merchant's email (assigned first: no filters inside attributes)
+  assign name_name = 'products.faq.form_name' | t
+  assign name_product = 'products.faq.form_product' | t
+-%}
+
+<product-faq
+  id="{{ anchor }}"
+  class="product-faq full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.tint %} product-faq--tint{% endif %}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
+>
+  <div class="product-faq__inner">
+    {%- if section.settings.decorations -%}
+      {%- comment -%}
+        The Figma doodles, as transparent PNG masks (assets/faq-doodle-*.png): the image only gives the
+        shape, CSS paints it (mask-image + background-color), so the tint follows the colour scheme.
+        Asset URLs need Liquid, and {% stylesheet %} can't run Liquid: they come in as CSS variables.
+      {%- endcomment -%}
+      <div
+        class="product-faq__decor"
+        aria-hidden="true"
+        style="--doodle-chat: url({{ 'faq-doodle-chat.png' | asset_url }}); --doodle-bubble: url({{ 'faq-doodle-bubble.png' | asset_url }}); --doodle-questions: url({{ 'faq-doodle-questions.png' | asset_url }}); --doodle-question: url({{ 'faq-doodle-question.png' | asset_url }});"
+      >
+        <span class="product-faq__doodle product-faq__doodle--chat"></span>
+        <span class="product-faq__doodle product-faq__doodle--bubble"></span>
+        <span class="product-faq__doodle product-faq__doodle--questions"></span>
+        <span class="product-faq__doodle product-faq__doodle--pale"></span>
+        <span class="product-faq__doodle product-faq__doodle--pale-small"></span>
+        <span class="product-faq__doodle product-faq__doodle--white"></span>
+      </div>
+    {%- endif -%}
+
+    <div class="product-faq__intro" data-tab-item>
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="eyebrow eyebrow--center">{{ section.settings.eyebrow | escape }}</p>
+      {%- endif -%}
+      {%- if section.settings.heading != blank -%}
+        <h2 class="product-faq__heading">{{ section.settings.heading }}</h2>
+      {%- endif -%}
+    </div>
+
+    <div class="product-faq__layout{% unless section.settings.show_form %} product-faq__layout--chat-only{% endunless %}">
+      {%- comment -%} The chat: first in the page order (the main content); on desktop it sits on the right {%- endcomment -%}
+      <div class="product-faq__chat" itemscope itemtype="https://schema.org/FAQPage" data-tab-item>
+        {%- for block in questions -%}
+          {%- if block.settings.question != blank -%}
+            <details
+              class="product-faq__item"
+              name="{{ group_name }}"
+              itemscope
+              itemprop="mainEntity"
+              itemtype="https://schema.org/Question"
+              {% if forloop.first %}
+                open
+              {% endif %}
+              {{ block.shopify_attributes }}
+            >
+              <summary class="product-faq__question">
+                <span itemprop="name">{{ block.settings.question | escape }}</span>
+              </summary>
+              <div class="product-faq__answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                <div class="product-faq__answer-text" itemprop="text">{{ block.settings.answer }}</div>
+              </div>
+            </details>
+          {%- endif -%}
+        {%- else -%}
+          {%- if request.design_mode -%}
+            <p class="product-faq__empty">{{ 'products.faq.empty' | t }}</p>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+
+      {%- if section.settings.show_form -%}
+        <div class="product-faq__card" data-tab-item>
+          {%- if section.settings.form_label != blank -%}
+            <p class="product-faq__label">{{ section.settings.form_label | escape }}</p>
+          {%- endif -%}
+          {%- if section.settings.form_heading != blank -%}
+            <h3 class="product-faq__card-heading">{{ section.settings.form_heading | escape }}</h3>
+          {%- endif -%}
+
+          {%- form 'contact', id: form_id, class: 'product-faq__form' -%}
+            {%- comment -%} After an error, keep what the visitor typed; otherwise a logged-in customer's details {%- endcomment -%}
+            {%- assign value_email = form.email | default: customer.email -%}
+            {%- if form.posted_successfully? -%}
+              <p class="form-message form-message--success" id="{{ success_id }}" tabindex="-1" data-focus-after-submit>
+                {{- 'contact.form.success' | t -}}
+              </p>
+            {%- elsif form.errors -%}
+              <div class="form-message form-message--error" id="{{ error_id }}" tabindex="-1" data-focus-after-submit>
+                {{- form.errors | default_errors -}}
+              </div>
+            {%- endif -%}
+
+            {%- if product -%}
+              <input type="hidden" name="contact[{{ name_product }}]" value="{{ product.title | escape }}">
+            {%- endif -%}
+
+            {%- comment -%}
+              Floating labels: at rest the label sits inside the field where the Figma placeholder is; on
+              focus or once filled it moves up onto the border, so it never disappears while typing (a
+              placeholder alone would). placeholder=" " only lets CSS tell an empty field (:placeholder-shown)
+            {%- endcomment -%}
+            <div class="product-faq__field">
+              <label class="product-faq__field-label" for="{{ form_id }}-name">{{ 'products.faq.form_name' | t }}</label>
+              <input
+                class="product-faq__input"
+                type="text"
+                id="{{ form_id }}-name"
+                name="contact[{{ name_name }}]"
+                value="{{ customer.name | escape }}"
+                placeholder=" "
+                autocomplete="name"
+              >
+            </div>
+
+            <div class="product-faq__field">
+              <label class="product-faq__field-label" for="{{ form_id }}-email">{{ 'products.faq.form_email' | t }}</label>
+              <input
+                class="product-faq__input"
+                type="email"
+                id="{{ form_id }}-email"
+                name="contact[email]"
+                value="{{ value_email | escape }}"
+                placeholder=" "
+                autocomplete="email"
+                autocapitalize="off"
+                spellcheck="false"
+                required
+                {% if form.errors contains 'email' %}
+                  aria-invalid="true"
+                  aria-describedby="{{ error_id }}"
+                {% endif %}
+              >
+            </div>
+
+            <div class="product-faq__field product-faq__field--message">
+              <label class="product-faq__field-label" for="{{ form_id }}-message">{{ 'products.faq.form_message' | t }}</label>
+              <textarea
+                class="product-faq__input product-faq__textarea"
+                id="{{ form_id }}-message"
+                name="contact[body]"
+                rows="3"
+                placeholder=" "
+                required
+              >
+                {{- form.body | escape -}}
+              </textarea>
+            </div>
+
+            {%- assign submit_label = 'contact.form.send' | t -%}
+            {% render 'explore-button', label: submit_label, tag: 'button', class: 'product-faq__submit' %}
+          {%- endform -%}
+        </div>
+      {%- endif -%}
+    </div>
+  </div>
+</product-faq>
+
+{% stylesheet %}
+  /*
+    Figma 1920 ("Product details 11"): pale pink fill; eyebrow y 211 centred, heading ~70px (y ~297),
+    accent word. Form card x 50–470 (420), y 348–818, white glass, radius ~24; "ASK US ANYTHING" accent
+    caps ~15px; "Didn't Find Your Answer?" heading font ~24px; pill fields 380 x 50 (message 88 tall),
+    "SEND MESSAGE" full width. Chat x 523–1870: questions = dark bubbles (~#1f1f1f, white text ~18px,
+    padding ~14 / 16, radius ~16 with a square bottom-right corner) on the right, ~45px apart; the
+    answer = a white bubble (x 523–1698, square top-left corner) under its question.
+    Doodles: a chat outline top left of the heading, a "?" speech bubble top right, a big outline "?"
+    behind the chat (left), two pale filled "?" in the middle, a white "?" bottom right.
+  */
+  .product-faq {
+    position: relative;
+    display: block;
+    overflow: clip; /* the doodles never widen the page */
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+    background-color: var(--color-background);
+  }
+
+  /* Figma: a pale pink fill, mixed from the scheme's accent so it follows the scheme */
+  .product-faq--tint {
+    background-color: color-mix(in srgb, var(--color-accent) 3%, var(--color-background));
+  }
+
+  .product-faq__inner {
+    position: relative;
+    z-index: 1;
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  .product-faq__intro {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-lg);
+    text-align: center;
+  }
+
+  .product-faq__intro .eyebrow {
+    margin: 0;
+  }
+
+  .product-faq__heading {
+    margin: 0;
+    font-size: var(--font-size-h1);
+    font-weight: 400;
+    line-height: 1.1;
+  }
+
+  .product-faq__heading em {
+    color: var(--color-accent);
+    font-style: normal;
+  }
+
+  /* Phones and tablets: the chat, then the form. Desktop: form left (420 of 1820), chat right */
+  .product-faq__layout {
+    display: grid;
+    gap: var(--space-2xl);
+    margin-block-start: max(var(--space-xl), calc(40 * var(--px, 0.0625rem)));
+  }
+
+  @media (min-width: 990px) {
+    .product-faq__layout {
+      grid-template-columns: minmax(18rem, 420fr) minmax(0, 1347fr);
+      align-items: start;
+      gap: calc(53 * var(--px, 0.0625rem));
+    }
+
+    .product-faq__card {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .product-faq__chat {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .product-faq__layout--chat-only {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .product-faq__layout--chat-only .product-faq__chat {
+      grid-column: 1;
+    }
+  }
+
+  /* The chat */
+  .product-faq__chat {
+    display: flex;
+    flex-direction: column;
+    gap: max(var(--space-lg), calc(45 * var(--px, 0.0625rem)));
+  }
+
+  /* Plain block flow inside <details> (older browsers ignore display: flex on it): the bubbles shrink
+     to their text (fit-content) and an auto margin pushes them right (question) or left (answer) */
+  .product-faq__question {
+    display: block;
+    inline-size: fit-content;
+    max-inline-size: min(100%, 34rem);
+    margin-inline-start: auto;
+    padding: max(0.75rem, calc(14 * var(--px, 0.0625rem))) max(1rem, calc(16 * var(--px, 0.0625rem)));
+    border-radius: 1rem 1rem 0.25rem 1rem;
+    background-color: var(--color-text);
+    box-shadow: var(--shadow-card-soft);
+    color: var(--color-background);
+    font-size: var(--font-size-body);
+    line-height: 1.35;
+    list-style: none; /* no ▸ marker */
+    cursor: pointer;
+    transition: background-color var(--duration-fast) var(--ease-out);
+  }
+
+  .product-faq__question::-webkit-details-marker {
+    display: none;
+  }
+
+  .product-faq__question:hover {
+    background-color: color-mix(in srgb, var(--color-text) 85%, var(--color-accent));
+  }
+
+  .product-faq__question:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+  }
+
+  /* The answer: a white bubble on the left under its question (Figma: up to 1175 of 1347) */
+  .product-faq__answer {
+    inline-size: fit-content;
+    max-inline-size: 87%;
+    margin-inline-end: auto;
+    margin-block-start: max(var(--space-md), calc(18 * var(--px, 0.0625rem)));
+    padding: max(0.75rem, calc(14 * var(--px, 0.0625rem))) max(1rem, calc(16 * var(--px, 0.0625rem)));
+    /* Figma "Frame 1984077925": white, a soft grey shadow, square bottom-left corner (the bubble's tail) */
+    border-radius: 20px 20px 20px 0;
+    background-color: #ffffff;
+    box-shadow: 0 2px 10px #c2c2c240;
+    font-size: var(--font-size-body);
+    line-height: 1.5;
+  }
+
+  .product-faq__answer-text > * {
+    margin: 0;
+  }
+
+  .product-faq__answer-text > * + * {
+    margin-block-start: var(--space-sm);
+  }
+
+  /* A new answer pops in like a chat reply */
+  @media (prefers-reduced-motion: no-preference) {
+    .product-faq__item[open] .product-faq__answer {
+      animation: product-faq-reply 0.45s var(--ease-out) 0.08s backwards;
+    }
+  }
+
+  @keyframes product-faq-reply {
+    from {
+      opacity: 0;
+      translate: 0 0.75rem;
+      scale: 0.97;
+    }
+  }
+
+  .product-faq__empty {
+    margin: 0;
+  }
+
+  /* The form card */
+  .product-faq__card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    padding: max(var(--space-lg), calc(30 * var(--px, 0.0625rem))) max(var(--space-md), calc(20 * var(--px, 0.0625rem)));
+    border: 1px solid var(--color-card-border);
+    border-radius: max(1rem, calc(24 * var(--px, 0.0625rem)));
+    background-color: color-mix(in srgb, var(--color-card, #ffffff) 70%, transparent);
+    box-shadow: var(--shadow-card-soft);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+
+  .product-faq__label {
+    margin: 0;
+    color: var(--color-accent);
+    font-size: var(--font-size-label);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  .product-faq__card-heading {
+    margin: 0;
+    font-size: var(--font-size-h3);
+    font-weight: 400;
+  }
+
+  /* Fields spaced with gap (no margins: Shopify may add an hCaptcha element inside the form) */
+  .product-faq__form {
+    display: flex;
+    flex-direction: column;
+    gap: max(var(--space-md), calc(25 * var(--px, 0.0625rem)));
+    margin-block-start: var(--space-sm);
+  }
+
+  /* Two classes: the global input[type] / textarea rules outweigh one */
+  .product-faq .product-faq__input {
+    margin: 0; /* the global :where(label) + input gap: here the label floats over the field */
+    border-radius: var(--radius-pill);
+    background-color: #ffffff; /* Figma: white pills (--color-card is a 20% cream, the fields looked see-through) */
+    padding-inline: max(var(--space-lg), calc(30 * var(--px, 0.0625rem)));
+  }
+
+  .product-faq .product-faq__textarea {
+    min-block-size: calc(88 * var(--px, 0.0625rem));
+    border-radius: 1rem;
+  }
+
+  /* Floating labels: at rest in the field (as the Figma placeholder), on focus / when filled on the border */
+  .product-faq__field {
+    position: relative;
+  }
+
+  .product-faq .product-faq__field-label {
+    position: absolute;
+    z-index: 1;
+    inset-block-start: 50%;
+    inset-inline-start: max(var(--space-lg), calc(30 * var(--px, 0.0625rem)));
+    padding-inline: 0.35rem;
+    margin-inline-start: -0.35rem;
+    border-radius: var(--radius-pill);
+    color: color-mix(in srgb, var(--color-text) 80%, var(--color-background)); /* 4.5:1 or more, as placeholders */
+    font-size: var(--font-size-body-sm);
+    font-weight: 400;
+    line-height: 1.2;
+    pointer-events: none; /* a click goes to the field under it */
+    translate: 0 -50%;
+    transition:
+      inset-block-start var(--duration-fast) var(--ease-out),
+      font-size var(--duration-fast) var(--ease-out),
+      color var(--duration-fast) var(--ease-out);
+  }
+
+  /* The message box: the label on the first line, not the middle */
+  .product-faq .product-faq__field--message .product-faq__field-label {
+    inset-block-start: 1.6rem;
+  }
+
+  /*
+    Up on the border while its field has focus or text. The selectors name the field: a bare
+    :not(:placeholder-shown) matched the label itself (it never shows a placeholder), so every label sat
+    on the border even in an empty field
+  */
+  .product-faq .product-faq__field:has(.product-faq__input:focus, .product-faq__input:not(:placeholder-shown)) .product-faq__field-label {
+    inset-block-start: 0;
+    background-color: #ffffff; /* solid, like the field: the border line must not run through the label */
+    color: var(--color-accent);
+    font-size: var(--font-size-small);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .product-faq .product-faq__field-label {
+      transition: none;
+    }
+  }
+
+  /*
+    Full width: the leaving paper plane must fly further than on a normal pill, or it stops inside the
+    button next to the one parking in (two icons). As on the contact page, the button is its own size
+    container and the plane flies 55% of its width (it starts near the middle)
+  */
+  .product-faq .product-faq__submit {
+    --explore-fly: 55cqi;
+    container-type: inline-size;
+    inline-size: 100%;
+    margin-block-start: var(--space-sm);
+  }
+
+  /*
+    The doodles (decoration only), placed from the Figma relative to the content box (x 50–1870, top =
+    the eyebrow): left / width in % of 1820, top in Figma px from the eyebrow. Behind the content: the
+    inner box is a stacking context (z-index 1), so z-index -1 keeps them under the text but above the
+    section's fill.
+  */
+  .product-faq__decor {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .product-faq__doodle {
+    position: absolute;
+    background-color: color-mix(in srgb, var(--color-accent) 12%, var(--color-background));
+    -webkit-mask: var(--doodle) center / contain no-repeat;
+    mask: var(--doodle) center / contain no-repeat;
+  }
+
+  /* Two chat bubbles, top left of the heading (Figma x 380–495, y 178) */
+  .product-faq__doodle--chat {
+    --doodle: var(--doodle-chat);
+    inset-block-start: calc(-33 * var(--px, 0.0625rem));
+    inset-inline-start: 18.1%;
+    inline-size: 6.3%;
+    aspect-ratio: 320 / 202;
+  }
+
+  /* The "?" speech bubble, top right (x 1455–1580, y 110), very faint and tilted */
+  .product-faq__doodle--bubble {
+    --doodle: var(--doodle-bubble);
+    /* Figma 100px above the eyebrow, but never above the section's top padding (it would be cut off) */
+    inset-block-start: max(calc(-100 * var(--px, 0.0625rem)), calc(-1 * var(--section-padding-top, 64px)));
+    inset-inline-start: 77.2%;
+    inline-size: 6.9%;
+    aspect-ratio: 320 / 322;
+    background-color: color-mix(in srgb, var(--color-text) 7%, var(--color-background));
+    rotate: 14deg;
+  }
+
+  /* Three outline "?" behind the chat, left (x 470–773, y 460–893) */
+  .product-faq__doodle--questions {
+    --doodle: var(--doodle-questions);
+    inset-block-start: calc(249 * var(--px, 0.0625rem));
+    inset-inline-start: 23.1%;
+    inline-size: 16.6%;
+    aspect-ratio: 640 / 835;
+    background-color: color-mix(in srgb, var(--color-accent) 9%, var(--color-background));
+  }
+
+  /* Two pale filled "?" in the middle (x 1114–1286, y 525–715) */
+  .product-faq__doodle--pale,
+  .product-faq__doodle--pale-small {
+    --doodle: var(--doodle-question);
+    aspect-ratio: 152 / 250;
+    background-color: color-mix(in srgb, var(--color-text) 6%, var(--color-background));
+  }
+
+  .product-faq__doodle--pale {
+    inset-block-start: calc(314 * var(--px, 0.0625rem));
+    inset-inline-start: 58.4%;
+    inline-size: 5.6%;
+    rotate: -8deg;
+  }
+
+  .product-faq__doodle--pale-small {
+    inset-block-start: calc(394 * var(--px, 0.0625rem));
+    inset-inline-start: 64%;
+    inline-size: 3.9%;
+    rotate: 10deg;
+  }
+
+  /* A white "?" bottom right (x 1733–1843, y 888) */
+  .product-faq__doodle--white {
+    --doodle: var(--doodle-question);
+    inset-block-start: calc(677 * var(--px, 0.0625rem));
+    inset-inline-start: 93.5%;
+    inline-size: 5.4%;
+    aspect-ratio: 152 / 250;
+    background-color: var(--color-card, #ffffff);
+    rotate: 14deg;
+  }
+
+  @media (max-width: 989px) {
+    .product-faq__doodle--questions,
+    .product-faq__doodle--chat,
+    .product-faq__doodle--pale-small {
+      display: none;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <product-faq>: after the contact form is sent, Shopify reloads the page with a thank-you or an error
+   * marked data-focus-after-submit. Focus moves there once the page has loaded: by then the tabs have
+   * shown this panel (a hidden or faded panel can't take focus). Only right after the visitor's own
+   * submit, never on a normal load (and no autofocus attribute: Theme Store rule).
+   */
+  class ProductFaq extends HTMLElement {
+    connectedCallback() {
+      // Theme editor: a question picked in the sidebar opens (the others close: same name)
+      this.controller?.abort();
+      this.controller = new AbortController();
+      this.addEventListener('shopify:block:select', (event) => {
+        if (event.target.matches('details')) event.target.open = true;
+      }, { signal: this.controller.signal });
+
+      // Once: the tabs' pinned track moves this section, which runs connectedCallback again
+      if (this.focusDone) return;
+      const message = this.querySelector('[data-focus-after-submit]');
+      if (!message) return;
+      this.focusDone = true;
+      // The tabs open this panel and scroll to the message (whatever the URL hash is), then focus moves
+      const focus = () => requestAnimationFrame(() => {
+        document.querySelector('product-tabs')?.reveal?.(message);
+        message.focus({ preventScroll: true });
+      });
+      if (document.readyState === 'complete') focus();
+      else window.addEventListener('load', focus, { once: true });
+    }
+
+    disconnectedCallback() {
+      this.controller?.abort();
+    }
+  }
+
+  if (!customElements.get('product-faq')) customElements.define('product-faq', ProductFaq);
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.product_faq",
+  "tag": "section",
+  "class": "product-faq-section",
+  "enabled_on": { "templates": ["product"] },
+  "max_blocks": 12,
+  "blocks": [
+    {
+      "type": "question",
+      "name": "t:general.product_faq_question",
+      "settings": [
+        { "type": "text", "id": "question", "label": "t:labels.faq_question", "default": "Can I use this with retinol?" },
+        {
+          "type": "richtext",
+          "id": "answer",
+          "label": "t:labels.faq_answer",
+          "default": "<p>Yes — alternate nights to begin. After a month most skins tolerate both in one routine, serum first.</p>"
+        }
+      ]
+    }
+  ],
+  "settings": [
+    {
+      "type": "text",
+      "id": "anchor",
+      "label": "t:labels.product_section_anchor",
+      "info": "t:labels.product_section_anchor_info",
+      "default": "faq"
+    },
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "FAQ"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.accent_heading_info",
+      "default": "A short <em>conversation.</em>"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.product_faq_form"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_form",
+      "label": "t:labels.product_faq_show_form",
+      "info": "t:labels.product_faq_show_form_info",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "form_label",
+      "label": "t:labels.eyebrow",
+      "default": "Ask us anything",
+      "visible_if": "{{ section.settings.show_form }}"
+    },
+    {
+      "type": "text",
+      "id": "form_heading",
+      "label": "t:labels.heading",
+      "default": "Didn't find your answer?",
+      "visible_if": "{{ section.settings.show_form }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "checkbox",
+      "id": "tint",
+      "label": "t:labels.product_faq_tint",
+      "info": "t:labels.product_faq_tint_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "decorations",
+      "label": "t:labels.product_faq_decorations",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "options": [
+        { "value": "wide", "label": "t:options.section_width.wide" },
+        { "value": "widest", "label": "t:options.section_width.widest" },
+        { "value": "full", "label": "t:options.section_width.full" }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.product_faq",
+      "blocks": [
+        {
+          "type": "question",
+          "settings": {
+            "question": "Can I use this with retinol?",
+            "answer": "<p>Yes — alternate nights to begin. After a month most skins tolerate both in one routine, serum first.</p>"
+          }
+        },
+        {
+          "type": "question",
+          "settings": {
+            "question": "Will it break me out?",
+            "answer": "<p>It's non-comedogenic and fragrance-free. Patch test first; if your skin feels tight, use it every other day for the first week.</p>"
+          }
+        },
+        {
+          "type": "question",
+          "settings": {
+            "question": "Is it pregnancy safe?",
+            "answer": "<p>It contains no retinoids or salicylic acid, but please check with your doctor before starting new skincare.</p>"
+          }
+        },
+        {
+          "type": "question",
+          "settings": {
+            "question": "How long does one bottle last?",
+            "answer": "<p>About two months, using two or three drops morning and night.</p>"
+          }
+        },
+        {
+          "type": "question",
+          "settings": {
+            "question": "Is it suitable for sensitive skin?",
+            "answer": "<p>Yes. It's dermatologist tested on sensitive skin, with no alcohol or added fragrance.</p>"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

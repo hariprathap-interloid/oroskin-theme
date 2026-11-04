@@ -21,6 +21,7 @@
 <product-tabs
   data-layout="{{ section.settings.layout | default: 'tabbed' }}"
   data-transition="{{ section.settings.transition | default: 'up' }}"
+  data-panel-scroll="{{ section.settings.panel_scroll | default: 50 }}"
   class="product-tabs full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
   style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
 >
@@ -59,6 +60,14 @@
     inset-block-start: 7rem;
     z-index: 19; /* under the header (20) */
     pointer-events: none; /* the wrapper spans the page width: only the bar takes clicks */
+  }
+
+  /*
+    Only the pill is painted: the colour scheme class would fill the whole width (a white band over the
+    pink FAQ). Element + class to outweigh .color-scheme-*
+  */
+  product-tabs.product-tabs {
+    background-color: transparent;
   }
 
   /* Tabbed layout: the sections that aren't the chosen tab (their Shopify wrapper) */
@@ -324,6 +333,15 @@
       this.overlap();
       this.onOverlapResize = () => this.overlap();
       window.addEventListener('resize', this.onOverlapResize);
+      this.onEndScroll = () => {
+        if (this.endTicking) return;
+        this.endTicking = true;
+        requestAnimationFrame(() => {
+          this.endTicking = false;
+          this.followEnd();
+        });
+      };
+      window.addEventListener('scroll', this.onEndScroll, { passive: true });
 
       this.querySelector('[data-tabs-top]')?.addEventListener('click', (event) => {
         event.preventDefault();
@@ -337,6 +355,7 @@
 
     disconnectedCallback() {
       window.removeEventListener('resize', this.onOverlapResize);
+      window.removeEventListener('scroll', this.onEndScroll);
       this.observer?.disconnect();
       this.unpin();
       document.removeEventListener('shopify:section:select', this.onEditorSelect);
@@ -353,6 +372,22 @@
       if (wrapper) wrapper.style.marginBlockEnd = `${-wrapper.offsetHeight}px`;
     }
 
+    /**
+     * The bar stays stuck while any of the last section is on screen, then leaves with its end. A sticky
+     * element only lets go at the end of its parent (<main>, so after every later section too): instead,
+     * once the bottom of the panels (the pinned track, or the lowest section) rises above the bar's
+     * bottom, the bar is pushed up by the difference
+     */
+    followEnd() {
+      const bar = this.closest('.shopify-section');
+      if (!bar || !this.targets.size) return;
+      const ends = this.track ? [this.track] : [...this.targets.values()].map((target) => this.wrapper(target));
+      const bottom = Math.max(...ends.map((element) => element.getBoundingClientRect().bottom));
+      const barBottom = (parseFloat(getComputedStyle(bar).top) || 0) + bar.offsetHeight;
+      const push = Math.min(0, bottom - barBottom);
+      bar.style.translate = push ? `0 ${push}px` : '';
+    }
+
     reducedMotion() {
       return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     }
@@ -366,8 +401,10 @@
 
     setUpTabbed() {
       this.classList.add('is-tabbed');
-      const fromHash = decodeURIComponent(window.location.hash.slice(1));
-      const first = this.targets.has(fromHash) ? fromHash : this.ids[0];
+      // A link to a tab (#highlights) or to something inside one (the FAQ form after sending reloads at
+      // #ProductFaqForm-…) opens that tab and brings it into view
+      const hashTarget = this.hashTarget();
+      const first = hashTarget ? this.tabOf(hashTarget) : this.ids[0];
 
       this.addEventListener('click', (event) => {
         const link = event.target.closest('[data-tab-target]');
@@ -386,7 +423,10 @@
 
       this.show(first);
       // Measure after fonts and images have settled, then pin if everything fits
-      requestAnimationFrame(() => this.tryPin(first));
+      requestAnimationFrame(() => {
+        this.tryPin(first);
+        if (hashTarget) this.reveal(hashTarget);
+      });
       this.onResize = () => {
         clearTimeout(this.resizeTimer);
         this.resizeTimer = setTimeout(() => {
@@ -415,6 +455,51 @@
         if (fromClick) this.bringIntoView();
       }
       if (fromClick) history.replaceState(history.state, '', `#${id}`);
+    }
+
+    /** The element the URL hash points at, if it is one of the panels or inside one */
+    hashTarget() {
+      const hash = decodeURIComponent(window.location.hash.slice(1));
+      const element = hash ? document.getElementById(hash) : null;
+      return element && this.tabOf(element) ? element : null;
+    }
+
+    /** The tab whose panel holds the element (a panel holds itself) */
+    tabOf(element) {
+      for (const [id, target] of this.targets) {
+        if (target.contains(element)) return id;
+      }
+      return null;
+    }
+
+    /**
+     * Opens the panel that holds an element and scrolls the element into view under the tabs (a hash
+     * into a panel, "Write a review" → the reviews app, the FAQ form after sending). Pinned, a panel's
+     * place in the page isn't where it shows: the scroll is worked out from its part of the track (and,
+     * in a tall panel, how far it has to slide up). Returns false when it can't help (the element isn't
+     * in a panel, or the layout is stacked): the link then works as usual.
+     */
+    reveal(element) {
+      const id = this.tabOf(element);
+      if (!id || this.layout !== 'tabbed') return false;
+      const behavior = this.reducedMotion() ? 'auto' : 'smooth';
+      if (!this.track) {
+        this.show(id);
+        element.scrollIntoView({ behavior, block: 'start' }); // html's scroll-padding leaves room for the tabs
+        return true;
+      }
+      const index = this.ids.indexOf(id);
+      const wrapper = this.wrappers[index];
+      // How far down its panel the element sits, less the room the tabs take at the top of the stage
+      const offset = element.getBoundingClientRect().top - wrapper.getBoundingClientRect().top - this.stageOffset - 16;
+      const slide = Math.min(this.overflows[index], Math.max(0, offset));
+      const start = this.track.getBoundingClientRect().top + window.scrollY + this.starts[index];
+      const top = start + (slide > 0 ? this.holdStart + slide : 0) + 1;
+      this.jumpTo = id;
+      this.show(id);
+      window.scrollTo({ top, behavior });
+      this.endJump(top);
+      return true;
     }
 
     /**
@@ -484,6 +569,7 @@
       stage.append(...wrappers);
 
       this.room = room;
+      this.stageOffset = barBottom;
       this.wrappers = wrappers;
       this.measure();
       // Images load later and change a panel's height: measure again (without rebuilding the track)
@@ -511,6 +597,13 @@
           this.wrappers.forEach((wrapper, i) => {
             const slide = i === index ? Math.min(this.overflows[i], Math.max(0, passed - this.starts[i] - this.holdStart)) : 0;
             wrapper.style.transform = slide > 0 ? `translateY(${-slide}px)` : '';
+            // A panel that asked for extra scroll (data-tab-scroll) gets its progress through it, 0–1, on
+            // every frame (also when not shown: a fast scroll past it still leaves it at 0 or 1)
+            if (this.extras[i]) {
+              const local = passed - this.starts[i] - this.holdStart - this.overflows[i];
+              const progress = Math.min(1, Math.max(0, local / this.extras[i]));
+              this.targets.get(this.ids[i]).dispatchEvent(new CustomEvent('tab:progress', { detail: progress }));
+            }
           });
           if (this.ids[index] !== this.activeId) this.show(this.ids[index]);
         });
@@ -521,21 +614,26 @@
 
     /**
      * Each panel's part of the track: a hold at the start, its extra height (measured in the stage, where
-     * each panel is at least one stage tall), a hold at the end. The last panel then holds one more screen before the pinned
-     * block lets go (it has to, so the rest of the page and the footer can be reached).
+     * each panel is at least one stage tall), the scroll it asked for (data-tab-scroll on the section, in
+     * screens: e.g. the reviews moving their cards on scroll), a hold at the end. The last panel then holds
+     * one more screen before the pinned block lets go (it has to, so the rest of the page and the footer
+     * can be reached).
      */
     measure() {
       if (!this.track) return;
       // Reading time: a hold at the start (the panel stays still: read the beginning), the slide-up of a
-      // taller panel, a hold at the end before the next panel comes in
-      this.holdStart = Math.round(this.room * 0.5);
-      this.holdEnd = Math.round(this.room * 0.75);
+      // taller panel, a hold at the end before the next panel comes in. "Scroll per panel" (setting, % of
+      // a screen, default 50) is shared half and half between the two holds
+      const hold = (Number(this.dataset.panelScroll) || 50) / 100 / 2;
+      this.holdStart = Math.round(this.room * hold);
+      this.holdEnd = Math.round(this.room * hold);
       this.overflows = this.wrappers.map((wrapper) => Math.max(0, wrapper.offsetHeight - this.room));
+      this.extras = this.ids.map((id) => Math.round((Number(this.targets.get(id).dataset.tabScroll) || 0) * this.room));
       this.starts = [];
       let total = 0;
-      this.overflows.forEach((overflow) => {
+      this.overflows.forEach((overflow, i) => {
         this.starts.push(total);
-        total += this.holdStart + overflow + this.holdEnd;
+        total += this.holdStart + overflow + this.extras[i] + this.holdEnd;
       });
       this.track.style.blockSize = `${total + this.room}px`;
     }
@@ -658,6 +756,18 @@
         { "value": "fade", "label": "t:options.product_tabs_transition.fade" }
       ],
       "default": "up",
+      "visible_if": "{{ section.settings.layout == 'tabbed' }}"
+    },
+    {
+      "type": "range",
+      "id": "panel_scroll",
+      "label": "t:labels.product_tabs_panel_scroll",
+      "info": "t:labels.product_tabs_panel_scroll_info",
+      "min": 20,
+      "max": 150,
+      "step": 10,
+      "unit": "%",
+      "default": 50,
       "visible_if": "{{ section.settings.layout == 'tabbed' }}"
     },
     {

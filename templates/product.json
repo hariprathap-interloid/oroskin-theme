@@ -238,6 +238,7 @@
       "settings": {
         "show_breadcrumb": true,
         "show_sticky_bar": true,
+        "sticky_minimize": true,
         "enable_lightbox": true,
         "section_width": "widest",
         "scale_screen": true,
@@ -322,6 +323,7 @@
       "settings": {
         "layout": "tabbed",
         "transition": "up",
+        "panel_scroll": 50,
         "show_top": true,
         "section_width": "widest",
         "color_scheme": "",
@@ -671,6 +673,176 @@
         "padding_top": 64,
         "padding_bottom": 64
       }
+    },
+    "reviews": {
+      "type": "product-reviews",
+      "blocks": {
+        "review_1": {
+          "type": "review",
+          "settings": {
+            "avatar": "shopify://shop_images/39aab73a45c612abf014cd8387797410e717c3ab.jpg",
+            "name": "Prince",
+            "place": "Canada",
+            "rating": 4.8,
+            "text": "I bought this to fade old acne marks. It feels gentle on my sensitive skin and has visibly lightened my dark spots in about three weeks."
+          }
+        },
+        "review_2": {
+          "type": "review",
+          "settings": {
+            "avatar": "shopify://shop_images/f5a8bcc390d41cf5cdcbc8e12d63402eabc96110.jpg",
+            "name": "Sara",
+            "place": "U.K",
+            "rating": 4.9,
+            "text": "The texture is nice and hydrating, but I did not notice a huge difference in my dark spots even after finishing the whole bottle."
+          }
+        },
+        "review_3": {
+          "type": "review",
+          "settings": {
+            "avatar": "shopify://shop_images/c9dc32848619b2f7395a3d971c83962cd484f4e3.jpg",
+            "name": "Aadhaya",
+            "place": "Dubai",
+            "rating": 4.6,
+            "text": "Highly hydrating! It plumps up my dry patches instantly while giving that targeted radiance look."
+          }
+        },
+        "review_4": {
+          "type": "review",
+          "settings": {
+            "avatar": "shopify://shop_images/4a2044d2febfca6537972cdb1ac62ed509ed8ed3.jpg",
+            "name": "Zara",
+            "place": "USA",
+            "rating": 4.9,
+            "text": "Very lightweight and watery. It layers perfectly under my heavy moisturizer and doesn't pill when I apply sunscreen over it."
+          }
+        },
+        "review_5": {
+          "type": "review",
+          "settings": {
+            "avatar": "shopify://shop_images/389d48c3df5ee8b67ef377543c9b31f0e430e2a6.jpg",
+            "name": "Sam",
+            "place": "USA",
+            "rating": 4.7,
+            "text": "Great for sun spots. It smoothed out my skin texture and blurred my dark patches over a few weeks."
+          }
+        },
+        "review_6": {
+          "type": "review",
+          "settings": {
+            "avatar": "shopify://shop_images/faa1c8058a578c2a8a62f56f20fc78f3dad2eb3e.png",
+            "name": "Jasmine",
+            "place": "U.K",
+            "rating": 4.9,
+            "text": "This serum is a game-changer! It is super lightweight, non-sticky, and absorbs in seconds. After two weeks of use, my dull skin has a fresh, natural glow."
+          }
+        }
+      },
+      "block_order": [
+        "review_1",
+        "review_2",
+        "review_3",
+        "review_4",
+        "review_5",
+        "review_6"
+      ],
+      "settings": {
+        "anchor": "reviews",
+        "eyebrow": "Voices",
+        "heading": "What our <em>customers</em> say",
+        "write_label": "Write a review",
+        "write_link": "",
+        "visible": 3,
+        "motion": "scroll",
+        "interval": 5,
+        "float_image": "shopify://shop_images/18b4d5aff561df49910306885f5046f82ca42d99.png",
+        "float_size": 330,
+        "float_motion": "repeat",
+        "word": "Reviews",
+        "section_width": "widest",
+        "color_scheme": "scheme-2",
+        "padding_top": 64,
+        "padding_bottom": 64
+      }
+    },
+    "faq": {
+      "type": "product-faq",
+      "blocks": {
+        "question_1": {
+          "type": "question",
+          "settings": {
+            "question": "Can I use this with retinol?",
+            "answer": "<p>Yes — alternate nights to begin. After a month most skins tolerate both in one routine, serum first.</p>"
+          }
+        },
+        "question_2": {
+          "type": "question",
+          "settings": {
+            "question": "Will it break me out?",
+            "answer": "<p>It's non-comedogenic and fragrance-free. Patch test first; if your skin feels tight, use it every other day for the first week.</p>"
+          }
+        },
+        "question_3": {
+          "type": "question",
+          "settings": {
+            "question": "Is it pregnancy safe?",
+            "answer": "<p>It contains no retinoids or salicylic acid, but please check with your doctor before starting new skincare.</p>"
+          }
+        },
+        "question_4": {
+          "type": "question",
+          "settings": {
+            "question": "How long does one bottle last?",
+            "answer": "<p>About two months, using two or three drops morning and night.</p>"
+          }
+        },
+        "question_5": {
+          "type": "question",
+          "settings": {
+            "question": "Is it suitable for sensitive skin?",
+            "answer": "<p>Yes. It's dermatologist tested on sensitive skin, with no alcohol or added fragrance.</p>"
+          }
+        }
+      },
+      "block_order": [
+        "question_1",
+        "question_2",
+        "question_3",
+        "question_4",
+        "question_5"
+      ],
+      "settings": {
+        "anchor": "faq",
+        "eyebrow": "FAQ",
+        "heading": "A short <em>conversation.</em>",
+        "show_form": true,
+        "form_label": "Ask us anything",
+        "form_heading": "Didn't find your answer?",
+        "tint": true,
+        "decorations": true,
+        "section_width": "widest",
+        "color_scheme": "scheme-2",
+        "padding_top": 64,
+        "padding_bottom": 64
+      }
+    },
+    "related": {
+      "type": "product-related",
+      "settings": {
+        "eyebrow": "You may also love",
+        "heading": "",
+        "link_label": "View all",
+        "link_url": "",
+        "limit": 2,
+        "columns": 2,
+        "card_shape": "890 / 398",
+        "products": [],
+        "animation": "fade-up",
+        "section_width": "widest",
+        "color_scheme": "scheme-2",
+        "padding_top": 64,
+        "padding_bottom": 96
+      }
     }
   },
   "order": [
@@ -680,6 +852,9 @@
     "overview",
     "highlights",
     "how_to",
-    "clinical"
+    "clinical",
+    "reviews",
+    "faq",
+    "related"
   ]
 }

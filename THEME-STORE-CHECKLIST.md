@@ -112,7 +112,7 @@ Why first: every later section reads these settings, CSS variables and base styl
 - [ ] 🟡 **Accelerated checkout buttons**, on by default. Skeleton has `payment_button`. *§4*
 - [ ] ❌ **Shop Pay Installments** banner. *§4*
 - [ ] ❌ **Pickup availability**. *§4*
-- [ ] ❌ **Related** and **complementary** product recommendations. *§4*
+- [x] ✅ **Related** and **complementary** product recommendations. *§4* (M6.5 complementary: sections/product-pairs.liquid; M6.9 related: sections/product-related.liquid, both via routes.product_recommendations_url)
 - [ ] ❌ Gift card recipient fields: email, name, message and send date. *§7*
 - [ ] ❌ "Add to cart" text moved to locales. It's currently hard-coded.
 

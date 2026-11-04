@@ -1,0 +1,1276 @@
+{%- comment -%}
+  Reviews (M6.8, Figma PDP reviews "Component 1642" frames): a centred eyebrow (VOICES) and heading,
+  "WRITE A REVIEW" top right, then review cards staggered right / left. As the visitor scrolls (Card
+  motion "On scroll", the default; or a timer / arrows) the cards slide up one place at a time (a vertical
+  carousel): the moving cards tilt a little and settle flat, the product image on the left rises up to
+  the tabs bar and slips under it, and a huge pale "REVIEWS" word sits bottom right.
+  - The cards are Review blocks (avatar, name, place, rating, text): featured reviews the merchant
+    types in, the same on every product. A reviews app (e.g. Judge.me) goes in as an app block: it
+    shows under the cards with its own list and form, and fills the product's reviews.rating
+    metafields (the stars by the price). No review microdata here: these blocks aren't per product,
+    so marking them up would mislead search engines; the app adds its own.
+  - "Write a review": the link setting, else the app's area (when an app block is there), else hidden.
+  - The carousel only starts with JavaScript (is-ready) and more cards than fit; without it every card
+    shows in a list. Autoplay has a pause button (WCAG 2.2.2), stops on keyboard focus, plays
+    only on screen (and, in the tabs' pinned block, while its panel shows), and is off with reduced
+    motion. The tabs link here with the Anchor (#reviews).
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+  assign anchor = section.settings.anchor | handleize | default: 'reviews'
+  assign visible = section.settings.visible | default: 3
+  assign app_id = anchor | append: '-app'
+
+  assign reviews = section.blocks | where: 'type', 'review'
+  assign app_count = section.blocks.size | minus: reviews.size
+
+  assign write_url = section.settings.write_link
+  if write_url == blank and app_count > 0
+    assign write_url = '#' | append: app_id
+  endif
+
+  assign carousel = false
+  if reviews.size > visible
+    assign carousel = true
+  endif
+
+  # Card motion: scroll (default) / auto (timer) / buttons. On scroll, the section asks the tabs' pinned
+  # block for extra scroll: about a third of a screen per card step, plus one for the image to leave
+  # (the first cards show during the tabs' own hold before it)
+  assign motion = section.settings.motion | default: 'scroll'
+  assign tab_scroll = 0
+  if motion == 'scroll'
+    if carousel or section.settings.float_image != blank
+      assign card_steps = reviews.size | minus: visible | at_least: 0
+      assign tab_scroll = card_steps | plus: 1 | times: 0.35
+    endif
+  endif
+-%}
+
+<product-reviews
+  id="{{ anchor }}"
+  class="product-reviews full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --visible: {{ visible }}; --float-size: {{ section.settings.float_size | default: 160 }};"
+  data-motion="{{ motion }}"
+  data-float="{{ section.settings.float_motion | default: 'hide' }}"
+  {% if tab_scroll > 0 %}
+    data-tab-scroll="{{ tab_scroll }}"
+  {% endif %}
+  {% if carousel %}
+    data-carousel
+    data-visible="{{ visible }}"
+  {% endif %}
+  {% if carousel and motion == 'auto' %}
+    data-autoplay="{{ section.settings.interval | times: 1000 }}"
+  {% endif %}
+>
+  <div class="product-reviews__inner">
+    <div class="product-reviews__intro" data-tab-item>
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="eyebrow eyebrow--center">{{ section.settings.eyebrow | escape }}</p>
+      {%- endif -%}
+      {%- if section.settings.heading != blank -%}
+        <h2 class="product-reviews__heading">{{ section.settings.heading }}</h2>
+      {%- endif -%}
+      {%- if write_url != blank and section.settings.write_label != blank -%}
+        <a class="button button--secondary product-reviews__write" href="{{ write_url }}" data-reviews-write>
+          {{- section.settings.write_label | escape -}}
+        </a>
+      {%- endif -%}
+    </div>
+
+    <div class="product-reviews__stage">
+      {%- comment -%} Decoration: the floating product (a cut-out image) and the big word {%- endcomment -%}
+      {%- if section.settings.float_image != blank -%}
+        <div class="product-reviews__float" aria-hidden="true">
+          {{
+            section.settings.float_image
+            | image_url: width: 500
+            | image_tag: loading: 'lazy', widths: '250, 500', sizes: '10vw', alt: '', class: 'product-reviews__float-image'
+          }}
+        </div>
+      {%- endif -%}
+      {%- if section.settings.word != blank -%}
+        <p class="product-reviews__word" aria-hidden="true">{{ section.settings.word | escape }}</p>
+      {%- endif -%}
+
+      {%- if reviews.size > 0 -%}
+        <div
+          class="product-reviews__viewport"
+          {% if carousel %}
+            role="region"
+            aria-roledescription="{{ 'products.reviews.carousel' | t | escape_once }}"
+            aria-label="{{ 'products.reviews.label' | t | escape_once }}"
+          {% endif %}
+          data-tab-item
+        >
+          <div class="product-reviews__track" data-reviews-track>
+            {%- for block in reviews -%}
+              {%- liquid
+                assign side = 'right'
+                assign is_odd = forloop.index0 | modulo: 2
+                if is_odd == 1
+                  assign side = 'left'
+                endif
+                assign rating_percent = block.settings.rating | times: 20
+              -%}
+              <figure class="review-card review-card--{{ side }}" {{ block.shopify_attributes }}>
+                <span class="review-card__mark" aria-hidden="true">
+                  {%- if side == 'right' -%}
+                    {{- 'icon-quote-open.svg' | inline_asset_content -}}
+                  {%- else -%}
+                    {{- 'icon-quote-close.svg' | inline_asset_content -}}
+                  {%- endif -%}
+                </span>
+
+                <span class="review-card__avatar">
+                  {%- if block.settings.avatar != blank -%}
+                    {{
+                      block.settings.avatar
+                      | image_url: width: 160, height: 160, crop: 'center'
+                      | image_tag: loading: 'lazy', alt: '', class: 'review-card__avatar-image'
+                    }}
+                  {%- else -%}
+                    <span aria-hidden="true">{{ block.settings.name | slice: 0 | upcase }}</span>
+                  {%- endif -%}
+                </span>
+
+                <blockquote class="review-card__quote">
+                  <p>{{ block.settings.text | escape | newline_to_br }}</p>
+                </blockquote>
+
+                <div class="review-card__footer">
+                  {%- if block.settings.rating > 0 -%}
+                    <p class="review-card__rating">
+                      <span class="review-card__stars" style="--rating-percent: {{ rating_percent }}%;" aria-hidden="true">★★★★★</span>
+                      <span aria-hidden="true">{{ block.settings.rating }}</span>
+                      <span class="visually-hidden">{{ 'products.card.rating' | t: rating: block.settings.rating, max: 5 }}</span>
+                    </p>
+                  {%- endif -%}
+                  {%- if block.settings.name != blank -%}
+                    <figcaption class="review-card__author">
+                      {{- block.settings.name | escape -}}
+                      {%- if block.settings.place != blank -%}, {{ block.settings.place | escape }}{%- endif -%}
+                    </figcaption>
+                  {%- endif -%}
+                </div>
+              </figure>
+            {%- endfor -%}
+          </div>
+        </div>
+
+        {%- if carousel and motion != 'scroll' -%}
+          <div class="product-reviews__controls" data-tab-item>
+            <button type="button" class="product-reviews__control" data-reviews-prev>
+              <span class="visually-hidden">{{ 'products.reviews.previous' | t }}</span>
+              <span class="product-reviews__arrow product-reviews__arrow--up" aria-hidden="true">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+            </button>
+            {%- if motion == 'auto' -%}
+              <button
+                type="button"
+                class="product-reviews__control product-reviews__pause"
+                data-reviews-pause
+                data-label-pause="{{ 'products.reviews.pause' | t | escape_once }}"
+                data-label-play="{{ 'products.reviews.play' | t | escape_once }}"
+              >
+                <span class="visually-hidden" data-pause-label>{{ 'products.reviews.pause' | t }}</span>
+                <svg class="product-reviews__pause-icon product-reviews__pause-icon--pause" aria-hidden="true" focusable="false" viewBox="0 0 16 16"><rect x="3.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/><rect x="9.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/></svg>
+                <svg class="product-reviews__pause-icon product-reviews__pause-icon--play" aria-hidden="true" focusable="false" viewBox="0 0 16 16"><path d="M4.5 2.8v10.4a.8.8 0 0 0 1.2.7l8.4-5.2a.8.8 0 0 0 0-1.4L5.7 2.1a.8.8 0 0 0-1.2.7z" fill="currentColor"/></svg>
+              </button>
+            {%- endif -%}
+            <button type="button" class="product-reviews__control" data-reviews-next>
+              <span class="visually-hidden">{{ 'products.reviews.next' | t }}</span>
+              <span class="product-reviews__arrow product-reviews__arrow--down" aria-hidden="true">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+            </button>
+          </div>
+        {%- endif -%}
+      {%- elsif request.design_mode -%}
+        <p class="product-reviews__empty">{{ 'products.reviews.empty' | t }}</p>
+      {%- endif -%}
+    </div>
+
+    {%- if app_count > 0 -%}
+      <div class="product-reviews__apps" id="{{ app_id }}">
+        {%- for block in section.blocks -%}
+          {%- if block.type == '@app' -%}
+            {% render block %}
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+  </div>
+</product-reviews>
+
+{% stylesheet %}
+  /*
+    Figma 1920 ("Component 1642"): eyebrow y 211 centred; heading ~70px centred (y ~297), accent word;
+    "WRITE A REVIEW" white glass pill x 1670–1878, y 200–248 (top right, level with the eyebrow).
+    Cards 660 x ~145, radius ~24, white, soft shadow; right ones x 858–1518, left ones x 393–1054, ~35px
+    apart; text ~18px centred; a 72px round avatar half over the outer edge; a pale accent quote mark
+    (~50px) at the inner top corner; stars ~16px gold + score; "~PRINCE, CANADA" caps, wide spacing.
+    Moving cards tilt ~1.5deg (right ones clockwise, left ones anticlockwise). Product cut-out x 110–270
+    (~160 wide) at three poses; "REVIEWS" ~130px bold, pale grey, x 1290–1850, y 850–950.
+  */
+  .product-reviews {
+    position: relative; /* the floating image measures its place from here (offsetTop) */
+    display: block;
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+    background-color: var(--color-background);
+    overflow: hidden; /* the big word and the floating image never widen the page */
+  }
+
+  .product-reviews__inner {
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  .product-reviews__intro {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-lg);
+    text-align: center;
+  }
+
+  .product-reviews__intro .eyebrow {
+    margin: 0;
+  }
+
+  .product-reviews__heading {
+    margin: 0;
+    font-size: var(--font-size-h1);
+    font-weight: 400;
+    line-height: 1.1;
+  }
+
+  .product-reviews__heading em {
+    color: var(--color-accent);
+    font-style: normal;
+  }
+
+  /* Top right, level with the eyebrow (phones: under the heading) */
+  .product-reviews__write {
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  @media (min-width: 990px) {
+    .product-reviews__write {
+      position: absolute;
+      inset-block-start: 0;
+      inset-inline-end: 0;
+    }
+  }
+
+  .product-reviews__stage {
+    position: relative;
+    margin-block-start: max(var(--space-xl), calc(60 * var(--px, 0.0625rem)));
+  }
+
+  /* The cards' column: 1190 of 1820 in the Figma (avatars included), centred */
+  .product-reviews__viewport {
+    position: relative;
+    z-index: 1;
+    max-inline-size: calc(1190 * var(--px, 0.0625rem));
+    margin-inline: auto;
+    padding-inline: calc(36 * var(--px, 0.0625rem)); /* room for the avatars over the card edges */
+  }
+
+  .product-reviews__track {
+    display: grid;
+    grid-auto-rows: 1fr; /* every card as tall as the tallest: each step of the carousel is the same */
+    gap: max(var(--space-lg), calc(35 * var(--px, 0.0625rem)));
+  }
+
+  /* With the script: only --visible cards show. The clip-path cuts above and below only, so the
+     avatars over the side edges still show (overflow: hidden would cut those too) */
+  product-reviews.is-ready .product-reviews__viewport {
+    block-size: var(--viewport-height, auto);
+    clip-path: inset(0 -100vw);
+  }
+
+  product-reviews.is-ready .product-reviews__track {
+    transform: translateY(calc(var(--index, 0) * var(--step, 0px) * -1));
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    product-reviews.is-ready.is-sliding .product-reviews__track {
+      transition: transform 0.9s var(--ease-out);
+    }
+  }
+
+  /* One card */
+  .review-card {
+    --tilt: 1.5deg;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--space-md);
+    inline-size: 55.5%; /* 660 of 1190 */
+    min-inline-size: min(100%, 22rem);
+    margin: 0;
+    padding-block: max(var(--space-md), calc(22 * var(--px, 0.0625rem)));
+    padding-inline: max(var(--space-xl), calc(80 * var(--px, 0.0625rem)));
+    border-radius: max(1rem, calc(24 * var(--px, 0.0625rem)));
+    background-color: var(--color-card, #ffffff);
+    box-shadow: var(--shadow-card-soft);
+    transition: opacity 0.6s var(--ease-out);
+  }
+
+  .review-card--right {
+    justify-self: end;
+  }
+
+  .review-card--left {
+    --tilt: -1.5deg;
+    justify-self: start;
+  }
+
+  /* Cards outside the window fade (the clip alone would cut them with a hard edge) */
+  .review-card.is-out {
+    opacity: 0;
+  }
+
+  product-reviews.is-jumping .review-card {
+    transition: none;
+  }
+
+  /* Each step: the cards tilt while they move and settle flat (the class restarts the animation) */
+  @media (prefers-reduced-motion: no-preference) {
+    product-reviews.is-tilting .review-card {
+      animation: review-card-tilt 0.9s var(--ease-out);
+    }
+  }
+
+  @keyframes review-card-tilt {
+    40% {
+      rotate: var(--tilt);
+    }
+  }
+
+  .review-card__mark {
+    position: absolute;
+    inset-block-start: max(var(--space-sm), calc(18 * var(--px, 0.0625rem)));
+    inset-inline-start: max(var(--space-sm), calc(18 * var(--px, 0.0625rem)));
+    color: color-mix(in srgb, var(--color-accent) 12%, var(--color-background));
+  }
+
+  .review-card--left .review-card__mark {
+    inset-inline: auto max(var(--space-sm), calc(18 * var(--px, 0.0625rem)));
+  }
+
+  .review-card__mark svg {
+    display: block;
+    inline-size: max(2.25rem, calc(50 * var(--px, 0.0625rem)));
+    block-size: auto;
+  }
+
+  /* The round avatar, half over the outer edge (right cards: right edge; left cards: left edge) */
+  .review-card__avatar {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-end: 0;
+    display: grid;
+    place-items: center;
+    inline-size: max(3.5rem, calc(72 * var(--px, 0.0625rem)));
+    aspect-ratio: 1;
+    overflow: hidden;
+    border: 3px solid var(--color-card, #ffffff);
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--color-accent) 12%, var(--color-background));
+    box-shadow: var(--shadow-card-soft);
+    color: var(--color-accent);
+    font-family: var(--font-heading--family);
+    font-size: var(--font-size-h3);
+    translate: 50% -50%;
+  }
+
+  .review-card--left .review-card__avatar {
+    inset-inline: 0 auto;
+    translate: -50% -50%;
+  }
+
+  .review-card__avatar-image {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .review-card__quote {
+    margin: 0;
+    font-size: var(--font-size-body);
+    line-height: 1.45;
+    text-align: center;
+  }
+
+  /* The quote marks of the page's language (“…” in English, « … » in French): quotes: auto */
+  .review-card__quote p {
+    margin: 0;
+    quotes: auto;
+  }
+
+  .review-card__quote p::before {
+    content: open-quote;
+  }
+
+  .review-card__quote p::after {
+    content: close-quote;
+  }
+
+  /* Right cards: stars left, name right. Left cards: name left, stars right */
+  .review-card__footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-xs) var(--space-md);
+  }
+
+  .review-card--left .review-card__footer {
+    flex-direction: row-reverse;
+  }
+
+  .review-card__rating {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin: 0;
+    font-size: var(--font-size-caption);
+  }
+
+  /* Five stars filled up to the rating (4.8 of 5 = 96%), the rest pale */
+  .review-card__stars {
+    background: linear-gradient(
+      90deg,
+      var(--color-rating) var(--rating-percent, 100%),
+      color-mix(in srgb, var(--color-text) 15%, transparent) var(--rating-percent, 100%)
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-size: 1.15em;
+    letter-spacing: 0.1em;
+  }
+
+  .review-card__author {
+    font-size: var(--font-size-small);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  .review-card__author::before {
+    content: "~";
+  }
+
+  /* Prev / pause / next under the cards */
+  .product-reviews__controls {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: center;
+    gap: var(--space-sm);
+    margin-block-start: var(--space-xl);
+  }
+
+  product-reviews:not(.is-ready) .product-reviews__controls {
+    display: none;
+  }
+
+  .product-reviews .product-reviews__control {
+    display: inline-grid;
+    place-items: center;
+    inline-size: 2.75rem;
+    block-size: 2.75rem;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--color-border);
+    border-radius: 50%;
+    background-color: var(--color-card, #ffffff);
+    box-shadow: var(--shadow-glass-edge);
+    color: var(--color-text);
+    cursor: pointer;
+    transition: color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
+  }
+
+  .product-reviews .product-reviews__control:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  .product-reviews__arrow {
+    display: inline-flex;
+  }
+
+  .product-reviews__arrow svg {
+    inline-size: 0.875rem;
+    block-size: auto;
+  }
+
+  /* icon-arrow.svg points right */
+  .product-reviews__arrow--up {
+    rotate: -90deg;
+  }
+
+  .product-reviews__arrow--down {
+    rotate: 90deg;
+  }
+
+  .product-reviews__pause-icon {
+    inline-size: 0.875rem;
+    block-size: 0.875rem;
+  }
+
+  .product-reviews__pause-icon--play,
+  product-reviews.is-stopped .product-reviews__pause-icon--pause {
+    display: none;
+  }
+
+  product-reviews.is-stopped .product-reviews__pause-icon--play {
+    display: block;
+  }
+
+  /*
+    The floating product (Figma, image strip): it rises up the left side, one place per card row, tilting
+    one way then the other (+12°, −15°, +20°, −3°, −25°) until it meets the bottom of the tabs bar, then
+    slips under it and fades. The script sets translate / rotate / opacity from the progress (the scroll,
+    or the carousel's steps). Size: the "Floating image size" setting (Figma 160px at 1920). Desktop only.
+  */
+  .product-reviews__float {
+    --float-width: calc(var(--float-size, 160) * var(--px, 0.0625rem));
+    position: absolute;
+    z-index: 0;
+    inset-block-end: 0;
+    /*
+      The gutter left of the cards is (stage width − the cards' 1190) / 2, about 315px at 1920. A wider
+      image moves left by the difference (into the page margin) so it never sits under the cards; only a
+      very large one is cut at the screen edge
+    */
+    inset-inline-start: min(0px, calc((100% - 1190 * var(--px, 0.0625rem)) / 2 - var(--float-width)));
+    inline-size: var(--float-width);
+    rotate: 12deg;
+    filter: drop-shadow(0 1.5rem 1.5rem #00000026);
+    will-change: translate, rotate, opacity;
+  }
+
+  /* Each card step: it eases to its next place (scroll, timer or arrows alike) */
+  @media (prefers-reduced-motion: no-preference) {
+    product-reviews.is-float-easing .product-reviews__float {
+      transition: translate 1.2s var(--ease-out), rotate 1.2s var(--ease-out), opacity 0.9s var(--ease-out);
+    }
+  }
+
+  .product-reviews__float-image {
+    display: block;
+    inline-size: 100%;
+    block-size: auto;
+  }
+
+  @media (max-width: 989px) {
+    .product-reviews__float {
+      display: none;
+    }
+  }
+
+  /* The big word: an outline that fills in once the section is on screen */
+  .product-reviews__word {
+    position: absolute;
+    z-index: 0;
+    inset-block-end: 0;
+    inset-inline-end: 0;
+    margin: 0;
+    color: color-mix(in srgb, var(--color-text) 9%, var(--color-background));
+    font-family: var(--font-body--family);
+    font-size: clamp(4rem, 9vw, calc(170 * var(--px, 0.0625rem)));
+    font-weight: 700;
+    line-height: 0.8;
+    text-transform: uppercase;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    product-reviews:not(.is-seen) .product-reviews__word {
+      color: transparent;
+      -webkit-text-stroke: 1px color-mix(in srgb, var(--color-text) 15%, var(--color-background));
+    }
+
+    .product-reviews__word {
+      transition: color 1.4s var(--ease-out);
+    }
+  }
+
+  .product-reviews__apps {
+    margin-block-start: var(--space-2xl);
+  }
+
+  .product-reviews__empty {
+    margin: 0;
+    text-align: center;
+  }
+
+  /* Phones and tablets: cards full width, no stagger */
+  @media (max-width: 749px) {
+    .review-card {
+      inline-size: 100%;
+      padding-inline: var(--space-lg) calc(var(--space-lg) + 1.75rem);
+    }
+
+    .review-card--left {
+      padding-inline: calc(var(--space-lg) + 1.75rem) var(--space-lg);
+    }
+
+    .product-reviews__viewport {
+      padding-inline: 1.75rem;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <product-reviews>: review cards in a window of data-visible cards, and a floating product image that
+   * rises up the left side to the tabs bar. Card motion (data-motion):
+   * - "scroll" (default): scrolling moves the cards and the image, and scrolling back reverses them.
+   *   Inside the tabs' pinned block the section asks for extra scroll (data-tab-scroll) and the tabs send
+   *   its progress (tab:progress, 0–1); anywhere else the progress comes from where the section is on
+   *   screen.
+   * - "auto": one step every data-autoplay ms (pause button; keyboard focus holds it; only on screen and
+   *   while its panel shows; off with reduced motion), plus arrows.
+   * - "buttons": arrows only.
+   * A step slides the track up one card (--index x --step) and the cards tilt and settle. Timer / buttons
+   * are endless: copies of the first cards follow the last ones, and after sliding onto them the track
+   * jumps back to the start without a transition (they look the same, so the jump is invisible).
+   */
+  class ProductReviews extends HTMLElement {
+    /**
+     * The floating image's path, bottom to top (Figma image strip): progress, share of the rise, sideways
+     * shift (rem), tilt (deg). At the last point it meets the tabs bar; after it, it slips under and fades.
+     */
+    static floatPath = [
+      [0, 0, 0, 12],
+      [0.25, 0.25, 0.3, -15],
+      [0.5, 0.5, -0.2, 20],
+      [0.75, 0.75, 0.3, -3],
+      [0.92, 1, 0, -25],
+    ];
+
+    connectedCallback() {
+      // Listeners go through this signal: the tabs' pinned track moves the section in the page, which
+      // runs connectedCallback again (see product-how-to)
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+      this.motion = this.dataset.motion || 'scroll';
+      this.floatMode = this.dataset.float || 'hide';
+      this.float = this.querySelector('.product-reviews__float');
+
+      // The big word fills in once the section has been on screen
+      this.seenObserver = new IntersectionObserver(([entry]) => {
+        if (!entry.isIntersecting) return;
+        this.classList.add('is-seen');
+        this.seenObserver.disconnect();
+      }, { threshold: 0.3 });
+      this.seenObserver.observe(this);
+
+      this.writeLink(signal);
+      this.carousel = this.hasAttribute('data-carousel') && this.setUpCarousel(signal);
+
+      this.resizeObserver = new ResizeObserver(() => {
+        this.measure();
+        this.measureFloat();
+      });
+      this.resizeObserver.observe(this);
+      if (this.float) this.resizeObserver.observe(this.float);
+
+      if (this.motion === 'scroll') this.setUpScroll(signal);
+      else if (this.carousel && this.dataset.autoplay) this.setUpAutoplay(signal);
+    }
+
+    disconnectedCallback() {
+      this.controller?.abort();
+      this.seenObserver?.disconnect();
+      this.resizeObserver?.disconnect();
+      this.observer?.disconnect();
+      this.classObserver?.disconnect();
+      clearInterval(this.timer);
+      this.playing = false;
+    }
+
+    /**
+     * "Write a review" pointing at the app's area on this page: inside the tabs' pinned block the page
+     * position of a panel isn't where it shows, so the tabs work out the scroll (reveal)
+     */
+    writeLink(signal) {
+      const link = this.querySelector('[data-reviews-write]');
+      const href = link?.getAttribute('href') || '';
+      if (!href.startsWith('#')) return;
+      link.addEventListener('click', (event) => {
+        const target = document.getElementById(href.slice(1));
+        const tabs = document.querySelector('product-tabs');
+        if (target && tabs?.reveal?.(target)) event.preventDefault();
+      }, { signal });
+    }
+
+    /* ---------- Cards ---------- */
+
+    setUpCarousel(signal) {
+      this.track = this.querySelector('[data-reviews-track]');
+      if (!this.track) return false;
+      this.visible = Number(this.dataset.visible) || 3;
+      this.cards = [...this.track.children].filter((card) => !card.hasAttribute('data-clone'));
+      this.count = this.cards.length;
+      this.index ??= 0;
+      // Endless only for the timer / buttons; on scroll the cards run from the first to the last
+      if (this.motion !== 'scroll') this.addClones();
+      this.classList.add('is-ready');
+      this.measure();
+
+      this.querySelector('[data-reviews-prev]')?.addEventListener('click', () => this.go(this.index - 1), { signal });
+      this.querySelector('[data-reviews-next]')?.addEventListener('click', () => this.go(this.index + 1), { signal });
+      this.track.addEventListener('transitionend', (event) => {
+        if (event.target === this.track && event.propertyName === 'transform') this.settle();
+      }, { signal });
+
+      // Theme editor: a review picked in the sidebar comes into the window and the carousel holds there
+      this.addEventListener('shopify:block:select', (event) => {
+        const i = this.cards.indexOf(event.target);
+        if (i < 0) return;
+        this.editorHold = true;
+        this.jump(Math.min(i, this.count - this.visible));
+        this.updatePlay();
+      }, { signal });
+      this.addEventListener('shopify:block:deselect', () => {
+        this.editorHold = false;
+        this.updatePlay();
+      }, { signal });
+      return true;
+    }
+
+    /** Copies of the first cards after the last ones (hidden from screen readers and the keyboard) */
+    addClones() {
+      if (this.track.querySelector('[data-clone]')) return;
+      this.cards.slice(0, this.visible).forEach((card) => {
+        const clone = card.cloneNode(true);
+        clone.setAttribute('data-clone', '');
+        clone.setAttribute('aria-hidden', 'true');
+        clone.removeAttribute('data-shopify-editor-block');
+        clone.inert = true;
+        this.track.append(clone);
+      });
+    }
+
+    /** One step = a card's height + the gap (all rows are equal: grid-auto-rows: 1fr) */
+    measure() {
+      const first = this.cards?.[0];
+      if (!first) return;
+      const gap = parseFloat(getComputedStyle(this.track).rowGap) || 0;
+      const step = first.offsetHeight + gap;
+      this.style.setProperty('--step', `${step}px`);
+      this.style.setProperty('--viewport-height', `${step * this.visible - gap}px`);
+      this.update();
+    }
+
+    /** Fades the cards outside the window */
+    update() {
+      [...this.track.children].forEach((card, n) => {
+        card.classList.toggle('is-out', n < this.index || n >= this.index + this.visible);
+      });
+      this.style.setProperty('--index', this.index);
+    }
+
+    /** Slides to card i: the track moves, the cards tilt and settle */
+    slideTo(i) {
+      this.index = i;
+      this.classList.add('is-sliding');
+      // Restart the tilt: remove the class, force a reflow, add it again
+      this.classList.remove('is-tilting');
+      void this.offsetWidth;
+      this.classList.add('is-tilting');
+      this.update();
+      // Reduced motion (no transition) or a missed transitionend: settle anyway
+      clearTimeout(this.settleTimer);
+      this.settleTimer = setTimeout(() => this.settle(), 1000);
+    }
+
+    /** Timer / buttons: one step (endless). Before going back from the first card, jump onto its copy */
+    go(i) {
+      if (this.busy) return;
+      const forward = i > this.index;
+      if (i < 0) {
+        this.jump(this.count);
+        i = this.count - 1;
+      }
+      this.busy = true;
+      this.slideTo(i);
+      this.moveFloat(this.placeFor(i % this.count), forward);
+    }
+
+    /** After a slide: on the copies, jump back to the real first card */
+    settle() {
+      clearTimeout(this.settleTimer);
+      this.busy = false;
+      this.classList.remove('is-sliding');
+      if (this.index >= this.count) this.jump(this.index - this.count);
+    }
+
+    /** Moves without a transition (the cards' fade too: the real first cards must not fade in) */
+    jump(i) {
+      this.classList.remove('is-sliding');
+      this.classList.add('is-jumping');
+      this.index = i;
+      this.update();
+      void this.offsetWidth;
+      this.classList.remove('is-jumping');
+    }
+
+    /* ---------- Scroll ---------- */
+
+    setUpScroll(signal) {
+      const steps = this.carousel ? Math.max(0, this.count - this.visible) : 0;
+      // The scroll in equal stretches: one per card position (the first cards, then each step) and a
+      // last one where the image leaves under the tabs. Card and image change together (back up = back)
+      const stretches = steps + 2;
+      const apply = (progress) => {
+        if (progress === this.progress) return;
+        const forward = progress > (this.progress ?? 0);
+        this.progress = progress;
+        const stretch = Math.min(stretches - 1, Math.floor(progress * stretches));
+        const card = Math.min(stretch, steps);
+        if (steps > 0 && card !== this.index) this.slideTo(card);
+        this.moveFloat(stretch > steps ? 'out' : this.placeFor(card), forward);
+      };
+
+      // Pinned under the tabs: the section doesn't move on screen, the tabs send the progress
+      if (this.closest('.product-tabs-track')) {
+        this.addEventListener('tab:progress', (event) => apply(event.detail), { signal });
+        return;
+      }
+      // Anywhere else: from the moment the section's top passes 75% down the screen until its bottom does
+      const onScroll = () => {
+        const rect = this.getBoundingClientRect();
+        const start = window.innerHeight * 0.75;
+        apply(Math.min(1, Math.max(0, (start - rect.top) / Math.max(1, rect.height))));
+      };
+      let ticking = false;
+      window.addEventListener('scroll', () => {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(() => {
+          ticking = false;
+          onScroll();
+        });
+      }, { passive: true, signal });
+      onScroll();
+    }
+
+    /* ---------- Floating image ---------- */
+
+    /** Where the image rests in the section (offsetTop ignores its own translate / rotate) */
+    measureFloat() {
+      if (!this.float?.offsetParent) return; // hidden (phones)
+      this.floatBase = this.float.offsetParent.offsetTop + this.float.offsetTop;
+      this.updateRise();
+      this.placeFloat(this.floatProgress || 0);
+    }
+
+    /**
+     * How far the image rises: from its resting place to the bottom of the tabs bar. Pinned, measured
+     * live from the bar's place on screen: a panel taller than the screen has been slid up by the tabs
+     * (by its extra height) before the card steps start, so the line isn't a fixed distance from the
+     * section's top. Not pinned: to the section's top edge
+     */
+    updateRise() {
+      if (this.floatBase === undefined) return;
+      let line = 0;
+      if (this.closest('.product-tabs-track')) {
+        const bar = document.querySelector('product-tabs')?.closest('.shopify-section');
+        if (bar) line = bar.getBoundingClientRect().bottom - this.getBoundingClientRect().top;
+      }
+      this.rise = Math.max(0, this.floatBase - line);
+    }
+
+    /**
+     * Places the image at progress p (0 = bottom, 1 = gone under the tabs): between two points of the
+     * path, its rise, sideways shift and tilt are mixed in proportion (linear interpolation)
+     */
+    placeFloat(p, fadeIn = false) {
+      if (!this.float || this.rise === undefined) return;
+      const path = ProductReviews.floatPath;
+      let k = path.length - 1;
+      while (k > 0 && p < path[k][0]) k -= 1;
+      const a = path[k];
+      const b = path[Math.min(k + 1, path.length - 1)];
+      const t = b === a ? 0 : (p - a[0]) / (b[0] - a[0]);
+      const mix = (n) => a[n] + (b[n] - a[n]) * t;
+      // After the last point: under the bar by up to half its height, fading out
+      const last = path[path.length - 1];
+      const after = p > last[0] ? (p - last[0]) / (1 - last[0]) : 0;
+      const y = mix(1) * this.rise + after * this.float.offsetHeight * 0.5;
+      let opacity = 1 - after;
+      if (fadeIn) opacity = Math.min(opacity, p / 0.08);
+      this.float.style.translate = `${mix(2)}rem ${-y}px`;
+      this.float.style.rotate = `${mix(3)}deg`;
+      this.float.style.opacity = String(opacity);
+    }
+
+    /**
+     * The image's place for card i (Figma strip: one place per card row, four below the tabs). "hide":
+     * after the fourth it leaves ('out'); "repeat": it starts again at the bottom (i modulo 4)
+     */
+    placeFor(i) {
+      const places = ProductReviews.floatPath.length - 1;
+      if (this.floatMode === 'repeat') return i % places;
+      return i < places ? i : 'out';
+    }
+
+    /**
+     * Eases the image to a place (0–3 on the path, or 'out' = gone under the tabs). Going forward to a
+     * lower place (repeat) or back from 'out', it first leaves under the tabs, then comes in at the
+     * bottom unseen and eases up to its place
+     */
+    moveFloat(place, forward = true) {
+      if (!this.float || place === this.floatAt) return;
+      this.updateRise();
+      const previous = this.floatAt ?? 0;
+      this.floatAt = place;
+      clearTimeout(this.floatTimer);
+      this.classList.add('is-float-easing');
+      const p = place === 'out' ? 1 : place / (ProductReviews.floatPath.length - 1);
+      const around = forward && place !== 'out' && (previous === 'out' || place < previous);
+      if (!around) {
+        this.floatProgress = p;
+        this.placeFloat(p);
+        return;
+      }
+      const comeBack = () => {
+        // At the bottom, see-through, without a transition for one frame; then it eases up and in
+        this.classList.remove('is-float-easing');
+        this.placeFloat(0, true);
+        void this.float.offsetWidth;
+        this.classList.add('is-float-easing');
+        this.floatProgress = p;
+        this.placeFloat(p);
+      };
+      if (previous === 'out') {
+        comeBack();
+        return;
+      }
+      this.floatProgress = 1;
+      this.placeFloat(1);
+      this.floatTimer = setTimeout(comeBack, 900);
+    }
+
+    /* ---------- Timer ---------- */
+
+    setUpAutoplay(signal) {
+      const delay = Number(this.dataset.autoplay);
+      if (!delay || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        this.querySelector('[data-reviews-pause]')?.remove();
+        return;
+      }
+      this.delay = delay;
+      this.inView = false;
+      this.held = false;
+      this.stopped ??= false;
+
+      this.observer = new IntersectionObserver(([entry]) => {
+        this.inView = entry.isIntersecting;
+        this.updatePlay();
+      }, { threshold: 0.35 });
+      this.observer.observe(this);
+
+      const pause = this.querySelector('[data-reviews-pause]');
+      pause?.addEventListener('click', () => {
+        this.stopped = !this.stopped;
+        const label = this.stopped ? pause.dataset.labelPlay : pause.dataset.labelPause;
+        pause.querySelector('[data-pause-label]').textContent = label;
+        this.classList.toggle('is-stopped', this.stopped);
+        this.updatePlay();
+      }, { signal });
+
+      // Keyboard focus holds it (not a mouse click on a button: it keeps focus). No hover pause: as in
+      // How to use, a mouse resting on the section looked like a freeze; the pause button is there
+      const hold = () => {
+        this.held = Boolean(this.querySelector(':focus-visible'));
+        this.updatePlay();
+      };
+      this.addEventListener('focusin', hold, { signal });
+      this.addEventListener('focusout', () => requestAnimationFrame(hold), { signal });
+
+      // Inside the tabs' pinned block: hidden panels (is-tab-faded / is-tab-hidden) don't play
+      const wrapper = this.closest('.shopify-section');
+      if (wrapper) {
+        this.classObserver = new MutationObserver(() => this.updatePlay());
+        this.classObserver.observe(wrapper, { attributes: true, attributeFilter: ['class'] });
+      }
+    }
+
+    updatePlay() {
+      if (!this.delay) return;
+      const hidden = Boolean(this.closest('.is-tab-faded, .is-tab-hidden'));
+      const play = this.inView && !hidden && !this.held && !this.stopped && !this.editorHold;
+      if (play === this.playing) return;
+      this.playing = play;
+      clearInterval(this.timer);
+      if (play) this.timer = setInterval(() => this.go(this.index + 1), this.delay);
+    }
+  }
+
+  if (!customElements.get('product-reviews')) customElements.define('product-reviews', ProductReviews);
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.product_reviews",
+  "tag": "section",
+  "class": "product-reviews-section",
+  "enabled_on": { "templates": ["product"] },
+  "max_blocks": 16,
+  "blocks": [
+    {
+      "type": "review",
+      "name": "t:general.review",
+      "settings": [
+        { "type": "image_picker", "id": "avatar", "label": "t:labels.avatar", "info": "t:labels.avatar_info" },
+        { "type": "text", "id": "name", "label": "t:labels.reviewer_name", "default": "Prince" },
+        { "type": "text", "id": "place", "label": "t:labels.reviewer_place", "default": "Canada" },
+        {
+          "type": "range",
+          "id": "rating",
+          "label": "t:labels.rating",
+          "min": 0,
+          "max": 5,
+          "step": 0.1,
+          "default": 4.8
+        },
+        {
+          "type": "textarea",
+          "id": "text",
+          "label": "t:labels.review_text",
+          "default": "I bought this to fade old acne marks. It feels gentle on my sensitive skin and has visibly lightened my dark spots in about three weeks."
+        }
+      ]
+    },
+    { "type": "@app" }
+  ],
+  "settings": [
+    {
+      "type": "text",
+      "id": "anchor",
+      "label": "t:labels.product_section_anchor",
+      "info": "t:labels.product_section_anchor_info",
+      "default": "reviews"
+    },
+    {
+      "type": "paragraph",
+      "content": "t:labels.product_reviews_info"
+    },
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "Voices"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.accent_heading_info",
+      "default": "What our <em>customers</em> say"
+    },
+    {
+      "type": "text",
+      "id": "write_label",
+      "label": "t:labels.product_reviews_write_label",
+      "default": "Write a review"
+    },
+    {
+      "type": "url",
+      "id": "write_link",
+      "label": "t:labels.product_reviews_write_link",
+      "info": "t:labels.product_reviews_write_link_info"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.product_reviews_cards"
+    },
+    {
+      "type": "range",
+      "id": "visible",
+      "label": "t:labels.product_reviews_visible",
+      "min": 2,
+      "max": 4,
+      "step": 1,
+      "default": 3
+    },
+    {
+      "type": "select",
+      "id": "motion",
+      "label": "t:labels.product_reviews_motion",
+      "info": "t:labels.product_reviews_motion_info",
+      "options": [
+        { "value": "scroll", "label": "t:options.product_reviews_motion.scroll" },
+        { "value": "auto", "label": "t:options.product_reviews_motion.auto" },
+        { "value": "buttons", "label": "t:options.product_reviews_motion.buttons" }
+      ],
+      "default": "scroll"
+    },
+    {
+      "type": "range",
+      "id": "interval",
+      "label": "t:labels.testimonials_interval",
+      "min": 3,
+      "max": 12,
+      "step": 1,
+      "unit": "s",
+      "default": 5,
+      "visible_if": "{{ section.settings.motion == 'auto' }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.product_reviews_decoration"
+    },
+    {
+      "type": "image_picker",
+      "id": "float_image",
+      "label": "t:labels.product_reviews_float_image",
+      "info": "t:labels.product_reviews_float_image_info"
+    },
+    {
+      "type": "range",
+      "id": "float_size",
+      "label": "t:labels.product_reviews_float_size",
+      "info": "t:labels.product_reviews_float_size_info",
+      "min": 80,
+      "max": 500,
+      "step": 10,
+      "unit": "px",
+      "default": 160,
+      "visible_if": "{{ section.settings.float_image != blank }}"
+    },
+    {
+      "type": "select",
+      "id": "float_motion",
+      "label": "t:labels.product_reviews_float_motion",
+      "options": [
+        { "value": "hide", "label": "t:options.product_reviews_float_motion.hide" },
+        { "value": "repeat", "label": "t:options.product_reviews_float_motion.repeat" }
+      ],
+      "default": "hide",
+      "visible_if": "{{ section.settings.float_image != blank }}"
+    },
+    {
+      "type": "text",
+      "id": "word",
+      "label": "t:labels.product_reviews_word",
+      "default": "Reviews"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "options": [
+        { "value": "wide", "label": "t:options.section_width.wide" },
+        { "value": "widest", "label": "t:options.section_width.widest" },
+        { "value": "full", "label": "t:options.section_width.full" }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.product_reviews",
+      "blocks": [
+        {
+          "type": "review",
+          "settings": {
+            "name": "Prince",
+            "place": "Canada",
+            "rating": 4.8,
+            "text": "I bought this to fade old acne marks. It feels gentle on my sensitive skin and has visibly lightened my dark spots in about three weeks."
+          }
+        },
+        {
+          "type": "review",
+          "settings": {
+            "name": "Sara",
+            "place": "U.K",
+            "rating": 4.9,
+            "text": "The texture is nice and hydrating, but I did not notice a huge difference in my dark spots even after finishing the whole bottle."
+          }
+        },
+        {
+          "type": "review",
+          "settings": {
+            "name": "Aadhaya",
+            "place": "Dubai",
+            "rating": 4.6,
+            "text": "Highly hydrating! It plumps up my dry patches instantly while giving that targeted radiance look."
+          }
+        },
+        {
+          "type": "review",
+          "settings": {
+            "name": "Zara",
+            "place": "USA",
+            "rating": 4.9,
+            "text": "Very lightweight and watery. It layers perfectly under my heavy moisturizer and doesn't pill when I apply sunscreen over it."
+          }
+        },
+        {
+          "type": "review",
+          "settings": {
+            "name": "Sam",
+            "place": "USA",
+            "rating": 4.7,
+            "text": "Great for sun spots. It smoothed out my skin texture and blurred my dark patches over a few weeks."
+          }
+        },
+        {
+          "type": "review",
+          "settings": {
+            "name": "Jasmine",
+            "place": "U.K",
+            "rating": 4.9,
+            "text": "This serum is a game-changer! It is super lightweight, non-sticky, and absorbs in seconds. After two weeks of use, my dull skin has a fresh, natural glow."
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

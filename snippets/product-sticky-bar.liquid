@@ -14,7 +14,7 @@
 
   @param {product} product - The product
   @param {string} [type_label] - The small line above the title (e.g. the product type)
-  @param {boolean} [minimize] - Show the − button that shrinks the bar to a round cart button
+  @param {boolean} [minimize] - Show the ⌄ button (inside the bar, after Buy now) that shrinks the bar to a round cart button
 
   @example
   {% render 'product-sticky-bar', product: product, type_label: product.type %}
@@ -48,16 +48,6 @@
     </button>
   {%- endif -%}
   <div class="product-sticky-bar__inner">
-    {%- if minimize -%}
-      <button
-        type="button"
-        class="product-sticky-bar__minimize"
-        aria-label="{{ 'products.sticky_bar.minimize' | t | escape_once }}"
-        data-sticky-minimize
-      >
-        <span aria-hidden="true"></span>
-      </button>
-    {%- endif -%}
     <div class="product-sticky-bar__product">
       <div class="product-sticky-bar__media">
         {%- if sticky_image != blank -%}
@@ -119,6 +109,17 @@
         <span class="product-sticky-bar__icon" aria-hidden="true">{{ 'icon-buy-now.svg' | inline_asset_content }}</span>
         <span>{{ 'products.sticky_bar.buy_now' | t }}</span>
       </button>
+      {%- if minimize -%}
+        {%- comment -%} Inside the bar, after Buy now: a round glass button with a ⌄ (shrinks the bar to the round cart) {%- endcomment -%}
+        <button
+          type="button"
+          class="product-sticky-bar__minimize"
+          aria-label="{{ 'products.sticky_bar.minimize' | t | escape_once }}"
+          data-sticky-minimize
+        >
+          <span aria-hidden="true">{{ 'icon-chevron.svg' | inline_asset_content }}</span>
+        </button>
+      {%- endif -%}
     </div>
   </div>
 
@@ -202,34 +203,73 @@
     backdrop-filter: blur(16px);
   }
 
-  /* The − button: a small round button on the bar's top right edge */
+  /*
+    Minimise: a round glass button with a ⌄ inside the bar, after Buy now, as tall as the buttons (50px).
+    Hover / focus: accent ring and the chevron nudges down (it shows where the bar goes).
+  */
   .product-sticky-bar .product-sticky-bar__minimize {
-    position: absolute;
-    inset-block-start: -0.75rem;
-    inset-inline-end: -0.75rem;
     display: grid;
+    flex: none;
     place-items: center;
-    inline-size: 1.75rem;
-    block-size: 1.75rem;
+    inline-size: 3.125rem;
+    block-size: 3.125rem;
     min-block-size: 0;
     margin: 0;
     padding: 0;
     border: 1px solid var(--color-card-border);
     border-radius: 50%;
-    background-color: var(--color-background);
-    box-shadow: 0 2px 8px #0000001f;
+    background-color: color-mix(in srgb, var(--color-background) 70%, transparent);
+    box-shadow: var(--shadow-glass-edge);
     color: var(--color-text);
     cursor: pointer;
+    transition:
+      border-color var(--duration-fast) var(--ease-out),
+      color var(--duration-fast) var(--ease-out);
   }
 
   .product-sticky-bar__minimize > span {
-    inline-size: 0.625rem;
-    block-size: 1.5px;
-    background-color: currentcolor;
+    display: inline-flex;
+    transition: translate var(--duration-fast) var(--ease-out);
   }
 
-  .product-sticky-bar__minimize:hover {
+  .product-sticky-bar__minimize svg {
+    inline-size: 0.875rem;
+    block-size: auto;
+  }
+
+  .product-sticky-bar .product-sticky-bar__minimize:hover,
+  .product-sticky-bar .product-sticky-bar__minimize:focus-visible {
+    border-color: var(--color-accent);
     color: var(--color-accent);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .product-sticky-bar__minimize:hover > span {
+      translate: 0 2px;
+    }
+
+    /* Minimised: the round cart pops in; opened again: the bar rises back */
+    .product-sticky-bar.is-minimized .product-sticky-bar__mini {
+      animation: sticky-bar-pop 0.35s var(--ease-out);
+    }
+
+    .product-sticky-bar.is-expanding .product-sticky-bar__inner {
+      animation: sticky-bar-rise 0.35s var(--ease-out);
+    }
+  }
+
+  @keyframes sticky-bar-pop {
+    from {
+      opacity: 0;
+      scale: 0.6;
+    }
+  }
+
+  @keyframes sticky-bar-rise {
+    from {
+      opacity: 0;
+      translate: 0 1rem;
+    }
   }
 
   /* Minimised: only a round cart button in the bottom right corner; a click opens the bar again */
@@ -400,7 +440,7 @@
       grid-column: 1 / -1;
     }
 
-    .product-sticky-bar__buttons > * {
+    .product-sticky-bar__buttons > .button {
       flex: 1;
     }
   }
@@ -511,6 +551,10 @@
     /** Shrinks the bar to the round cart button (or opens it), moving focus to the button that's left */
     minimize(on, moveFocus = true) {
       this.classList.toggle('is-minimized', on);
+      // Opened from the round cart: the bar rises back in (is-expanding plays the CSS animation once)
+      const animate = !on && moveFocus && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      this.classList.toggle('is-expanding', animate);
+      if (animate) this.querySelector('.product-sticky-bar__inner')?.addEventListener('animationend', () => this.classList.remove('is-expanding'), { once: true });
       try {
         sessionStorage.setItem('oroskin-sticky-bar', on ? 'min' : 'open');
       } catch (error) {
