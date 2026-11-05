@@ -15,6 +15,16 @@
     "logo_text_accent": "Skin",
     "logo_text_size": 47,
     "favicon": "shopify://shop_images/logo-mark-flame.png",
+    "type_accent_font": "cormorant_i4",
+    "badge_color_scheme": "scheme-1",
+    "sale_badge_color_scheme": "scheme-3",
+    "sold_out_badge_color_scheme": "scheme-5",
+    "social_instagram_link": "#",
+    "social_facebook_link": "#",
+    "social_whatsapp_link": "#",
+    "social_tiktok_link": "#",
+    "social_youtube_link": "#",
+    "social_x_link": "#",
     "content_for_index": [],
     "color_schemes": {
       "scheme-1": {
@@ -87,10 +97,6 @@
           "secondary_button_border": "#fffaf0"
         }
       }
-    },
-    "badge_color_scheme": "scheme-1",
-    "sale_badge_color_scheme": "scheme-3",
-    "sold_out_badge_color_scheme": "scheme-5",
-    "type_accent_font": "cormorant_i4"
+    }
   }
 }

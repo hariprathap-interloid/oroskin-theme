@@ -247,6 +247,12 @@
     "search": "Search",
     "login": "Login",
     "account": "Account",
+    "account_menu": {
+      "open": "Account menu for {{ name }}",
+      "greeting": "Hi, {{ name }}",
+      "orders": "Orders",
+      "sign_out": "Sign out"
+    },
     "open_menu": "Open menu",
     "close_menu": "Close menu",
     "cart_count": {

@@ -111,17 +111,77 @@
       </cart-count>
 
       {%- comment -%}
-        Customer accounts are Shopify's own pages (decision 6). <shopify-account> is Shopify's web component:
-        signed in, it shows the customer's avatar and an account menu; signed out, it shows whatever we put
-        in its "signed-out-avatar" slot, here the Figma's red LOGIN pill.
+        Account (decision 6: the account pages are Shopify's own, on shopify.com). Our own menu instead of
+        Shopify's <shopify-account> popup, so it matches the theme:
+        - signed out: the Figma's red LOGIN pill, a link to Shopify's sign-in page
+        - signed in (the customer object exists): a round glass button with the customer's initial opens a
+          panel: "Hi, name", the email, the links of the "Customer account menu" (Shopify keeps that menu
+          with Orders and Profile) and Sign out. The panel is a native popover: Escape and a click outside
+          close it, the browser handles the open state; the script only places it under the button.
       {%- endcomment -%}
       {%- if shop.customer_accounts_enabled -%}
-        <shopify-account class="header__account" menu="{{ section.settings.customer_account_menu }}">
-          <span slot="signed-out-avatar" class="button header__login">
+        {%- if customer -%}
+          {%- liquid
+            assign account_menu_id = 'AccountMenu-' | append: section.id
+            assign account_name = customer.first_name | default: customer.name | default: customer.email
+            assign account_initial = account_name | slice: 0 | upcase
+            assign account_links = linklists[section.settings.customer_account_menu].links
+          -%}
+          <account-menu class="header__account">
+            <button
+              type="button"
+              class="header__icon-button header__avatar"
+              popovertarget="{{ account_menu_id }}"
+              aria-label="{{ 'header.account_menu.open' | t: name: account_name | escape_once }}"
+            >
+              <span aria-hidden="true">{{ account_initial }}</span>
+            </button>
+            <div id="{{ account_menu_id }}" class="account-menu" popover>
+              {%- comment -%} Head: the initial in a circle, then "Hi, name" and the email; the close button on the right {%- endcomment -%}
+              <div class="account-menu__head">
+                <span class="account-menu__initial" aria-hidden="true">{{ account_initial }}</span>
+                <div class="account-menu__who">
+                  <p class="account-menu__greeting">{{ 'header.account_menu.greeting' | t: name: account_name }}</p>
+                  {%- if customer.email != blank -%}
+                    <p class="account-menu__email">{{ customer.email | escape }}</p>
+                  {%- endif -%}
+                </div>
+                <button type="button" class="account-menu__close" popovertarget="{{ account_menu_id }}" popovertargetaction="hide">
+                  <span class="visually-hidden">{{ 'header.close_menu' | t }}</span>
+                  <span aria-hidden="true">{{ 'icon-close.svg' | inline_asset_content }}</span>
+                </button>
+              </div>
+
+              {%- comment -%} The account links (Shopify's Orders / Profile) as full-width rows with an arrow {%- endcomment -%}
+              <ul class="account-menu__links" role="list">
+                {%- for link in account_links -%}
+                  <li>
+                    <a class="account-menu__link" href="{{ link.url }}">
+                      <span>{{ link.title | escape }}</span>
+                      <span class="account-menu__arrow" aria-hidden="true">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+                    </a>
+                  </li>
+                {%- else -%}
+                  <li>
+                    <a class="account-menu__link" href="{{ routes.account_url }}">
+                      <span>{{ 'header.account_menu.orders' | t }}</span>
+                      <span class="account-menu__arrow" aria-hidden="true">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+                    </a>
+                  </li>
+                {%- endfor -%}
+              </ul>
+
+              <a class="account-menu__link account-menu__signout" href="{{ routes.account_logout_url }}">
+                <span>{{ 'header.account_menu.sign_out' | t }}</span>
+              </a>
+            </div>
+          </account-menu>
+        {%- else -%}
+          <a class="button header__login" href="{{ routes.account_login_url }}">
             {{ 'icon-account.svg' | inline_asset_content | remove: 'slot="signed-out-avatar"' }}
             {{- 'header.login' | t -}}
-          </span>
-        </shopify-account>
+          </a>
+        {%- endif -%}
       {%- endif -%}
     </div>
   </div>
@@ -395,6 +455,204 @@
     block-size: var(--icon-size);
   }
 
+  /*
+    Signed in: a glass circle with the customer's initial in the accent colour. The body font (the
+    heading serif's tall letter shapes sat the initial off-centre), centred with flexbox; no border, and
+    the focus ring only for the keyboard.
+  */
+  .header .header__avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    outline: none;
+    color: var(--color-accent);
+    font-family: var(--font-body--family);
+    font-size: 1.125rem;
+    font-weight: var(--font-weight-medium);
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .header .header__avatar:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+  }
+
+  /*
+    The account panel: a native popover (top layer), placed by the script under the avatar, its right
+    edge lined up with it (--account-top / --account-left). The browser centres a popover by default
+    (inset 0, margin auto) and gives it a black border: both reset. A white glass card with a soft
+    shadow, no borders inside: head (initial, name, email, close), a hairline, the link rows, a hairline,
+    Sign out. It inherits the header's colour scheme (inheritance follows the page structure, even in
+    the top layer).
+  */
+  .account-menu {
+    position: fixed;
+    inset: auto;
+    inset-block-start: var(--account-top, 6rem);
+    inset-inline-start: var(--account-left, auto);
+    inline-size: min(19rem, calc(100vw - 2rem));
+    margin: 0;
+    padding: var(--space-sm);
+    border: 0;
+    border-radius: 1.25rem;
+    background-color: color-mix(in srgb, #ffffff 92%, transparent);
+    box-shadow: 0 12px 40px #0000001f, 0 2px 8px #0000000d;
+    color: var(--color-text);
+    -webkit-backdrop-filter: blur(var(--glass-frost));
+    backdrop-filter: blur(var(--glass-frost));
+  }
+
+  .account-menu:popover-open {
+    display: flex;
+    flex-direction: column;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .account-menu:popover-open {
+      animation: account-menu-in 0.25s var(--ease-out);
+    }
+  }
+
+  @keyframes account-menu-in {
+    from {
+      opacity: 0;
+      translate: 0 -0.5rem;
+    }
+  }
+
+  /* Head: initial | name + email | close, all vertically centred */
+  .account-menu__head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-sm) var(--space-md);
+    border-block-end: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  }
+
+  .account-menu__initial {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    inline-size: 2.75rem;
+    block-size: 2.75rem;
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--color-accent) 10%, #ffffff);
+    color: var(--color-accent);
+    font-size: 1.125rem;
+    font-weight: var(--font-weight-medium);
+    line-height: 1;
+  }
+
+  .account-menu__who {
+    flex: 1;
+    min-inline-size: 0;
+  }
+
+  .account-menu__greeting {
+    margin: 0;
+    font-family: var(--font-heading--family);
+    font-size: 1.25rem;
+    line-height: 1.2;
+  }
+
+  .account-menu__email {
+    margin: 0.125rem 0 0;
+    overflow: hidden;
+    color: color-mix(in srgb, var(--color-text) 62%, #ffffff);
+    font-size: var(--font-size-small);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .account-menu .account-menu__close {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    align-self: flex-start;
+    inline-size: 2rem;
+    block-size: 2rem;
+    min-block-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background-color: transparent;
+    box-shadow: none;
+    color: color-mix(in srgb, var(--color-text) 62%, #ffffff);
+    cursor: pointer;
+    transition:
+      background-color var(--duration-fast) var(--ease-out),
+      color var(--duration-fast) var(--ease-out);
+  }
+
+  .account-menu .account-menu__close:hover {
+    background-color: color-mix(in srgb, var(--color-text) 6%, transparent);
+    color: var(--color-text);
+  }
+
+  .account-menu__close svg {
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
+  }
+
+  /* Link rows: label left, arrow right, a soft tint on hover; no borders */
+  .account-menu__links {
+    margin: 0;
+    padding: var(--space-xs) 0;
+    border-block-end: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    list-style: none;
+  }
+
+  .account-menu__link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    min-block-size: 2.75rem;
+    padding-inline: var(--space-sm);
+    border-radius: 0.75rem;
+    color: var(--color-text);
+    font-size: var(--font-size-body-sm);
+    line-height: 1.2;
+    text-decoration: none;
+    transition:
+      background-color var(--duration-fast) var(--ease-out),
+      color var(--duration-fast) var(--ease-out);
+  }
+
+  .account-menu__link:hover,
+  .account-menu__link:focus-visible {
+    background-color: color-mix(in srgb, var(--color-accent) 7%, transparent);
+    color: var(--color-accent);
+  }
+
+  .account-menu__arrow {
+    display: inline-flex;
+    opacity: 0.5;
+    transition:
+      opacity var(--duration-fast) var(--ease-out),
+      translate var(--duration-fast) var(--ease-out);
+  }
+
+  .account-menu__link:hover .account-menu__arrow {
+    opacity: 1;
+    translate: 0.125rem 0;
+  }
+
+  .account-menu__arrow svg {
+    inline-size: 0.75rem;
+    block-size: auto;
+  }
+
+  .account-menu .account-menu__signout {
+    margin-block-start: var(--space-xs);
+    color: var(--color-accent);
+  }
+
   /* The menu button stays clickable while a transparent header is "at rest" (like the actions) */
   .header--transparent .header-drawer__toggle {
     pointer-events: auto;
@@ -577,6 +835,38 @@
   }
 
   if (!customElements.get('cart-count')) customElements.define('cart-count', CartCount);
+
+  /**
+   * <account-menu>: the signed-in customer's panel is a native popover (the browser opens and closes it:
+   * the avatar button, Escape, a click outside). This only places it before it opens: under the avatar,
+   * its right edge lined up with the avatar's, kept inside the screen.
+   */
+  class AccountMenu extends HTMLElement {
+    connectedCallback() {
+      this.button = this.querySelector('[popovertarget]');
+      this.panel = this.querySelector('[popover]');
+      if (!this.button || !this.panel) return;
+      this.onBeforeToggle = (event) => {
+        if (event.newState === 'open') this.place();
+      };
+      this.panel.addEventListener('beforetoggle', this.onBeforeToggle);
+    }
+
+    disconnectedCallback() {
+      this.panel?.removeEventListener('beforetoggle', this.onBeforeToggle);
+    }
+
+    place() {
+      const rect = this.button.getBoundingClientRect();
+      const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      const width = Math.min(19 * rem, window.innerWidth - 2 * rem); // the panel's CSS width (.account-menu)
+      const left = Math.max(rem, Math.min(rect.right - width, window.innerWidth - width - rem));
+      this.panel.style.setProperty('--account-top', `${rect.bottom + 0.75 * rem}px`);
+      this.panel.style.setProperty('--account-left', `${left}px`);
+    }
+  }
+
+  if (!customElements.get('account-menu')) customElements.define('account-menu', AccountMenu);
 {% endjavascript %}
 
 {% schema %}

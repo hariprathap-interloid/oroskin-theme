@@ -21,7 +21,7 @@
               "type": "_hero-product",
               "settings": {
                 "image": "shopify://shop_images/Group_1000003837.png",
-                "collection": "",
+                "collection": "makeup",
                 "product": "",
                 "link": "",
                 "label": "Makeup",
@@ -39,7 +39,7 @@
               "type": "_hero-product",
               "settings": {
                 "image": "shopify://shop_images/Group_1000003838.png",
-                "collection": "",
+                "collection": "skincare",
                 "product": "",
                 "link": "",
                 "label": "Skincare",
@@ -58,7 +58,7 @@
               "settings": {
                 "image": "shopify://shop_images/Group_1000003840.png",
                 "collection": "",
-                "product": "",
+                "product": "radiance-vitamin-c-serum",
                 "link": "",
                 "label": "Serums",
                 "brush_word": "renewal",
@@ -75,7 +75,7 @@
               "type": "_hero-product",
               "settings": {
                 "image": "shopify://shop_images/Group_1000003839.png",
-                "collection": "",
+                "collection": "fragrance",
                 "product": "",
                 "link": "",
                 "label": "Fragrance",
@@ -545,7 +545,7 @@
                   "type": "button",
                   "settings": {
                     "label": "New arrivals",
-                    "link": "",
+                    "link": "shopify://collections/new-arrivals",
                     "new_tab": false,
                     "style": "text",
                     "show_arrow": true,
@@ -668,6 +668,7 @@
         "buy_label": "Buy now",
         "fan_on_scroll": true,
         "fan_style": "auto",
+        "card_size": 100,
         "card_height": 85,
         "cart_size": "50",
         "cart_icon_color": "#ffffff",
@@ -879,7 +880,7 @@
             "heading": "Trending <em>Now</em>",
             "link_label": "View all",
             "link": "shopify://collections",
-            "collection": "",
+            "collection": "all",
             "products_to_show": 7,
             "width": 50,
             "scene_length": 250,

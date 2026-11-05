@@ -27,7 +27,7 @@
 {% endstyle %}
 
 <faq-page
-  class="faq{% if request.design_mode %} faq--editor{% endif %} full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
+  class="faq{% if request.design_mode %} faq--editor{% endif %} full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}{% if section.settings.fill_screen %} section--fill-screen{% endif %}"
   style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }}; --faq-row-radius: {{ section.settings.question_radius | default: 19 }}px;"
   data-view="overview"
   data-label-count-one="{{ 'faq.results_count.one' | t: count: '[count]' | escape }}"
@@ -126,6 +126,17 @@
     display: block;
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
     background-color: var(--color-background);
+  }
+
+  /*
+    Fill the screen height: at least one screen tall (the page background never stops above the fold),
+    but the content keeps starting at the top, as in the Figma (the shared rule centres it). Two classes,
+    so it beats both .faq (display: block) and the shared .section--fill-screen
+  */
+  .faq.section--fill-screen {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
   }
 
   .faq__inner {
@@ -1035,6 +1046,13 @@
         }
       ],
       "default": "widest"
+    },
+    {
+      "type": "checkbox",
+      "id": "fill_screen",
+      "label": "t:labels.fill_screen",
+      "info": "t:labels.fill_screen_top_info",
+      "default": true
     },
     {
       "type": "checkbox",

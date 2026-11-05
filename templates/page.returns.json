@@ -1,3 +1,12 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
 {
   "sections": {
     "hero": {
@@ -26,7 +35,8 @@
             "title": "Open the order",
             "text": "<p>Find it in your archive and choose Return. Tell us which pieces and, if you like, why.</p>",
             "label": "Within 60 days"
-          }
+          },
+          "blocks": {}
         },
         "courier": {
           "type": "_return-step",
@@ -34,7 +44,8 @@
             "title": "We book the courier",
             "text": "<p>A collection slot is offered for the next working day. No printer, no label, no queue.</p>",
             "label": "Same day"
-          }
+          },
+          "blocks": {}
         },
         "hand": {
           "type": "_return-step",
@@ -42,7 +53,8 @@
             "title": "Hand it over",
             "text": "<p>Reuse the original box or any box. The courier scans it at your door and that is your proof.</p>",
             "label": "At your door"
-          }
+          },
+          "blocks": {}
         },
         "refund": {
           "type": "_return-step",
@@ -50,7 +62,8 @@
             "title": "Refunded in full",
             "text": "<p>We release the refund the moment it is collected — not when it reaches us.</p>",
             "label": "2–3 days to your bank"
-          }
+          },
+          "blocks": {}
         }
       },
       "block_order": [
@@ -84,24 +97,6 @@
         "padding_bottom": 48
       }
     },
-    "cta": {
-      "type": "cta-card",
-      "settings": {
-        "heading": "Ready to send something back?",
-        "text": "Open the order in your archive and we will book the courier — no printer, no queue.",
-        "button_label": "Start a return",
-        "button_link": "",
-        "second_label": "",
-        "second_link": "",
-        "style": "tinted",
-        "section_width": "widest",
-        "scale_screen": true,
-        "text_scale": 100,
-        "color_scheme": "scheme-2",
-        "padding_top": 48,
-        "padding_bottom": 96
-      }
-    },
     "policy": {
       "type": "policy",
       "settings": {
@@ -126,6 +121,24 @@
         "color_scheme": "scheme-2",
         "padding_top": 48,
         "padding_bottom": 32
+      }
+    },
+    "cta": {
+      "type": "cta-card",
+      "settings": {
+        "heading": "Ready to send something back?",
+        "text": "Open the order in your archive and we will book the courier — no printer, no queue.",
+        "button_label": "Start a return",
+        "button_link": "",
+        "second_label": "",
+        "second_link": "",
+        "style": "tinted",
+        "section_width": "widest",
+        "scale_screen": true,
+        "text_scale": 100,
+        "color_scheme": "scheme-2",
+        "padding_top": 48,
+        "padding_bottom": 96
       }
     }
   },

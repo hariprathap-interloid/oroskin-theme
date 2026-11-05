@@ -998,7 +998,8 @@
     "product_related_columns": "Products per row on desktop",
     "product_related_card_shape": "Card shape",
     "product_related_fallback": "Fallback products",
-    "product_related_fallback_info": "Shown when Shopify has no related products for a product yet."
+    "product_related_fallback_info": "Shown when Shopify has no related products for a product yet.",
+    "fill_screen_top_info": "The section is at least as tall as the screen; its content starts at the top."
   },
   "options": {
     "collection_list_header": {

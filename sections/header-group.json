@@ -52,13 +52,17 @@
       ],
       "settings": {
         "color_scheme": "",
+        "transparent_mode": "home",
         "menu": "main-menu",
         "customer_account_menu": "customer-account-main-menu",
         "mega_menu_width": "bar",
         "mega_menu_columns": 3,
         "mega_menu_image_ratio": "landscape",
         "mega_menu_image_fit": "cover",
-        "mega_menu_color_scheme": ""
+        "mega_menu_color_scheme": "",
+        "mega_menu_shop_all_show": true,
+        "mega_menu_shop_all_label": "",
+        "mega_menu_shop_all_link": "shopify://collections/all"
       }
     }
   },

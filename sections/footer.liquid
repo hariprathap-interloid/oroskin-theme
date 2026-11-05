@@ -194,12 +194,14 @@
         already heard the shop name in the logo, it shouldn't hear it again as a huge word.
       {%- endcomment -%}
       <p class="footer__wordmark" aria-hidden="true">
+        <span class="footer__wordmark-text">
         {%- if has_logo_text -%}
           {{- settings.logo_text | escape -}}
           {%- if settings.logo_text_accent != blank -%}<em>{{ settings.logo_text_accent | escape }}</em>{%- endif -%}
         {%- else -%}
           {{- shop.name | escape -}}
         {%- endif -%}
+        </span>
       </p>
     {%- endif -%}
   </div>
@@ -372,15 +374,20 @@
     display: inline-block;
   }
 
+  /*
+    One size for every link (it used to be 65% of each word, stretched: "About" and "Blog" got different
+    swooshes): the SVG's own proportions (97:16, "contain"), starting at the word's left edge (Figma)
+  */
   .footer__links .footer__link::after {
     content: '';
     position: absolute;
     inset-inline-start: -0.1em;
-    inset-block-start: calc(100% + 0.25rem);
-    inline-size: 65%; /* Figma: shorter than the word, starting at its left edge */
-    block-size: 0.5rem;
+    inset-block-start: calc(100% + 0.2rem);
+    inline-size: 3.5rem;
+    aspect-ratio: 97 / 16;
     background-color: currentcolor;
-    mask: var(--nav-underline) center / 100% 100% no-repeat;
+    mask: var(--nav-underline) left center / contain no-repeat;
+    pointer-events: none;
     transform: scaleX(0);
     transform-origin: left center;
     transition: transform var(--duration-base) var(--ease-out);
@@ -517,6 +524,28 @@
 
   .footer__wordmark em {
     color: color-mix(in srgb, var(--color-accent) 20%, transparent);
+  }
+
+  /*
+    The whole word floats: it sinks a little further into the bottom edge and rises back, in a slow
+    loop (only down from its resting place: the box clips at the top too, so moving up would cut the
+    tops of the letters). transform only, so it costs no layout. With the theme's "Enable animations"
+    setting on and motion allowed.
+  */
+  .footer__wordmark-text {
+    display: inline-block;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .animations-on .footer__wordmark-text {
+      animation: footer-wordmark-float 7s ease-in-out infinite;
+    }
+  }
+
+  @keyframes footer-wordmark-float {
+    50% {
+      transform: translateY(0.14em);
+    }
   }
 
   /*
