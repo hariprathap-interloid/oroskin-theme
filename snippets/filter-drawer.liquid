@@ -191,13 +191,17 @@
   }
 
   /*
-    The panel (Figma 332 x full height): a soft off-white sheet from the left, rounded on the right,
-    34px side padding. The background mixes 2% of the text colour into the scheme background (#faf8f8).
+    The panel (Figma 332 x full height, widened to 384px on 2026-11-05 so long filter names and the
+    brand search have room): a soft off-white sheet from the left, rounded on the right, 34px side
+    padding. The background mixes 2% of the text colour into the scheme background (#faf8f8).
+    overflow: hidden: only the body scrolls (a <dialog> scrolls itself by default, which gave two
+    scrollbars).
   */
   .filter-drawer__dialog {
     inset-block: 0;
     inset-inline: 0 auto;
-    inline-size: min(20.75rem, calc(100vw - 3rem));
+    overflow: hidden;
+    inline-size: min(24rem, calc(100vw - 3rem));
     max-inline-size: none;
     block-size: 100dvh;
     max-block-size: none;
@@ -243,10 +247,13 @@
     }
   }
 
-  /* Head and foot stay put, the groups in between scroll */
+  /*
+    Head and foot stay put, the groups in between scroll. minmax(0, 1fr), not 1fr: a plain 1fr row is
+    never smaller than its content, so the body grew past the screen and the dialog scrolled instead.
+  */
   .filter-drawer__form {
     display: grid;
-    grid-template-rows: auto 1fr auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
     block-size: 100%;
     margin: 0;
   }

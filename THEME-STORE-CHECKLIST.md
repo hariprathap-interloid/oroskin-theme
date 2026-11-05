@@ -94,7 +94,7 @@ Why first: every later section reads these settings, CSS variables and base styl
 
 - [x] 🟡 Collection title (never truncated), description and image *`sections/collection-banner.liquid`.*
 - [x] 🟡 Product grid that handles mixed image ratios, using the product card. Includes unit price, sale badge and price range. *Bento / even grid; `product-card` + `price` snippets.*
-- [ ] 🟡 **Faceted filters**: availability, price, type, vendor and variant options. Also on the search page. *§4* *Built M5.4 (collection) + M5.6 (search): `snippets/filter-drawer.liquid` renders whatever Search & Discovery returns (list, boolean, price range, swatches). Tested with availability, price and Size. **To do: turn on Product type and Vendor filters in Search & Discovery, test, then tick.***
+- [x] 🟡 **Faceted filters**: availability, price, type, vendor and variant options. Also on the search page. *§4* *Built M5.4 (collection) + M5.6 (search): `snippets/filter-drawer.liquid` renders whatever Search & Discovery returns (list, boolean, price range, swatches). Tested with availability, price, Size, Product type and Brand (vendor, with its search box) on 2026-11-05; drawer widened to 384px and given one scrollbar.*
 - [x] ❌ **Sort** dropdown *Styled `base-select` in the toolbar (collection + search).*
 - [x] ❌ Empty-collection message *Two messages: empty collection (strip + suggestions) and "no filter match" (clear filters).*
 - [x] ✅ Pagination *`snippets/pagination.liquid`.*

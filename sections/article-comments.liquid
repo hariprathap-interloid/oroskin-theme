@@ -35,6 +35,12 @@
       id="comments"
       data-section-id="{{ section.id }}"
       data-loaded-text="{{ 'blog.comments.loaded' | t | escape }}"
+      data-form-id="{{ form_id }}"
+      {% if blog.moderated? %}
+        data-sent-text="{{ 'blog.comments.success_moderated' | t | escape }}"
+      {% else %}
+        data-sent-text="{{ 'blog.comments.success' | t | escape }}"
+      {% endif %}
     >
       <div class="article-comments__content">
         <div class="article-comments__header">
@@ -595,6 +601,7 @@
       this.more = this.querySelector('[data-comments-more]');
       this.status = this.querySelector('[data-comments-status]');
 
+      this.confirmSent();
       this.querySelector('[data-focus-after-submit]')?.focus();
       this.relativeDates(this);
       this.more?.addEventListener('click', (event) => {
@@ -603,6 +610,27 @@
         event.preventDefault();
         this.loadMore(link);
       });
+    }
+
+    /**
+     * Back-up for the "sent" message. The form's action ends in #<form id>, so after posting Shopify
+     * reloads the article with that #. Liquid shows the message when Shopify reports
+     * form.posted_successfully?, but on a moderated blog that can come back false (seen 2026-11-05: the
+     * comment arrived in the admin, the page said nothing). So: back at the form's # with no message
+     * and no error → show the "sent" text here. The # is then removed, so a refresh doesn't repeat it.
+     */
+    confirmSent() {
+      const form = document.getElementById(this.dataset.formId);
+      if (!form || location.hash !== `#${form.id}`) return;
+      if (!form.querySelector('.form-message') && this.dataset.sentText) {
+        const message = document.createElement('p');
+        message.className = 'form-message form-message--success';
+        message.tabIndex = -1;
+        message.dataset.focusAfterSubmit = '';
+        message.textContent = this.dataset.sentText;
+        form.prepend(message);
+      }
+      history.replaceState(null, '', location.pathname + location.search);
     }
 
     relativeDates(root) {

@@ -87,8 +87,7 @@
         "reading_speed": 200,
         "show_video": true,
         "video_position": "left",
-        "video": "shopify://files/videos/homepage-classic-watches-datejust-video-autoplay.webm",
-        "video_url": "",
+        "video_url": "https://youtu.be/nabwuTwtlnM?si=EHS15mrbhpg7Q50t",
         "poster": "shopify://shop_images/6514468765eb7d5b1a064a890e7e065fdac9f2c3.png",
         "video_label": "Video · 12:40",
         "video_title": "The OroSkin lab: building a winter skincare routine from scratch",
@@ -179,7 +178,7 @@
         "columns_mobile": "1",
         "section_width": "widest",
         "color_scheme": "scheme-2",
-        "icon_color": "#7B0000",
+        "icon_color": "#7b0000",
         "animation": "slide-bottom",
         "padding_top": 80,
         "padding_bottom": 80
