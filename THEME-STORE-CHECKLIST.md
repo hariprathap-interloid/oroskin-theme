@@ -53,8 +53,8 @@ Why first: every later section reads these settings, CSS variables and base styl
 - [x] ❌ Logo, falling back to `shop.name` *Done M2.1: image / text logo / shop name.*
 - [x] ❌ **Multi-level dropdown menu**, fully keyboard accessible. *§4, §12* *Done M2.2: `<details>` mega menu, Escape/outside click; keyboard-tested M2.11.*
 - [ ] ❌ Mobile menu *Parked: M2.6, waiting on the mobile design (decision 7).*
-- [ ] 🟡 Search link and **predictive search**. *§4* *Search link done (M2.3); predictive search popup drafted in M7.7 (2026-10-27): products, suggestions, collections, pages, articles via the Predictive Search API, no-JS fallback = /search. Tick after browser testing.*
-- [ ] 🟡 `<shopify-account>` in the **desktop and mobile** header. Skeleton has desktop only. *§4* *Desktop done (M2.3, LOGIN pill); mobile comes with the mobile header (decision 7).*
+- [ ] 🟡 Search link and **predictive search**. *§4* *Search link done (M2.3); predictive search popup committed in 25dff98 (`snippets/search-popup.liquid` + `sections/predictive-search.liquid`): products, suggestions, collections, pages, articles via the Predictive Search API, no-JS fallback = /search. **To do: browser test (typing, keyboard, no results, Escape), then tick.***
+- [ ] 🟡 Account link in the **desktop and mobile** header. *§4* *Desktop done: our own `<account-menu>` (2026-11-05, decision 6) replaces `<shopify-account>`; signed out = LOGIN link to Shopify's sign-in. Mobile comes with the mobile header (decision 7).*
 - [x] ❌ **Country/currency selector** and **language selector**. *§4* *Done M2.7 (`localization-form` snippet, footer).*
 - [x] ❌ Menu defaults: `main-menu` for the header, `footer` for the footer. *§14*
 - [x] ❌ **Newsletter signup form** in the footer. *§4* *Done M2.9 (`newsletter-form` snippet).*
@@ -82,7 +82,7 @@ Why first: every later section reads these settings, CSS variables and base styl
 
 ## M4 Homepage
 
-- [ ] 🟡 The Figma homepage sections. Each one needs a **preset**, real placeholder content and `!= blank` empty states. *§14* *M4 (2026-10-22): 9 of 10 built, each with a preset and placeholders (hero, scrolling showcase, editor's picks, image banner ×2 presets, trending, testimonials, blog stories, feature icons, featured product). New Arrivals deck (M4.6) still open: a Product list stands in on the homepage.*
+- [x] 🟡 The Figma homepage sections. Each one needs a **preset**, real placeholder content and `!= blank` empty states. *§14* *All 10 built, each with a preset and placeholders (hero, scrolling showcase, editor's picks, image banner ×2 presets, trending, testimonials, blog stories, feature icons, featured product, New Arrivals deck = `product-deck`, now on `templates/index.json`). Audit 2026-11-05.*
 - [x] ✅ **Featured product** section with `@app` blocks and rich media. *§4, §5* *Done M4.13 (5b79cab): images, video, external video, 3D; `@app` + `@theme` blocks; swatches in M6.*
 - [x] ✅ No empty sections in the template. *§6, since Lighthouse tests real content.* *M4.14: every homepage section has content; button links set; New Arrivals = Product list until the deck exists.*
 
@@ -90,58 +90,73 @@ Why first: every later section reads these settings, CSS variables and base styl
 
 ## M5 Collection
 
-- [ ] 🟡 Collection title (never truncated), description and image
-- [ ] 🟡 Product grid that handles mixed image ratios, using the product card. Includes unit price, sale badge and price range.
-- [ ] 🟡 **Faceted filters**: availability, price, type, vendor and variant options. Also on the search page. *§4* *Built M5.4 (collection) + M5.6 (search): `snippets/filter-drawer.liquid` renders whatever Search & Discovery returns (list, boolean, price range, swatches). Tested with availability, price and Size; tick after testing type / vendor on the store.*
-- [ ] ❌ **Sort** dropdown
-- [ ] ❌ Empty-collection message
-- [ ] ✅ Pagination
-- [ ] 🟡 Collection list page: `collection.featured_image` and pagination
+*Audit 2026-11-05: M5 was built and tested on 2026-10-29 (branch `feature/m5-collection`) but never ticked here.*
+
+- [x] 🟡 Collection title (never truncated), description and image *`sections/collection-banner.liquid`.*
+- [x] 🟡 Product grid that handles mixed image ratios, using the product card. Includes unit price, sale badge and price range. *Bento / even grid; `product-card` + `price` snippets.*
+- [ ] 🟡 **Faceted filters**: availability, price, type, vendor and variant options. Also on the search page. *§4* *Built M5.4 (collection) + M5.6 (search): `snippets/filter-drawer.liquid` renders whatever Search & Discovery returns (list, boolean, price range, swatches). Tested with availability, price and Size. **To do: turn on Product type and Vendor filters in Search & Discovery, test, then tick.***
+- [x] ❌ **Sort** dropdown *Styled `base-select` in the toolbar (collection + search).*
+- [x] ❌ Empty-collection message *Two messages: empty collection (strip + suggestions) and "no filter match" (clear filters).*
+- [x] ✅ Pagination *`snippets/pagination.liquid`.*
+- [x] 🟡 Collection list page: `collection.featured_image` and pagination *`sections/collections.liquid`: tiles / cards / overlay / bento.*
 
 ---
 
 ## M6 Product
 
-- [ ] ❌ The product section is built from **blocks**: title, price, vendor, description, variant picker, quantity and buy buttons. *§5*
+*Audit 2026-11-05: M6.1–M6.9 built and browser-tested, ticked below.*
+
+- [x] ❌ The product section is built from **blocks**: title, price, vendor, description, variant picker, quantity and buy buttons. *§5* *`product-title`, `product-price`, `product-eyebrow` (type / vendor), `product-description`, `buy-buttons` (picker, quantity stepper, Add to cart, Buy now).*
 - [x] ✅ `@app` blocks and a Custom Liquid block. *§5* *`sections/product.liquid` accepts `@theme` + `@app`; `blocks/custom-liquid.liquid` is a theme block, so it can be added there. Also `@app` in `product-panel`, `featured-product`, `product-reviews`.*
-- [ ] 🟡 Variant options shown **separately** (not one combined `<select>`), with **swatches** (`swatch.color` and `swatch.image`). *§7*
-- [ ] ❌ **Variant images**: choosing a variant shows its image. *§4*
-- [ ] 🟡 All media is viewable, including **3D models, video, YouTube and Vimeo**. *§4*
-- [ ] ❌ Price, compare-at, sold-out and unit price update when the variant changes; first available variant selected on load. *§7*
-- [ ] ❌ Tax-included note via `cart.taxes_included`
-- [ ] 🟡 **Accelerated checkout buttons**, on by default. Skeleton has `payment_button`. *§4*
-- [ ] ❌ **Shop Pay Installments** banner. *§4*
-- [ ] ❌ **Pickup availability**. *§4*
+- [x] 🟡 Variant options shown **separately** (not one combined `<select>`), with **swatches** (`swatch.color` and `swatch.image`). *§7* *`buy-buttons`: one group per option, swatches from `swatch.color` / `swatch.image`. Retest swatch images with the new catalogue (T6).*
+- [x] ❌ **Variant images**: choosing a variant shows its image. *§4* *`variant:change` moves the variant's `featured_media` first in the gallery (`sections/product.liquid`).*
+- [ ] 🟡 All media is viewable, including **3D models, video, YouTube and Vimeo**. *§4* *Code handles all four (`product-media`, `product-lightbox`, featured product). **To do: test YouTube, Vimeo and a 3D model on a product (the demo catalogue has none yet).***
+- [x] ❌ Price, compare-at, sold-out and unit price update when the variant changes; first available variant selected on load. *§7* *`product-price` swaps the variant's price (from the `price` snippet: compare-at, unit price); Add to cart shows Sold out / Unavailable; `selected_or_first_available_variant`; the plan price follows the selling plan.*
+- [x] ❌ Tax-included note via `cart.taxes_included` *Price block and cart summary.*
+- [x] 🟡 **Accelerated checkout buttons**, on by default. Skeleton has `payment_button`. *§4* *`show_dynamic_checkout` default true.*
+- [x] ❌ **Shop Pay Installments** banner. *§4* *`form | payment_terms` in Buy buttons.*
+- [x] ❌ **Pickup availability**. *§4* *`product-pickup` block (`store_availabilities`).*
 - [x] ✅ **Related** and **complementary** product recommendations. *§4* (M6.5 complementary: sections/product-pairs.liquid; M6.9 related: sections/product-related.liquid, both via routes.product_recommendations_url)
 - [x] ✅ Gift card recipient fields: email, name, message and send date. *§7* (M6.3 snippets/gift-card-recipient.liquid in Buy buttons; 2026-11-04: fields render with Shopify's property names, kept on the cart line, test checkout order #1005 on the dev store. 2026-11-05: gift card email received after fulfilling the line; turn on Settings > Checkout > Automatically fulfill gift cards.)
-- [ ] ❌ "Add to cart" text moved to locales. It's currently hard-coded.
+- [x] ❌ "Add to cart" text moved to locales. *Audit 2026-11-05: "Add to cart" only appears in comments now; every label uses `| t`.*
 
 ---
 
 ## M7 Cart
 
-- [ ] 🟡 For each line item: image, title, `options_with_values`, unit price, final price and quantity
-- [ ] 🟡 Visible total; tax note; changing a quantity refreshes all line items
-- [ ] ❌ Empty-cart message
-- [ ] ❌ **Cart notes**, **selling plans (subscriptions)** and **discounts** shown. *§4, §7*
-- [ ] ❌ **Accelerated checkout** on the cart, on by default. *§4*
-- [ ] ✅ Checkout button submits the cart form
+*Audit 2026-11-05: M7.1–M7.6 built and tested on 2026-10-27; M7.7 search popup committed in 25dff98 (see M2).*
+
+- [x] 🟡 For each line item: image, title, `options_with_values`, unit price, final price and quantity *`snippets/cart-item.liquid`.*
+- [x] 🟡 Visible total; tax note; changing a quantity refreshes all line items
+- [x] ❌ Empty-cart message *`cart-empty` strip with buttons.*
+- [x] ❌ **Cart notes**, **selling plans (subscriptions)** and **discounts** shown. *§4, §7* *Note in a `<details>` in the summary; `selling_plan_allocation` on the line; line and order discounts + coupon card.*
+- [x] ❌ **Accelerated checkout** on the cart, on by default. *§4* *`show_express_checkout` default true.*
+- [x] ✅ Checkout button submits the cart form
+- [x] ➕ App blocks in the cart (2026-11-05), under the order summary.
 
 ---
 
 ## M8 Remaining pages + SEO
 
-- [ ] 🟡 Search: no-results message, products/articles/pages told apart (`object_type`), pagination, filters *Built M5.6 (2026-10-29): product tiles + "Articles and pages" rows, no-results / no-match messages, pagination snippet, filters + sort. Tick after review.*
-- [ ] 🟡 Blog: title, article image, **`article.excerpt_or_content`** (Skeleton uses `excerpt`), pagination
-- [ ] 🟡 Article: `published_at`, paginated comments, success and error messages
-- [ ] ❌ **`templates/page.contact.json`** with a contact form. *§5*
-- [ ] 🟡 404 page: clear message, **search bar** and home link
-- [ ] 🟡 Password page: logo or shop name, `password_message`, password form
+*Audit 2026-11-05: code for every page exists; the review pass (T2) is a browser check of each one.*
+
+- [x] 🟡 Search: no-results message, products/articles/pages told apart (`object_type`), pagination, filters *Built M5.6 (2026-10-29): product tiles + "Articles and pages" rows, no-results / no-match messages, pagination snippet, filters + sort.*
+- [x] 🟡 Blog: title, article image, **`article.excerpt_or_content`** (Skeleton uses `excerpt`), pagination *`sections/blog.liquid` + `article-card` (befbf81).*
+- [x] 🟡 Article: `published_at`, paginated comments, success and error messages *`article-hero`, `article-comments` (moderation message, per-field errors). **To do in T2: post a test comment.***
+- [x] ❌ **`templates/page.contact.json`** with a contact form. *§5* *`contact-form` + channels, locations, map. Contact form posts only on the preview link, not on `theme dev` (502).*
+- [x] 🟡 404 page: clear message, **search bar** and home link
+- [x] 🟡 Password page: logo or shop name, `password_message`, password form
 - [x] ✅ Gift card page: code, **QR code (at least 120×120px)**, **Apple Wallet**, logo. *§7* *Verified 2026-11-05 with the real gift card from order #1005.*
-- [ ] ✅ Title, meta description, canonical, Open Graph and Twitter tags. *§11, §13*
-- [ ] ✅ Product JSON-LD via `structured_data`. *§11*
-- [ ] ❌ Organization and BreadcrumbList JSON-LD. *Not required, but good for SEO.*
-- [ ] ✅ No `robots.txt.liquid`. *§11. Keep it that way.*
+- [x] ✅ Title, meta description, canonical, Open Graph and Twitter tags. *§11, §13* *`snippets/meta-tags.liquid`.*
+- [x] ✅ Product JSON-LD via `structured_data`. *§11* *Also FAQPage microdata on the FAQ sections.*
+- [ ] ❌ Organization and BreadcrumbList JSON-LD. *Not required, but good for SEO. Optional, do in M9 if time allows.*
+- [x] ✅ No `robots.txt.liquid`. *§11. Keep it that way.*
+
+### Pages in the Figma with no template yet (audit 2026-11-05)
+- [ ] Shipping (`design/figma/screens/shipping`): the built-in /policies/shipping-policy is styled; a page like Returns is open.
+- [ ] Cookies (`screens/cookies`): a banner (Customer Privacy API) or a page? Confirm with the design.
+- [ ] Track order (`screens/track-order-1|2`): Shopify hosts the order status; at most a form that leads there.
+- [ ] Signed-in home (`after-home-1|2`, `new-arrivals-after-login`) and Sign out (`signout`): check what differs.
 
 ---
 
@@ -152,9 +167,9 @@ Why first: every later section reads these settings, CSS variables and base styl
 - [ ] Valid HTML; contrast 4.5:1 for body text and 3:1 for large text and UI elements. *§12*
 - [ ] Every input has a unique `id` and a matching `<label for>`. *§12*
 - [ ] Browsers: the latest Safari, Chrome, Firefox, Edge, iOS Safari, Chrome Mobile and Samsung Internet, plus the **Instagram, Facebook and Pinterest in-app browsers**. *§9*
-- [ ] No Sass and no minified files of our own. *§10*
+- [x] No Sass and no minified files of our own. *§10* *Audit 2026-11-05: no `.min.*`, `.scss` or `.sass` in `assets/`. Keep it that way.*
 - [ ] Setting labels: sentence case, American English, and Shopify's terminology list ("home page", "main menu", "button label"…). *§14*
-- [ ] No fake urgency, countdowns, stock counts or "people viewing" features. *§8*
+- [ ] No fake urgency, countdowns, stock counts or "people viewing" features. *§8* *Audit 2026-11-05: `blocks/product-stock.liquid` shows "X pieces left" from the real `inventory_quantity`, only when tracked and low. Re-read §8 before submitting: if real counts are also banned, remove the count from the Theme Store version (keep "In stock").*
 
 ---
 
