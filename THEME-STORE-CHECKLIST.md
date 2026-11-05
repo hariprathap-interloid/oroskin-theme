@@ -53,7 +53,7 @@ Why first: every later section reads these settings, CSS variables and base styl
 - [x] ❌ Logo, falling back to `shop.name` *Done M2.1: image / text logo / shop name.*
 - [x] ❌ **Multi-level dropdown menu**, fully keyboard accessible. *§4, §12* *Done M2.2: `<details>` mega menu, Escape/outside click; keyboard-tested M2.11.*
 - [ ] ❌ Mobile menu *Parked: M2.6, waiting on the mobile design (decision 7).*
-- [ ] 🟡 Search link and **predictive search**. *§4* *Search link done (M2.3); predictive search popup committed in 25dff98 (`snippets/search-popup.liquid` + `sections/predictive-search.liquid`): products, suggestions, collections, pages, articles via the Predictive Search API, no-JS fallback = /search. **To do: browser test (typing, keyboard, no results, Escape), then tick.***
+- [x] 🟡 Search link and **predictive search**. *§4* *Search link done (M2.3); predictive search popup committed in 25dff98 (`snippets/search-popup.liquid` + `sections/predictive-search.liquid`): products, suggestions, collections, pages, articles via the Predictive Search API, no-JS fallback = /search. Browser-tested 2026-11-05: open, starting groups, typing, no results, Enter, recent searches, keyboard + Escape, outside click.*
 - [ ] 🟡 Account link in the **desktop and mobile** header. *§4* *Desktop done: our own `<account-menu>` (2026-11-05, decision 6) replaces `<shopify-account>`; signed out = LOGIN link to Shopify's sign-in. Mobile comes with the mobile header (decision 7).*
 - [x] ❌ **Country/currency selector** and **language selector**. *§4* *Done M2.7 (`localization-form` snippet, footer).*
 - [x] ❌ Menu defaults: `main-menu` for the header, `footer` for the footer. *§14*
