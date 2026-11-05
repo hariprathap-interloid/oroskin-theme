@@ -492,6 +492,16 @@
               {{- 'cart.continue_shopping' | t -}}
             </a>
           </div>
+
+          {%- comment -%}
+            App blocks (upsells, free-shipping bars, notes…) added to this section in the theme editor. An
+            app draws its own content and styles; `render block` is how Shopify asks the app for it.
+          {%- endcomment -%}
+          {%- for block in section.blocks -%}
+            {%- if block.type == '@app' -%}
+              <div class="cart-page__app">{% render block %}</div>
+            {%- endif -%}
+          {%- endfor -%}
         </aside>
       </div>
     {%- endif -%}
@@ -2023,6 +2033,9 @@
           "info": "t:labels.wrap_style_product_info"
         }
       ]
+    },
+    {
+      "type": "@app"
     }
   ]
 }

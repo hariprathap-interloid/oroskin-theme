@@ -103,7 +103,7 @@ Why first: every later section reads these settings, CSS variables and base styl
 ## M6 Product
 
 - [ ] ❌ The product section is built from **blocks**: title, price, vendor, description, variant picker, quantity and buy buttons. *§5*
-- [ ] ❌ `@app` blocks and a Custom Liquid block. *§5*
+- [x] ✅ `@app` blocks and a Custom Liquid block. *§5* *`sections/product.liquid` accepts `@theme` + `@app`; `blocks/custom-liquid.liquid` is a theme block, so it can be added there. Also `@app` in `product-panel`, `featured-product`, `product-reviews`.*
 - [ ] 🟡 Variant options shown **separately** (not one combined `<select>`), with **swatches** (`swatch.color` and `swatch.image`). *§7*
 - [ ] ❌ **Variant images**: choosing a variant shows its image. *§4*
 - [ ] 🟡 All media is viewable, including **3D models, video, YouTube and Vimeo**. *§4*
@@ -113,7 +113,7 @@ Why first: every later section reads these settings, CSS variables and base styl
 - [ ] ❌ **Shop Pay Installments** banner. *§4*
 - [ ] ❌ **Pickup availability**. *§4*
 - [x] ✅ **Related** and **complementary** product recommendations. *§4* (M6.5 complementary: sections/product-pairs.liquid; M6.9 related: sections/product-related.liquid, both via routes.product_recommendations_url)
-- [x] ✅ Gift card recipient fields: email, name, message and send date. *§7* (M6.3 snippets/gift-card-recipient.liquid in Buy buttons; 2026-11-04: fields render with Shopify's property names, kept on the cart line, test checkout order #1005 on the dev store. The gift card email itself is Shopify's: confirm it arrives.)
+- [x] ✅ Gift card recipient fields: email, name, message and send date. *§7* (M6.3 snippets/gift-card-recipient.liquid in Buy buttons; 2026-11-04: fields render with Shopify's property names, kept on the cart line, test checkout order #1005 on the dev store. 2026-11-05: gift card email received after fulfilling the line; turn on Settings > Checkout > Automatically fulfill gift cards.)
 - [ ] ❌ "Add to cart" text moved to locales. It's currently hard-coded.
 
 ---
@@ -137,7 +137,7 @@ Why first: every later section reads these settings, CSS variables and base styl
 - [ ] ❌ **`templates/page.contact.json`** with a contact form. *§5*
 - [ ] 🟡 404 page: clear message, **search bar** and home link
 - [ ] 🟡 Password page: logo or shop name, `password_message`, password form
-- [ ] 🟡 Gift card page: code, **QR code (at least 120×120px)**, **Apple Wallet**, logo. *§7*
+- [x] ✅ Gift card page: code, **QR code (at least 120×120px)**, **Apple Wallet**, logo. *§7* *Verified 2026-11-05 with the real gift card from order #1005.*
 - [ ] ✅ Title, meta description, canonical, Open Graph and Twitter tags. *§11, §13*
 - [ ] ✅ Product JSON-LD via `structured_data`. *§11*
 - [ ] ❌ Organization and BreadcrumbList JSON-LD. *Not required, but good for SEO.*
@@ -162,10 +162,7 @@ Why first: every later section reads these settings, CSS variables and base styl
 
 These are in the Figma but aren't native Shopify features. Don't build them until they're confirmed. Each one gets a **show/hide toggle** setting.
 
-- [ ] Wishlist (heart icons plus the account wishlist). *Needs an app. Not allowed in the Theme Store version (§8), so it must be possible to switch it off.*
-- [ ] Custom account pages: overview, details, orders, track order, refills, rewards, preferences. *Shopify hosts customer accounts itself; for now the theme only uses `<shopify-account>`.*
-- [ ] Rewards and refills. *Need apps.*
-- [ ] Notification bell with a badge. *Needs an app.*
+- [x] ~~Wishlist, custom account pages, rewards, refills, notification bell~~ **Decided 2026-11-05 (decision 6, "A + C"):** not built in the theme. Accounts are Shopify-hosted and branded; the header has our own `<account-menu>` dropdown. These features come from apps (app embeds, the Apps section, `@app` blocks). Optional later: a browser-only wishlist with a show/hide toggle.
 - [ ] Compare products bar (collection page)
 - [ ] Countdown timer ("Glow-Up Event"). *Only for real sales; §8 bans fake urgency.*
 - [ ] Mobile layouts. *No mobile designs yet; to be decided later.*
