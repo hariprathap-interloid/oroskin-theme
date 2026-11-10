@@ -21,50 +21,67 @@
   endcase
 -%}
 
+{%- comment -%}
+  The logo's contents, captured once: the bar shows them, and the phone drawer repeats them at its top.
+{%- endcomment -%}
+{%- capture logo_markup -%}
+    {%- liquid
+      # Logo = optional image (e.g. the flame mark) + optional text ("Oro" + italic accent "Skin").
+      # With neither, the shop name is shown. The image's alt is empty when text is shown, so the
+      # link isn't announced twice.
+      assign has_logo_text = false
+      if settings.logo_text != blank or settings.logo_text_accent != blank
+        assign has_logo_text = true
+      endif
+      assign logo_alt = shop.name
+      if has_logo_text
+        assign logo_alt = ''
+      endif
+    -%}
+    {%- if settings.logo != blank -%}
+      {{
+        settings.logo
+        | image_url: width: logo_width_2x
+        | image_tag:
+          class: 'header__logo-image',
+          widths: logo_widths,
+          sizes: logo_sizes,
+          loading: 'eager',
+          alt: logo_alt
+      }}
+    {%- endif -%}
+    {%- if has_logo_text -%}
+      <span class="header__logo-text">
+        {{- settings.logo_text | escape -}}
+        {%- if settings.logo_text_accent != blank -%}<em>{{ settings.logo_text_accent | escape }}</em>{%- endif -%}
+      </span>
+    {%- elsif settings.logo == blank -%}
+      <span class="header__logo-text">{{ shop.name | escape }}</span>
+    {%- endif -%}
+{%- endcapture -%}
+
 <sticky-header>
 <header
-  class="header{% if transparent %} header--transparent{% endif %}"
+  class="header{% if transparent %} header--transparent{% endif %}{% if section.settings.mobile_show_search %} header--m-search{% endif %}{% if section.settings.mobile_show_cart %} header--m-cart{% endif %}"
   style="--logo-width: {{ settings.logo_width }}px; --logo-text-size: {{ settings.logo_text_size }}px; --nav-underline: url('{{ 'nav-underline.svg' | asset_url }}'); --mega-columns: {{ section.settings.mega_menu_columns }};"
 >
   <div class="header__bar color-{{ section.settings.color_scheme.id }}">
-    {%- comment -%} Phones and tablets: the menu button + drawer (hidden from 1200px) {%- endcomment -%}
-    {% render 'header-drawer', links: section.settings.menu.links %}
+    {%- comment -%}
+      Phones: the menu button + drawer (hidden from 768px). The drawer also holds search, cart and account,
+      which the bar hides below 768px unless the "Small screens" settings keep search / cart there.
+    {%- endcomment -%}
+    {% render 'header-drawer',
+      links: section.settings.menu.links,
+      logo: logo_markup,
+      cards: section.blocks,
+      image_fit: section.settings.mega_menu_image_fit,
+      image_ratio: section.settings.mega_menu_image_ratio,
+      shop_all_show: section.settings.mega_menu_shop_all_show,
+      shop_all_label: section.settings.mega_menu_shop_all_label,
+      shop_all_link: section.settings.mega_menu_shop_all_link
+    %}
 
-    <a class="header__logo" href="{{ routes.root_url }}">
-      {%- liquid
-        # Logo = optional image (e.g. the flame mark) + optional text ("Oro" + italic accent "Skin").
-        # With neither, the shop name is shown. The image's alt is empty when text is shown, so the
-        # link isn't announced twice.
-        assign has_logo_text = false
-        if settings.logo_text != blank or settings.logo_text_accent != blank
-          assign has_logo_text = true
-        endif
-        assign logo_alt = shop.name
-        if has_logo_text
-          assign logo_alt = ''
-        endif
-      -%}
-      {%- if settings.logo != blank -%}
-        {{
-          settings.logo
-          | image_url: width: logo_width_2x
-          | image_tag:
-            class: 'header__logo-image',
-            widths: logo_widths,
-            sizes: logo_sizes,
-            loading: 'eager',
-            alt: logo_alt
-        }}
-      {%- endif -%}
-      {%- if has_logo_text -%}
-        <span class="header__logo-text">
-          {{- settings.logo_text | escape -}}
-          {%- if settings.logo_text_accent != blank -%}<em>{{ settings.logo_text_accent | escape }}</em>{%- endif -%}
-        </span>
-      {%- elsif settings.logo == blank -%}
-        <span class="header__logo-text">{{ shop.name | escape }}</span>
-      {%- endif -%}
-    </a>
+    <a class="header__logo" href="{{ routes.root_url }}">{{ logo_markup }}</a>
 
     <nav class="header__menu" aria-label="{{ 'accessibility.main_menu' | t }}">
       {% render 'header-menu',
@@ -179,7 +196,7 @@
         {%- else -%}
           <a class="button header__login" href="{{ routes.account_login_url }}">
             {{ 'icon-account.svg' | inline_asset_content | remove: 'slot="signed-out-avatar"' }}
-            {{- 'header.login' | t -}}
+            <span class="header__login-text">{{- 'header.login' | t -}}</span>
           </a>
         {%- endif -%}
       {%- endif -%}
@@ -660,15 +677,16 @@
   }
 
   /*
-    Phones, tablets and small laptops (below 1200px; the full menu and LOGIN need ~1200px): no Figma yet, so a smaller version of the same pill.
-    Menu button | logo (centred) | search + bag. The full menu and the LOGIN pill move into the drawer
-    (snippets/header-drawer.liquid). A 3-column grid keeps the logo centred whatever the sides hold.
+    Below 1200px (tablets and phones) the pill is smaller: 60px tall, 12px from the top and the sides, so the
+    first-section pull-ups use --header-space (72px). What goes inside the pill depends on the width:
+    - 768-1199px (tablets, small laptops): the desktop layout, scaled down (logo, full menu, search, cart, LOGIN).
+    - below 768px (phones, Figma mobile pill): logo | menu button; the drawer holds the rest.
   */
   @media (max-width: 1199px) {
     .header {
       --icon-size: 1.125rem;
 
-      /* A 12px gap all round: the page margins would leave the logo too little room on a phone */
+      /* A 12px gap all round: the page margins would leave the content too little room */
       padding-block-start: var(--space-sm);
       padding-inline: var(--space-sm);
     }
@@ -682,61 +700,19 @@
     }
 
     .header__bar {
-      display: grid;
-      grid-template-columns: 1fr auto 1fr;
-      gap: var(--space-xs);
       block-size: 3.75rem; /* 60px */
-      padding-inline: var(--space-xs);
     }
 
-    .header__menu,
-    .header__account {
-      display: none;
+    /* The buttons in the bar: 40px glass circles (smaller than desktop's 50px), never squeezed */
+    .header__actions .header__icon-button {
+      flex-shrink: 0;
+      inline-size: 2.5rem;
+      block-size: 2.5rem;
     }
 
-    .header__logo {
-      grid-column: 2;
-      justify-self: center;
-    }
-
-    /* 20px on a 320px phone up to 28px on tablets */
-    .header__logo-text {
-      font-size: clamp(1.25rem, 6vw, 1.75rem);
-    }
-
-    /* Sized by height in the small pill (2rem), never wider than the Logo width setting */
-    .header__logo {
-      gap: var(--space-xs);
-    }
-
-    .header__logo-image {
-      inline-size: auto;
-      max-inline-size: var(--logo-width);
-      block-size: 2rem;
-    }
-
-    .header__actions {
-      grid-column: 3;
-      justify-self: end;
-      gap: var(--space-2xs);
-      margin-inline-start: 0;
-    }
-
-    .header__icon-button {
-      inline-size: 2.75rem; /* 44px tap target */
-      block-size: 2.75rem;
-    }
-
-    .header-drawer__toggle {
-      grid-column: 1;
-      grid-row: 1;
-    }
-
-    /* Very small phones (under 360px): no room to centre the logo between the sides, so it takes the space left */
-    @media (max-width: 359px) {
-      .header__bar {
-        grid-template-columns: auto minmax(0, 1fr) auto;
-      }
+    .header__login svg {
+      inline-size: 1rem;
+      block-size: 1rem;
     }
 
     /* The page sits 72px lower than the full pill's 97px: transparent header pull-up to match */
@@ -748,6 +724,192 @@
     :root {
       --header-space: calc(3.75rem + var(--space-sm));
     }
+  }
+
+  /*
+    Tablets and small laptops (768-1199px): the desktop layout with small adjustments so it fits at 768px:
+    a smaller logo, menu text and gaps, 40px buttons and a compact LOGIN pill. The mega menu opens under the
+    pill as on desktop, with less padding.
+  */
+  @media (min-width: 768px) and (max-width: 1199px) {
+    .header__bar {
+      gap: var(--space-md);
+      padding-inline: var(--space-lg) var(--space-xs);
+    }
+
+    .header__logo-text {
+      font-size: 1.5rem;
+    }
+
+    .header__logo-image {
+      inline-size: auto;
+      max-inline-size: var(--logo-width);
+      block-size: 1.5rem;
+    }
+
+    .header .menu {
+      gap: clamp(var(--space-sm), 2vw, var(--space-xl));
+    }
+
+    .header .menu__link {
+      font-size: clamp(0.75rem, 1.15vw, 0.9375rem);
+    }
+
+    .header__actions {
+      gap: var(--space-xs);
+    }
+
+    .header__login {
+      gap: var(--space-2xs);
+      min-block-size: 2.5rem;
+      padding-inline: var(--space-md);
+      white-space: nowrap;
+    }
+
+    .header .menu__panel {
+      inset-block-start: calc(100% + var(--space-sm));
+      padding: var(--space-md) var(--space-lg) var(--space-lg);
+    }
+  }
+
+  /*
+    Phones (below 768px), Figma mobile pill: logo (left) | menu button (right). The menu, account, search and
+    cart move into the drawer (snippets/header-drawer.liquid); search and cart can stay in the bar (settings
+    "Small screens"). The logo column is the only one that gives way when space runs short (minmax(0, 1fr)).
+    At rest on a transparent header the logo is hidden as on desktop: the hero shows its own logo there.
+  */
+  @media (max-width: 767px) {
+      /*
+        Columns: logo (takes what is left, may shrink to 0) | optional search + cart | menu button.
+        Figma mobile pill: 58px tall, ~24px inside padding, the logo on the left and a plain menu icon on the right.
+      */
+      .header__bar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        align-items: center;
+        gap: var(--space-xs);
+        padding-inline: var(--space-lg) var(--space-sm);
+      }
+
+      .header__menu {
+        display: none;
+      }
+
+      .header__logo {
+        grid-column: 1;
+        grid-row: 1;
+        justify-self: start;
+        gap: var(--space-xs);
+        min-inline-size: 0; /* a flex/grid item won't shrink below its content without this */
+        max-inline-size: 100%;
+        overflow: hidden;
+      }
+
+      /* A small mark, a big word: 26px on a 320px phone, 30px at 375px, up to 32px on tablets */
+      .header__logo-text {
+        font-size: clamp(1.625rem, 8vw, 2rem);
+      }
+
+      /* Sized by height in the small pill (26px), never wider than the Logo width setting or the column */
+      .header__logo-image {
+        flex-shrink: 0;
+        inline-size: auto;
+        max-inline-size: min(var(--logo-width), 100%);
+        block-size: 1.625rem;
+      }
+
+      .header__actions {
+        grid-column: 2;
+        grid-row: 1;
+        gap: var(--space-2xs);
+        margin-inline-start: 0;
+      }
+
+      /*
+        Account, search and cart live in the drawer here. Search and cart can stay in the bar (header settings
+        "Small screens" add header--m-search / header--m-cart). Only the search BUTTON is hidden: its popup
+        <dialog> sits in the same element and must still open from the drawer.
+      */
+      .header__actions :is(.header__account, .header__login),
+      .header:not(.header--m-search) .header__actions [data-search-open],
+      .header:not(.header--m-cart) .header__actions cart-count > a {
+        display: none;
+      }
+
+      /*
+        Transparent header at rest (top of the homepage, Figma mobile hero): no pill and no logo (the hero has
+        its own), so there is room for search, cart and LOGIN / the account initial in the bar. Once the page
+        scrolls they go back into the drawer. (This selector outweighs the hiding rule above.)
+      */
+      .header--transparent:not(.is-scrolled):not(:has(:focus-visible)):not(:has(.menu__dropdown[open]))
+        .header__actions
+        :is([data-search-open], cart-count > a) {
+        display: inline-grid; /* the round button's own display: centres the icon (place-items) */
+      }
+
+      .header--transparent:not(.is-scrolled):not(:has(:focus-visible)):not(:has(.menu__dropdown[open]))
+        .header__actions
+        .header__account {
+        display: inline-flex;
+      }
+
+      .header--transparent:not(.is-scrolled):not(:has(:focus-visible)):not(:has(.menu__dropdown[open]))
+        .header__actions
+        .header__login {
+        display: inline-flex;
+        inline-size: 2.5rem;
+        min-block-size: 2.5rem;
+        padding: 0;
+      }
+
+      /* LOGIN at rest is a round icon button like search and cart: the word is only for screen readers */
+      .header__login-text {
+        position: absolute;
+        inline-size: 1px;
+        block-size: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+
+      .header__login svg {
+        inline-size: var(--icon-size);
+        block-size: var(--icon-size);
+      }
+
+      /* Menu button: a plain icon inside the pill (Figma), 44px tap area */
+      .header .header-drawer__toggle {
+        grid-column: 3;
+        grid-row: 1;
+        inline-size: 2.75rem;
+        block-size: 2.75rem;
+        border: 0;
+        background-color: transparent;
+        box-shadow: none;
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+      }
+
+      .header .header-drawer__toggle:hover {
+        background-color: transparent;
+        color: var(--color-accent);
+      }
+
+      /* At rest over the hero there is no pill behind it: the glass circle like search and cart (no border) */
+      .header--transparent:not(.is-scrolled):not(:has(:focus-visible)):not(:has(.menu__dropdown[open]))
+        .header-drawer__toggle {
+        inline-size: 2.5rem;
+        block-size: 2.5rem;
+        background-color: var(--color-glass);
+        box-shadow: var(--shadow-header);
+        -webkit-backdrop-filter: blur(var(--glass-frost));
+        backdrop-filter: blur(var(--glass-frost));
+      }
+
+      .header-drawer__toggle svg {
+        inline-size: 1.125rem;
+        block-size: auto;
+      }
   }
 {% endstylesheet %}
 
@@ -948,6 +1110,23 @@
       "id": "customer_account_menu",
       "label": "t:labels.customer_account_menu",
       "default": "customer-account-main-menu"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.small_screens",
+      "info": "t:labels.small_screens_info"
+    },
+    {
+      "type": "checkbox",
+      "id": "mobile_show_search",
+      "label": "t:labels.mobile_show_search",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "mobile_show_cart",
+      "label": "t:labels.mobile_show_cart",
+      "default": false
     },
     {
       "type": "header",

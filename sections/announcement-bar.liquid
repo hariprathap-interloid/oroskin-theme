@@ -352,6 +352,29 @@
     letter-spacing: 0.3em;
   }
 
+  /*
+    Horizontal bar on phones (below 750px): the text follows the screen width instead of the fixed Text size,
+    and the letter spacing shrinks with it, so a short message stays on one line. Text size is the upper
+    limit: min() takes the smaller of the setting and 3.4% of the screen width (11px on a 320px phone,
+    ~13px at 375px), never below 11px. A message that still doesn't fit wraps onto lines of even length
+    (text-wrap: balance) instead of leaving one word alone. (Marquee keeps any length on one line.)
+    Letter spacing Automatic only: a spacing the merchant picked by hand is kept.
+  */
+  @media (max-width: 749px) {
+    .announcement-bar__inner {
+      font-size: max(0.6875rem, min(var(--announcement-text, 0.875rem), 3.4vw));
+      padding-block: var(--space-2xs);
+    }
+
+    .announcement-bar__message {
+      text-wrap: balance;
+    }
+
+    .announcement-bar--uppercase.announcement-bar--spacing-auto .announcement-bar__inner {
+      letter-spacing: 0.08em;
+    }
+  }
+
   @media (prefers-reduced-motion: no-preference) {
     .animations-on .announcement-bar--marquee .announcement-bar__track {
       animation: announcement-slide-x var(--announcement-duration, 40s) linear infinite;

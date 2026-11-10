@@ -254,6 +254,8 @@
       "sign_out": "Sign out"
     },
     "open_menu": "Open menu",
+    "back": "Back",
+    "menu_tools": "Search, cart and account",
     "close_menu": "Close menu",
     "cart_count": {
       "zero": "Cart",

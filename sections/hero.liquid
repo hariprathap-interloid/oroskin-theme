@@ -150,8 +150,14 @@
       on a 2560 monitor and shrinks on a laptop, keeping the Figma's proportions. max() keeps a minimum on
       small screens.
   */
+  /*
+    --hero-bottom-space: the room under the content, shared by the pause button so the two line up: the
+    button is centred on the content's last row on every screen (see .hero__pause).
+    At least 48px (64px on phones, below), more when "Bottom padding" asks for it.
+  */
   .hero {
     --hero-px: 1px;
+    --hero-bottom-space: max(var(--space-2xl), calc(var(--hero-pad-bottom) * var(--hero-px)));
   }
 
   /*
@@ -177,6 +183,53 @@
   }
 
   /*
+    Phones (below 750px, Figma mobile hero at 375px): the 1920-frame maths gives sizes far too small there, and
+    the max() floors above are desktop minimums (a 56px display line on a 320px screen). Each size here grows with
+    the screen width (vw) between a phone minimum and a tablet maximum. The minimums keep small phones (320px)
+    at the 375px Figma size: "Unveil your" (display) 34px, "It is time to" / "Ultimate glow" (h1) 24px, the
+    subheading (h3) 17px, the paragraph 15px, buttons 15px. Applies with either Text scaling option.
+  */
+  @media (max-width: 749px) {
+    .hero {
+      --font-size-display-xl: clamp(2.375rem, 10vw, 3.25rem);
+      --font-size-display: clamp(2.125rem, 9vw, 3rem);
+      --font-size-h1: clamp(1.5rem, 6.4vw, 2.25rem);
+      --font-size-h2: clamp(1.375rem, 5.4vw, 1.75rem);
+      --font-size-h3: clamp(1.0625rem, 4.27vw, 1.375rem);
+      --font-size-body-lg: clamp(0.9375rem, 4vw, 1.125rem);
+      --font-size-body: clamp(0.9375rem, 3.8vw, 1rem);
+      --font-size-body-sm: clamp(0.875rem, 3.6vw, 0.9375rem);
+      /* Button text (caption): 15px on phones up to 375px, then up to 16px, so it fills the pill */
+      --font-size-caption: clamp(0.9375rem, 4vw, 1rem);
+      --font-size-label: clamp(0.9375rem, 4vw, 1rem);
+      --font-size-small: clamp(0.75rem, 3.2vw, 0.8125rem);
+    }
+
+    /*
+      Room at the bottom: 64px under the last row ("New arrivals") on phones, so it and the pause button next
+      to it never hug the bottom of the screen (or the browser's toolbar). ".hero" in front of .hero__pause:
+      this rule comes before the base one further down, so it needs the extra class to win.
+    */
+    .hero {
+      --hero-bottom-space: max(var(--space-3xl), calc(var(--hero-pad-bottom) * var(--hero-px)));
+    }
+
+    .hero .hero__pause {
+      inset-block-end: calc(var(--hero-bottom-space) - 0.625rem);
+      inset-inline-end: var(--space-md);
+    }
+
+    /*
+      Buttons: the global pill is 50px tall with 35px sides (desktop Figma). On a phone that left the text
+      looking small inside a big pill, so the pill is sized to the text instead: 46px tall, 24px sides.
+    */
+    .hero .button:not(.button--text) {
+      min-block-size: 2.875rem;
+      padding-inline: var(--space-lg);
+    }
+  }
+
+  /*
     The content layer spans the full width over the product area, so it lets the pointer through
     (pointer-events: none) and only the content column takes clicks again: otherwise hovering or
     clicking a product would never reach it.
@@ -187,8 +240,7 @@
     display: flex;
     inline-size: 100%;
     pointer-events: none;
-    padding-block: max(var(--space-2xl), calc(var(--hero-pad-top) * var(--hero-px)))
-      max(var(--space-xl), calc(var(--hero-pad-bottom) * var(--hero-px)));
+    padding-block: max(var(--space-2xl), calc(var(--hero-pad-top) * var(--hero-px))) var(--hero-bottom-space);
     padding-inline: max(var(--page-margin), calc(var(--hero-pad-side) * var(--hero-px)));
     /* Section width: Full (default, Figma) = from the screen edge; Wide / Narrow = a centred column */
     max-inline-size: var(--section-width, 100vw);
@@ -279,9 +331,13 @@
   }
 
   /* Pause / play: a small round glass button, bottom right (left of the brand band, when there is one) */
+  /*
+    Centred on the content's last row. Large screens: the 50px button row, so the 44px button sits 3px above
+    the content's bottom. Phones (below): the "New arrivals" link alone on the last line (24px), so 10px below.
+  */
   .hero__pause {
     position: absolute;
-    inset-block-end: var(--space-lg);
+    inset-block-end: calc(var(--hero-bottom-space) + 0.1875rem);
     inset-inline-end: var(--space-lg);
     z-index: 3;
     display: grid;
