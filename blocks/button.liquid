@@ -124,6 +124,10 @@
       "default": false
     },
     {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
       "type": "select",
       "id": "style",
       "label": "t:labels.button_style",
@@ -159,6 +163,10 @@
       "visible_if": "{{ block.settings.style != 'explore' }}"
     },
     {
+      "type": "header",
+      "content": "t:labels.layout"
+    },
+    {
       "type": "text_alignment",
       "id": "alignment",
       "label": "t:labels.alignment",
@@ -168,7 +176,12 @@
   ],
   "presets": [
     {
-      "name": "t:general.button"
+      "name": "t:general.button",
+      "settings": {
+        "label": "Explore collection",
+        "link": "/collections/all",
+        "style": "primary"
+      }
     }
   ]
 }

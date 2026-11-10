@@ -59,16 +59,30 @@
 {
   "name": "t:general.group",
   "tag": null,
-  "blocks": [{ "type": "@theme" }],
+  "blocks": [
+    {
+      "type": "@theme"
+    }
+  ],
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.layout"
+    },
     {
       "type": "select",
       "id": "layout_direction",
-      "label": "t:labels.layout_direction",
+      "label": "t:labels.direction",
       "default": "group--vertical",
       "options": [
-        { "value": "group--vertical", "label": "t:options.direction.vertical" },
-        { "value": "group--horizontal", "label": "t:options.direction.horizontal" }
+        {
+          "value": "group--vertical",
+          "label": "t:options.group_direction.column"
+        },
+        {
+          "value": "group--horizontal",
+          "label": "t:options.group_direction.row"
+        }
       ]
     },
     {
@@ -78,9 +92,18 @@
       "label": "t:labels.alignment",
       "default": "flex-start",
       "options": [
-        { "value": "flex-start", "label": "t:options.alignment.left" },
-        { "value": "center", "label": "t:options.alignment.center" },
-        { "value": "flex-end", "label": "t:options.alignment.right" }
+        {
+          "value": "flex-start",
+          "label": "t:options.alignment.left"
+        },
+        {
+          "value": "center",
+          "label": "t:options.alignment.center"
+        },
+        {
+          "value": "flex-end",
+          "label": "t:options.alignment.right"
+        }
       ]
     },
     {
@@ -90,10 +113,22 @@
       "label": "t:labels.alignment",
       "default": "flex-start",
       "options": [
-        { "value": "flex-start", "label": "t:options.alignment.left" },
-        { "value": "center", "label": "t:options.alignment.center" },
-        { "value": "flex-end", "label": "t:options.alignment.right" },
-        { "value": "space-between", "label": "t:options.alignment.spread" }
+        {
+          "value": "flex-start",
+          "label": "t:options.alignment.left"
+        },
+        {
+          "value": "center",
+          "label": "t:options.alignment.center"
+        },
+        {
+          "value": "flex-end",
+          "label": "t:options.alignment.right"
+        },
+        {
+          "value": "space-between",
+          "label": "t:options.alignment.spread"
+        }
       ]
     },
     {
@@ -103,10 +138,23 @@
       "label": "t:labels.vertical_alignment",
       "default": "center",
       "options": [
-        { "value": "flex-start", "label": "t:options.vertical_alignment.top" },
-        { "value": "center", "label": "t:options.vertical_alignment.middle" },
-        { "value": "flex-end", "label": "t:options.vertical_alignment.bottom" }
+        {
+          "value": "flex-start",
+          "label": "t:options.vertical_alignment.top"
+        },
+        {
+          "value": "center",
+          "label": "t:options.vertical_alignment.middle"
+        },
+        {
+          "value": "flex-end",
+          "label": "t:options.vertical_alignment.bottom"
+        }
       ]
+    },
+    {
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -161,11 +209,20 @@
       "blocks": [
         {
           "type": "button",
-          "settings": { "label": "Explore collection", "style": "primary" }
+          "settings": {
+            "label": "Explore collection",
+            "style": "primary",
+            "link": "/collections/all"
+          }
         },
         {
           "type": "button",
-          "settings": { "label": "New arrivals", "style": "text", "show_arrow": true }
+          "settings": {
+            "label": "New arrivals",
+            "style": "text",
+            "show_arrow": true,
+            "link": "/collections/all"
+          }
         }
       ]
     }

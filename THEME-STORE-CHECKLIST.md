@@ -142,7 +142,7 @@ Why first: every later section reads these settings, CSS variables and base styl
 
 - [x] 🟡 Search: no-results message, products/articles/pages told apart (`object_type`), pagination, filters *Built M5.6 (2026-10-29): product tiles + "Articles and pages" rows, no-results / no-match messages, pagination snippet, filters + sort.*
 - [x] 🟡 Blog: title, article image, **`article.excerpt_or_content`** (Skeleton uses `excerpt`), pagination *`sections/blog.liquid` + `article-card` (befbf81).*
-- [x] 🟡 Article: `published_at`, paginated comments, success and error messages *`article-hero`, `article-comments` (moderation message, per-field errors). **To do in T2: post a test comment.***
+- [x] 🟡 Article: `published_at`, paginated comments, success and error messages *`article-hero`, `article-comments` (moderation message, per-field errors). Tested 2026-11-05 on a moderated blog: the "sent" message now also comes from a script back-up (Shopify didn't report `posted_successfully?`).*
 - [x] ❌ **`templates/page.contact.json`** with a contact form. *§5* *`contact-form` + channels, locations, map. Contact form posts only on the preview link, not on `theme dev` (502).*
 - [x] 🟡 404 page: clear message, **search bar** and home link
 - [x] 🟡 Password page: logo or shop name, `password_message`, password form

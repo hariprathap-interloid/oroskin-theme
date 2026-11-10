@@ -7,12 +7,15 @@
   {% content_for 'block', type: '_hero-content', id: 'hero-content' %}
 {% enddoc %}
 
-<div class="hero-content" style="--hero-content-gap: {{ block.settings.gap }}px;" {{ block.shopify_attributes }}>
+<div class="hero-content" {{ block.shopify_attributes }}>
   {% content_for 'blocks' %}
 </div>
 
 {% stylesheet %}
-  /* Layer 10: decorations with Layer 1-9 sit behind the text, 11-20 in front of it */
+  /*
+    Layer 10: decorations with Layer 1-9 sit behind the text, 11-20 in front of it.
+    The gap is the section's "Gap" setting (Content spacing = Fixed gap); the other spacings spread the blocks.
+  */
   .hero-content {
     position: relative;
     z-index: 10;
@@ -27,18 +30,11 @@
 {
   "name": "t:general.content",
   "tag": null,
-  "blocks": [{ "type": "@theme" }],
-  "settings": [
+  "blocks": [
     {
-      "type": "range",
-      "id": "gap",
-      "label": "t:labels.gap",
-      "min": 0,
-      "max": 96,
-      "step": 4,
-      "unit": "px",
-      "default": 24
+      "type": "@theme"
     }
-  ]
+  ],
+  "settings": []
 }
 {% endschema %}

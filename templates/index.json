@@ -389,9 +389,7 @@
         "hero-content": {
           "type": "_hero-content",
           "static": true,
-          "settings": {
-            "gap": 24
-          },
+          "settings": {},
           "blocks": {
             "image_iVkbJb": {
               "type": "image",
@@ -469,7 +467,8 @@
                 "heading_NJiJQH",
                 "heading_RMAJtF",
                 "heading_zBXHU6"
-              ]
+              ],
+              "name": "t:general.column"
             },
             "group_6HCRQb": {
               "type": "group",
@@ -516,7 +515,8 @@
               "block_order": [
                 "heading_B3mC7z",
                 "text_LXTnRQ"
-              ]
+              ],
+              "name": "t:general.column"
             },
             "group_iY4Wa7": {
               "type": "group",
@@ -557,7 +557,8 @@
               "block_order": [
                 "button_wFX67R",
                 "button_TKXrWf"
-              ]
+              ],
+              "name": "t:general.buttons"
             }
           },
           "block_order": [
@@ -580,16 +581,13 @@
         "text_scaling": "screen",
         "padding_top": 0,
         "padding_bottom": 0,
-        "padding_side": 90,
         "products_start": 45,
         "rotate_products": true,
         "rotate_interval": 4,
         "resume_delay": 2.5,
         "section_width": "full",
         "color_scheme": "",
-        "show_band": true,
-        "band_text": "OroSkin • Signature collection • Estd. 2026",
-        "band_color_scheme": ""
+        "content_gap": 24
       }
     },
     "product_panels_Kh9WWd": {

@@ -165,15 +165,34 @@
       "default": "<p>Share details about your brand, a product or a promotion.</p>"
     },
     {
+      "type": "header",
+      "content": "t:labels.size"
+    },
+    {
       "type": "select",
       "id": "style",
       "label": "t:labels.text_style",
       "options": [
-        { "value": "body-lg", "label": "t:options.text_style.body_large" },
-        { "value": "body", "label": "t:options.text_style.body" },
-        { "value": "small", "label": "t:options.text_style.small" },
-        { "value": "caption", "label": "t:options.text_style.caption" },
-        { "value": "eyebrow", "label": "t:options.text_style.eyebrow" }
+        {
+          "value": "body-lg",
+          "label": "t:options.text_style.body_large"
+        },
+        {
+          "value": "body",
+          "label": "t:options.text_style.body"
+        },
+        {
+          "value": "small",
+          "label": "t:options.text_style.small"
+        },
+        {
+          "value": "caption",
+          "label": "t:options.text_style.caption"
+        },
+        {
+          "value": "eyebrow",
+          "label": "t:options.text_style.eyebrow"
+        }
       ],
       "default": "body"
     },
@@ -196,12 +215,22 @@
       "visible_if": "{{ block.settings.use_custom_size }}"
     },
     {
+      "type": "header",
+      "content": "t:labels.style"
+    },
+    {
       "type": "select",
       "id": "font",
       "label": "t:labels.font",
       "options": [
-        { "value": "body-font", "label": "t:options.font.body" },
-        { "value": "heading-font", "label": "t:options.font.heading" }
+        {
+          "value": "body-font",
+          "label": "t:options.font.body"
+        },
+        {
+          "value": "heading-font",
+          "label": "t:options.font.heading"
+        }
       ],
       "default": "body-font"
     },
@@ -210,11 +239,24 @@
       "id": "color",
       "label": "t:labels.text_color",
       "options": [
-        { "value": "default", "label": "t:options.text_color.default" },
-        { "value": "muted", "label": "t:options.text_color.muted" },
-        { "value": "accent", "label": "t:options.text_color.accent" }
+        {
+          "value": "default",
+          "label": "t:options.text_color.default"
+        },
+        {
+          "value": "muted",
+          "label": "t:options.text_color.muted"
+        },
+        {
+          "value": "accent",
+          "label": "t:options.text_color.accent"
+        }
       ],
       "default": "default"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.layout"
     },
     {
       "type": "text_alignment",
@@ -225,16 +267,34 @@
     {
       "type": "select",
       "id": "max_width",
-      "label": "t:labels.max_width",
+      "label": "t:labels.text_content_width",
       "info": "t:labels.max_width_info",
       "options": [
-        { "value": "none", "label": "t:options.max_width.none" },
-        { "value": "60ch", "label": "t:options.max_width.normal" },
-        { "value": "40ch", "label": "t:options.max_width.narrow" }
+        {
+          "value": "none",
+          "label": "t:options.max_width.full"
+        },
+        {
+          "value": "60ch",
+          "label": "t:options.max_width.normal"
+        },
+        {
+          "value": "40ch",
+          "label": "t:options.max_width.narrow"
+        }
       ],
       "default": "60ch"
     }
   ],
-  "presets": [{ "name": "t:general.text" }]
+  "presets": [
+    {
+      "name": "t:general.text",
+      "settings": {
+        "text": "<p>Discover our meticulously curated collection, blending the finest natural ingredients with advanced anti-aging technology for a radiant transformation.</p>",
+        "style": "body-lg",
+        "max_width": "60ch"
+      }
+    }
+  ]
 }
 {% endschema %}

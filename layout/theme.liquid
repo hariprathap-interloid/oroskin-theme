@@ -58,6 +58,25 @@
     {%- endif -%}
 
     {{ content_for_header }}
+
+    {%- comment -%}
+      Only in the theme editor's "Add block / Add section" preview (request.visual_preview_mode): no
+      scrollbars (they showed as an empty strip on the right and bottom of the preview, so the block
+      looked off-centre). Customers never get this.
+    {%- endcomment -%}
+    {%- if request.visual_preview_mode -%}
+      <style>
+        html,
+        body {
+          overflow: hidden;
+          scrollbar-width: none;
+        }
+
+        body {
+          min-height: auto;
+        }
+      </style>
+    {%- endif -%}
   </head>
 
   <body>

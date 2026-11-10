@@ -64,9 +64,37 @@
         "mega_menu_shop_all_label": "",
         "mega_menu_shop_all_link": "shopify://collections/all"
       }
+    },
+    "announcement_bar": {
+      "type": "announcement-bar",
+      "blocks": {
+        "announcement_band": {
+          "type": "announcement",
+          "settings": {
+            "text": "OroSkin • Signature collection • Estd. 2026",
+            "link": ""
+          }
+        }
+      },
+      "block_order": [
+        "announcement_band"
+      ],
+      "settings": {
+        "mode": "static",
+        "autoplay": true,
+        "interval": 5,
+        "show_arrows": true,
+        "speed": 40,
+        "direction": "left",
+        "position": "right",
+        "text_style": "uppercase",
+        "show_close": false,
+        "color_scheme": "scheme-3"
+      }
     }
   },
   "order": [
+    "announcement_bar",
     "header"
   ]
 }

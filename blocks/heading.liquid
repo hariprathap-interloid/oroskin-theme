@@ -171,16 +171,38 @@
       "default": "Clinical beauty <em>formulations</em>"
     },
     {
+      "type": "header",
+      "content": "t:labels.size"
+    },
+    {
       "type": "select",
       "id": "size",
-      "label": "t:labels.heading_size",
+      "label": "t:labels.size",
       "options": [
-        { "value": "display-xl", "label": "t:options.heading_size.display_xl" },
-        { "value": "display", "label": "t:options.heading_size.display" },
-        { "value": "h1", "label": "t:options.heading_size.h1" },
-        { "value": "h2", "label": "t:options.heading_size.h2" },
-        { "value": "h3", "label": "t:options.heading_size.h3" },
-        { "value": "h4", "label": "t:options.heading_size.h4" }
+        {
+          "value": "display-xl",
+          "label": "t:options.heading_size.display_xl"
+        },
+        {
+          "value": "display",
+          "label": "t:options.heading_size.display"
+        },
+        {
+          "value": "h1",
+          "label": "t:options.heading_size.h1"
+        },
+        {
+          "value": "h2",
+          "label": "t:options.heading_size.h2"
+        },
+        {
+          "value": "h3",
+          "label": "t:options.heading_size.h3"
+        },
+        {
+          "value": "h4",
+          "label": "t:options.heading_size.h4"
+        }
       ],
       "default": "h2"
     },
@@ -203,40 +225,48 @@
       "visible_if": "{{ block.settings.use_custom_size }}"
     },
     {
-      "type": "select",
-      "id": "tag",
-      "label": "t:labels.heading_tag",
-      "info": "t:labels.heading_tag_info",
-      "options": [
-        { "value": "h1", "label": "t:options.heading_tag.h1" },
-        { "value": "h2", "label": "t:options.heading_tag.h2" },
-        { "value": "h3", "label": "t:options.heading_tag.h3" },
-        { "value": "h4", "label": "t:options.heading_tag.h4" },
-        { "value": "p", "label": "t:options.heading_tag.p" }
-      ],
-      "default": "h2"
-    },
-    {
-      "type": "select",
-      "id": "color",
-      "label": "t:labels.text_color",
-      "options": [
-        { "value": "default", "label": "t:options.text_color.default" },
-        { "value": "accent", "label": "t:options.text_color.accent" },
-        { "value": "faded", "label": "t:options.text_color.faded" }
-      ],
-      "default": "default"
+      "type": "header",
+      "content": "t:labels.style"
     },
     {
       "type": "select",
       "id": "font",
       "label": "t:labels.font",
       "options": [
-        { "value": "heading-font", "label": "t:options.font.heading" },
-        { "value": "accent-font", "label": "t:options.font.accent" },
-        { "value": "body-font", "label": "t:options.font.body" }
+        {
+          "value": "heading-font",
+          "label": "t:options.font.heading"
+        },
+        {
+          "value": "accent-font",
+          "label": "t:options.font.accent"
+        },
+        {
+          "value": "body-font",
+          "label": "t:options.font.body"
+        }
       ],
       "default": "heading-font"
+    },
+    {
+      "type": "select",
+      "id": "color",
+      "label": "t:labels.text_color",
+      "options": [
+        {
+          "value": "default",
+          "label": "t:options.text_color.default"
+        },
+        {
+          "value": "accent",
+          "label": "t:options.text_color.accent"
+        },
+        {
+          "value": "faded",
+          "label": "t:options.text_color.faded"
+        }
+      ],
+      "default": "default"
     },
     {
       "type": "select",
@@ -244,11 +274,24 @@
       "label": "t:labels.italic_style",
       "info": "t:labels.italic_style_info",
       "options": [
-        { "value": "accent", "label": "t:options.italic_style.accent" },
-        { "value": "brush", "label": "t:options.italic_style.brush" },
-        { "value": "plain", "label": "t:options.italic_style.plain" }
+        {
+          "value": "accent",
+          "label": "t:options.italic_style.accent"
+        },
+        {
+          "value": "brush",
+          "label": "t:options.italic_style.brush"
+        },
+        {
+          "value": "plain",
+          "label": "t:options.italic_style.plain"
+        }
       ],
       "default": "accent"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.layout"
     },
     {
       "type": "text_alignment",
@@ -266,8 +309,51 @@
       "step": 0.1,
       "unit": "em",
       "default": 0
+    },
+    {
+      "type": "header",
+      "content": "t:labels.page_structure"
+    },
+    {
+      "type": "select",
+      "id": "tag",
+      "label": "t:labels.heading_tag",
+      "info": "t:labels.heading_tag_info",
+      "options": [
+        {
+          "value": "h1",
+          "label": "t:options.heading_tag.h1"
+        },
+        {
+          "value": "h2",
+          "label": "t:options.heading_tag.h2"
+        },
+        {
+          "value": "h3",
+          "label": "t:options.heading_tag.h3"
+        },
+        {
+          "value": "h4",
+          "label": "t:options.heading_tag.h4"
+        },
+        {
+          "value": "p",
+          "label": "t:options.heading_tag.p"
+        }
+      ],
+      "default": "h2"
     }
   ],
-  "presets": [{ "name": "t:general.heading" }]
+  "presets": [
+    {
+      "name": "t:general.heading",
+      "settings": {
+        "heading": "It is time to <em>unveil</em>",
+        "size": "display",
+        "font": "heading-font",
+        "italic_style": "brush"
+      }
+    }
+  ]
 }
 {% endschema %}

@@ -180,6 +180,15 @@
     rotate: -45deg;
   }
 
+  /*
+    The active product's name label must sit over the content's text (it reaches left, into the text
+    column). The product's rotate/translate make it its own stacking layer, so the label's z-index
+    can't escape it: the active product itself is lifted above the content layer (.hero__inner, z-index 1).
+  */
+  .hero-product.is-active {
+    z-index: 2;
+  }
+
   .hero-product.is-active .hero-product__label {
     opacity: 1;
     scale: 1;
@@ -318,7 +327,8 @@
     {
       "type": "range",
       "id": "width",
-      "label": "t:labels.image_width",
+      "label": "t:labels.product_image_size",
+      "info": "t:labels.product_image_size_info",
       "min": 5,
       "max": 60,
       "step": 1,

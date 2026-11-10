@@ -1,0 +1,37 @@
+{% doc %}
+  One announcement: its text, and a link when the block has one. With a link label the label is a
+  separate underlined link after the text ("… on all orders. Shop now"); without one the whole text is
+  the link.
+
+  @param {object} block - The announcement block (settings.text, settings.link, settings.link_label)
+  @param {boolean} [hidden_copy] - A marquee repeat: hidden from screen readers by its parent, so its link
+    is also taken out of the keyboard order (the visually hidden list has the real one)
+
+  @example
+  {% render 'announcement-message', block: block %}
+{% enddoc %}
+
+{%- if block.settings.link != blank and block.settings.link_label != blank -%}
+  {{- block.settings.text | escape -}}
+  <a
+    href="{{ block.settings.link }}"
+    class="announcement-bar__link announcement-bar__link-label"
+    {% if hidden_copy %}
+      tabindex="-1"
+    {% endif %}
+  >
+    {{- block.settings.link_label | escape -}}
+  </a>
+{%- elsif block.settings.link != blank -%}
+  <a
+    href="{{ block.settings.link }}"
+    class="announcement-bar__link"
+    {% if hidden_copy %}
+      tabindex="-1"
+    {% endif %}
+  >
+    {{- block.settings.text | escape -}}
+  </a>
+{%- else -%}
+  {{- block.settings.text | escape -}}
+{%- endif -%}

@@ -1,0 +1,924 @@
+{%- comment -%}
+  Announcement bar (Header group, every page). Short messages, each with an optional link.
+  - Position "Above the header": a full-width bar above the header pill; it scrolls away, the pill stays sticky.
+  - Position "Right side": the vertical band from the Figma home hero (red strip, uppercase text reading top to
+    bottom), fixed to the right edge of the screen, one screen tall (100svh). Optionally it slides out once the
+    page scrolls down and comes back only at the top of the page.
+    Large screens only: below 990px it is a bar above the header.
+  - Movement: None (first message only), Slideshow (one at a time, arrows, optional autoplay) or Marquee.
+    Anything that moves has a pause button (WCAG 2.2.2) and never moves with reduced motion; the marquee also
+    needs the theme's animations on (never in the theme editor).
+  - Close button: hides the bar for the rest of the visit (sessionStorage). The inline script after the bar
+    hides it before the first paint, so nothing jumps. Ignored in the theme editor.
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-3'
+  assign position = section.settings.position | default: 'top'
+  assign mode = section.settings.mode | default: 'static'
+
+  assign count = 0
+  for block in section.blocks
+    if block.settings.text != blank
+      assign count = count | plus: 1
+    endif
+  endfor
+
+  if count < 2 and mode == 'slideshow'
+    assign mode = 'static'
+  endif
+
+  assign moves = false
+  if mode == 'marquee'
+    assign moves = true
+  elsif mode == 'slideshow' and section.settings.autoplay
+    assign moves = true
+  endif
+-%}
+
+{%- if count > 0 -%}
+  {%- comment -%} On :root: the page's right-side gap (body) has to know the band's width {%- endcomment -%}
+  {% style %}
+    :root {
+      --announcement-size: {{ section.settings.bar_size | default: 36 }}px;
+      --announcement-text: {{ section.settings.text_size | default: 14 }}px;
+    }
+  {% endstyle %}
+  <announcement-bar
+    class="announcement-bar full-width color-{{ scheme_id }} announcement-bar--{{ position }} announcement-bar--{{ mode }} announcement-bar--{{ section.settings.text_style | default: 'uppercase' }} announcement-bar--marquee-{{ section.settings.direction | default: 'left' }} announcement-bar--align-{{ section.settings.text_align | default: 'center' }} announcement-bar--font-{{ section.settings.font | default: 'body' }} announcement-bar--spacing-{{ section.settings.letter_spacing | default: 'auto' }}"
+    role="region"
+    aria-label="{{ 'sections.announcement_bar.label' | t }}"
+    data-mode="{{ mode }}"
+    data-autoplay="{{ moves }}"
+    data-tuck="{% if position == 'right' and section.settings.hide_on_scroll %}true{% else %}false{% endif %}"
+    data-interval="{{ section.settings.interval | times: 1000 }}"
+    style="--announcement-duration: {{ section.settings.speed }}s;"
+  >
+    <div class="announcement-bar__inner">
+      {%- if mode == 'slideshow' and section.settings.show_arrows -%}
+        <button type="button" class="announcement-bar__button announcement-bar__prev" data-step="-1">
+          <span class="visually-hidden">{{ 'sections.announcement_bar.previous' | t }}</span>
+          <svg class="announcement-bar__arrow" aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="16" height="16"><path d="M13 8H3m4-4L3 8l4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      {%- endif -%}
+
+      {%- case mode -%}
+        {%- when 'marquee' -%}
+          {%- comment -%} Screen readers and keyboards use this list; the moving copy is hidden from them {%- endcomment -%}
+          <ul class="visually-hidden">
+            {%- for block in section.blocks -%}
+              {%- if block.settings.text != blank -%}
+                <li>{% render 'announcement-message', block: block %}</li>
+              {%- endif -%}
+            {%- endfor -%}
+          </ul>
+          <div class="announcement-bar__viewport" aria-hidden="true">
+            <div class="announcement-bar__track">
+              {%- for half in (1..2) -%}
+                <div class="announcement-bar__half">
+                  {%- for i in (1..3) -%}
+                    {%- for block in section.blocks -%}
+                      {%- if block.settings.text != blank -%}
+                        <span class="announcement-bar__item">
+                          {%- render 'announcement-message', block: block, hidden_copy: true -%}
+                        </span>
+                        <span class="announcement-bar__separator">•</span>
+                      {%- endif -%}
+                    {%- endfor -%}
+                  {%- endfor -%}
+                </div>
+              {%- endfor -%}
+            </div>
+          </div>
+
+        {%- when 'slideshow' -%}
+          <div class="announcement-bar__messages" aria-live="{% if moves %}off{% else %}polite{% endif %}">
+            {%- assign index = 0 -%}
+            {%- for block in section.blocks -%}
+              {%- if block.settings.text != blank -%}
+                <p
+                  class="announcement-bar__message{% if index == 0 %} is-active{% endif %}"
+                  data-index="{{ index }}"
+                  {{ block.shopify_attributes }}
+                >
+                  {%- render 'announcement-message', block: block -%}
+                </p>
+                {%- assign index = index | plus: 1 -%}
+              {%- endif -%}
+            {%- endfor -%}
+          </div>
+
+        {%- else -%}
+          <div class="announcement-bar__messages">
+            {%- for block in section.blocks -%}
+              {%- if block.settings.text != blank -%}
+                <p class="announcement-bar__message is-active" {{ block.shopify_attributes }}>
+                  {%- render 'announcement-message', block: block -%}
+                </p>
+                {%- break -%}
+              {%- endif -%}
+            {%- endfor -%}
+          </div>
+      {%- endcase -%}
+
+      {%- if mode == 'slideshow' and section.settings.show_arrows -%}
+        <button type="button" class="announcement-bar__button announcement-bar__next" data-step="1">
+          <span class="visually-hidden">{{ 'sections.announcement_bar.next' | t }}</span>
+          <svg class="announcement-bar__arrow" aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="16" height="16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      {%- endif -%}
+
+      {%- if moves -%}
+        <button
+          type="button"
+          class="announcement-bar__button announcement-bar__pause"
+          aria-pressed="false"
+          data-label-pause="{{ 'sections.announcement_bar.pause' | t }}"
+          data-label-play="{{ 'sections.announcement_bar.play' | t }}"
+          hidden
+        >
+          <span class="visually-hidden">{{ 'sections.announcement_bar.pause' | t }}</span>
+          <svg class="announcement-bar__icon--pause" aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="12" height="12"><rect x="3.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/><rect x="9.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/></svg>
+          <svg class="announcement-bar__icon--play" aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="12" height="12"><path d="M4.5 2.8v10.4a.8.8 0 0 0 1.2.7l8.4-5.2a.8.8 0 0 0 0-1.4L5.7 2.1a.8.8 0 0 0-1.2.7z" fill="currentColor"/></svg>
+        </button>
+      {%- endif -%}
+
+      {%- if section.settings.show_close -%}
+        <button type="button" class="announcement-bar__button announcement-bar__close">
+          <span class="visually-hidden">{{ 'sections.announcement_bar.close' | t }}</span>
+          <svg aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="12" height="12"><path d="m4 4 8 8M12 4l-8 8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+      {%- endif -%}
+    </div>
+  </announcement-bar>
+
+  {%- if section.settings.show_close -%}
+    {%- comment -%} Runs while the page is still being read, before the first paint: a closed bar never shows {%- endcomment -%}
+    <script>
+      (function (bar) {
+        try {
+          if (!(window.Shopify && Shopify.designMode) && sessionStorage.getItem('announcement-closed') === '1') {
+            bar.hidden = true;
+          }
+        } catch (error) {}
+      })(document.currentScript.previousElementSibling);
+    </script>
+  {%- endif -%}
+{%- endif -%}
+
+{% stylesheet %}
+  /*
+    The Header group wraps each of its sections in .shopify-section-group-header-group. Only the header's
+    wrapper is sticky (header.liquid); this one stays in the page flow, so the bar scrolls away.
+  */
+  .announcement-bar {
+    display: block;
+    background-color: var(--color-background);
+    color: var(--color-text);
+  }
+
+  .announcement-bar[hidden] {
+    display: none;
+  }
+
+  .announcement-bar__inner {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    min-block-size: var(--announcement-size, 2.25rem);
+    padding-inline: var(--page-margin);
+    font-size: var(--announcement-text, var(--font-size-small));
+    font-weight: var(--font-weight-medium);
+    line-height: 1.3;
+  }
+
+  /*
+    Horizontal bar: the message area takes all the room between the arrows, so the arrows sit at the two
+    edges and Text alignment places the message inside that area. With a close button, both sides keep
+    its room (plus a gap), so the message stays centred.
+  */
+  .announcement-bar__messages {
+    flex: 1;
+  }
+
+  .announcement-bar__inner:has(.announcement-bar__close) {
+    padding-inline: calc(var(--page-margin) + 1.5rem + var(--space-sm));
+  }
+
+  .announcement-bar__inner:has(.announcement-bar__close) .announcement-bar__close {
+    inset-inline-end: var(--page-margin);
+  }
+
+  .announcement-bar--font-heading .announcement-bar__inner {
+    font-family: var(--font-heading--family);
+  }
+
+  /* Arrows follow the text size */
+  .announcement-bar__arrow {
+    inline-size: 1.15em;
+    block-size: 1.15em;
+  }
+
+  .announcement-bar--uppercase .announcement-bar__inner {
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  .announcement-bar__message {
+    margin: 0;
+    text-align: center;
+  }
+
+  /* Text alignment: along the bar (left / right above the header, top / bottom in the band) */
+  .announcement-bar--align-start .announcement-bar__inner {
+    justify-content: flex-start;
+  }
+
+  .announcement-bar--align-end .announcement-bar__inner {
+    justify-content: flex-end;
+  }
+
+  .announcement-bar--align-start .announcement-bar__message {
+    text-align: start;
+  }
+
+  .announcement-bar--align-end .announcement-bar__message {
+    text-align: end;
+  }
+
+  .announcement-bar__link-label {
+    margin-inline-start: 0.5em;
+  }
+
+  .announcement-bar__link {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 0.35em;
+  }
+
+  .announcement-bar__link:hover {
+    text-decoration-thickness: 2px;
+  }
+
+  /* Slideshow: every message in the same grid cell, so the bar keeps the tallest one's size (no jumps) */
+  .announcement-bar--slideshow .announcement-bar__messages {
+    display: grid;
+    min-inline-size: 0;
+  }
+
+  .announcement-bar--slideshow .announcement-bar__message {
+    grid-area: 1 / 1;
+  }
+
+  .announcement-bar--slideshow .announcement-bar__message:not(.is-active) {
+    visibility: hidden;
+    opacity: 0;
+  }
+
+  .animations-on .announcement-bar--slideshow .announcement-bar__message {
+    transition:
+      opacity var(--duration-base) var(--ease-out),
+      visibility var(--duration-base);
+  }
+
+  /* Small round buttons: arrows, pause / play, close (24px targets, WCAG 2.5.8) */
+  .announcement-bar__button {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background-color: transparent;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .announcement-bar__button:hover {
+    background-color: color-mix(in srgb, var(--color-text) 15%, transparent);
+  }
+
+  .announcement-bar__button[hidden] {
+    display: none;
+  }
+
+  .announcement-bar__close {
+    position: absolute;
+    inset-inline-end: var(--page-margin);
+  }
+
+  .announcement-bar__pause:not([aria-pressed='true']) .announcement-bar__icon--play,
+  .announcement-bar__pause[aria-pressed='true'] .announcement-bar__icon--pause {
+    display: none;
+  }
+
+  /* Marquee: the track slides by one half, then starts over; the halves are the same, so no seam shows */
+  .announcement-bar__viewport {
+    overflow: hidden;
+    min-inline-size: 0;
+    flex: 1;
+  }
+
+  .announcement-bar__track,
+  .announcement-bar__half {
+    display: flex;
+    align-items: center;
+    inline-size: max-content;
+  }
+
+  .announcement-bar__item,
+  .announcement-bar__separator {
+    flex-shrink: 0;
+    padding-inline-end: 2em;
+    white-space: nowrap;
+  }
+
+  /* Letter spacing: Automatic = from Text style (uppercase is spaced, wider in the band). The class is doubled so a
+     chosen value also beats the band's uppercase rule further down. */
+  .announcement-bar.announcement-bar.announcement-bar--spacing-normal .announcement-bar__inner {
+    letter-spacing: 0;
+  }
+
+  .announcement-bar.announcement-bar.announcement-bar--spacing-wide .announcement-bar__inner {
+    letter-spacing: 0.1em;
+  }
+
+  .announcement-bar.announcement-bar.announcement-bar--spacing-extra .announcement-bar__inner {
+    letter-spacing: 0.3em;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .animations-on .announcement-bar--marquee .announcement-bar__track {
+      animation: announcement-slide-x var(--announcement-duration, 40s) linear infinite;
+    }
+
+    .animations-on .announcement-bar--marquee-right .announcement-bar__track {
+      animation-direction: reverse;
+    }
+
+    .animations-on .announcement-bar--marquee:is(:hover, :focus-within, .is-paused) .announcement-bar__track {
+      animation-play-state: paused;
+    }
+  }
+
+  @keyframes announcement-slide-x {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  @keyframes announcement-slide-y {
+    to {
+      transform: translateY(-50%);
+    }
+  }
+
+  /*
+    Right side (large screens): the vertical band (Figma home hero, 36px). writing-mode turns the whole row
+    sideways, so the same flex layout runs top to bottom; arrows turn to point up and down, and the marquee
+    moves vertically ("Left" = up).
+  */
+  @media (min-width: 990px) {
+    /*
+      Fixed to the right edge of the screen, one screen tall, so it is always whole while the page scrolls.
+      "Slide away while scrolling down": the script adds is-tucked once the page has scrolled down and removes it
+      only back at the top; the band slides out to the right and back (instant with reduced motion).
+    */
+    .announcement-bar--right {
+      position: fixed;
+      inset-block-start: 0;
+      inset-inline-end: 0;
+      z-index: 15; /* under the sticky header (20) */
+      inline-size: var(--announcement-size, 2.25rem);
+      block-size: 100svh;
+    }
+
+    .announcement-bar--right.is-tucked {
+      translate: 100% 0;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .announcement-bar--right {
+        transition: translate var(--duration-slow, 0.5s) var(--ease-out);
+      }
+    }
+
+    /*
+      Arrows stay right next to the message (one compact group, like the bar above the header); Text alignment
+      places the group at the top, middle or bottom of the band.
+      The page keeps the band's width free on the right, so the band never covers content (full-width
+      sections included): body padding narrows everything that is laid out inside it.
+    */
+    .announcement-bar--right .announcement-bar__messages {
+      flex: 0 1 auto;
+    }
+
+    /*
+      The page leaves the band's width free only while the band is showing: once it slides out
+      (is-tucked), the gap closes with it, so no empty strip stays on the right.
+    */
+    body:has(.announcement-bar--right:not([hidden]):not(.is-tucked)) {
+      padding-inline-end: var(--announcement-size, 2.25rem);
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      body:has(.announcement-bar--right) {
+        transition: padding-inline-end var(--duration-slow, 0.5s) var(--ease-out);
+      }
+    }
+
+    .announcement-bar--right .announcement-bar__inner {
+      writing-mode: vertical-rl;
+      /*
+        Physical sizes on purpose: with vertical writing, "block" means across and "inline" means down, so
+        block-size: 100% only set the width and the row stayed as short as its content (alignment had no room).
+      */
+      inline-size: auto;
+      block-size: auto;
+      width: 100%;
+      height: 100%;
+      min-block-size: 0;
+      padding-inline: var(--space-sm);
+    }
+
+    .announcement-bar--right.announcement-bar--uppercase .announcement-bar__inner {
+      letter-spacing: 0.35em;
+    }
+
+    /* One line only: a long message is cut at the band's end instead of wrapping into a second column */
+    .announcement-bar--right .announcement-bar__messages {
+      overflow: hidden;
+      min-inline-size: 0;
+    }
+
+    .announcement-bar--right .announcement-bar__message {
+      white-space: nowrap;
+    }
+
+    .announcement-bar--right .announcement-bar__arrow {
+      rotate: 90deg;
+    }
+
+    .announcement-bar--right .announcement-bar__close {
+      inset-inline-end: auto;
+      inset-inline-start: var(--space-sm);
+    }
+
+    /*
+      With a close button (at the top), both ends keep the button's room plus a gap, like the bar above the
+      header: the text never runs under the button and stays centred in the band.
+    */
+    /* Pause / play: at the bottom end of the band, the close button's counterpart at the top */
+    .announcement-bar--right .announcement-bar__pause {
+      position: absolute;
+      inset-inline-end: var(--space-sm);
+    }
+
+    .announcement-bar--right .announcement-bar__inner:is(:has(.announcement-bar__close), :has(.announcement-bar__pause)) {
+      padding-inline: calc(var(--space-sm) + 1.5rem + var(--space-md));
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .animations-on .announcement-bar--right.announcement-bar--marquee .announcement-bar__track {
+        animation-name: announcement-slide-y;
+      }
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <announcement-bar>
+   * - Close: hides the bar and remembers it for the visit (not in the theme editor).
+   * - Slideshow: arrows, autoplay (paused on hover / focus and by the pause button). Screen readers hear the
+   *   new message only when the visitor changed it (aria-live polite), not every few seconds.
+   * - Marquee: shows the pause button when it really moves.
+   * Listeners are removed when the editor re-renders the section (AbortController).
+   */
+  class AnnouncementBar extends HTMLElement {
+    connectedCallback() {
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+      this.motion = window.matchMedia('(prefers-reduced-motion: no-preference)').matches;
+      this.designMode = Boolean(window.Shopify && Shopify.designMode);
+
+      this.querySelector('.announcement-bar__close')?.addEventListener('click', () => this.close(), { signal });
+      if (this.dataset.tuck === 'true') this.setUpTuck(signal);
+
+      this.pauseButton = this.querySelector('.announcement-bar__pause');
+      this.pauseButton?.addEventListener('click', () => this.togglePause(), { signal });
+
+      if (this.dataset.mode === 'slideshow') this.setUpSlideshow(signal);
+      if (this.dataset.mode === 'marquee') {
+        const animations = document.documentElement.classList.contains('animations-on');
+        if (this.pauseButton && animations && this.motion) this.pauseButton.hidden = false;
+      }
+    }
+
+    disconnectedCallback() {
+      this.controller?.abort();
+      clearInterval(this.timer);
+    }
+
+    /*
+      Right-side band: slides out once the page has scrolled down, and comes back only at the top of the page
+      (not in the middle when scrolling up), or while it has keyboard focus.
+    */
+    setUpTuck(signal) {
+      const large = window.matchMedia('(min-width: 990px)');
+      let ticking = false;
+      const update = () => {
+        ticking = false;
+        const atTop = window.scrollY < 80;
+        const show = !large.matches || atTop || this.contains(document.activeElement);
+        this.classList.toggle('is-tucked', !show);
+      };
+      window.addEventListener(
+        'scroll',
+        () => {
+          if (!ticking) {
+            ticking = true;
+            requestAnimationFrame(update);
+          }
+        },
+        { passive: true, signal }
+      );
+      this.addEventListener('focusin', () => this.classList.remove('is-tucked'), { signal });
+    }
+
+    close() {
+      this.hidden = true;
+      if (this.designMode) return;
+      try {
+        sessionStorage.setItem('announcement-closed', '1');
+      } catch (error) {
+        // Storage blocked: the bar comes back on the next page
+      }
+    }
+
+    setUpSlideshow(signal) {
+      this.messages = [...this.querySelectorAll('.announcement-bar__message')];
+      this.current = 0;
+      this.region = this.querySelector('.announcement-bar__messages');
+
+      this.querySelectorAll('[data-step]').forEach((button) => {
+        button.addEventListener(
+          'click',
+          () => {
+            this.region.setAttribute('aria-live', 'polite');
+            this.show(this.current + Number(button.dataset.step));
+            this.restart();
+          },
+          { signal }
+        );
+      });
+
+      // Theme editor: selecting a message's block shows it and stops the autoplay
+      document.addEventListener(
+        'shopify:block:select',
+        (event) => {
+          const index = this.messages.findIndex((message) => message.contains(event.target) || message === event.target);
+          if (index === -1) return;
+          this.userPaused = true;
+          clearInterval(this.timer);
+          this.show(index);
+        },
+        { signal }
+      );
+
+      if (this.dataset.autoplay !== 'true' || !this.motion || this.messages.length < 2) {
+        this.region.setAttribute('aria-live', 'polite');
+        return;
+      }
+
+      if (this.pauseButton) this.pauseButton.hidden = false;
+      this.hoverPaused = false;
+      const hold = (paused) => {
+        this.hoverPaused = paused;
+        this.restart();
+      };
+      this.addEventListener('mouseenter', () => hold(true), { signal });
+      this.addEventListener('mouseleave', () => hold(false), { signal });
+      this.addEventListener('focusin', () => hold(true), { signal });
+      this.addEventListener('focusout', (event) => {
+        if (!this.contains(event.relatedTarget)) hold(false);
+      }, { signal });
+      this.restart();
+    }
+
+    show(index) {
+      const count = this.messages.length;
+      this.current = (index + count) % count;
+      this.messages.forEach((message, i) => message.classList.toggle('is-active', i === this.current));
+    }
+
+    restart() {
+      clearInterval(this.timer);
+      if (this.dataset.mode !== 'slideshow' || this.dataset.autoplay !== 'true' || !this.motion) return;
+      if (this.userPaused || this.hoverPaused) return;
+      this.timer = setInterval(() => this.show(this.current + 1), Number(this.dataset.interval) || 5000);
+    }
+
+    togglePause() {
+      this.userPaused = !this.userPaused;
+      this.classList.toggle('is-paused', this.userPaused);
+      this.pauseButton.setAttribute('aria-pressed', String(this.userPaused));
+      this.pauseButton.querySelector('.visually-hidden').textContent = this.userPaused
+        ? this.pauseButton.dataset.labelPlay
+        : this.pauseButton.dataset.labelPause;
+      this.region?.setAttribute('aria-live', this.userPaused ? 'polite' : 'off');
+      this.restart();
+    }
+  }
+
+  if (!customElements.get('announcement-bar')) customElements.define('announcement-bar', AnnouncementBar);
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.announcement_bar",
+  "class": "announcement-bar-section",
+  "enabled_on": {
+    "groups": [
+      "header"
+    ]
+  },
+  "max_blocks": 10,
+  "blocks": [
+    {
+      "type": "announcement",
+      "name": "t:general.announcement",
+      "settings": [
+        {
+          "type": "text",
+          "id": "text",
+          "label": "t:labels.text",
+          "default": "Free shipping on orders over $75"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "t:labels.link",
+          "info": "t:labels.announcement_link_info"
+        },
+        {
+          "type": "text",
+          "id": "link_label",
+          "label": "t:labels.link_label",
+          "info": "t:labels.announcement_link_label_info"
+        }
+      ]
+    }
+  ],
+  "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.movement"
+    },
+    {
+      "type": "select",
+      "id": "mode",
+      "label": "t:labels.style",
+      "options": [
+        {
+          "value": "static",
+          "label": "t:options.announcement_mode.static"
+        },
+        {
+          "value": "slideshow",
+          "label": "t:options.announcement_mode.slideshow"
+        },
+        {
+          "value": "marquee",
+          "label": "t:options.announcement_mode.marquee"
+        }
+      ],
+      "default": "static"
+    },
+    {
+      "type": "checkbox",
+      "id": "autoplay",
+      "label": "t:labels.autoplay_messages",
+      "default": true,
+      "visible_if": "{{ section.settings.mode == 'slideshow' }}"
+    },
+    {
+      "type": "range",
+      "id": "interval",
+      "label": "t:labels.message_interval",
+      "min": 3,
+      "max": 10,
+      "step": 1,
+      "unit": "s",
+      "default": 5,
+      "visible_if": "{{ section.settings.mode == 'slideshow' and section.settings.autoplay }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_arrows",
+      "label": "t:labels.show_arrows",
+      "default": true,
+      "visible_if": "{{ section.settings.mode == 'slideshow' }}"
+    },
+    {
+      "type": "range",
+      "id": "speed",
+      "label": "t:labels.marquee_speed",
+      "info": "t:labels.marquee_speed_info",
+      "min": 10,
+      "max": 120,
+      "step": 5,
+      "unit": "s",
+      "default": 40,
+      "visible_if": "{{ section.settings.mode == 'marquee' }}"
+    },
+    {
+      "type": "select",
+      "id": "direction",
+      "label": "t:labels.marquee_direction",
+      "info": "t:labels.announcement_direction_info",
+      "options": [
+        {
+          "value": "left",
+          "label": "t:options.marquee_direction.left"
+        },
+        {
+          "value": "right",
+          "label": "t:options.marquee_direction.right"
+        }
+      ],
+      "default": "left",
+      "visible_if": "{{ section.settings.mode == 'marquee' }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.layout"
+    },
+    {
+      "type": "select",
+      "id": "position",
+      "label": "t:labels.announcement_position",
+      "info": "t:labels.announcement_position_info",
+      "options": [
+        {
+          "value": "top",
+          "label": "t:options.announcement_position.top"
+        },
+        {
+          "value": "right",
+          "label": "t:options.announcement_position.right"
+        }
+      ],
+      "default": "top"
+    },
+    {
+      "type": "select",
+      "id": "text_align",
+      "label": "t:labels.announcement_align",
+      "info": "t:labels.announcement_align_info",
+      "options": [
+        {
+          "value": "start",
+          "label": "t:options.position.start"
+        },
+        {
+          "value": "center",
+          "label": "t:options.position.center"
+        },
+        {
+          "value": "end",
+          "label": "t:options.position.end"
+        }
+      ],
+      "default": "center"
+    },
+    {
+      "type": "checkbox",
+      "id": "hide_on_scroll",
+      "label": "t:labels.hide_on_scroll",
+      "info": "t:labels.hide_on_scroll_info",
+      "default": true,
+      "visible_if": "{{ section.settings.position == 'right' }}"
+    },
+    {
+      "type": "select",
+      "id": "text_style",
+      "label": "t:labels.text_style",
+      "options": [
+        {
+          "value": "plain",
+          "label": "t:options.announcement_text_style.plain"
+        },
+        {
+          "value": "uppercase",
+          "label": "t:options.announcement_text_style.uppercase"
+        }
+      ],
+      "default": "uppercase"
+    },
+    {
+      "type": "range",
+      "id": "text_size",
+      "label": "t:labels.text_size",
+      "min": 11,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "default": 14
+    },
+    {
+      "type": "range",
+      "id": "bar_size",
+      "label": "t:labels.announcement_size",
+      "info": "t:labels.announcement_size_info",
+      "min": 28,
+      "max": 72,
+      "step": 2,
+      "unit": "px",
+      "default": 36
+    },
+    {
+      "type": "select",
+      "id": "letter_spacing",
+      "label": "t:labels.letter_spacing",
+      "options": [
+        {
+          "value": "auto",
+          "label": "t:options.letter_spacing.auto"
+        },
+        {
+          "value": "normal",
+          "label": "t:options.letter_spacing.normal"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.letter_spacing.wide"
+        },
+        {
+          "value": "extra",
+          "label": "t:options.letter_spacing.extra"
+        }
+      ],
+      "default": "auto"
+    },
+    {
+      "type": "select",
+      "id": "font",
+      "label": "t:labels.font",
+      "options": [
+        {
+          "value": "body",
+          "label": "t:options.announcement_font.body"
+        },
+        {
+          "value": "heading",
+          "label": "t:options.announcement_font.heading"
+        }
+      ],
+      "default": "body"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_close",
+      "label": "t:labels.show_close",
+      "info": "t:labels.show_close_info",
+      "default": false
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-3"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.announcement_bar",
+      "blocks": [
+        {
+          "type": "announcement",
+          "settings": {
+            "text": "Complimentary express delivery on all orders.",
+            "link_label": "Shop now"
+          }
+        },
+        {
+          "type": "announcement",
+          "settings": {
+            "text": "New: the Signature collection"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

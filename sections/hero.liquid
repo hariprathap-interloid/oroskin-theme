@@ -1,7 +1,7 @@
 {%- comment -%}
   Hero (Figma home): one full-width photo, the content on the left (any theme blocks: logo image,
   headings, text, buttons), cut-out product photos placed freely on the right (e.g. on the lattice
-  shelves) and an optional vertical brand band on the right edge.
+  shelves). The vertical brand band on the right edge is the Announcement bar (Position = Right side).
 
   Two static blocks make the two areas: _hero-content (left, holds theme blocks) and _hero-products
   (right, holds "Product image" blocks). Static = always there, in a fixed place; their children can
@@ -12,11 +12,9 @@
 {%- endcomment -%}
 
 {%- liquid
-  # Colour schemes with a fallback: a saved value can be empty ("") even when the editor shows the
-  # default as selected (the editor highlights the default when nothing is stored). Without a scheme
-  # the band would lose its red background, so empty falls back to the defaults (Cream / Red).
+  # Colour scheme with a fallback: a saved value can be empty ("") even when the editor shows the
+  # default as selected (the editor highlights the default when nothing is stored), so empty = Cream.
   assign scheme_id = section.settings.color_scheme.id | default: 'scheme-1'
-  assign band_scheme_id = section.settings.band_color_scheme.id | default: 'scheme-3'
 
   assign is_first = false
   if section.index == 1
@@ -29,7 +27,7 @@
   data-rotate="{{ section.settings.rotate_products }}"
   data-interval="{{ section.settings.rotate_interval | times: 1000 }}"
   data-resume="{{ section.settings.resume_delay | times: 1000 }}"
-  style="--hero-overlay: {{ section.settings.overlay_opacity }}%; --hero-content-width: {{ section.settings.content_width }}; --hero-products-start: {{ section.settings.products_start }}%; --hero-pad-top: {{ section.settings.padding_top }}; --hero-pad-bottom: {{ section.settings.padding_bottom }}; --hero-pad-side: {{ section.settings.padding_side }};"
+  style="--hero-overlay: {{ section.settings.overlay_opacity }}%; --hero-content-width: {{ section.settings.content_width }}; --hero-products-start: {{ section.settings.products_start }}%; --hero-pad-top: {{ section.settings.padding_top }}; --hero-pad-bottom: {{ section.settings.padding_bottom }}; --hero-pad-side: 90; --hero-content-gap: calc({{ section.settings.content_gap }} * var(--hero-px));"
 >
   <div class="hero__media">
     {%- if section.settings.image != blank -%}
@@ -45,15 +43,20 @@
     {%- endif -%}
   </div>
 
-  <div class="hero__products">
-    {% content_for 'block', type: '_hero-products', id: 'hero-products' %}
-  </div>
-
+  {%- comment -%}
+    The editor lists static blocks in the order they are rendered here: Content, Decorations, Products.
+    (Same order for keyboard and screen readers: the text and buttons come first.) Stacking doesn't
+    depend on this order: it comes from z-index (content layer 1, active product 2, decoration Layer).
+  {%- endcomment -%}
   <div class="hero__inner">
     <div class="hero__content">
-      {% content_for 'block', type: '_hero-decorations', id: 'hero-decorations' %}
       {% content_for 'block', type: '_hero-content', id: 'hero-content' %}
+      {% content_for 'block', type: '_hero-decorations', id: 'hero-decorations' %}
     </div>
+  </div>
+
+  <div class="hero__products">
+    {% content_for 'block', type: '_hero-products', id: 'hero-products' %}
   </div>
 
   {%- comment -%}
@@ -74,12 +77,6 @@
     <svg class="hero__pause-icon hero__pause-icon--play" aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="16" height="16"><path d="M4.5 2.8v10.4a.8.8 0 0 0 1.2.7l8.4-5.2a.8.8 0 0 0 0-1.4L5.7 2.1a.8.8 0 0 0-1.2.7z" fill="currentColor"/></svg>
   </button>
 
-  {%- if section.settings.show_band and section.settings.band_text != blank -%}
-    {%- comment -%} Decorative brand line; the same words are not needed twice by screen readers {%- endcomment -%}
-    <div class="hero__band color-{{ band_scheme_id }}" aria-hidden="true">
-      <span class="hero__band-text">{{ section.settings.band_text | escape }}</span>
-    </div>
-  {%- endif -%}
 </hero-showcase>
 
 {% stylesheet %}
@@ -247,37 +244,17 @@
     max-inline-size: calc(var(--hero-content-width) * var(--hero-px));
   }
 
-  /* Product area: from "Products area start" to the band, full height; products are % inside it */
+  /*
+    Product area: from "Products area start" to the right edge, full height; products are % inside it.
+    (A right-side Announcement bar band keeps its own room: the page leaves its width free.)
+  */
   .hero__products {
     position: absolute;
     inset-block: 0;
     inset-inline-start: var(--hero-products-start);
-    inset-inline-end: 2.25rem;
-  }
-
-  /*
-    Vertical brand band (Figma: a red strip on the right edge, white uppercase text reading top to
-    bottom). writing-mode turns the line of text sideways; the band's own colour scheme paints it.
-  */
-  .hero__band {
-    position: absolute;
-    inset-block: 0;
     inset-inline-end: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    inline-size: 2.25rem;
   }
 
-  .hero__band-text {
-    writing-mode: vertical-rl;
-    color: var(--color-text);
-    font-size: var(--font-size-small);
-    font-weight: var(--font-weight-medium);
-    letter-spacing: 0.35em;
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
 
   /*
     When the active product changes, only the brush WORD fades out and back in: the script wraps the
@@ -301,11 +278,11 @@
     }
   }
 
-  /* Pause / play: a small round glass button, bottom right (left of the brand band) */
+  /* Pause / play: a small round glass button, bottom right (left of the brand band, when there is one) */
   .hero__pause {
     position: absolute;
     inset-block-end: var(--space-lg);
-    inset-inline-end: calc(2.25rem + var(--space-lg));
+    inset-inline-end: var(--space-lg);
     z-index: 3;
     display: grid;
     place-items: center;
@@ -343,7 +320,7 @@
 
   /*
     Smaller screens (no mobile design yet, decision 7): the content spans the width and a light tint
-    keeps the text readable over the photo; the band is hidden (too narrow to read).
+    keeps the text readable over the photo.
   */
   @media (max-width: 989px) {
     .hero::before {
@@ -355,8 +332,7 @@
     }
 
     /* Products need the photo's shelves to sit on, so they are hidden where the layout stacks */
-    .hero__products,
-    .hero__band {
+    .hero__products {
       display: none;
     }
   }
@@ -631,13 +607,9 @@
   ],
   "settings": [
     {
-      "type": "header",
-      "content": "t:labels.image"
-    },
-    {
       "type": "image_picker",
       "id": "image",
-      "label": "t:labels.image",
+      "label": "t:labels.background_image",
       "info": "t:labels.hero_image_info"
     },
     {
@@ -650,6 +622,40 @@
       "step": 5,
       "unit": "%",
       "default": 0
+    },
+    {
+      "type": "header",
+      "content": "t:labels.autoplay"
+    },
+    {
+      "type": "checkbox",
+      "id": "rotate_products",
+      "label": "t:labels.rotate_products",
+      "info": "t:labels.rotate_products_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "rotate_interval",
+      "label": "t:labels.rotate_interval",
+      "min": 2,
+      "max": 10,
+      "step": 0.5,
+      "unit": "s",
+      "default": 4,
+      "visible_if": "{{ section.settings.rotate_products }}"
+    },
+    {
+      "type": "range",
+      "id": "resume_delay",
+      "label": "t:labels.resume_delay",
+      "info": "t:labels.resume_delay_info",
+      "min": 1,
+      "max": 6,
+      "step": 0.5,
+      "unit": "s",
+      "default": 2.5,
+      "visible_if": "{{ section.settings.rotate_products }}"
     },
     {
       "type": "header",
@@ -674,6 +680,42 @@
         }
       ],
       "default": "full"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "full"
+    },
+    {
+      "type": "range",
+      "id": "products_start",
+      "label": "t:labels.products_start",
+      "info": "t:labels.products_start_info",
+      "min": 30,
+      "max": 70,
+      "step": 1,
+      "unit": "%",
+      "default": 45
     },
     {
       "type": "range",
@@ -753,6 +795,18 @@
       "default": "gap"
     },
     {
+      "type": "range",
+      "id": "content_gap",
+      "label": "t:labels.content_gap",
+      "info": "t:labels.hero_size_info",
+      "min": 0,
+      "max": 96,
+      "step": 4,
+      "unit": "px",
+      "default": 24,
+      "visible_if": "{{ section.settings.content_spacing == 'gap' }}"
+    },
+    {
       "type": "select",
       "id": "text_scaling",
       "label": "t:labels.text_scaling",
@@ -768,6 +822,16 @@
         }
       ],
       "default": "screen"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
     },
     {
       "type": "header",
@@ -792,113 +856,6 @@
       "step": 5,
       "unit": "px",
       "default": 60
-    },
-    {
-      "type": "range",
-      "id": "padding_side",
-      "label": "t:labels.padding_side",
-      "info": "t:labels.hero_size_info",
-      "min": 0,
-      "max": 300,
-      "step": 5,
-      "unit": "px",
-      "default": 90
-    },
-    {
-      "type": "range",
-      "id": "products_start",
-      "label": "t:labels.products_start",
-      "info": "t:labels.products_start_info",
-      "min": 30,
-      "max": 70,
-      "step": 1,
-      "unit": "%",
-      "default": 45
-    },
-    {
-      "type": "checkbox",
-      "id": "rotate_products",
-      "label": "t:labels.rotate_products",
-      "info": "t:labels.rotate_products_info",
-      "default": true
-    },
-    {
-      "type": "range",
-      "id": "rotate_interval",
-      "label": "t:labels.rotate_interval",
-      "min": 2,
-      "max": 10,
-      "step": 0.5,
-      "unit": "s",
-      "default": 4,
-      "visible_if": "{{ section.settings.rotate_products }}"
-    },
-    {
-      "type": "range",
-      "id": "resume_delay",
-      "label": "t:labels.resume_delay",
-      "info": "t:labels.resume_delay_info",
-      "min": 1,
-      "max": 6,
-      "step": 0.5,
-      "unit": "s",
-      "default": 2.5,
-      "visible_if": "{{ section.settings.rotate_products }}"
-    },
-    {
-      "type": "select",
-      "id": "section_width",
-      "label": "t:labels.section_width",
-      "info": "t:labels.section_width_info",
-      "options": [
-        {
-          "value": "narrow",
-          "label": "t:options.section_width.narrow"
-        },
-        {
-          "value": "wide",
-          "label": "t:options.section_width.wide"
-        },
-        {
-          "value": "widest",
-          "label": "t:options.section_width.widest"
-        },
-        {
-          "value": "full",
-          "label": "t:options.section_width.full"
-        }
-      ],
-      "default": "full"
-    },
-    {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-1"
-    },
-    {
-      "type": "header",
-      "content": "t:labels.brand_band"
-    },
-    {
-      "type": "checkbox",
-      "id": "show_band",
-      "label": "t:labels.show_band",
-      "default": true
-    },
-    {
-      "type": "text",
-      "id": "band_text",
-      "label": "t:labels.band_text",
-      "default": "OroSkin • Signature collection • Estd. 2026",
-      "visible_if": "{{ section.settings.show_band }}"
-    },
-    {
-      "type": "color_scheme",
-      "id": "band_color_scheme",
-      "label": "t:labels.band_color_scheme",
-      "default": "scheme-3",
-      "visible_if": "{{ section.settings.show_band }}"
     }
   ],
   "presets": [
@@ -1154,9 +1111,6 @@
           "type": "_hero-content",
           "id": "hero-content",
           "static": true,
-          "settings": {
-            "gap": 24
-          },
           "blocks": [
             {
               "type": "image",
@@ -1206,7 +1160,8 @@
                     "indent": 1.6
                   }
                 }
-              ]
+              ],
+              "name": "t:general.column"
             },
             {
               "type": "heading",
@@ -1250,7 +1205,8 @@
                     "show_arrow": true
                   }
                 }
-              ]
+              ],
+              "name": "t:general.buttons"
             }
           ]
         },

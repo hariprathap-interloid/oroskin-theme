@@ -317,6 +317,14 @@
       "pause": "Pause the scrolling text",
       "play": "Play the scrolling text",
       "empty": "Add the text that scrolls."
+    },
+    "announcement_bar": {
+      "label": "Announcements",
+      "previous": "Previous announcement",
+      "next": "Next announcement",
+      "pause": "Pause announcements",
+      "play": "Play announcements",
+      "close": "Close announcements"
     }
   },
   "products": {

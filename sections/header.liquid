@@ -192,9 +192,10 @@
   /*
     Sticky header. Shopify wraps the header in a section element (class shopify-section-group-header-group);
     that wrapper is what has to stick. A sticky element only sticks inside its parent, and the <header> fills
-    its wrapper exactly, so making <header> itself sticky would do nothing.
+    its wrapper exactly, so making <header> itself sticky would do nothing. Every section of the Header group
+    gets that class (e.g. the announcement bar), so :has(sticky-header) picks the header's wrapper only.
   */
-  .shopify-section-group-header-group {
+  .shopify-section-group-header-group:has(sticky-header) {
     position: sticky;
     inset-block-start: 0;
     z-index: 20;
