@@ -57,8 +57,8 @@
 
 {%- if show -%}
   <div
-    class="hero-decoration hero-decoration--{{ block.settings.color }} hero-decoration--anim-{{ block.settings.animation }}"
-    style="--deco-x: {{ block.settings.x }}%; --deco-y: {{ block.settings.y }}%; --deco-size: {{ block.settings.size }}; --deco-rotate: {{ block.settings.rotate }}deg; --deco-opacity: {{ block.settings.opacity | divided_by: 100.0 }}; --deco-layer: {{ block.settings.layer }}; --deco-speed: {{ block.settings.speed }}s; --deco-delay: {{ block.settings.delay }}s;"
+    class="hero-decoration hero-decoration--{{ block.settings.color }} hero-decoration--anim-{{ block.settings.animation }}{% if block.settings.mobile_show %} hero-decoration--phone{% endif %}"
+    style="--deco-x: {{ block.settings.x }}%; --deco-y: {{ block.settings.y }}%; --deco-size: {{ block.settings.size }}; --deco-rotate: {{ block.settings.rotate }}deg; --deco-opacity: {{ block.settings.opacity | divided_by: 100.0 }}; --deco-layer: {{ block.settings.layer }}; --deco-speed: {{ block.settings.speed }}s; --deco-delay: {{ block.settings.delay }}s; --deco-mx: {{ block.settings.mobile_x }}%; --deco-my: {{ block.settings.mobile_y }}%; --deco-msize: {{ block.settings.mobile_size }};"
     aria-hidden="true"
     {{ block.shopify_attributes }}
   >
@@ -392,6 +392,50 @@
       "step": 0.5,
       "unit": "s",
       "default": 0
+    },
+    {
+      "type": "header",
+      "content": "t:labels.phones",
+      "info": "t:labels.hero_decoration_phones_info"
+    },
+    {
+      "type": "checkbox",
+      "id": "mobile_show",
+      "label": "t:labels.show_on_phones",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "mobile_x",
+      "label": "t:labels.position_horizontal",
+      "min": -10,
+      "max": 110,
+      "step": 2,
+      "unit": "%",
+      "default": 50,
+      "visible_if": "{{ block.settings.mobile_show }}"
+    },
+    {
+      "type": "range",
+      "id": "mobile_y",
+      "label": "t:labels.position_vertical",
+      "min": -10,
+      "max": 110,
+      "step": 2,
+      "unit": "%",
+      "default": 50,
+      "visible_if": "{{ block.settings.mobile_show }}"
+    },
+    {
+      "type": "range",
+      "id": "mobile_size",
+      "label": "t:labels.decoration_size",
+      "min": 8,
+      "max": 120,
+      "step": 2,
+      "unit": "px",
+      "default": 32,
+      "visible_if": "{{ block.settings.mobile_show }}"
     }
   ],
   "presets": [{ "name": "t:general.hero_decoration" }]

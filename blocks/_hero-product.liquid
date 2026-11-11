@@ -55,7 +55,7 @@
 {%- if product_image != blank or request.design_mode -%}
   <div
     class="hero-product"
-    style="--hero-product-x: {{ block.settings.x }}%; --hero-product-y: {{ block.settings.y }}%; --hero-product-width: {{ block.settings.width }}%; --hero-product-rotate: {{ block.settings.rotate }}deg; --hero-label-x: {{ block.settings.label_x }}%; --hero-label-y: {{ block.settings.label_y }}%;"
+    style="--hero-product-x: {{ block.settings.x }}%; --hero-product-y: {{ block.settings.y }}%; --hero-product-width: {{ block.settings.width }}%; --hero-product-rotate: {{ block.settings.rotate }}deg; --hero-label-x: {{ block.settings.label_x }}%; --hero-label-y: {{ block.settings.label_y }}%; --hero-product-mx: {{ block.settings.mobile_x }}%; --hero-product-my: {{ block.settings.mobile_y }}%; --hero-product-mw: {{ block.settings.mobile_width }}%; --hero-label-mx: {{ block.settings.mobile_label_x }}%; --hero-label-my: {{ block.settings.mobile_label_y }}%;"
     {% if product_label != blank or product_word != blank %}
       data-hero-product
       data-brush-word="{{ product_word | escape }}"
@@ -73,7 +73,7 @@
       {% render 'image',
         image: product_image,
         url: product_link,
-        sizes: '(min-width: 990px) 25vw, 40vw',
+        sizes: '(min-width: 990px) 25vw, 45vw',
         class: 'hero-product__image'
       %}
     {%- else -%}
@@ -344,6 +344,61 @@
       "step": 1,
       "unit": "°",
       "default": 0
+    },
+    {
+      "type": "header",
+      "content": "t:labels.phones",
+      "info": "t:labels.hero_product_phones_info"
+    },
+    {
+      "type": "range",
+      "id": "mobile_x",
+      "label": "t:labels.position_horizontal",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "%",
+      "default": 50
+    },
+    {
+      "type": "range",
+      "id": "mobile_y",
+      "label": "t:labels.position_vertical",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "%",
+      "default": 75
+    },
+    {
+      "type": "range",
+      "id": "mobile_width",
+      "label": "t:labels.product_image_size",
+      "min": 5,
+      "max": 80,
+      "step": 1,
+      "unit": "%",
+      "default": 30
+    },
+    {
+      "type": "range",
+      "id": "mobile_label_x",
+      "label": "t:labels.label_position_x",
+      "min": -50,
+      "max": 150,
+      "step": 2,
+      "unit": "%",
+      "default": -4
+    },
+    {
+      "type": "range",
+      "id": "mobile_label_y",
+      "label": "t:labels.label_position_y",
+      "min": -50,
+      "max": 150,
+      "step": 2,
+      "unit": "%",
+      "default": 50
     }
   ],
   "presets": [

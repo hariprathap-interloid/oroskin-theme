@@ -25,7 +25,7 @@
 -%}
 
 <div
-  class="text rte text--{{ block.settings.style }} text--{{ block.settings.font }} text--{{ block.settings.color }} text--align-{{ block.settings.alignment }}{% if block.settings.use_custom_size %} text--custom-size{% endif %}"
+  class="text rte text--{{ block.settings.style }} text--{{ block.settings.font }} text--{{ block.settings.color }} text--align-{{ block.settings.alignment }}{% if block.settings.use_custom_size %} text--custom-size{% endif %}{% if block.settings.hide_on_phones %} text--hide-phones{% endif %}"
   style="--text-max-width: {{ block.settings.max_width }}; {{ size_style | strip }}"
   {{ block.shopify_attributes }}
 >
@@ -150,6 +150,13 @@
 
   .text--accent {
     color: var(--color-accent);
+  }
+
+  /* "Hide on phones": e.g. a long paragraph the mobile design leaves out (it stays on tablets and desktop) */
+  @media (max-width: 749px) {
+    .text--hide-phones {
+      display: none;
+    }
   }
 {% endstylesheet %}
 
@@ -284,6 +291,13 @@
         }
       ],
       "default": "60ch"
+    },
+    {
+      "type": "checkbox",
+      "id": "hide_on_phones",
+      "label": "t:labels.hide_on_phones",
+      "info": "t:labels.hide_on_phones_info",
+      "default": false
     }
   ],
   "presets": [

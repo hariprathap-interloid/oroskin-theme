@@ -20,17 +20,73 @@
   if section.index == 1
     assign is_first = true
   endif
+
+  # Phones and tablets: an optional tall Mobile image (plain wall on top for the text, shelves below for the
+  # products). With it, the mobile layout below 1024px switches on (class hero--has-mobile) and the products use their
+  # Phones settings. --hero-m-ratio = its width / height; --hero-m-start = where the shelves begin (%).
+  assign mobile_image = section.settings.mobile_image
+  assign mobile_class = ''
+  assign mobile_style = ''
+  if mobile_image != blank
+    assign mobile_class = ' hero--has-mobile'
+    assign mobile_style = ' --hero-m-ratio: ' | append: mobile_image.aspect_ratio | append: '; --hero-m-start: ' | append: section.settings.mobile_products_start | append: '; --hero-m-text-width: ' | append: section.settings.mobile_text_width | append: '%;'
+  endif
+
+  # Loading for the hero photo (same rules as snippets/image.liquid): first section = eager + high priority
+  assign media_loading = 'eager'
+  assign media_priority = 'auto'
+  if is_first
+    assign media_priority = 'high'
+  elsif section.index > 3
+    assign media_loading = 'lazy'
+  endif
 -%}
 
 <hero-showcase
-  class="hero full-width section-width--{{ section.settings.section_width | default: 'full' }} color-{{ scheme_id }} hero--height-{{ section.settings.height }} hero--x-{{ section.settings.content_x }} hero--y-{{ section.settings.content_y }} hero--scale-{{ section.settings.text_scaling }} hero--spacing-{{ section.settings.content_spacing }}"
+  class="hero full-width section-width--{{ section.settings.section_width | default: 'full' }} color-{{ scheme_id }} hero--height-{{ section.settings.height }} hero--x-{{ section.settings.content_x }} hero--y-{{ section.settings.content_y }} hero--scale-{{ section.settings.text_scaling }} hero--spacing-{{ section.settings.content_spacing }}{{ mobile_class }}"
   data-rotate="{{ section.settings.rotate_products }}"
   data-interval="{{ section.settings.rotate_interval | times: 1000 }}"
   data-resume="{{ section.settings.resume_delay | times: 1000 }}"
-  style="--hero-overlay: {{ section.settings.overlay_opacity }}%; --hero-content-width: {{ section.settings.content_width }}; --hero-products-start: {{ section.settings.products_start }}%; --hero-pad-top: {{ section.settings.padding_top }}; --hero-pad-bottom: {{ section.settings.padding_bottom }}; --hero-pad-side: 90; --hero-content-gap: calc({{ section.settings.content_gap }} * var(--hero-px));"
+  style="--hero-overlay: {{ section.settings.overlay_opacity }}%; --hero-content-width: {{ section.settings.content_width }}; --hero-products-start: {{ section.settings.products_start }}%; --hero-pad-top: {{ section.settings.padding_top }}; --hero-pad-bottom: {{ section.settings.padding_bottom }}; --hero-pad-side: 90; --hero-content-gap: calc({{ section.settings.content_gap }} * var(--hero-px));{{ mobile_style }}"
 >
   <div class="hero__media">
-    {%- if section.settings.image != blank -%}
+    {%- if mobile_image != blank -%}
+      {%- comment -%}
+        <picture>: the browser picks ONE file. Phones and tablets (below 1024px) match the <source> and download
+        only the mobile image (in the size their screen needs, from the srcset); larger screens skip it and load
+        the <img> (the desktop photo). The <img> carries loading and fetchpriority, which apply to whichever
+        file is chosen.
+      {%- endcomment -%}
+      {%- liquid
+        # srcset: 375 / 550 / 750 / 1100 / 1500 / 2000 px wide (only sizes smaller than the file), then the
+        # file at its own width. split makes text, plus: 0 turns each piece back into a number to compare.
+        assign mobile_widths = '375,550,750,1100,1500,2000' | split: ','
+        assign mobile_srcset = ''
+        for width_text in mobile_widths
+          assign mw = width_text | plus: 0
+          if mw < mobile_image.width
+            assign mobile_url = mobile_image | image_url: width: mw
+            assign mobile_srcset = mobile_srcset | append: mobile_url | append: ' ' | append: mw | append: 'w, '
+          endif
+        endfor
+        assign mobile_full_width = mobile_image.width | at_most: 5760
+        assign mobile_url = mobile_image | image_url: width: mobile_full_width
+        assign mobile_srcset = mobile_srcset | append: mobile_url | append: ' ' | append: mobile_full_width | append: 'w'
+      -%}
+      <picture class="image image--cover">
+        <source
+          media="(max-width: 1023px)"
+          srcset="{{ mobile_srcset }}"
+          sizes="100vw"
+          width="{{ mobile_image.width }}"
+          height="{{ mobile_image.height }}"
+        >
+        {%- liquid
+          assign desktop_image = section.settings.image | default: mobile_image
+          echo desktop_image | image_url: width: 3840 | image_tag: widths: '750, 1100, 1500, 1780, 2000, 3000, 3840', sizes: '100vw', loading: media_loading, fetchpriority: media_priority, alt: ''
+        -%}
+      </picture>
+    {%- elsif section.settings.image != blank -%}
       {% render 'image',
         image: section.settings.image,
         class: 'image--cover',
@@ -308,6 +364,7 @@
   }
 
 
+
   /*
     When the active product changes, only the brush WORD fades out and back in: the script wraps the
     word in .hero-brush-text, so the red brush (drawn by the em's ::before) stays still.
@@ -316,6 +373,7 @@
     display: inline-block;
     min-inline-size: var(--brush-word-width, auto); /* the widest brush word: the brush keeps one size */
     text-align: center;
+    white-space: nowrap; /* one line: a word that wrapped inside the brush would run past it */
     transition: opacity var(--duration-base) var(--ease-out), scale var(--duration-base) var(--ease-out);
   }
 
@@ -461,6 +519,125 @@
       transform: none;
     }
   }
+
+
+  /*
+    Phones and tablets with a Mobile image (below 1024px, Figma mobile hero / "product scene showcase"): one
+    tall photo, the text over its top, the products on its shelves.
+    - The hero is exactly the photo's shape at the screen width (100vw / its width:height ratio): the photo is
+      shown whole, never stretched or cropped, on every phone. The section's Height setting doesn't apply here.
+    - "Text area height" (mobile_products_start, e.g. 46%) = how much of the top the text may use: the text's
+      bottom padding is the rest of the photo + 16px. The products area is the whole photo, so a product at
+      68% / 61% always sits on the same shelf.
+    - "Text width" (e.g. 100%) = the text column's width.
+    - The hero never grows: if the text is taller than its area, the merchant raises Text area height, shortens
+      the text or hides the paragraph (Text block: Hide on phones).
+    Placed after the 989px rules on purpose: same specificity, so the later rule wins (tint, hidden products).
+    Note: a tall photo on a wide tablet makes a tall hero (about 2 screens at 1024px held upright).
+  */
+  @media (max-width: 1023px) {
+    .hero.hero--has-mobile {
+      --hero-m-height: calc(100vw / var(--hero-m-ratio));
+      align-items: flex-start;
+      min-block-size: 0;
+      block-size: var(--hero-m-height);
+    }
+
+    .hero--has-mobile .hero__content {
+      max-inline-size: var(--hero-m-text-width, 100%);
+    }
+
+    /* The gap between the content's rows: the 1920-frame maths makes it ~5px here, so a fixed 16px (Figma) */
+    .hero--has-mobile .hero-content {
+      gap: var(--space-md);
+    }
+
+    /* Figma: the logo sits at the top, level with the header's buttons (the header floats over the hero) */
+    .hero--has-mobile .hero__inner {
+      padding-block-start: var(--space-sm);
+    }
+
+    /* A row of buttons that wraps (Explore collection / New arrivals): 16px between the lines, not the desktop 48px */
+    .hero--has-mobile .group--horizontal {
+      gap: var(--space-md) var(--space-lg);
+    }
+
+
+    /* The Figma mobile hero has no tint: back to the Overlay setting (0 by default) */
+    .hero--has-mobile::before {
+      background-color: color-mix(in srgb, var(--color-background) var(--hero-overlay), transparent);
+    }
+
+    /*
+      The text area is a real box: the top "Text area height" (e.g. 46%) of the photo, minus 16px above the
+      shelves. The text sits in it by the section's own options, so the setting visibly moves it:
+      - Content spacing Between / Around / Evenly: the rows spread over the whole area (logo at the top,
+        buttons at its bottom, as in the Figma);
+      - Content spacing Gap: the rows stay together, placed by Vertical position (top / center / bottom).
+      (box-sizing: border-box, so the height includes the 12px top and 16px bottom padding.)
+    */
+    .hero--has-mobile .hero__inner {
+      box-sizing: border-box;
+      block-size: calc(var(--hero-m-height) * var(--hero-m-start) / 100);
+      padding-block-end: var(--space-md);
+      align-items: flex-start;
+    }
+
+    .hero--has-mobile.hero--y-center .hero__inner {
+      align-items: center;
+    }
+
+    .hero--has-mobile.hero--y-end .hero__inner {
+      align-items: flex-end;
+    }
+
+    .hero--has-mobile:not(.hero--spacing-gap) .hero__inner {
+      align-items: stretch;
+    }
+
+    /* The products area = the whole photo (the hero is exactly its shape) */
+    .hero--has-mobile .hero__products {
+      display: block;
+      inset: auto 0 0;
+      z-index: 2;
+      block-size: var(--hero-m-height);
+      pointer-events: none;
+    }
+
+    /* Each product's Phones settings (set as variables on the product, see blocks/_hero-product.liquid) */
+    .hero--has-mobile .hero-product {
+      inset-inline-start: var(--hero-product-mx);
+      inset-block-start: var(--hero-product-my);
+      inline-size: var(--hero-product-mw);
+      pointer-events: auto;
+    }
+
+    .hero--has-mobile .hero-product__label {
+      inset-inline-start: var(--hero-label-mx);
+      inset-block-start: var(--hero-label-my);
+      font-size: clamp(1.25rem, 6vw, 1.75rem); /* Figma ~22px at 375px */
+    }
+
+    /* Decorations: only those with "Show on phones", at their Phones position and size (real px) */
+    .hero--has-mobile .hero-decorations {
+      display: block;
+    }
+
+    .hero--has-mobile .hero-decoration {
+      inset-inline-start: var(--deco-mx);
+      inset-block-start: var(--deco-my);
+      inline-size: calc(var(--deco-msize) * 1px);
+    }
+
+    .hero--has-mobile .hero-decoration:not(.hero-decoration--phone) {
+      display: none;
+    }
+
+    /* The pause button sits over the shelves, bottom right (the text's bottom space is the shelf area here) */
+    .hero--has-mobile .hero__pause {
+      inset-block-end: var(--space-md);
+    }
+  }
 {% endstylesheet %}
 
 {% javascript %}
@@ -498,6 +675,17 @@
 
       this.defaultWord = this.brush ? this.brush.textContent : '';
       this.fixBrushWidth();
+
+      /*
+        Measure again when the screen width changes (phone / tablet / desktop type sizes and letter spacing
+        differ, so a width measured on one screen can be too narrow on another: "glamour" ran past the brush
+        at 320px). Debounced: once the resizing stops.
+      */
+      this.onResize = () => {
+        clearTimeout(this.resizeTimer);
+        this.resizeTimer = setTimeout(() => this.fixBrushWidth(), 150);
+      };
+      if (this.brush) window.addEventListener('resize', this.onResize, { passive: true });
 
       // The product that owns the headline's word ("glow") is the starting state
       const ownWord = this.defaultWord.trim().toLowerCase();
@@ -540,6 +728,8 @@
       this.stop();
       clearTimeout(this.resumeTimer);
       this.observer?.disconnect();
+      clearTimeout(this.resizeTimer);
+      window.removeEventListener('resize', this.onResize);
       document.removeEventListener('shopify:block:select', this.onBlockSelect);
       document.removeEventListener('shopify:block:deselect', this.onBlockDeselect);
     }
@@ -587,6 +777,7 @@
       const words = [this.defaultWord, ...this.products.map((product) => product.dataset.brushWord || '')].filter(Boolean);
       const shown = this.brush.textContent;
       this.brush.style.minInlineSize = '0px';
+      this.brush.style.removeProperty('--brush-word-width');
       let widest = 0;
       for (const word of words) {
         this.brush.textContent = word;
@@ -678,6 +869,39 @@
       "step": 5,
       "unit": "%",
       "default": 0
+    },
+    {
+      "type": "header",
+      "content": "t:labels.phones"
+    },
+    {
+      "type": "image_picker",
+      "id": "mobile_image",
+      "label": "t:labels.mobile_image",
+      "info": "t:labels.mobile_image_info"
+    },
+    {
+      "type": "range",
+      "id": "mobile_products_start",
+      "label": "t:labels.mobile_products_start",
+      "info": "t:labels.mobile_products_start_info",
+      "min": 20,
+      "max": 80,
+      "step": 1,
+      "unit": "%",
+      "default": 46,
+      "visible_if": "{{ section.settings.mobile_image != blank }}"
+    },
+    {
+      "type": "range",
+      "id": "mobile_text_width",
+      "label": "t:labels.mobile_text_width",
+      "min": 50,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 100,
+      "visible_if": "{{ section.settings.mobile_image != blank }}"
     },
     {
       "type": "header",

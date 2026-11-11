@@ -12,380 +12,6 @@
     "hero_ceiA99": {
       "type": "hero",
       "blocks": {
-        "hero-products": {
-          "type": "_hero-products",
-          "static": true,
-          "settings": {},
-          "blocks": {
-            "hero_product_NC8wV8": {
-              "type": "_hero-product",
-              "settings": {
-                "image": "shopify://shop_images/Group_1000003837.png",
-                "collection": "makeup",
-                "product": "",
-                "link": "",
-                "label": "Makeup",
-                "brush_word": "glamour",
-                "label_x": -4,
-                "label_y": 50,
-                "x": 84,
-                "y": 23,
-                "width": 34,
-                "rotate": 0
-              },
-              "blocks": {}
-            },
-            "hero_product_EdLdma": {
-              "type": "_hero-product",
-              "settings": {
-                "image": "shopify://shop_images/Group_1000003838.png",
-                "collection": "skincare",
-                "product": "",
-                "link": "",
-                "label": "Skincare",
-                "brush_word": "radiance",
-                "label_x": -4,
-                "label_y": 50,
-                "x": 55,
-                "y": 55,
-                "width": 47,
-                "rotate": 0
-              },
-              "blocks": {}
-            },
-            "hero_product_3Qyw3w": {
-              "type": "_hero-product",
-              "settings": {
-                "image": "shopify://shop_images/Group_1000003840.png",
-                "collection": "",
-                "product": "radiance-vitamin-c-serum",
-                "link": "",
-                "label": "Serums",
-                "brush_word": "renewal",
-                "label_x": -4,
-                "label_y": 50,
-                "x": 16,
-                "y": 74,
-                "width": 29,
-                "rotate": 0
-              },
-              "blocks": {}
-            },
-            "hero_product_pJ7caW": {
-              "type": "_hero-product",
-              "settings": {
-                "image": "shopify://shop_images/Group_1000003839.png",
-                "collection": "fragrance",
-                "product": "",
-                "link": "",
-                "label": "Fragrance",
-                "brush_word": "scent",
-                "label_x": -4,
-                "label_y": 50,
-                "x": 86,
-                "y": 80,
-                "width": 37,
-                "rotate": 0
-              },
-              "blocks": {}
-            }
-          },
-          "block_order": [
-            "hero_product_NC8wV8",
-            "hero_product_EdLdma",
-            "hero_product_3Qyw3w",
-            "hero_product_pJ7caW"
-          ]
-        },
-        "hero-decorations": {
-          "type": "_hero-decorations",
-          "static": true,
-          "settings": {},
-          "blocks": {
-            "hero_decoration_BeHfpQ": {
-              "type": "_hero-decoration",
-              "settings": {
-                "title": "Powder compact, top centre",
-                "kind": "compact",
-                "tint": true,
-                "color": "muted",
-                "opacity": 70,
-                "x": 34,
-                "y": 2,
-                "size": 46,
-                "rotate": 0,
-                "layer": 5,
-                "animation": "breathe",
-                "speed": 3,
-                "delay": 0
-              },
-              "blocks": {}
-            },
-            "hero_decoration_RafJGD": {
-              "type": "_hero-decoration",
-              "settings": {
-                "title": "Makeup brush, top right",
-                "kind": "brush",
-                "tint": true,
-                "color": "muted",
-                "opacity": 70,
-                "x": 104,
-                "y": 0,
-                "size": 106,
-                "rotate": 95,
-                "layer": 5,
-                "animation": "float",
-                "speed": 4,
-                "delay": 1
-              },
-              "blocks": {}
-            },
-            "hero_decoration_dnTrbE": {
-              "type": "_hero-decoration",
-              "settings": {
-                "title": "Serum bottle, top right",
-                "kind": "bottle",
-                "tint": true,
-                "color": "muted",
-                "opacity": 70,
-                "x": 74,
-                "y": 12,
-                "size": 56,
-                "rotate": -20,
-                "layer": 5,
-                "animation": "float",
-                "speed": 3,
-                "delay": 0
-              },
-              "blocks": {}
-            },
-            "hero_decoration_JhraBh": {
-              "type": "_hero-decoration",
-              "settings": {
-                "title": "Perfume bottle, middle right",
-                "kind": "perfume",
-                "tint": true,
-                "color": "muted",
-                "opacity": 70,
-                "x": 72,
-                "y": 30,
-                "size": 84,
-                "rotate": 10,
-                "layer": 5,
-                "animation": "float",
-                "speed": 4,
-                "delay": 0
-              },
-              "blocks": {}
-            },
-            "hero_decoration_LajCaF": {
-              "type": "_hero-decoration",
-              "settings": {
-                "title": "Gold magnolia, middle centre",
-                "kind": "magnolia",
-                "tint": true,
-                "color": "muted",
-                "opacity": 100,
-                "x": 64,
-                "y": 44,
-                "size": 96,
-                "rotate": 0,
-                "layer": 12,
-                "animation": "none",
-                "speed": 4,
-                "delay": 0
-              },
-              "blocks": {}
-            },
-            "hero_decoration_NHEUNt": {
-              "type": "_hero-decoration",
-              "settings": {
-                "title": "Lipstick, middle left",
-                "kind": "lipstick",
-                "tint": true,
-                "color": "muted",
-                "opacity": 70,
-                "x": -6,
-                "y": 58,
-                "size": 56,
-                "rotate": -10,
-                "layer": 5,
-                "animation": "sway",
-                "speed": 2,
-                "delay": 0
-              },
-              "blocks": {}
-            },
-            "hero_decoration_nxbzfR": {
-              "type": "_hero-decoration",
-              "settings": {
-                "title": "Round perfume, bottom right",
-                "kind": "perfume-round",
-                "tint": true,
-                "color": "muted",
-                "opacity": 70,
-                "x": 78,
-                "y": 82,
-                "size": 84,
-                "rotate": -10,
-                "layer": 5,
-                "animation": "float",
-                "speed": 9,
-                "delay": 1
-              },
-              "blocks": {}
-            },
-            "hero_decoration_zCY7RL": {
-              "type": "_hero-decoration",
-              "settings": {
-                "title": "Sparkle, top centre",
-                "kind": "sparkle",
-                "tint": true,
-                "color": "white",
-                "opacity": 100,
-                "x": 56,
-                "y": 0,
-                "size": 14,
-                "rotate": 0,
-                "layer": 5,
-                "animation": "twinkle",
-                "speed": 3,
-                "delay": 0
-              },
-              "blocks": {}
-            },
-            "hero_decoration_PdfNDt": {
-              "type": "_hero-decoration",
-              "settings": {
-                "title": "Sparkle, top left",
-                "kind": "sparkle",
-                "tint": true,
-                "color": "white",
-                "opacity": 100,
-                "x": 32,
-                "y": 12,
-                "size": 18,
-                "rotate": 0,
-                "layer": 5,
-                "animation": "twinkle",
-                "speed": 4,
-                "delay": 1
-              },
-              "blocks": {}
-            },
-            "hero_decoration_8ctQK3": {
-              "type": "_hero-decoration",
-              "settings": {
-                "title": "Sparkle, top left 2",
-                "kind": "sparkle",
-                "tint": true,
-                "color": "accent",
-                "opacity": 30,
-                "x": 20,
-                "y": 0,
-                "size": 12,
-                "rotate": 0,
-                "layer": 5,
-                "animation": "twinkle",
-                "speed": 3,
-                "delay": 2
-              },
-              "blocks": {}
-            },
-            "hero_decoration_WzE7Pw": {
-              "type": "_hero-decoration",
-              "settings": {
-                "title": "Sparkle, top right",
-                "kind": "sparkle",
-                "tint": true,
-                "color": "accent",
-                "opacity": 30,
-                "x": 78,
-                "y": 16,
-                "size": 16,
-                "rotate": 0,
-                "layer": 5,
-                "animation": "twinkle",
-                "speed": 4,
-                "delay": 0.5
-              },
-              "blocks": {}
-            },
-            "hero_decoration_7993nC": {
-              "type": "_hero-decoration",
-              "settings": {
-                "title": "Sparkle, middle centre",
-                "kind": "sparkle",
-                "tint": true,
-                "color": "white",
-                "opacity": 100,
-                "x": 66,
-                "y": 38,
-                "size": 14,
-                "rotate": 0,
-                "layer": 5,
-                "animation": "twinkle",
-                "speed": 3,
-                "delay": 1.5
-              },
-              "blocks": {}
-            },
-            "hero_decoration_mfQf6F": {
-              "type": "_hero-decoration",
-              "settings": {
-                "title": "Sparkle, middle left",
-                "kind": "sparkle",
-                "tint": true,
-                "color": "white",
-                "opacity": 100,
-                "x": -6,
-                "y": 50,
-                "size": 16,
-                "rotate": 0,
-                "layer": 5,
-                "animation": "twinkle",
-                "speed": 4,
-                "delay": 2.5
-              },
-              "blocks": {}
-            },
-            "hero_decoration_4VHnC8": {
-              "type": "_hero-decoration",
-              "settings": {
-                "title": "Sparkle, bottom right",
-                "kind": "sparkle",
-                "tint": true,
-                "color": "accent",
-                "opacity": 30,
-                "x": 88,
-                "y": 62,
-                "size": 14,
-                "rotate": 0,
-                "layer": 5,
-                "animation": "twinkle",
-                "speed": 3,
-                "delay": 1
-              },
-              "blocks": {}
-            }
-          },
-          "block_order": [
-            "hero_decoration_BeHfpQ",
-            "hero_decoration_RafJGD",
-            "hero_decoration_dnTrbE",
-            "hero_decoration_JhraBh",
-            "hero_decoration_LajCaF",
-            "hero_decoration_NHEUNt",
-            "hero_decoration_nxbzfR",
-            "hero_decoration_zCY7RL",
-            "hero_decoration_PdfNDt",
-            "hero_decoration_8ctQK3",
-            "hero_decoration_WzE7Pw",
-            "hero_decoration_7993nC",
-            "hero_decoration_mfQf6F",
-            "hero_decoration_4VHnC8"
-          ]
-        },
         "hero-content": {
           "type": "_hero-content",
           "static": true,
@@ -395,16 +21,17 @@
               "type": "image",
               "settings": {
                 "image": "shopify://shop_images/logo-mark-flame.png",
+                "link": "",
                 "ratio": "original",
                 "radius": "none",
                 "width": 40,
-                "alignment": "left",
-                "link": ""
+                "alignment": "left"
               },
               "blocks": {}
             },
             "group_fCACcX": {
               "type": "group",
+              "name": "t:general.column",
               "settings": {
                 "layout_direction": "group--vertical",
                 "alignment": "flex-start",
@@ -421,12 +48,12 @@
                     "size": "h1",
                     "use_custom_size": false,
                     "custom_size": 60,
-                    "tag": "p",
-                    "color": "default",
                     "font": "accent-font",
+                    "color": "default",
                     "italic_style": "accent",
                     "alignment": "left",
-                    "indent": 1.4
+                    "indent": 1.4,
+                    "tag": "p"
                   },
                   "blocks": {}
                 },
@@ -437,12 +64,12 @@
                     "size": "display",
                     "use_custom_size": false,
                     "custom_size": 60,
-                    "tag": "h1",
-                    "color": "accent",
                     "font": "accent-font",
+                    "color": "accent",
                     "italic_style": "accent",
                     "alignment": "left",
-                    "indent": 0
+                    "indent": 0,
+                    "tag": "h1"
                   },
                   "blocks": {}
                 },
@@ -453,12 +80,12 @@
                     "size": "h1",
                     "use_custom_size": false,
                     "custom_size": 60,
-                    "tag": "p",
-                    "color": "default",
                     "font": "heading-font",
+                    "color": "default",
                     "italic_style": "brush",
                     "alignment": "left",
-                    "indent": 1.6
+                    "indent": 1.6,
+                    "tag": "p"
                   },
                   "blocks": {}
                 }
@@ -467,11 +94,11 @@
                 "heading_NJiJQH",
                 "heading_RMAJtF",
                 "heading_zBXHU6"
-              ],
-              "name": "t:general.column"
+              ]
             },
             "group_6HCRQb": {
               "type": "group",
+              "name": "t:general.column",
               "settings": {
                 "layout_direction": "group--vertical",
                 "alignment": "flex-start",
@@ -488,12 +115,12 @@
                     "size": "h3",
                     "use_custom_size": false,
                     "custom_size": 60,
-                    "tag": "p",
-                    "color": "default",
                     "font": "body-font",
+                    "color": "default",
                     "italic_style": "accent",
                     "alignment": "left",
-                    "indent": 0
+                    "indent": 0,
+                    "tag": "p"
                   },
                   "blocks": {}
                 },
@@ -507,7 +134,8 @@
                     "font": "body-font",
                     "color": "default",
                     "alignment": "left",
-                    "max_width": "40ch"
+                    "max_width": "40ch",
+                    "hide_on_phones": true
                   },
                   "blocks": {}
                 }
@@ -515,11 +143,11 @@
               "block_order": [
                 "heading_B3mC7z",
                 "text_LXTnRQ"
-              ],
-              "name": "t:general.column"
+              ]
             },
             "group_iY4Wa7": {
               "type": "group",
+              "name": "t:general.buttons",
               "settings": {
                 "layout_direction": "group--horizontal",
                 "alignment": "flex-start",
@@ -557,8 +185,7 @@
               "block_order": [
                 "button_wFX67R",
                 "button_TKXrWf"
-              ],
-              "name": "t:general.buttons"
+              ]
             }
           },
           "block_order": [
@@ -567,27 +194,480 @@
             "group_6HCRQb",
             "group_iY4Wa7"
           ]
+        },
+        "hero-decorations": {
+          "type": "_hero-decorations",
+          "static": true,
+          "settings": {},
+          "blocks": {
+            "hero_decoration_BeHfpQ": {
+              "type": "_hero-decoration",
+              "settings": {
+                "title": "Powder compact, top centre",
+                "kind": "compact",
+                "tint": true,
+                "color": "muted",
+                "opacity": 70,
+                "x": 34,
+                "y": 2,
+                "size": 46,
+                "rotate": 0,
+                "layer": 5,
+                "animation": "breathe",
+                "speed": 3,
+                "delay": 0,
+                "mobile_show": true,
+                "mobile_x": 12,
+                "mobile_y": 30,
+                "mobile_size": 26
+              },
+              "blocks": {}
+            },
+            "hero_decoration_RafJGD": {
+              "type": "_hero-decoration",
+              "settings": {
+                "title": "Makeup brush, top right",
+                "kind": "brush",
+                "tint": true,
+                "color": "muted",
+                "opacity": 70,
+                "x": 104,
+                "y": 0,
+                "size": 106,
+                "rotate": 95,
+                "layer": 5,
+                "animation": "float",
+                "speed": 4,
+                "delay": 1,
+                "mobile_show": false,
+                "mobile_x": 50,
+                "mobile_y": 50,
+                "mobile_size": 32
+              },
+              "blocks": {}
+            },
+            "hero_decoration_dnTrbE": {
+              "type": "_hero-decoration",
+              "settings": {
+                "title": "Serum bottle, top right",
+                "kind": "bottle",
+                "tint": true,
+                "color": "muted",
+                "opacity": 70,
+                "x": 74,
+                "y": 12,
+                "size": 56,
+                "rotate": -20,
+                "layer": 5,
+                "animation": "float",
+                "speed": 3,
+                "delay": 0,
+                "mobile_show": true,
+                "mobile_x": 74,
+                "mobile_y": 18,
+                "mobile_size": 26
+              },
+              "blocks": {}
+            },
+            "hero_decoration_JhraBh": {
+              "type": "_hero-decoration",
+              "settings": {
+                "title": "Perfume bottle, middle right",
+                "kind": "perfume",
+                "tint": true,
+                "color": "muted",
+                "opacity": 70,
+                "x": 72,
+                "y": 30,
+                "size": 84,
+                "rotate": 10,
+                "layer": 5,
+                "animation": "float",
+                "speed": 4,
+                "delay": 0,
+                "mobile_show": true,
+                "mobile_x": 92,
+                "mobile_y": 74,
+                "mobile_size": 34
+              },
+              "blocks": {}
+            },
+            "hero_decoration_LajCaF": {
+              "type": "_hero-decoration",
+              "settings": {
+                "title": "Gold magnolia, middle centre",
+                "kind": "magnolia",
+                "tint": true,
+                "color": "muted",
+                "opacity": 100,
+                "x": 64,
+                "y": 44,
+                "size": 96,
+                "rotate": 0,
+                "layer": 12,
+                "animation": "none",
+                "speed": 4,
+                "delay": 0,
+                "mobile_show": true,
+                "mobile_x": 58,
+                "mobile_y": 28,
+                "mobile_size": 30
+              },
+              "blocks": {}
+            },
+            "hero_decoration_NHEUNt": {
+              "type": "_hero-decoration",
+              "settings": {
+                "title": "Lipstick, middle left",
+                "kind": "lipstick",
+                "tint": true,
+                "color": "muted",
+                "opacity": 70,
+                "x": -6,
+                "y": 58,
+                "size": 56,
+                "rotate": -10,
+                "layer": 5,
+                "animation": "sway",
+                "speed": 2,
+                "delay": 0,
+                "mobile_show": true,
+                "mobile_x": 10,
+                "mobile_y": 62,
+                "mobile_size": 28
+              },
+              "blocks": {}
+            },
+            "hero_decoration_nxbzfR": {
+              "type": "_hero-decoration",
+              "settings": {
+                "title": "Round perfume, bottom right",
+                "kind": "perfume-round",
+                "tint": true,
+                "color": "muted",
+                "opacity": 70,
+                "x": 78,
+                "y": 82,
+                "size": 84,
+                "rotate": -10,
+                "layer": 5,
+                "animation": "float",
+                "speed": 9,
+                "delay": 1,
+                "mobile_show": false,
+                "mobile_x": 50,
+                "mobile_y": 50,
+                "mobile_size": 32
+              },
+              "blocks": {}
+            },
+            "hero_decoration_zCY7RL": {
+              "type": "_hero-decoration",
+              "settings": {
+                "title": "Sparkle, top centre",
+                "kind": "sparkle",
+                "tint": true,
+                "color": "white",
+                "opacity": 100,
+                "x": 56,
+                "y": 0,
+                "size": 14,
+                "rotate": 0,
+                "layer": 5,
+                "animation": "twinkle",
+                "speed": 3,
+                "delay": 0,
+                "mobile_show": true,
+                "mobile_x": 70,
+                "mobile_y": 8,
+                "mobile_size": 10
+              },
+              "blocks": {}
+            },
+            "hero_decoration_PdfNDt": {
+              "type": "_hero-decoration",
+              "settings": {
+                "title": "Sparkle, top left",
+                "kind": "sparkle",
+                "tint": true,
+                "color": "white",
+                "opacity": 100,
+                "x": 32,
+                "y": 12,
+                "size": 18,
+                "rotate": 0,
+                "layer": 5,
+                "animation": "twinkle",
+                "speed": 4,
+                "delay": 1,
+                "mobile_show": false,
+                "mobile_x": 50,
+                "mobile_y": 50,
+                "mobile_size": 32
+              },
+              "blocks": {}
+            },
+            "hero_decoration_8ctQK3": {
+              "type": "_hero-decoration",
+              "settings": {
+                "title": "Sparkle, top left 2",
+                "kind": "sparkle",
+                "tint": true,
+                "color": "accent",
+                "opacity": 30,
+                "x": 20,
+                "y": 0,
+                "size": 12,
+                "rotate": 0,
+                "layer": 5,
+                "animation": "twinkle",
+                "speed": 3,
+                "delay": 2,
+                "mobile_show": false,
+                "mobile_x": 50,
+                "mobile_y": 50,
+                "mobile_size": 32
+              },
+              "blocks": {}
+            },
+            "hero_decoration_WzE7Pw": {
+              "type": "_hero-decoration",
+              "settings": {
+                "title": "Sparkle, top right",
+                "kind": "sparkle",
+                "tint": true,
+                "color": "accent",
+                "opacity": 30,
+                "x": 78,
+                "y": 16,
+                "size": 16,
+                "rotate": 0,
+                "layer": 5,
+                "animation": "twinkle",
+                "speed": 4,
+                "delay": 0.5,
+                "mobile_show": true,
+                "mobile_x": 94,
+                "mobile_y": 44,
+                "mobile_size": 12
+              },
+              "blocks": {}
+            },
+            "hero_decoration_7993nC": {
+              "type": "_hero-decoration",
+              "settings": {
+                "title": "Sparkle, middle centre",
+                "kind": "sparkle",
+                "tint": true,
+                "color": "white",
+                "opacity": 100,
+                "x": 66,
+                "y": 38,
+                "size": 14,
+                "rotate": 0,
+                "layer": 5,
+                "animation": "twinkle",
+                "speed": 3,
+                "delay": 1.5,
+                "mobile_show": false,
+                "mobile_x": 50,
+                "mobile_y": 50,
+                "mobile_size": 32
+              },
+              "blocks": {}
+            },
+            "hero_decoration_mfQf6F": {
+              "type": "_hero-decoration",
+              "settings": {
+                "title": "Sparkle, middle left",
+                "kind": "sparkle",
+                "tint": true,
+                "color": "white",
+                "opacity": 100,
+                "x": -6,
+                "y": 50,
+                "size": 16,
+                "rotate": 0,
+                "layer": 5,
+                "animation": "twinkle",
+                "speed": 4,
+                "delay": 2.5,
+                "mobile_show": false,
+                "mobile_x": 50,
+                "mobile_y": 50,
+                "mobile_size": 32
+              },
+              "blocks": {}
+            },
+            "hero_decoration_4VHnC8": {
+              "type": "_hero-decoration",
+              "settings": {
+                "title": "Sparkle, bottom right",
+                "kind": "sparkle",
+                "tint": true,
+                "color": "accent",
+                "opacity": 30,
+                "x": 88,
+                "y": 62,
+                "size": 14,
+                "rotate": 0,
+                "layer": 5,
+                "animation": "twinkle",
+                "speed": 3,
+                "delay": 1,
+                "mobile_show": false,
+                "mobile_x": 50,
+                "mobile_y": 50,
+                "mobile_size": 32
+              },
+              "blocks": {}
+            }
+          },
+          "block_order": [
+            "hero_decoration_BeHfpQ",
+            "hero_decoration_RafJGD",
+            "hero_decoration_dnTrbE",
+            "hero_decoration_JhraBh",
+            "hero_decoration_LajCaF",
+            "hero_decoration_NHEUNt",
+            "hero_decoration_nxbzfR",
+            "hero_decoration_zCY7RL",
+            "hero_decoration_PdfNDt",
+            "hero_decoration_8ctQK3",
+            "hero_decoration_WzE7Pw",
+            "hero_decoration_7993nC",
+            "hero_decoration_mfQf6F",
+            "hero_decoration_4VHnC8"
+          ]
+        },
+        "hero-products": {
+          "type": "_hero-products",
+          "static": true,
+          "settings": {},
+          "blocks": {
+            "hero_product_NC8wV8": {
+              "type": "_hero-product",
+              "settings": {
+                "image": "shopify://shop_images/Group_1000003837.png",
+                "collection": "makeup",
+                "product": "",
+                "link": "",
+                "label": "Makeup",
+                "brush_word": "glamour",
+                "label_x": -4,
+                "label_y": 50,
+                "x": 84,
+                "y": 23,
+                "width": 34,
+                "rotate": 0,
+                "mobile_x": 65,
+                "mobile_y": 61,
+                "mobile_width": 36,
+                "mobile_label_x": 4,
+                "mobile_label_y": 50
+              },
+              "blocks": {}
+            },
+            "hero_product_EdLdma": {
+              "type": "_hero-product",
+              "settings": {
+                "image": "shopify://shop_images/Group_1000003838.png",
+                "collection": "skincare",
+                "product": "",
+                "link": "",
+                "label": "Skincare",
+                "brush_word": "radiance",
+                "label_x": 8,
+                "label_y": 50,
+                "x": 55,
+                "y": 55,
+                "width": 47,
+                "rotate": 0,
+                "mobile_x": 44,
+                "mobile_y": 76,
+                "mobile_width": 40,
+                "mobile_label_x": -4,
+                "mobile_label_y": 52
+              },
+              "blocks": {}
+            },
+            "hero_product_3Qyw3w": {
+              "type": "_hero-product",
+              "settings": {
+                "image": "shopify://shop_images/Group_1000003840.png",
+                "collection": "",
+                "product": "radiance-vitamin-c-serum",
+                "link": "",
+                "label": "Serums",
+                "brush_word": "renewal",
+                "label_x": -4,
+                "label_y": 50,
+                "x": 16,
+                "y": 74,
+                "width": 29,
+                "rotate": 0,
+                "mobile_x": 17,
+                "mobile_y": 87,
+                "mobile_width": 29,
+                "mobile_label_x": 74,
+                "mobile_label_y": 100
+              },
+              "blocks": {}
+            },
+            "hero_product_pJ7caW": {
+              "type": "_hero-product",
+              "settings": {
+                "image": "shopify://shop_images/Group_1000003839.png",
+                "collection": "fragrance",
+                "product": "",
+                "link": "",
+                "label": "Fragrance",
+                "brush_word": "scent",
+                "label_x": -4,
+                "label_y": 50,
+                "x": 86,
+                "y": 80,
+                "width": 37,
+                "rotate": 0,
+                "mobile_x": 75,
+                "mobile_y": 91,
+                "mobile_width": 32,
+                "mobile_label_x": -4,
+                "mobile_label_y": 86
+              },
+              "blocks": {}
+            }
+          },
+          "block_order": [
+            "hero_product_NC8wV8",
+            "hero_product_EdLdma",
+            "hero_product_3Qyw3w",
+            "hero_product_pJ7caW"
+          ]
         }
       },
       "name": "t:general.hero",
       "settings": {
         "image": "shopify://shop_images/Hero-background.png",
         "overlay_opacity": 0,
+        "mobile_image": "shopify://shop_images/Group2.png",
+        "mobile_products_start": 46,
+        "mobile_text_width": 100,
+        "rotate_products": true,
+        "rotate_interval": 4,
+        "resume_delay": 2.5,
         "height": "full",
+        "section_width": "full",
+        "products_start": 45,
         "content_width": 700,
         "content_x": "start",
         "content_y": "center",
         "content_spacing": "between",
+        "content_gap": 24,
         "text_scaling": "screen",
-        "padding_top": 0,
-        "padding_bottom": 0,
-        "products_start": 45,
-        "rotate_products": true,
-        "rotate_interval": 4,
-        "resume_delay": 2.5,
-        "section_width": "full",
         "color_scheme": "",
-        "content_gap": 24
+        "padding_top": 0,
+        "padding_bottom": 0
       }
     },
     "product_panels_Kh9WWd": {
@@ -769,7 +849,8 @@
                 "font": "body-font",
                 "color": "accent",
                 "alignment": "left",
-                "max_width": "none"
+                "max_width": "none",
+                "hide_on_phones": false
               },
               "blocks": {}
             },
@@ -780,12 +861,12 @@
                 "size": "h1",
                 "use_custom_size": true,
                 "custom_size": 72,
-                "tag": "h2",
-                "color": "default",
                 "font": "heading-font",
+                "color": "default",
                 "italic_style": "accent",
                 "alignment": "left",
-                "indent": 0
+                "indent": 0,
+                "tag": "h2"
               },
               "blocks": {}
             },
@@ -799,7 +880,8 @@
                 "font": "body-font",
                 "color": "default",
                 "alignment": "left",
-                "max_width": "60ch"
+                "max_width": "60ch",
+                "hide_on_phones": false
               },
               "blocks": {}
             },
@@ -999,12 +1081,12 @@
                 "size": "h1",
                 "use_custom_size": true,
                 "custom_size": 72,
-                "tag": "h2",
-                "color": "default",
                 "font": "heading-font",
+                "color": "default",
                 "italic_style": "accent",
                 "alignment": "left",
-                "indent": 0
+                "indent": 0,
+                "tag": "h2"
               },
               "blocks": {}
             },
@@ -1018,7 +1100,8 @@
                 "font": "body-font",
                 "color": "default",
                 "alignment": "left",
-                "max_width": "60ch"
+                "max_width": "60ch",
+                "hide_on_phones": false
               },
               "blocks": {}
             },
