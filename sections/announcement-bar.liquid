@@ -8,7 +8,8 @@
   - Movement: Static (first message only), Slideshow (one at a time, arrows, optional autoplay) or Marquee.
     Anything that moves has a pause button (WCAG 2.2.2) and never moves with reduced motion. The marquee moves
     whenever Marquee is chosen (not tied to the theme's "Enable animations"), except in the theme editor.
-  - Close button: hides the bar for the rest of the visit (sessionStorage). The inline script after the bar
+  - Close button: hides the bar until the messages change (localStorage, keyed by a fingerprint of the
+    messages, so a new announcement always shows again). The inline script after the bar
     hides it before the first paint, so nothing jumps. Ignored in the theme editor.
 {%- endcomment -%}
 
@@ -17,12 +18,17 @@
   assign position = section.settings.position | default: 'top'
   assign mode = section.settings.mode | default: 'static'
 
+  # messages_key joins every shown message (text + links); its md5 fingerprint names the "closed" note, so
+  # editing a message or its link gives a new name and the bar shows again for visitors who closed it.
   assign count = 0
+  assign messages_key = ''
   for block in section.blocks
     if block.settings.text != blank
       assign count = count | plus: 1
+      assign messages_key = messages_key | append: block.settings.text | append: block.settings.link | append: block.settings.link_label
     endif
   endfor
+  assign close_key = messages_key | md5 | slice: 0, 8 | prepend: 'announcement-closed-'
 
   if count < 2 and mode == 'slideshow'
     assign mode = 'static'
@@ -52,6 +58,7 @@
     data-autoplay="{{ moves }}"
     data-tuck="{% if position == 'right' and section.settings.hide_on_scroll %}true{% else %}false{% endif %}"
     data-interval="{{ section.settings.interval | times: 1000 }}"
+    data-close-key="{{ close_key }}"
     data-speed="{{ section.settings.speed }}"
   >
     <div class="announcement-bar__inner">
@@ -183,7 +190,7 @@
     <script>
       (function (bar) {
         try {
-          if (!(window.Shopify && Shopify.designMode) && sessionStorage.getItem('announcement-closed') === '1') {
+          if (!(window.Shopify && Shopify.designMode) && localStorage.getItem(bar.dataset.closeKey) === '1') {
             bar.hidden = true;
           }
         } catch (error) {}
@@ -912,7 +919,11 @@
       // Remember it first, so a closed bar stays closed even if the animation is cut short
       if (!this.designMode) {
         try {
-          sessionStorage.setItem('announcement-closed', '1');
+          localStorage.setItem(this.dataset.closeKey, '1');
+          // Forget notes for older messages, so they don't pile up
+          Object.keys(localStorage)
+            .filter((key) => key.startsWith('announcement-closed') && key !== this.dataset.closeKey)
+            .forEach((key) => localStorage.removeItem(key));
         } catch (error) {
           // Storage blocked: the bar comes back on the next page
         }
