@@ -5,7 +5,7 @@
     bottom), fixed to the right edge of the screen, one screen tall (100svh). Optionally it slides out once the
     page scrolls down and comes back only at the top of the page.
     Large screens only: below 990px it is a bar above the header.
-  - Movement: None (first message only), Slideshow (one at a time, arrows, optional autoplay) or Marquee.
+  - Movement: Static (first message only), Slideshow (one at a time, arrows, optional autoplay) or Marquee.
     Anything that moves has a pause button (WCAG 2.2.2) and never moves with reduced motion; the marquee also
     needs the theme's animations on (never in the theme editor).
   - Close button: hides the bar for the rest of the visit (sessionStorage). The inline script after the bar
@@ -109,11 +109,19 @@
           </div>
 
         {%- else -%}
-          <div class="announcement-bar__messages">
+          {%- comment -%}
+            tabindex: keyboard users (mainly desktop) can focus this box, and on phones it also scrolls a
+            long message sideways. The focus ring is drawn on the inner text span, so it hugs the message
+            instead of spanning the whole bar. No aria-label: the parent <announcement-bar role="region">
+            already names it, and aria-label on a role-less div is disallowed.
+          {%- endcomment -%}
+          <div class="announcement-bar__messages" tabindex="0">
             {%- for block in section.blocks -%}
               {%- if block.settings.text != blank -%}
                 <p class="announcement-bar__message is-active" {{ block.shopify_attributes }}>
-                  {%- render 'announcement-message', block: block -%}
+                  <span class="announcement-bar__text">
+                    {%- render 'announcement-message', block: block -%}
+                  </span>
                 </p>
                 {%- break -%}
               {%- endif -%}
@@ -179,6 +187,23 @@
 
   .announcement-bar[hidden] {
     display: none;
+  }
+
+  /*
+    Close: the script fixes the bar's height, then animates it (and the opacity) to zero, so the bar
+    collapses instead of vanishing. block-size + opacity are set inline by the script; this only supplies
+    the easing. The full-height hero grows back in step (see hero.liquid). Instant with reduced motion.
+  */
+  .announcement-bar.is-closing {
+    overflow: hidden;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .announcement-bar {
+      transition:
+        block-size var(--duration-base, 300ms) var(--ease-out),
+        opacity var(--duration-base, 300ms) var(--ease-out);
+    }
   }
 
   .announcement-bar__inner {
@@ -366,13 +391,82 @@
       padding-block: var(--space-2xs);
     }
 
-    .announcement-bar__message {
+    /* Slideshow keeps wrapping onto even lines (it swaps whole messages, so it can't scroll) */
+    .announcement-bar--slideshow .announcement-bar__message {
       text-wrap: balance;
+    }
+
+    /*
+      Static bar, long message on phones: it stays on one line and the visitor swipes sideways instead of
+      wrapping onto two lines. When it fits it follows the Text alignment setting (start / centre / end) via
+      the auto margins below; when it is too long it overflows and the box scrolls from the beginning (auto
+      margins collapse to 0, so a long message always reads from its start, whatever the alignment).
+      The scrollbar is hidden; a soft fade marks whichever side still has text off screen. The fades are
+      switched on by the script (has-overflow-start / -end), so once you swipe to an end that end is fully
+      shown, never left stuck under a fade.
+    */
+    .announcement-bar--static .announcement-bar__messages {
+      overflow-x: auto;
+      scrollbar-width: none; /* Firefox: hide the bar; the fades are the cue */
+    }
+
+    .announcement-bar--static .announcement-bar__messages::-webkit-scrollbar {
+      display: none; /* Chrome / Safari */
+    }
+
+    .announcement-bar--static.has-overflow-start.has-overflow-end .announcement-bar__messages {
+      -webkit-mask-image: linear-gradient(to right, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent);
+      mask-image: linear-gradient(to right, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent);
+    }
+
+    .announcement-bar--static.has-overflow-end:not(.has-overflow-start) .announcement-bar__messages {
+      -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+      mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+    }
+
+    .announcement-bar--static.has-overflow-start:not(.has-overflow-end) .announcement-bar__messages {
+      -webkit-mask-image: linear-gradient(to right, transparent, #000 2.5rem);
+      mask-image: linear-gradient(to right, transparent, #000 2.5rem);
+    }
+
+    .announcement-bar--static .announcement-bar__message {
+      inline-size: max-content;
+      max-inline-size: none;
+      margin-inline: auto; /* centre (default); the auto margins place a message that fits */
+      white-space: nowrap;
+    }
+
+    /* Follow the Text alignment setting when the message fits (ignored once it overflows and scrolls) */
+    .announcement-bar--static.announcement-bar--align-start .announcement-bar__message {
+      margin-inline: 0 auto;
+    }
+
+    .announcement-bar--static.announcement-bar--align-end .announcement-bar__message {
+      margin-inline: auto 0;
     }
 
     .announcement-bar--uppercase.announcement-bar--spacing-auto .announcement-bar__inner {
       letter-spacing: 0.08em;
     }
+  }
+
+  /*
+    Keyboard focus: the ring is drawn on the text span, not the full-width scroll box, so it hugs the
+    message. outline-offset gives the gap ("padding") between the text and the ring; the pill radius rounds
+    it. currentColor keeps it visible on any colour scheme (e.g. the red band).
+  */
+  .announcement-bar__text {
+    display: inline-block;
+    border-radius: var(--radius-pill);
+  }
+
+  .announcement-bar__messages:focus-visible {
+    outline: none;
+  }
+
+  .announcement-bar__messages:focus-visible .announcement-bar__text {
+    outline: 2px solid currentColor;
+    outline-offset: 4px;
   }
 
   @media (prefers-reduced-motion: no-preference) {
@@ -427,7 +521,9 @@
 
     @media (prefers-reduced-motion: no-preference) {
       .announcement-bar--right {
-        transition: translate var(--duration-slow, 0.5s) var(--ease-out);
+        transition:
+          translate var(--duration-slow, 0.5s) var(--ease-out),
+          opacity var(--duration-base, 300ms) var(--ease-out);
       }
     }
 
@@ -541,11 +637,46 @@
         const animations = document.documentElement.classList.contains('animations-on');
         if (this.pauseButton && animations && this.motion) this.pauseButton.hidden = false;
       }
+      if (this.dataset.mode === 'static') this.setUpScroll(signal);
     }
 
     disconnectedCallback() {
       this.controller?.abort();
       clearInterval(this.timer);
+      clearTimeout(this.closeFallback);
+      this.resizeObserver?.disconnect();
+    }
+
+    /*
+      Static bar on phones: the message scrolls sideways when it's too long. Mark which side still has text
+      off screen (has-overflow-start / -end) so the stylesheet fades only that side — and drops the fade once
+      an end is reached, so no text is left stuck under it.
+    */
+    setUpScroll(signal) {
+      const box = this.querySelector('.announcement-bar__messages');
+      if (!box) return;
+      let ticking = false;
+      const update = () => {
+        ticking = false;
+        const max = box.scrollWidth - box.clientWidth;
+        this.classList.toggle('has-overflow-start', box.scrollLeft > 1);
+        this.classList.toggle('has-overflow-end', box.scrollLeft < max - 1);
+      };
+      box.addEventListener(
+        'scroll',
+        () => {
+          if (!ticking) {
+            ticking = true;
+            requestAnimationFrame(update);
+          }
+        },
+        { passive: true, signal }
+      );
+      this.resizeObserver = new ResizeObserver(update);
+      this.resizeObserver.observe(box);
+      // Also watch the message: when the web font swaps in, its width changes but the box's doesn't
+      if (box.firstElementChild) this.resizeObserver.observe(box.firstElementChild);
+      update();
     }
 
     /*
@@ -575,13 +706,40 @@
     }
 
     close() {
-      this.hidden = true;
-      if (this.designMode) return;
-      try {
-        sessionStorage.setItem('announcement-closed', '1');
-      } catch (error) {
-        // Storage blocked: the bar comes back on the next page
+      // Remember it first, so a closed bar stays closed even if the animation is cut short
+      if (!this.designMode) {
+        try {
+          sessionStorage.setItem('announcement-closed', '1');
+        } catch (error) {
+          // Storage blocked: the bar comes back on the next page
+        }
       }
+
+      // Theme editor or reduced motion: just hide it, no animation
+      if (this.designMode || !this.motion) {
+        this.hidden = true;
+        return;
+      }
+
+      const finish = (event) => {
+        if (event && event.target !== this) return;
+        this.hidden = true;
+        this.removeEventListener('transitionend', finish);
+        clearTimeout(this.closeFallback);
+      };
+
+      this.classList.add('is-closing');
+      // Top bar: collapse its height so the page (and the hero) closes the gap smoothly. The right-side
+      // band keeps its height and only fades (collapsing a full-height fixed band would look wrong).
+      if (this.classList.contains('announcement-bar--top')) {
+        this.style.blockSize = `${this.offsetHeight}px`;
+        void this.offsetHeight; // commit that height before animating to 0
+        this.style.blockSize = '0';
+      }
+      this.style.opacity = '0';
+
+      this.addEventListener('transitionend', finish);
+      this.closeFallback = setTimeout(finish, 600); // safety if transitionend never fires
     }
 
     setUpSlideshow(signal) {

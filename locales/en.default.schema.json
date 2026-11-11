@@ -1498,7 +1498,7 @@
       "portrait": "Portrait (4:5)"
     },
     "announcement_mode": {
-      "static": "None (first message only)",
+      "static": "Static (first message only)",
       "slideshow": "Slideshow",
       "marquee": "Marquee"
     },

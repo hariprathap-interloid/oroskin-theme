@@ -28,6 +28,22 @@
   }
 
   /*
+    A top announcement bar sits in flow above everything and pushes the first section down, so take its
+    height off too (same as the hero, see hero.liquid). The rule falls away when the bar is closed
+    ([hidden]) or is the right-side band; .is-closing drops it as the bar collapses, so the section grows
+    back in step. --announcement-size is set on :root by the announcement bar section (default 36px).
+  */
+  body:has(.announcement-bar--top:not([hidden]):not(.is-closing)) #MainContent > .shopify-section:first-child .section--fill-screen {
+    min-block-size: calc(100svh - 6.0625rem - var(--announcement-size, 2.25rem));
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    #MainContent > .shopify-section:first-child .section--fill-screen {
+      transition: min-block-size var(--duration-base, 300ms) var(--ease-out);
+    }
+  }
+
+  /*
     --px (one Figma pixel on this screen) sizes the cards, badges, icons and fields. Text and spacing
     are NOT tied to it (that made the text far bigger than normal on big screens): text uses the
     theme's normal sizes x --text-boost (the section's Text size setting, e.g. 1.1 = 10% bigger), and

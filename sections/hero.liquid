@@ -166,6 +166,31 @@
     min-block-size: 60svh;
   }
 
+  /*
+    A top announcement bar sits in normal flow ABOVE the hero (it's in the Header group and scrolls away),
+    so it pushes the hero down and the bottom of a full-height hero falls below the screen. Take the bar's
+    height off the full-height hero so it fits the first screen exactly. --announcement-size is set on :root
+    by the announcement bar section (default 36px). The rule falls away on its own when the bar is closed
+    ([hidden]) or set to the right-side band (only announcement-bar--top matches).
+    Desktop only (min-width 1024px): below that the hero with a Mobile image is sized from the photo's
+    ratio (see .hero--has-mobile), and this must not override that fixed height.
+  */
+  @media (min-width: 1024px) {
+    body:has(.announcement-bar--top:not([hidden]):not(.is-closing)) #MainContent > .shopify-section:first-child .hero--height-full {
+      min-block-size: calc(100svh - var(--announcement-size, 2.25rem));
+    }
+
+    /*
+      When the bar is closed it collapses to nothing and stops matching the rule above, so the hero grows
+      back to the full screen. Easing that change keeps it in step with the bar's own collapse.
+    */
+    @media (prefers-reduced-motion: no-preference) {
+      #MainContent > .shopify-section:first-child .hero--height-full {
+        transition: min-block-size var(--duration-base, 300ms) var(--ease-out);
+      }
+    }
+  }
+
   .hero__media {
     position: absolute;
     inset: 0;
