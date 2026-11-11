@@ -6,8 +6,8 @@
     page scrolls down and comes back only at the top of the page.
     Large screens only: below 990px it is a bar above the header.
   - Movement: Static (first message only), Slideshow (one at a time, arrows, optional autoplay) or Marquee.
-    Anything that moves has a pause button (WCAG 2.2.2) and never moves with reduced motion; the marquee also
-    needs the theme's animations on (never in the theme editor).
+    Anything that moves has a pause button (WCAG 2.2.2) and never moves with reduced motion. The marquee moves
+    whenever Marquee is chosen (not tied to the theme's "Enable animations"), except in the theme editor.
   - Close button: hides the bar for the rest of the visit (sessionStorage). The inline script after the bar
     hides it before the first paint, so nothing jumps. Ignored in the theme editor.
 {%- endcomment -%}
@@ -52,7 +52,7 @@
     data-autoplay="{{ moves }}"
     data-tuck="{% if position == 'right' and section.settings.hide_on_scroll %}true{% else %}false{% endif %}"
     data-interval="{{ section.settings.interval | times: 1000 }}"
-    style="--announcement-duration: {{ section.settings.speed }}s;"
+    data-speed="{{ section.settings.speed }}"
   >
     <div class="announcement-bar__inner">
       {%- if mode == 'slideshow' and section.settings.show_arrows -%}
@@ -64,30 +64,46 @@
 
       {%- case mode -%}
         {%- when 'marquee' -%}
-          {%- comment -%} Screen readers and keyboards use this list; the moving copy is hidden from them {%- endcomment -%}
-          <ul class="visually-hidden">
-            {%- for block in section.blocks -%}
-              {%- if block.settings.text != blank -%}
-                <li>{% render 'announcement-message', block: block %}</li>
-              {%- endif -%}
-            {%- endfor -%}
-          </ul>
+          {%- comment -%}
+            Two copies of the messages.
+            1) The real line: every message in one row with a dot between them, built like the Static line, so
+               it scrolls along the bar, follows Text alignment and carries the editor attributes (select a
+               message in the theme editor). Screen readers and the keyboard use it. Everyone sees it whenever
+               the marquee doesn't move (theme editor, reduced motion, no JavaScript), and it swaps in for the
+               moving strip while it has keyboard focus, so the focus ring is visible.
+            2) The moving strip: hidden from screen readers, its links out of the Tab order. It holds one set of
+               messages; the script copies them until one half covers the bar.
+          {%- endcomment -%}
+          <div class="announcement-bar__messages">
+            <p class="announcement-bar__message announcement-bar__scroller announcement-bar__marquee-line" tabindex="0">
+              <span class="announcement-bar__text">
+                {%- assign printed = false -%}
+                {%- for block in section.blocks -%}
+                  {%- if block.settings.text != blank -%}
+                    {%- if printed -%}
+                      <span class="announcement-bar__separator" aria-hidden="true">•</span>
+                    {%- endif -%}
+                    <span class="announcement-bar__part" {{ block.shopify_attributes }}>
+                      {%- render 'announcement-message', block: block -%}
+                    </span>
+                    {%- assign printed = true -%}
+                  {%- endif -%}
+                {%- endfor -%}
+              </span>
+            </p>
+          </div>
           <div class="announcement-bar__viewport" aria-hidden="true">
             <div class="announcement-bar__track">
-              {%- for half in (1..2) -%}
-                <div class="announcement-bar__half">
-                  {%- for i in (1..3) -%}
-                    {%- for block in section.blocks -%}
-                      {%- if block.settings.text != blank -%}
-                        <span class="announcement-bar__item">
-                          {%- render 'announcement-message', block: block, hidden_copy: true -%}
-                        </span>
-                        <span class="announcement-bar__separator">•</span>
-                      {%- endif -%}
-                    {%- endfor -%}
-                  {%- endfor -%}
-                </div>
-              {%- endfor -%}
+              <div class="announcement-bar__half">
+                {%- for block in section.blocks -%}
+                  {%- if block.settings.text != blank -%}
+                    <span class="announcement-bar__item">
+                      {%- render 'announcement-message', block: block, hidden_copy: true -%}
+                    </span>
+                    <span class="announcement-bar__separator">•</span>
+                  {%- endif -%}
+                {%- endfor -%}
+              </div>
             </div>
           </div>
 
@@ -359,11 +375,42 @@
     display: none;
   }
 
-  /* Marquee: the track slides by one half, then starts over; the halves are the same, so no seam shows */
+  /*
+    Marquee. The script adds is-moving when the strip may move: not in the theme editor, and the visitor
+    hasn't asked for reduced motion. (The theme's "Enable animations" setting doesn't matter: choosing
+    Marquee is the merchant's own choice.)
+    - Not moving: the strip is hidden and the real line shows (one line, scrolls, follows Text alignment).
+    - Moving: the strip shows and the real line is visually hidden (screen readers still read it). When the
+      keyboard reaches the real line, it swaps in for the strip, so the focus ring can be seen.
+    The track slides by one half, then starts over; the halves are the same, so no seam shows.
+  */
   .announcement-bar__viewport {
+    display: none;
     overflow: hidden;
     min-inline-size: 0;
     flex: 1;
+    padding-block: 0.3em; /* room for the link underline (offset 0.35em), which overflow: hidden would cut off */
+  }
+
+  .announcement-bar--marquee.is-moving:not(:has(.announcement-bar__marquee-line:focus-within)) .announcement-bar__viewport {
+    display: block;
+  }
+
+  .announcement-bar--marquee.is-moving:not(:has(.announcement-bar__marquee-line:focus-within)) .announcement-bar__messages {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* Real line: a dot between messages, with room on both sides */
+  .announcement-bar__marquee-line .announcement-bar__separator {
+    padding-inline: 1em;
   }
 
   .announcement-bar__track,
@@ -502,15 +549,20 @@
   }
 
   @media (prefers-reduced-motion: no-preference) {
-    .animations-on .announcement-bar--marquee .announcement-bar__track {
+    .announcement-bar--marquee.is-moving .announcement-bar__track {
       animation: announcement-slide-x var(--announcement-duration, 40s) linear infinite;
     }
 
-    .animations-on .announcement-bar--marquee-right .announcement-bar__track {
+    .announcement-bar--marquee-right.is-moving .announcement-bar__track {
       animation-direction: reverse;
     }
 
-    .animations-on .announcement-bar--marquee:is(:hover, :focus-within, .is-paused) .announcement-bar__track {
+    /*
+      Paused while the mouse is over it or by the pause button. Not on keyboard focus: focus on the message
+      already swaps in the still line, and pausing on focus kept it stopped after pressing play (the button
+      keeps focus).
+    */
+    .announcement-bar--marquee.is-moving:is(:hover, .is-paused) .announcement-bar__track {
       animation-play-state: paused;
     }
   }
@@ -660,7 +712,7 @@
     }
 
     @media (prefers-reduced-motion: no-preference) {
-      .animations-on .announcement-bar--right.announcement-bar--marquee .announcement-bar__track {
+      .announcement-bar--right.announcement-bar--marquee.is-moving .announcement-bar__track {
         animation-name: announcement-slide-y;
       }
     }
@@ -690,11 +742,8 @@
       this.pauseButton?.addEventListener('click', () => this.togglePause(), { signal });
 
       if (this.dataset.mode === 'slideshow') this.setUpSlideshow(signal);
-      if (this.dataset.mode === 'marquee') {
-        const animations = document.documentElement.classList.contains('animations-on');
-        if (this.pauseButton && animations && this.motion) this.pauseButton.hidden = false;
-      }
-      if (this.dataset.mode === 'static' || this.dataset.mode === 'slideshow') this.setUpScroll(signal);
+      if (this.dataset.mode === 'marquee') this.setUpMarquee(signal);
+      this.setUpScroll(signal);
     }
 
     disconnectedCallback() {
@@ -702,6 +751,87 @@
       clearInterval(this.timer);
       clearTimeout(this.closeFallback);
       this.resizeObserver?.disconnect();
+      this.marqueeObserver?.disconnect();
+    }
+
+    /*
+      Marquee: moves only outside the theme editor and when the visitor hasn't asked for reduced motion
+      (re-checked if that preference changes while the page is open). While moving, the strip gets enough
+      copies of the messages that one half covers the bar (no gap at the loop point), and the loop time comes
+      from the Speed setting in pixels per second, so short and long messages move at the same pace. The
+      pause button shows only while it really moves. In the editor, selecting a message scrolls the real
+      line to it.
+    */
+    setUpMarquee(signal) {
+      this.viewport = this.querySelector('.announcement-bar__viewport');
+      this.track = this.viewport?.querySelector('.announcement-bar__track');
+      if (!this.track) return;
+      this.unit = [...this.track.querySelector('.announcement-bar__half').children].map((node) => node.cloneNode(true));
+
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const apply = () => {
+        const moving = !this.designMode && !reduced.matches;
+        this.classList.toggle('is-moving', moving);
+        if (this.pauseButton) this.pauseButton.hidden = !moving;
+        if (moving) this.buildMarquee();
+      };
+      reduced.addEventListener('change', apply, { signal });
+
+      // Rebuild when the strip's room changes (window resize, band height, or the strip showing again after
+      // the keyboard leaves the real line). At most once per frame.
+      let pending = false;
+      this.marqueeObserver = new ResizeObserver(() => {
+        if (pending) return;
+        pending = true;
+        requestAnimationFrame(() => {
+          pending = false;
+          if (!this.classList.contains('is-moving')) return;
+          const size = this.measure(this.viewport);
+          if (size > 0 && size !== this.marqueeSize) this.buildMarquee();
+        });
+      });
+      this.marqueeObserver.observe(this.viewport);
+
+      // The web font changes the messages' width once it has loaded
+      document.fonts?.ready.then(() => {
+        if (this.classList.contains('is-moving')) this.buildMarquee();
+      });
+
+      document.addEventListener(
+        'shopify:block:select',
+        (event) => {
+          const part = [...this.querySelectorAll('.announcement-bar__part')].find(
+            (element) => element === event.target || element.contains(event.target)
+          );
+          part?.scrollIntoView({ block: 'nearest', inline: 'center' });
+        },
+        { signal }
+      );
+
+      apply();
+    }
+
+    // Size along the text: width in the bar above the header, height in the right-side band (vertical)
+    measure(element) {
+      const rect = element.getBoundingClientRect();
+      return getComputedStyle(element).writingMode.startsWith('vertical') ? rect.height : rect.width;
+    }
+
+    buildMarquee() {
+      const target = this.measure(this.viewport);
+      if (target === 0) return; // the strip is hidden right now (keyboard on the real line)
+      this.marqueeSize = target;
+      const half = document.createElement('div');
+      half.className = 'announcement-bar__half';
+      this.track.replaceChildren(half);
+      let copies = 0;
+      do {
+        this.unit.forEach((node) => half.append(node.cloneNode(true)));
+        copies += 1;
+      } while (this.measure(half) < target && copies < 50);
+      this.track.append(half.cloneNode(true));
+      const speed = Number(this.dataset.speed) || 50; // pixels per second
+      this.style.setProperty('--announcement-duration', (this.measure(half) / speed).toFixed(2) + 's');
     }
 
     /*
@@ -1001,13 +1131,13 @@
     {
       "type": "range",
       "id": "speed",
-      "label": "t:labels.marquee_speed",
-      "info": "t:labels.marquee_speed_info",
-      "min": 10,
-      "max": 120,
-      "step": 5,
-      "unit": "s",
-      "default": 40,
+      "label": "t:labels.announcement_speed",
+      "info": "t:labels.announcement_speed_info",
+      "min": 20,
+      "max": 200,
+      "step": 10,
+      "unit": "px",
+      "default": 50,
       "visible_if": "{{ section.settings.mode == 'marquee' }}"
     },
     {

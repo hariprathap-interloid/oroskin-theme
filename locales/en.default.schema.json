@@ -824,6 +824,8 @@
     "marquee_direction": "Direction",
     "marquee_speed": "Time for one loop",
     "marquee_speed_info": "Higher = slower. It pauses on hover and has a pause button; it never moves for visitors who reduce motion or when animations are off.",
+    "announcement_speed": "Speed",
+    "announcement_speed_info": "Pixels per second: higher = faster, the same pace for short and long messages. It pauses on hover and has a pause button. It stays still in the theme editor and for visitors who reduce motion.",
     "marquee_text_size": "Text size",
     "marquee_text_size_info": "At a 1920px screen; it scales with the screen.",
     "marquee_outline": "Alternate with outline text",
