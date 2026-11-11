@@ -91,17 +91,26 @@
             </div>
           </div>
 
+        {%- comment -%}
+          Static and Slideshow share one message line: <p class="announcement-bar__scroller">. On phones a
+          long message stays on one line and this line scrolls sideways (swipe), with fades on the side that
+          still has text. tabindex: keyboard users can focus it (and scroll it with the arrow keys); the focus
+          ring is drawn on the inner text span, so it hugs the message. Hidden slides (visibility: hidden) are
+          skipped by Tab. No aria-label: the parent <announcement-bar role="region"> already names it.
+        {%- endcomment -%}
         {%- when 'slideshow' -%}
           <div class="announcement-bar__messages" aria-live="{% if moves %}off{% else %}polite{% endif %}">
             {%- assign index = 0 -%}
             {%- for block in section.blocks -%}
               {%- if block.settings.text != blank -%}
                 <p
-                  class="announcement-bar__message{% if index == 0 %} is-active{% endif %}"
-                  data-index="{{ index }}"
+                  class="announcement-bar__message announcement-bar__scroller{% if index == 0 %} is-active{% endif %}"
+                  tabindex="0"
                   {{ block.shopify_attributes }}
                 >
-                  {%- render 'announcement-message', block: block -%}
+                  <span class="announcement-bar__text">
+                    {%- render 'announcement-message', block: block -%}
+                  </span>
                 </p>
                 {%- assign index = index | plus: 1 -%}
               {%- endif -%}
@@ -109,16 +118,10 @@
           </div>
 
         {%- else -%}
-          {%- comment -%}
-            tabindex: keyboard users (mainly desktop) can focus this box, and on phones it also scrolls a
-            long message sideways. The focus ring is drawn on the inner text span, so it hugs the message
-            instead of spanning the whole bar. No aria-label: the parent <announcement-bar role="region">
-            already names it, and aria-label on a role-less div is disallowed.
-          {%- endcomment -%}
-          <div class="announcement-bar__messages" tabindex="0">
+          <div class="announcement-bar__messages">
             {%- for block in section.blocks -%}
               {%- if block.settings.text != blank -%}
-                <p class="announcement-bar__message is-active" {{ block.shopify_attributes }}>
+                <p class="announcement-bar__message announcement-bar__scroller is-active" tabindex="0" {{ block.shopify_attributes }}>
                   <span class="announcement-bar__text">
                     {%- render 'announcement-message', block: block -%}
                   </span>
@@ -140,7 +143,6 @@
         <button
           type="button"
           class="announcement-bar__button announcement-bar__pause"
-          aria-pressed="false"
           data-label-pause="{{ 'sections.announcement_bar.pause' | t }}"
           data-label-play="{{ 'sections.announcement_bar.play' | t }}"
           hidden
@@ -220,20 +222,17 @@
   }
 
   /*
-    Horizontal bar: the message area takes all the room between the arrows, so the arrows sit at the two
-    edges and Text alignment places the message inside that area. With a close button, both sides keep
-    its room (plus a gap), so the message stays centred.
+    Horizontal bar: the message area fills the row by default, and Text alignment places the text inside it.
+    (Slideshow instead lets the arrows hug the text — see below.) The pause and close buttons are taken out
+    of the flow and pinned to the two ends, so neither shifts the text. Whenever either button is present,
+    both ends reserve the same room, so the message stays centred with one button or two.
   */
   .announcement-bar__messages {
     flex: 1;
   }
 
-  .announcement-bar__inner:has(.announcement-bar__close) {
+  .announcement-bar--top .announcement-bar__inner:is(:has(.announcement-bar__close), :has(.announcement-bar__pause)) {
     padding-inline: calc(var(--page-margin) + 1.5rem + var(--space-sm));
-  }
-
-  .announcement-bar__inner:has(.announcement-bar__close) .announcement-bar__close {
-    inset-inline-end: var(--page-margin);
   }
 
   .announcement-bar--font-heading .announcement-bar__inner {
@@ -291,6 +290,8 @@
   .announcement-bar--slideshow .announcement-bar__messages {
     display: grid;
     min-inline-size: 0;
+    /* Don't stretch: the box shrinks to the message so the arrows sit right beside the text, centred as a group */
+    flex: 0 1 auto;
   }
 
   .announcement-bar--slideshow .announcement-bar__message {
@@ -337,8 +338,24 @@
     inset-inline-end: var(--page-margin);
   }
 
-  .announcement-bar__pause:not([aria-pressed='true']) .announcement-bar__icon--play,
-  .announcement-bar__pause[aria-pressed='true'] .announcement-bar__icon--pause {
+  /*
+    Top bar: pause/play is pinned to the start end and close to the other, both out of the flow, and centred
+    vertically so they sit right whatever the bar's height.
+  */
+  .announcement-bar--top .announcement-bar__pause {
+    position: absolute;
+    inset-inline-start: var(--page-margin);
+  }
+
+  .announcement-bar--top .announcement-bar__close,
+  .announcement-bar--top .announcement-bar__pause {
+    inset-block: 0;
+    margin-block: auto;
+  }
+
+  /* Play icon only while paused, pause icon only while playing (driven by .is-paused on the host element) */
+  .announcement-bar:not(.is-paused) .announcement-bar__icon--play,
+  .announcement-bar.is-paused .announcement-bar__icon--pause {
     display: none;
   }
 
@@ -381,8 +398,8 @@
     Horizontal bar on phones (below 750px): the text follows the screen width instead of the fixed Text size,
     and the letter spacing shrinks with it, so a short message stays on one line. Text size is the upper
     limit: min() takes the smaller of the setting and 3.4% of the screen width (11px on a 320px phone,
-    ~13px at 375px), never below 11px. A message that still doesn't fit wraps onto lines of even length
-    (text-wrap: balance) instead of leaving one word alone. (Marquee keeps any length on one line.)
+    ~13px at 375px), never below 11px. A message that still doesn't fit stays on one line and scrolls
+    sideways, as on every screen size (Static and Slideshow); Marquee keeps any length on one line by moving.
     Letter spacing Automatic only: a spacing the merchant picked by hand is kept.
   */
   @media (max-width: 749px) {
@@ -391,63 +408,78 @@
       padding-block: var(--space-2xs);
     }
 
-    /* Slideshow keeps wrapping onto even lines (it swaps whole messages, so it can't scroll) */
-    .announcement-bar--slideshow .announcement-bar__message {
-      text-wrap: balance;
+    /* Phones: tighter icon room so the message keeps more width */
+    .announcement-bar--top .announcement-bar__inner:is(:has(.announcement-bar__close), :has(.announcement-bar__pause)) {
+      padding-inline: calc(var(--space-xs) + 1.5rem);
     }
 
-    /*
-      Static bar, long message on phones: it stays on one line and the visitor swipes sideways instead of
-      wrapping onto two lines. When it fits it follows the Text alignment setting (start / centre / end) via
-      the auto margins below; when it is too long it overflows and the box scrolls from the beginning (auto
-      margins collapse to 0, so a long message always reads from its start, whatever the alignment).
-      The scrollbar is hidden; a soft fade marks whichever side still has text off screen. The fades are
-      switched on by the script (has-overflow-start / -end), so once you swipe to an end that end is fully
-      shown, never left stuck under a fade.
-    */
-    .announcement-bar--static .announcement-bar__messages {
-      overflow-x: auto;
-      scrollbar-width: none; /* Firefox: hide the bar; the fades are the cue */
+    .announcement-bar--top .announcement-bar__close {
+      inset-inline-end: var(--space-2xs);
     }
 
-    .announcement-bar--static .announcement-bar__messages::-webkit-scrollbar {
-      display: none; /* Chrome / Safari */
-    }
-
-    .announcement-bar--static.has-overflow-start.has-overflow-end .announcement-bar__messages {
-      -webkit-mask-image: linear-gradient(to right, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent);
-      mask-image: linear-gradient(to right, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent);
-    }
-
-    .announcement-bar--static.has-overflow-end:not(.has-overflow-start) .announcement-bar__messages {
-      -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
-      mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
-    }
-
-    .announcement-bar--static.has-overflow-start:not(.has-overflow-end) .announcement-bar__messages {
-      -webkit-mask-image: linear-gradient(to right, transparent, #000 2.5rem);
-      mask-image: linear-gradient(to right, transparent, #000 2.5rem);
-    }
-
-    .announcement-bar--static .announcement-bar__message {
-      inline-size: max-content;
-      max-inline-size: none;
-      margin-inline: auto; /* centre (default); the auto margins place a message that fits */
-      white-space: nowrap;
-    }
-
-    /* Follow the Text alignment setting when the message fits (ignored once it overflows and scrolls) */
-    .announcement-bar--static.announcement-bar--align-start .announcement-bar__message {
-      margin-inline: 0 auto;
-    }
-
-    .announcement-bar--static.announcement-bar--align-end .announcement-bar__message {
-      margin-inline: auto 0;
+    .announcement-bar--top .announcement-bar__pause {
+      inset-inline-start: var(--space-2xs);
     }
 
     .announcement-bar--uppercase.announcement-bar--spacing-auto .announcement-bar__inner {
       letter-spacing: 0.08em;
     }
+  }
+
+  /*
+    Static and Slideshow, every screen size: a long message stays on ONE line and its line scrolls sideways
+    (swipe, trackpad, Shift + mouse wheel, or the arrow keys once focused) instead of wrapping. Each message
+    line (.announcement-bar__scroller) is the scroll box and its text span grows past it (max-content).
+    When it fits, the text follows the Text alignment setting via the auto margins; when it is too long the
+    margins collapse to 0, so it reads from its start. The scrollbar is hidden; a soft fade marks whichever
+    side still has text off screen. The script toggles has-overflow-start / -end on the line, so once you
+    reach an end that end is fully shown. A little block padding leaves room for the focus ring.
+    Slideshow: the arrows hug a short message; a long one fills the room between them and scrolls.
+    The right-side band scrolls the same way, but up and down (its text runs top to bottom).
+  */
+  .announcement-bar--slideshow .announcement-bar__messages {
+    grid-template-columns: minmax(0, 1fr); /* each line is the box's width, so it can scroll */
+  }
+
+  .announcement-bar__scroller {
+    overflow-x: auto;
+    padding-block: 0.25rem;
+    scrollbar-width: none; /* Firefox: hide the bar; the fades are the cue */
+  }
+
+  .announcement-bar__scroller::-webkit-scrollbar {
+    display: none; /* Chrome / Safari */
+  }
+
+  .announcement-bar__scroller.has-overflow-start.has-overflow-end {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent);
+    mask-image: linear-gradient(to right, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent);
+  }
+
+  .announcement-bar__scroller.has-overflow-end:not(.has-overflow-start) {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+  }
+
+  .announcement-bar__scroller.has-overflow-start:not(.has-overflow-end) {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 2.5rem);
+    mask-image: linear-gradient(to right, transparent, #000 2.5rem);
+  }
+
+  .announcement-bar__scroller .announcement-bar__text {
+    display: block;
+    inline-size: max-content;
+    margin-inline: auto; /* centre (default); the auto margins place a message that fits */
+    white-space: nowrap;
+  }
+
+  /* Follow the Text alignment setting when the message fits (ignored once it overflows and scrolls) */
+  .announcement-bar--align-start .announcement-bar__scroller .announcement-bar__text {
+    margin-inline: 0 auto;
+  }
+
+  .announcement-bar--align-end .announcement-bar__scroller .announcement-bar__text {
+    margin-inline: auto 0;
   }
 
   /*
@@ -460,11 +492,11 @@
     border-radius: var(--radius-pill);
   }
 
-  .announcement-bar__messages:focus-visible {
+  .announcement-bar__scroller:focus-visible {
     outline: none;
   }
 
-  .announcement-bar__messages:focus-visible .announcement-bar__text {
+  .announcement-bar__scroller:focus-visible .announcement-bar__text {
     outline: 2px solid currentColor;
     outline-offset: 4px;
   }
@@ -579,6 +611,31 @@
       white-space: nowrap;
     }
 
+    /*
+      The band reads top to bottom, so a long message scrolls up and down along the band (mouse wheel,
+      trackpad, or the arrow keys once focused) instead of sideways, and the fades sit at the top / bottom.
+      (Text alignment still places a message that fits: top, middle or bottom of the band.)
+    */
+    .announcement-bar--right .announcement-bar__scroller {
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    .announcement-bar--right .announcement-bar__scroller.has-overflow-start.has-overflow-end {
+      -webkit-mask-image: linear-gradient(to bottom, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent);
+      mask-image: linear-gradient(to bottom, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent);
+    }
+
+    .announcement-bar--right .announcement-bar__scroller.has-overflow-end:not(.has-overflow-start) {
+      -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 2.5rem), transparent);
+      mask-image: linear-gradient(to bottom, #000 calc(100% - 2.5rem), transparent);
+    }
+
+    .announcement-bar--right .announcement-bar__scroller.has-overflow-start:not(.has-overflow-end) {
+      -webkit-mask-image: linear-gradient(to bottom, transparent, #000 2.5rem);
+      mask-image: linear-gradient(to bottom, transparent, #000 2.5rem);
+    }
+
     .announcement-bar--right .announcement-bar__arrow {
       rotate: 90deg;
     }
@@ -637,7 +694,7 @@
         const animations = document.documentElement.classList.contains('animations-on');
         if (this.pauseButton && animations && this.motion) this.pauseButton.hidden = false;
       }
-      if (this.dataset.mode === 'static') this.setUpScroll(signal);
+      if (this.dataset.mode === 'static' || this.dataset.mode === 'slideshow') this.setUpScroll(signal);
     }
 
     disconnectedCallback() {
@@ -648,35 +705,47 @@
     }
 
     /*
-      Static bar on phones: the message scrolls sideways when it's too long. Mark which side still has text
-      off screen (has-overflow-start / -end) so the stylesheet fades only that side — and drops the fade once
-      an end is reached, so no text is left stuck under it.
+      Static and Slideshow, every screen size: each message line scrolls sideways when the message is too long. Mark
+      which side of a line still has text off screen (has-overflow-start / -end on the line) so the
+      stylesheet fades only that side, and drops the fade once an end is reached.
+      In a slideshow, a swipe restarts the autoplay timer, so the slide doesn't change mid-swipe.
     */
     setUpScroll(signal) {
-      const box = this.querySelector('.announcement-bar__messages');
-      if (!box) return;
-      let ticking = false;
-      const update = () => {
-        ticking = false;
-        const max = box.scrollWidth - box.clientWidth;
-        this.classList.toggle('has-overflow-start', box.scrollLeft > 1);
-        this.classList.toggle('has-overflow-end', box.scrollLeft < max - 1);
+      const scrollers = [...this.querySelectorAll('.announcement-bar__scroller')];
+      if (!scrollers.length) return;
+      const update = (scroller) => {
+        // The right-side band writes top to bottom (vertical writing mode), so it scrolls vertically
+        const vertical = getComputedStyle(scroller).writingMode.startsWith('vertical');
+        const max = vertical
+          ? scroller.scrollHeight - scroller.clientHeight
+          : scroller.scrollWidth - scroller.clientWidth;
+        const position = vertical ? scroller.scrollTop : scroller.scrollLeft;
+        scroller.classList.toggle('has-overflow-start', position > 1);
+        scroller.classList.toggle('has-overflow-end', position < max - 1);
       };
-      box.addEventListener(
-        'scroll',
-        () => {
-          if (!ticking) {
+      // Watch each line and its text: when the web font swaps in, the text's width changes, not the line's
+      this.resizeObserver = new ResizeObserver((entries) => {
+        entries.forEach((entry) => update(entry.target.closest('.announcement-bar__scroller')));
+      });
+      scrollers.forEach((scroller) => {
+        let ticking = false;
+        scroller.addEventListener(
+          'scroll',
+          () => {
+            if (this.dataset.mode === 'slideshow') this.restart();
+            if (ticking) return;
             ticking = true;
-            requestAnimationFrame(update);
-          }
-        },
-        { passive: true, signal }
-      );
-      this.resizeObserver = new ResizeObserver(update);
-      this.resizeObserver.observe(box);
-      // Also watch the message: when the web font swaps in, its width changes but the box's doesn't
-      if (box.firstElementChild) this.resizeObserver.observe(box.firstElementChild);
-      update();
+            requestAnimationFrame(() => {
+              ticking = false;
+              update(scroller);
+            });
+          },
+          { passive: true, signal }
+        );
+        this.resizeObserver.observe(scroller);
+        if (scroller.firstElementChild) this.resizeObserver.observe(scroller.firstElementChild);
+        update(scroller);
+      });
     }
 
     /*
@@ -706,6 +775,10 @@
     }
 
     close() {
+      // Stop the slideshow timer so it isn't left cycling a hidden bar (or restarted by mouseleave)
+      clearInterval(this.timer);
+      this.userPaused = true;
+
       // Remember it first, so a closed bar stays closed even if the animation is cut short
       if (!this.designMode) {
         try {
@@ -759,15 +832,27 @@
         );
       });
 
-      // Theme editor: selecting a message's block shows it and stops the autoplay
+      // Theme editor: selecting a message's block shows it and pauses autoplay; deselecting resumes it.
+      // A separate flag (not userPaused) so it never touches the pause button's own state.
+      const findMessage = (event) =>
+        this.messages.findIndex((message) => message.contains(event.target) || message === event.target);
       document.addEventListener(
         'shopify:block:select',
         (event) => {
-          const index = this.messages.findIndex((message) => message.contains(event.target) || message === event.target);
+          const index = findMessage(event);
           if (index === -1) return;
-          this.userPaused = true;
+          this.editorPaused = true;
           clearInterval(this.timer);
           this.show(index);
+        },
+        { signal }
+      );
+      document.addEventListener(
+        'shopify:block:deselect',
+        (event) => {
+          if (findMessage(event) === -1) return;
+          this.editorPaused = false;
+          this.restart();
         },
         { signal }
       );
@@ -778,16 +863,17 @@
       }
 
       if (this.pauseButton) this.pauseButton.hidden = false;
+      // Hover and focus each pause on their own, so leaving one doesn't resume while the other still holds
       this.hoverPaused = false;
-      const hold = (paused) => {
-        this.hoverPaused = paused;
-        this.restart();
-      };
-      this.addEventListener('mouseenter', () => hold(true), { signal });
-      this.addEventListener('mouseleave', () => hold(false), { signal });
-      this.addEventListener('focusin', () => hold(true), { signal });
+      this.focusPaused = false;
+      this.addEventListener('mouseenter', () => { this.hoverPaused = true; this.restart(); }, { signal });
+      this.addEventListener('mouseleave', () => { this.hoverPaused = false; this.restart(); }, { signal });
+      this.addEventListener('focusin', () => { this.focusPaused = true; this.restart(); }, { signal });
       this.addEventListener('focusout', (event) => {
-        if (!this.contains(event.relatedTarget)) hold(false);
+        if (!this.contains(event.relatedTarget)) {
+          this.focusPaused = false;
+          this.restart();
+        }
       }, { signal });
       this.restart();
     }
@@ -796,19 +882,25 @@
       const count = this.messages.length;
       this.current = (index + count) % count;
       this.messages.forEach((message, i) => message.classList.toggle('is-active', i === this.current));
+      // A slide that was swiped earlier starts again from the beginning of its message
+      const active = this.messages[this.current];
+      if (active && (active.scrollLeft !== 0 || active.scrollTop !== 0)) active.scrollTo(0, 0);
     }
 
     restart() {
       clearInterval(this.timer);
       if (this.dataset.mode !== 'slideshow' || this.dataset.autoplay !== 'true' || !this.motion) return;
-      if (this.userPaused || this.hoverPaused) return;
-      this.timer = setInterval(() => this.show(this.current + 1), Number(this.dataset.interval) || 5000);
+      if (this.userPaused || this.hoverPaused || this.focusPaused || this.editorPaused) return;
+      this.timer = setInterval(() => {
+        // Auto-advance is silent to screen readers; only a change the visitor makes is announced (polite)
+        this.region?.setAttribute('aria-live', 'off');
+        this.show(this.current + 1);
+      }, Number(this.dataset.interval) || 5000);
     }
 
     togglePause() {
       this.userPaused = !this.userPaused;
       this.classList.toggle('is-paused', this.userPaused);
-      this.pauseButton.setAttribute('aria-pressed', String(this.userPaused));
       this.pauseButton.querySelector('.visually-hidden').textContent = this.userPaused
         ? this.pauseButton.dataset.labelPlay
         : this.pauseButton.dataset.labelPause;
