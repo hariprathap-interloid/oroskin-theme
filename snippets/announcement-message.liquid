@@ -1,18 +1,35 @@
 {% doc %}
-  One announcement: its text, and a link when the block has one. With a link label the label is a
-  separate underlined link after the text ("… on all orders. Shop now"); without one the whole text is
-  the link.
+  One announcement: its text, and its links.
+  - Text is inline rich text: the merchant can select any word(s) in the theme editor and add a link, so a
+    link can sit anywhere in the message (start, middle or end), and use bold / italic. Those links get the
+    bar's link style.
+  - Link + Link label: an extra underlined link after the text ("… on all orders. Shop now").
+  - Link without a label: the whole message is the link, but only when no word in the text is already
+    linked (a link can't sit inside another link).
 
   @param {object} block - The announcement block (settings.text, settings.link, settings.link_label)
-  @param {boolean} [hidden_copy] - A marquee repeat: hidden from screen readers by its parent, so its link
-    is also taken out of the keyboard order (the visually hidden list has the real one)
+  @param {boolean} [hidden_copy] - A marquee repeat: hidden from screen readers by its parent, so its links
+    are also taken out of the keyboard order (the real line has the real ones)
 
   @example
   {% render 'announcement-message', block: block %}
 {% enddoc %}
 
+{%- liquid
+  assign text = block.settings.text
+  assign text_has_link = false
+  if text contains '<a '
+    assign text_has_link = true
+    if hidden_copy
+      assign text = text | replace: '<a ', '<a class="announcement-bar__link" tabindex="-1" '
+    else
+      assign text = text | replace: '<a ', '<a class="announcement-bar__link" '
+    endif
+  endif
+-%}
+
 {%- if block.settings.link != blank and block.settings.link_label != blank -%}
-  {{- block.settings.text | escape -}}
+  {{- text -}}
   <a
     href="{{ block.settings.link }}"
     class="announcement-bar__link announcement-bar__link-label"
@@ -22,7 +39,7 @@
   >
     {{- block.settings.link_label | escape -}}
   </a>
-{%- elsif block.settings.link != blank -%}
+{%- elsif block.settings.link != blank and text_has_link == false -%}
   <a
     href="{{ block.settings.link }}"
     class="announcement-bar__link"
@@ -30,8 +47,8 @@
       tabindex="-1"
     {% endif %}
   >
-    {{- block.settings.text | escape -}}
+    {{- text -}}
   </a>
 {%- else -%}
-  {{- block.settings.text | escape -}}
+  {{- text -}}
 {%- endif -%}
