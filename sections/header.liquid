@@ -426,7 +426,7 @@
   .header__logo-text {
     color: var(--color-text);
     font-family: var(--font-logo--family);
-    font-size: clamp(1.75rem, 1.4rem + 1.4vw, var(--logo-text-size));
+    font-size: clamp(min(1.75rem, var(--logo-text-size)), 1.4rem + 1.4vw, var(--logo-text-size)); /* never above the setting */
     font-weight: var(--font-logo--weight);
     line-height: 1;
     letter-spacing: 0;
@@ -735,6 +735,8 @@
     --bar-display (grid), --menu-display (none), --drawer-display (contents: the menu button shows),
     --actions-start (0: the buttons sit in their grid column, not pushed right).
     --logo-overflow (hidden: a long logo is cut in its column instead of pushing the buttons out).
+    KEEP THE THREE BLOCKS BELOW THE SAME: they hold the same five values. (One copy would need CSS style
+    queries, which Firefox doesn't support, or JavaScript.) A missing value breaks only that width range.
     On tablets the logo, search, cart and LOGIN keep their tablet sizes; the phone sizes are further below.
   */
   @media (max-width: 767px) {
@@ -898,7 +900,7 @@
       above the "Logo text size" setting and never above 40px, so it fits the 60px pill.
     */
     .header__logo-text {
-      font-size: clamp(1.75rem, 1.4rem + 1.4vw, min(var(--logo-text-size), 2.5rem));
+      font-size: clamp(min(1.75rem, var(--logo-text-size)), 1.4rem + 1.4vw, min(var(--logo-text-size), 2.5rem));
     }
 
     /* The logo image grows the same way: 28px tall at 768px up to 36px, never wider than the Logo width setting */
@@ -1085,31 +1087,32 @@
    *   /cart.js once, update the bubble and the hidden label, then send "cart:updated" with the cart (the
    *   cart page listens to it and redraws itself).
    * - "cart:updated" from the cart page itself already carries the cart: just update the bubble.
-   * There are two <cart-count> elements (the bar and the phone drawer). They share ONE request
-   * (CartCount.pending), and only that request sends "cart:updated", so the cart page redraws once.
+   * There are two <cart-count> elements (the bar and the phone drawer). Both receive the SAME event object
+   * for one "cart:changed", so they share one request for that event (CartCount.requests, keyed by the
+   * event), and only that request sends "cart:updated": the cart page redraws once. A later
+   * "cart:changed" is a new event, so it always gets a new request and never an older answer.
    */
   class CartCount extends HTMLElement {
-    static pending = null;
+    static requests = new WeakMap();
 
-    /** One /cart.js request for every <cart-count> on the page; it announces the new cart once */
-    static fetchCart(root) {
-      if (!CartCount.pending) {
-        CartCount.pending = fetch(`${root}cart.js`, { headers: { Accept: 'application/json' } })
+    /** The /cart.js request for this "cart:changed" event: started by the first <cart-count>, reused by the other */
+    static fetchCart(root, event) {
+      let request = CartCount.requests.get(event);
+      if (!request) {
+        request = fetch(`${root}cart.js`, { headers: { Accept: 'application/json' } })
           .then((response) => response.json())
           .then((cart) => {
             document.dispatchEvent(new CustomEvent('cart:updated', { detail: { cart, source: 'header' } }));
             return cart;
-          })
-          .finally(() => {
-            CartCount.pending = null;
           });
+        CartCount.requests.set(event, request);
       }
-      return CartCount.pending;
+      return request;
     }
 
     connectedCallback() {
       this.root = window.Shopify?.routes?.root || '/';
-      this.onChanged = () => this.refresh();
+      this.onChanged = (event) => this.refresh(event);
       this.onUpdated = (event) => {
         if (event.detail?.source !== 'header' && event.detail?.cart) this.show(event.detail.cart.item_count);
       };
@@ -1122,9 +1125,9 @@
       document.removeEventListener('cart:updated', this.onUpdated);
     }
 
-    async refresh() {
+    async refresh(event) {
       try {
-        const cart = await CartCount.fetchCart(this.root);
+        const cart = await CartCount.fetchCart(this.root, event);
         this.show(cart.item_count);
       } catch (error) {
         // The add itself worked; only the count is stale. The cart page shows the right total.
@@ -1201,8 +1204,16 @@
       };
       window.addEventListener('resize', update, { signal });
       window.addEventListener('scroll', update, { passive: true, signal });
-      // The pill's width animates after "is-scrolled" changes: place the panel again when it ends
-      this.closest('.header')?.addEventListener('transitionend', update, { signal });
+      // The pill's width animates after "is-scrolled" changes: place the panel again when THAT transition ends
+      // (hover transitions inside the header also bubble a transitionend; they are ignored)
+      const bar = this.closest('.header__bar');
+      bar?.addEventListener(
+        'transitionend',
+        (event) => {
+          if (event.target === bar && event.propertyName === 'max-inline-size') update();
+        },
+        { signal }
+      );
     }
 
     unwatch() {

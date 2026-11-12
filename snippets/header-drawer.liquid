@@ -833,7 +833,10 @@
 
       // The breakpoint is a header setting (768 / 990 / 1200px), so check the button itself, not one width
       this.onResize = () => {
-        if (this.dialog.open && !this.toggle.checkVisibility()) this.dialog.close();
+        if (!this.dialog.open) return;
+        // checkVisibility() is missing before Safari 17.4: a hidden button has no offsetParent there
+        const visible = this.toggle.checkVisibility ? this.toggle.checkVisibility() : this.toggle.offsetParent !== null;
+        if (!visible) this.dialog.close();
       };
       window.addEventListener('resize', this.onResize);
     }

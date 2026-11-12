@@ -181,6 +181,14 @@
     }
 
     /*
+      The bar AND a solid header ("Solid header background") sit above the hero: take both off. (The rule
+      above is stronger than the solid-header rule further down, so this case needs its own rule.)
+    */
+    body:has(.header--solid):has(.announcement-bar--top:not([hidden]):not(.is-closing)) #MainContent > .shopify-section:first-child .hero--height-full {
+      min-block-size: calc(100svh - var(--header-space) - var(--announcement-size, 2.25rem));
+    }
+
+    /*
       When the bar is closed it collapses to nothing and stops matching the rule above, so the hero grows
       back to the full screen. Easing that change keeps it in step with the bar's own collapse.
     */
