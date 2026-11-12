@@ -191,6 +191,22 @@
     }
   }
 
+  /*
+    The hero is the page's first section and the header is NOT transparent (logo and menu always show):
+    header.liquid slides the hero up under the pill, so the image fills the top of the page behind the
+    glass. The text moves down by the header's height (--header-space, set by header.liquid), so the pill
+    never covers it. A transparent header needs no offset (its logo and menu are hidden at rest, the Figma
+    hero's own logo sits level with the buttons), and a solid header keeps the hero below it.
+  */
+  body:has(sticky-header):not(:has(.header--transparent, .header--solid)) #MainContent > .shopify-section:first-child .hero {
+    --hero-header-offset: var(--header-space);
+  }
+
+  /* A solid header keeps the hero below it: a full-height hero fills the rest of the first screen */
+  body:has(.header--solid) #MainContent > .shopify-section:first-child .hero--height-full {
+    min-block-size: calc(100svh - var(--header-space));
+  }
+
   .hero__media {
     position: absolute;
     inset: 0;
@@ -321,7 +337,9 @@
     display: flex;
     inline-size: 100%;
     pointer-events: none;
-    padding-block: max(var(--space-2xl), calc(var(--hero-pad-top) * var(--hero-px))) var(--hero-bottom-space);
+    padding-block:
+      calc(max(var(--space-2xl), calc(var(--hero-pad-top) * var(--hero-px))) + var(--hero-header-offset, 0px))
+      var(--hero-bottom-space);
     padding-inline: max(var(--page-margin), calc(var(--hero-pad-side) * var(--hero-px)));
     /* Section width: Full (default, Figma) = from the screen edge; Wide / Narrow = a centred column */
     max-inline-size: var(--section-width, 100vw);
@@ -579,7 +597,7 @@
 
     /* Figma: the logo sits at the top, level with the header's buttons (the header floats over the hero) */
     .hero--has-mobile .hero__inner {
-      padding-block-start: var(--space-sm);
+      padding-block-start: calc(var(--space-sm) + var(--hero-header-offset, 0px));
     }
 
     /* A row of buttons that wraps (Explore collection / New arrivals): 16px between the lines, not the desktop 48px */

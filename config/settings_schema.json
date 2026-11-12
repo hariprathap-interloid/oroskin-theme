@@ -91,6 +91,10 @@
         "default": "cormorant_i4",
         "label": "t:labels.accent_font",
         "info": "t:labels.accent_font_info"
+      },
+      {
+        "type": "paragraph",
+        "content": "t:labels.logo_font_location_info"
       }
     ]
   },

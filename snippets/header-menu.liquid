@@ -359,7 +359,8 @@
     transition-duration: 1500ms;
     }
 
-  /* Category title (Figma: Satoshi Medium 16.54px, line-height 100%, letter-spacing 12%, uppercase, primary) */
+  /* Category title (Figma: Satoshi Medium 16.54px, line-height 100%, letter-spacing 12%, uppercase, accent).
+     --color-accent follows the panel's colour scheme, so it stays readable on red / dark schemes. */
   .menu__card-title {
     position: relative;
     display: inline-flex;
@@ -368,7 +369,7 @@
     justify-self: start;
     min-block-size: 1.5rem;
     padding-block-end: var(--space-xs);
-    color: var(--color-primary);
+    color: var(--color-accent);
     font-family: var(--font-body--family);
     font-size: 1.0338rem;
     font-weight: var(--font-weight-medium);

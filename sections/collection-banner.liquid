@@ -184,6 +184,12 @@
     margin-block-start: 0;
   }
 
+  /* A solid header ("Solid background" header setting) has nothing to show through: the banner starts below it */
+  body:has(.header--solid) .collection-banner--under-header {
+    margin-block-start: 0;
+    padding-block-start: var(--section-padding-top);
+  }
+
   .collection-banner__inner {
     display: flex;
     flex-direction: column;

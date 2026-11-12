@@ -246,7 +246,6 @@
     "shop_all": "Shop all",
     "search": "Search",
     "login": "Login",
-    "account": "Account",
     "account_menu": {
       "open": "Account menu for {{ name }}",
       "greeting": "Hi, {{ name }}",
@@ -255,7 +254,7 @@
     },
     "open_menu": "Open menu",
     "back": "Back",
-    "menu_tools": "Search, cart and account",
+    "menu_tools": "Search and cart",
     "close_menu": "Close menu",
     "cart_count": {
       "zero": "Cart",

@@ -1,13 +1,15 @@
 {% doc %}
-  Renders the phone menu (below 768px): a menu button for the header pill, and the drawer it opens.
+  Renders the menu button for the header pill and the drawer it opens. Shown on phones (below 768px), and on
+  tablets when the header setting "Show the menu button below" says so.
 
   The drawer is a modal <dialog> that slides in from the right. showModal() gives it the browser's own
   modal behaviour: focus moves into it, Tab stays inside it, Escape closes it and the page behind can't be
   clicked or read by screen readers.
 
-  Figma mobile menu: the logo and a white round close button on top, the links, then at the bottom a
-  hairline and a row of round buttons. Signed out: search and cart, then the full-width LOGIN pill.
-  Signed in: search, cart and the account button in the row, no pill. Bell and wishlist icons come from
+  Figma mobile menu: the logo and a round close button on top, the links, then at the bottom a hairline
+  and a row of round buttons. Signed out: search and cart, then the full-width LOGIN pill.
+  Signed in: search and cart in the row, then the same account links as the desktop account panel
+  ("Hi, name", the Customer account menu links, Sign out). Bell and wishlist icons come from
   apps (decision 6), not from the theme. The header bar hides account, search and cart below 768px (search
   and cart can stay there: header settings "Small screens"), so the drawer is where they always are.
 
@@ -17,6 +19,8 @@
 
   @param {link[]} links - The menu's top-level links, e.g. section.settings.menu.links
   @param {string} [logo] - The logo's contents (image and/or text), shown at the top of the drawer
+  @param {link[]} [account_links] - The "Customer account menu" links, shown to a signed-in customer
+  @param {object} [scheme] - Colour scheme for the drawer (header setting "Menu drawer color scheme")
   @param {block[]} [cards] - The header's "Menu card" blocks (section.blocks), for the second level
   @param {string} [image_fit] - Card images: 'cover' or 'contain' (header setting)
   @param {string} [image_ratio] - Card image shape: 'landscape', 'square' or 'portrait' (header setting)
@@ -40,7 +44,11 @@
     <span class="visually-hidden">{{ 'header.open_menu' | t }}</span>
   </button>
 
-  <dialog id="HeaderDrawer" class="header-drawer__dialog" aria-label="{{ 'accessibility.main_menu' | t }}">
+  <dialog
+    id="HeaderDrawer"
+    class="header-drawer__dialog{% if scheme %} color-{{ scheme.id }}{% endif %}"
+    aria-label="{{ 'accessibility.main_menu' | t }}"
+  >
     <div class="header-drawer__panel">
       <div class="header-drawer__head">
         {%- if logo != blank -%}
@@ -108,6 +116,48 @@
       </nav>
 
       <div class="header-drawer__tools">
+        {%- comment -%}
+          Customer accounts are Shopify's own pages (decision 6). Signed in, above the buttons: an account
+          card like the desktop account panel: the initial in a circle, "Hi, name" and the email, then each
+          link of the "Customer account menu" (Shopify's Orders / Profile, which open the account pages) as
+          a row with an arrow. Sign out is the full-width button under the round buttons (where the LOGIN
+          pill sits when signed out).
+        {%- endcomment -%}
+        {%- if shop.customer_accounts_enabled and customer -%}
+          {%- liquid
+            assign account_name = customer.first_name | default: customer.name | default: customer.email
+            assign account_initial = account_name | slice: 0 | upcase
+          -%}
+          <div class="header-drawer__account-card">
+            <div class="header-drawer__account-head">
+              <span class="header-drawer__initial" aria-hidden="true">{{ account_initial }}</span>
+              <div class="header-drawer__who">
+                <p class="header-drawer__greeting">{{ 'header.account_menu.greeting' | t: name: account_name }}</p>
+                {%- if customer.email != blank -%}
+                  <p class="header-drawer__email">{{ customer.email | escape }}</p>
+                {%- endif -%}
+              </div>
+            </div>
+            <ul class="header-drawer__account-links" role="list">
+              {%- for link in account_links -%}
+                <li>
+                  <a class="header-drawer__account-link" href="{{ link.url }}">
+                    <span>{{ link.title | escape }}</span>
+                    <span class="header-drawer__arrow" aria-hidden="true">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+                  </a>
+                </li>
+              {%- else -%}
+                <li>
+                  <a class="header-drawer__account-link" href="{{ routes.account_url }}">
+                    <span>{{ 'header.account_menu.orders' | t }}</span>
+                    <span class="header-drawer__arrow" aria-hidden="true">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+                  </a>
+                </li>
+              {%- endfor -%}
+            </ul>
+          </div>
+        {%- endif -%}
+
         <ul class="header-drawer__icons" role="list" aria-label="{{ 'header.menu_tools' | t }}">
           {%- comment -%}
             Search: a link to the search page; with JavaScript it closes the drawer and opens the header's
@@ -142,25 +192,20 @@
               </a>
             </cart-count>
           </li>
-          {%- comment -%}
-            Customer accounts are Shopify's own pages (decision 6). Signed in: a round account button in the row
-            (routes.account_url opens the account). Signed out: the LOGIN pill under the row instead.
-          {%- endcomment -%}
-          {%- if shop.customer_accounts_enabled and customer -%}
-            <li>
-              <a class="header-drawer__icon" href="{{ routes.account_url }}">
-                {{ 'icon-account.svg' | inline_asset_content | remove: 'slot="signed-out-avatar"' }}
-                <span class="visually-hidden">{{ 'header.account' | t }}</span>
-              </a>
-            </li>
-          {%- endif -%}
         </ul>
 
-        {%- if shop.customer_accounts_enabled and customer == nil -%}
-          <a class="button header-drawer__account" href="{{ routes.account_login_url }}">
-            {{ 'icon-account.svg' | inline_asset_content | remove: 'slot="signed-out-avatar"' }}
-            {{- 'header.login' | t -}}
-          </a>
+        {%- comment -%} Under the buttons: Sign out (signed in, outline button) or the LOGIN pill (signed out) {%- endcomment -%}
+        {%- if shop.customer_accounts_enabled -%}
+          {%- if customer -%}
+            <a class="button button--secondary header-drawer__account" href="{{ routes.account_logout_url }}">
+              {{- 'header.account_menu.sign_out' | t -}}
+            </a>
+          {%- else -%}
+            <a class="button header-drawer__account" href="{{ routes.account_login_url }}">
+              {{ 'icon-account.svg' | inline_asset_content | remove: 'slot="signed-out-avatar"' }}
+              {{- 'header.login' | t -}}
+            </a>
+          {%- endif -%}
         {%- endif -%}
       </div>
     </div>
@@ -168,29 +213,33 @@
 </header-drawer>
 
 {% stylesheet %}
-  /* Tablets and desktop (768px+): the full menu is in the pill, so the drawer isn't needed */
+  /*
+    Shown only in the header's menu-button layout: header.liquid sets --drawer-display: contents there
+    (phones, and tablets per the "Show the menu button below" setting). Elsewhere the full menu is in the pill.
+  */
   .header-drawer {
-    display: contents;
-  }
-
-  @media (min-width: 768px) {
-    .header-drawer {
-      display: none;
-    }
+    display: var(--drawer-display, none);
   }
 
   /*
-    The drawer (Figma: 267px of a 375px screen, #FAF8F8, soft grey shadow, 25px corners on the left). Fixed
-    light colours from the Figma, so the text uses the same fixed dark grey (#1F1F1F) for contrast.
+    The drawer (Figma: 267px of a 375px screen, #FAF8F8, soft grey shadow, 25px corners on the left).
+    Colours come from the header setting "Menu drawer color scheme" (the color-* class on the dialog):
+    - --drawer-surface: the panel, the scheme background with 2% of its text colour (a slightly deeper
+      tone, so the round buttons in the plain background colour stand out, like the Figma's white
+      buttons on #FAF8F8; on a dark scheme it works the other way round)
+    - --drawer-text: the scheme's text colour; hover / current link: the scheme's accent
     The header's sticky wrapper turns off clicks (pointer-events: none) and the dialog would inherit that
     even in the top layer, so turn them back on.
+    Two classes (.header .header-drawer__dialog), so the background beats the color-* class's own paint.
   */
-  .header-drawer__dialog {
-    --drawer-text: #1f1f1f;
+  .header .header-drawer__dialog {
+    --drawer-text: var(--color-text);
+    --drawer-surface: color-mix(in srgb, var(--color-text) 2%, var(--color-background));
     --drawer-shadow: 0 4px 15px #b9b9b940;
     inset-block: 0;
     inset-inline: auto 0;
-    inline-size: min(22rem, 72vw);
+    /* 85% of the screen (≈ 320px at 375px; wider than the Figma 267px, so the account card and the email fit), at most 352px */
+    inline-size: min(22rem, 85vw);
     min-inline-size: 16rem;
     max-inline-size: none;
     block-size: 100dvh;
@@ -199,7 +248,7 @@
     padding: 0;
     border: 0;
     border-radius: 25px 0 0 25px;
-    background-color: #faf8f8;
+    background-color: var(--drawer-surface);
     box-shadow: var(--drawer-shadow);
     color: var(--drawer-text);
     pointer-events: auto;
@@ -280,7 +329,7 @@
     block-size: 1.625rem;
   }
 
-  /* Close (Figma: a 38px white circle) */
+  /* Close (Figma: a 38px white circle = the scheme's background on the deeper drawer surface) */
   .header-drawer__close {
     display: inline-grid;
     flex-shrink: 0;
@@ -291,7 +340,7 @@
     padding: 0;
     border: 0;
     border-radius: 50%;
-    background-color: #ffffff;
+    background-color: var(--color-background);
     color: var(--drawer-text);
     cursor: pointer;
   }
@@ -305,7 +354,7 @@
   /* The X turns a quarter on hover / keyboard focus, and spins in once when the drawer opens */
   .header-drawer__close:hover,
   .header-drawer__close:focus-visible {
-    color: var(--color-primary);
+    color: var(--color-accent);
   }
 
   .header-drawer__close:hover svg,
@@ -371,7 +420,7 @@
 
   .header-drawer__link:hover,
   .header-drawer__link--active {
-    color: var(--color-primary);
+    color: var(--color-accent);
   }
 
   /*
@@ -440,8 +489,8 @@
     gap: var(--space-2xs);
     overflow-y: auto;
     padding-inline-end: var(--space-md); /* room between the cards and the scrollbar */
-    background-color: #faf8f8;
-    scrollbar-color: color-mix(in srgb, var(--color-primary) 50%, transparent) transparent;
+    background-color: var(--drawer-surface);
+    scrollbar-color: color-mix(in srgb, var(--color-accent) 50%, transparent) transparent;
     scrollbar-width: thin;
   }
 
@@ -487,7 +536,7 @@
   }
 
   .header-drawer__back:hover {
-    color: var(--color-primary);
+    color: var(--color-accent);
   }
 
   /*
@@ -520,7 +569,7 @@
   }
 
   .header-drawer__sub .menu__panel-title {
-    color: var(--color-primary);
+    color: var(--color-accent);
   }
 
   .header-drawer__sub .menu__panel-all {
@@ -553,11 +602,17 @@
   }
 
   /* Bottom: a hairline, the round buttons in a row from the start, then the LOGIN pill when signed out */
+  /*
+    One column that never grows past the drawer's padding: without minmax(0, 1fr) a long one-line
+    email in the account card made the column as wide as the email, so the card and Sign out stuck out
+    on the right.
+  */
   .header-drawer__tools {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-md);
     padding-block-start: var(--space-md);
-    border-block-start: 1px solid #1f1f1f1a;
+    border-block-start: 1px solid color-mix(in srgb, var(--drawer-text) 10%, transparent);
   }
 
   .header-drawer__icons {
@@ -569,7 +624,7 @@
     list-style: none;
   }
 
-  /* Round white buttons with the drawer's soft shadow (the cart link also carries .header__icon-button) */
+  /* Round buttons in the scheme's background colour with the drawer's soft shadow (the cart link also carries .header__icon-button) */
   .header .header-drawer__icon {
     position: relative;
     display: inline-grid;
@@ -578,7 +633,7 @@
     block-size: 2.5rem;
     padding: 0;
     border-radius: 50%;
-    background-color: #ffffff;
+    background-color: var(--color-background);
     box-shadow: var(--drawer-shadow);
     color: var(--drawer-text);
     -webkit-backdrop-filter: none;
@@ -586,8 +641,114 @@
   }
 
   .header .header-drawer__icon:hover {
-    background-color: #ffffff;
-    color: var(--color-primary);
+    background-color: var(--color-background);
+    color: var(--color-accent);
+  }
+
+  /*
+    Signed in: the account card above the round buttons, like the desktop account panel. A raised card in
+    the scheme's background colour (the same surface as the round buttons) with the drawer's soft shadow:
+    head = the initial in an accent-tinted circle + "Hi, name" / the email; then the account links as
+    44px rows split by hairlines, each with an arrow that moves on hover.
+  */
+  .header-drawer__account-card {
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: 1rem;
+    background-color: var(--color-background);
+    box-shadow: var(--drawer-shadow);
+  }
+
+  .header-drawer__account-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding-block: var(--space-xs);
+  }
+
+  .header-drawer__initial {
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    inline-size: 2.25rem;
+    block-size: 2.25rem;
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--color-accent) 10%, var(--color-background));
+    color: var(--color-accent);
+    font-size: 1rem;
+    font-weight: var(--font-weight-medium);
+    line-height: 1;
+  }
+
+  .header-drawer__who {
+    flex: 1;
+    min-inline-size: 0; /* lets a long email shorten with an ellipsis */
+  }
+
+  .header-drawer__greeting {
+    margin: 0;
+    color: var(--drawer-text);
+    font-family: var(--font-heading--family);
+    font-size: 1.125rem;
+    line-height: 1.2;
+  }
+
+  .header-drawer__email {
+    margin: 0.125rem 0 0;
+    overflow: hidden;
+    color: color-mix(in srgb, var(--drawer-text) 62%, var(--color-background));
+    font-size: var(--font-size-small);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .header-drawer__account-links {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .header-drawer__account-links li {
+    border-block-start: 1px solid color-mix(in srgb, var(--drawer-text) 8%, transparent);
+  }
+
+  .header-drawer__account-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    min-block-size: 2.75rem; /* 44px tap area */
+    color: var(--drawer-text);
+    font-size: var(--font-size-body-sm);
+    line-height: 1.2;
+    text-decoration: none;
+  }
+
+  .header-drawer__account-link:hover {
+    color: var(--color-accent);
+  }
+
+  .header-drawer__arrow {
+    display: inline-flex;
+    opacity: 0.5;
+    transition:
+      opacity var(--duration-fast) var(--ease-out),
+      translate var(--duration-fast) var(--ease-out);
+  }
+
+  .header-drawer__account-link:hover .header-drawer__arrow {
+    opacity: 1;
+    translate: 0.125rem 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .header-drawer__arrow {
+      transition: none;
+    }
+  }
+
+  .header-drawer__arrow svg {
+    inline-size: 0.75rem;
+    block-size: auto;
   }
 
   .header-drawer__icon svg {
@@ -607,7 +768,7 @@
 
   /* Small phones (320-359px): a slightly wider drawer, tighter sides, no gap between the three parts */
   @media (max-width: 359px) {
-    .header-drawer__dialog {
+    .header .header-drawer__dialog {
       min-inline-size: 18rem;
     }
 
@@ -622,7 +783,7 @@
   /**
    * <header-drawer>: opens the phone menu <dialog> with showModal() and keeps the button's aria-expanded in
    * step. Closes on the close button, a click on the dimmed backdrop, Escape (built into <dialog>), and when
-   * the screen grows to desktop width (the drawer button is gone there).
+   * the window grows past the menu-button layout (the menu button is hidden there).
    * Second level: a link's button shows its panel (focus to Back); Back hides it (focus to the link's button).
    * Closing the drawer always returns to the first level.
    */
@@ -670,15 +831,15 @@
         this.closeSub(false);
       });
 
-      this.desktop = window.matchMedia('(min-width: 768px)');
-      this.onResize = (event) => {
-        if (event.matches && this.dialog.open) this.dialog.close();
+      // The breakpoint is a header setting (768 / 990 / 1200px), so check the button itself, not one width
+      this.onResize = () => {
+        if (this.dialog.open && !this.toggle.checkVisibility()) this.dialog.close();
       };
-      this.desktop.addEventListener('change', this.onResize);
+      window.addEventListener('resize', this.onResize);
     }
 
     disconnectedCallback() {
-      this.desktop?.removeEventListener('change', this.onResize);
+      window.removeEventListener('resize', this.onResize);
     }
 
     openSub(opener) {

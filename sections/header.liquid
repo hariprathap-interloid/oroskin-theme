@@ -19,6 +19,13 @@
         assign transparent = true
       endif
   endcase
+
+  # Solid background: the whole header area (full width, the gap around the pill too) takes the header's
+  # colour scheme and the page starts below it. Never on a page where the header is transparent.
+  assign solid = false
+  if section.settings.solid_background and transparent == false
+    assign solid = true
+  endif
 -%}
 
 {%- comment -%}
@@ -60,9 +67,15 @@
     {%- endif -%}
 {%- endcapture -%}
 
+{%- comment -%}
+  The drawer's copy of the logo is inside a closed <dialog> (phones only), so its image loads lazily:
+  the browser fetches it only when the drawer opens, not on every page view.
+{%- endcomment -%}
+{%- assign logo_markup_lazy = logo_markup | replace: 'loading="eager"', 'loading="lazy"' -%}
+
 <sticky-header>
 <header
-  class="header{% if transparent %} header--transparent{% endif %}{% if section.settings.mobile_show_search %} header--m-search{% endif %}{% if section.settings.mobile_show_cart %} header--m-cart{% endif %}"
+  class="header{% if transparent %} header--transparent{% endif %}{% if solid %} header--solid color-{{ section.settings.color_scheme.id }}{% endif %}{% if section.settings.menu_button_breakpoint != 'phones' %} header--menu-button-{{ section.settings.menu_button_breakpoint }}{% endif %}{% if section.settings.mobile_show_search %} header--m-search{% endif %}{% if section.settings.mobile_show_cart %} header--m-cart{% endif %}"
   style="--logo-width: {{ settings.logo_width }}px; --logo-text-size: {{ settings.logo_text_size }}px; --nav-underline: url('{{ 'nav-underline.svg' | asset_url }}'); --mega-columns: {{ section.settings.mega_menu_columns }};"
 >
   <div class="header__bar color-{{ section.settings.color_scheme.id }}">
@@ -72,7 +85,9 @@
     {%- endcomment -%}
     {% render 'header-drawer',
       links: section.settings.menu.links,
-      logo: logo_markup,
+      logo: logo_markup_lazy,
+      account_links: linklists[section.settings.customer_account_menu].links,
+      scheme: section.settings.drawer_color_scheme,
       cards: section.blocks,
       image_fit: section.settings.mega_menu_image_fit,
       image_ratio: section.settings.mega_menu_image_ratio,
@@ -240,7 +255,7 @@
   */
   .header__bar {
     position: relative; /* the mega menu panel is positioned against the pill */
-    display: flex;
+    display: var(--bar-display, flex); /* grid in the menu-button layout (see "Menu button layout" below) */
     align-items: center;
     justify-content: space-between;
     gap: var(--space-xl);
@@ -272,7 +287,36 @@
     (negative margin = 20px gap + 77px pill), so the hero starts at the very top of the page.
   */
   .shopify-section-group-header-group:has(.header--transparent) {
-    margin-block-end: -6.0625rem;
+    margin-block-end: calc(var(--header-space) * -1);
+  }
+
+  /*
+    A Hero as the first section goes under the header the same way when the header is not transparent
+    (logo and menu always show): the hero image fills the top of the page behind the glass pill, instead
+    of a strip of the hero's background colour. hero.liquid moves the hero's text down by --header-space.
+  */
+  body:has(#MainContent > .shopify-section:first-child .hero) .shopify-section-group-header-group:has(.header:not(.header--transparent):not(.header--solid)) {
+    margin-block-end: calc(var(--header-space) * -1);
+  }
+
+  /*
+    "Solid background" setting: the header area (full width, with the gap around the pill) is painted in the
+    header's colour scheme (the color-* class on .header) and the page starts below it, so no section slides
+    under it (the rules below skip .header--solid). The pill keeps its glass on top of that colour.
+  */
+  .header--solid {
+    padding-block-end: 1.25rem; /* the same 20px under the pill as above it */
+    pointer-events: auto; /* the wrapper lets clicks through; a painted band must not */
+  }
+
+  /* The band spans the whole window (the section grid puts its child in the page column; the pill still centres itself) */
+  .shopify-section-group-header-group:has(.header--solid) > sticky-header {
+    grid-column: 1 / -1;
+  }
+
+  /* The solid header is 20px taller (gap under the pill too): anchors and screen heights use this value */
+  :root:has(.header--solid) {
+    --header-space: calc(6.0625rem + 1.25rem);
   }
 
   /*
@@ -289,11 +333,11 @@
     --header-space: 6.0625rem; /* 20px gap + 77px pill */
   }
 
-  body:has(sticky-header):not(:has(.header--transparent)) #MainContent > .shopify-section:first-child:not(:has(.collection-banner--under-header)) {
+  body:has(sticky-header):not(:has(.header--transparent, .header--solid)) #MainContent > .shopify-section:first-child:not(:has(.collection-banner--under-header, .hero)) {
     margin-block-start: calc(var(--header-space) * -1);
   }
 
-  body:has(sticky-header):not(:has(.header--transparent)) #MainContent > .shopify-section:first-child:not(:has(.collection-banner--under-header)) > * {
+  body:has(sticky-header):not(:has(.header--transparent, .header--solid)) #MainContent > .shopify-section:first-child:not(:has(.collection-banner--under-header, .hero)) > * {
     border-block-start: var(--header-space) solid transparent;
   }
 
@@ -302,7 +346,7 @@
     header (above), so it is exactly one screen tall. The older rule (critical.css / screen-scale,
     100svh minus the header) subtracted the header a second time, and the footer showed at the bottom.
   */
-  body:has(sticky-header):not(:has(.header--transparent)) #MainContent > .shopify-section:first-child:not(:has(.collection-banner--under-header)) .section--fill-screen {
+  body:has(sticky-header):not(:has(.header--transparent, .header--solid)) #MainContent > .shopify-section:first-child:not(:has(.collection-banner--under-header, .hero)) .section--fill-screen {
     min-block-size: 100svh;
   }
 
@@ -349,7 +393,7 @@
 
   /* The actions stay at the right edge in both states */
   .header__actions {
-    margin-inline-start: auto;
+    margin-inline-start: var(--actions-start, auto);
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -389,8 +433,9 @@
     white-space: nowrap;
   }
 
+  /* The accent word follows the header's colour scheme (--color-accent), so it stays readable on red / dark schemes */
   .header__logo-text em {
-    color: var(--color-primary);
+    color: var(--color-accent);
     font-style: italic;
   }
 
@@ -399,6 +444,11 @@
     display: flex;
     align-items: center;
     gap: var(--space-md);
+  }
+
+  /* Hidden in the menu-button layout (its items are in the drawer) */
+  .header__menu {
+    display: var(--menu-display, flex);
   }
 
   /* Header actions (Figma): round glass icon buttons, then the red LOGIN pill */
@@ -440,7 +490,7 @@
     block-size: var(--icon-size);
   }
 
-  /* Item count bubble on the cart (Figma: small red circle, top right) */
+  /* Item count bubble on the cart (Figma: small red circle, top right). The scheme's button colours, so it follows the scheme */
   .header__count {
     position: absolute;
     inset-block-start: -0.125rem;
@@ -451,8 +501,8 @@
     block-size: 1.25rem;
     padding-inline: 0.3rem;
     border-radius: var(--radius-pill);
-    background-color: var(--color-primary);
-    color: #ffffff;
+    background-color: var(--color-button);
+    color: var(--color-button-text);
     font-size: 0.6875rem;
     font-weight: var(--font-weight-medium);
     line-height: 1;
@@ -500,10 +550,10 @@
   /*
     The account panel: a native popover (top layer), placed by the script under the avatar, its right
     edge lined up with it (--account-top / --account-left). The browser centres a popover by default
-    (inset 0, margin auto) and gives it a black border: both reset. A white glass card with a soft
-    shadow, no borders inside: head (initial, name, email, close), a hairline, the link rows, a hairline,
-    Sign out. It inherits the header's colour scheme (inheritance follows the page structure, even in
-    the top layer).
+    (inset 0, margin auto) and gives it a black border: both reset. A glass card in the scheme's
+    background colour with a soft shadow, no borders inside: head (initial, name, email, close), a
+    hairline, the link rows, a hairline, Sign out. It inherits the header's colour scheme (inheritance
+    follows the page structure, even in the top layer), so a dark scheme gives a dark card.
   */
   .account-menu {
     position: fixed;
@@ -515,7 +565,7 @@
     padding: var(--space-sm);
     border: 0;
     border-radius: 1.25rem;
-    background-color: color-mix(in srgb, #ffffff 92%, transparent);
+    background-color: color-mix(in srgb, var(--color-background) 92%, transparent);
     box-shadow: 0 12px 40px #0000001f, 0 2px 8px #0000000d;
     color: var(--color-text);
     -webkit-backdrop-filter: blur(var(--glass-frost));
@@ -557,7 +607,7 @@
     inline-size: 2.75rem;
     block-size: 2.75rem;
     border-radius: 50%;
-    background-color: color-mix(in srgb, var(--color-accent) 10%, #ffffff);
+    background-color: color-mix(in srgb, var(--color-accent) 10%, var(--color-background));
     color: var(--color-accent);
     font-size: 1.125rem;
     font-weight: var(--font-weight-medium);
@@ -579,7 +629,7 @@
   .account-menu__email {
     margin: 0.125rem 0 0;
     overflow: hidden;
-    color: color-mix(in srgb, var(--color-text) 62%, #ffffff);
+    color: color-mix(in srgb, var(--color-text) 62%, var(--color-background));
     font-size: var(--font-size-small);
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -600,7 +650,7 @@
     border-radius: 50%;
     background-color: transparent;
     box-shadow: none;
-    color: color-mix(in srgb, var(--color-text) 62%, #ffffff);
+    color: color-mix(in srgb, var(--color-text) 62%, var(--color-background));
     cursor: pointer;
     transition:
       background-color var(--duration-fast) var(--ease-out),
@@ -677,9 +727,111 @@
   }
 
   /*
+    Menu button layout: logo | buttons | menu button; the menu items are in the drawer.
+    Phones (below 768px) always use it. Header setting "Show the menu button below" uses it on tablets too:
+    990 = below 990px, 1200 = below 1200px (the class header--menu-button-990 / -1200).
+    A media query can't read a setting, so each width range sets four variables on the header for the
+    classes that apply there, and the layout rules read them (one set of rules for every case):
+    --bar-display (grid), --menu-display (none), --drawer-display (contents: the menu button shows),
+    --actions-start (0: the buttons sit in their grid column, not pushed right).
+    --logo-overflow (hidden: a long logo is cut in its column instead of pushing the buttons out).
+    On tablets the logo, search, cart and LOGIN keep their tablet sizes; the phone sizes are further below.
+  */
+  @media (max-width: 767px) {
+    .header {
+      --bar-display: grid;
+      --menu-display: none;
+      --drawer-display: contents;
+      --actions-start: 0;
+      --logo-overflow: hidden;
+    }
+  }
+
+  @media (min-width: 768px) and (max-width: 989px) {
+    .header--menu-button-990,
+    .header--menu-button-1200 {
+      --bar-display: grid;
+      --menu-display: none;
+      --drawer-display: contents;
+      --actions-start: 0;
+      --logo-overflow: hidden;
+    }
+  }
+
+  @media (min-width: 990px) and (max-width: 1199px) {
+    .header--menu-button-1200 {
+      --bar-display: grid;
+      --menu-display: none;
+      --drawer-display: contents;
+      --actions-start: 0;
+      --logo-overflow: hidden;
+    }
+  }
+
+  /*
+    The grid of the menu-button layout: logo (takes what is left, may shrink to 0) | buttons | menu button.
+    These only act while the bar is a grid; the full layout (flexbox) ignores grid placement.
+  */
+  .header__bar {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .header__logo {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+    min-inline-size: 0; /* a grid item won't shrink below its content without this */
+    max-inline-size: 100%;
+    overflow: var(--logo-overflow, visible); /* clips a long logo in the narrow grid column only */
+  }
+
+  .header__actions {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  /* Menu button: a plain icon inside the pill (Figma), 44px tap area. Only shown in the menu-button layout. */
+  .header .header-drawer__toggle {
+    grid-column: 3;
+    grid-row: 1;
+    inline-size: 2.75rem;
+    block-size: 2.75rem;
+    border: 0;
+    background-color: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .header .header-drawer__toggle:hover {
+    background-color: transparent;
+    color: var(--color-accent);
+  }
+
+  /*
+    At rest over the hero there is no pill behind it: the glass circle like search and cart (no border).
+    40px; on phones the smaller at-rest size (--rest-button).
+  */
+  .header--transparent:not(.is-scrolled):not(:has(:focus-visible)):not(:has(.menu__dropdown[open]))
+    .header-drawer__toggle {
+    inline-size: var(--rest-button, 2.5rem);
+    block-size: var(--rest-button, 2.5rem);
+    background-color: var(--color-glass);
+    box-shadow: var(--shadow-header);
+    -webkit-backdrop-filter: blur(var(--glass-frost));
+    backdrop-filter: blur(var(--glass-frost));
+  }
+
+  .header-drawer__toggle svg {
+    inline-size: 1.125rem;
+    block-size: auto;
+  }
+
+  /*
     Below 1200px (tablets and phones) the pill is smaller: 60px tall, 12px from the top and the sides, so the
     first-section pull-ups use --header-space (72px). What goes inside the pill depends on the width:
-    - 768-1199px (tablets, small laptops): the desktop layout, scaled down (logo, full menu, search, cart, LOGIN).
+    - 768-1199px (tablets, small laptops): the desktop layout, scaled down (logo, full menu, search, cart, LOGIN),
+      or the menu-button layout when the "Show the menu button below" setting covers this width.
     - below 768px (phones, Figma mobile pill): logo | menu button; the drawer holds the rest.
   */
   @media (max-width: 1199px) {
@@ -715,12 +867,16 @@
       block-size: 1rem;
     }
 
-    /* The page sits 72px lower than the full pill's 97px: transparent header pull-up to match */
-    .shopify-section-group-header-group:has(.header--transparent) {
-      margin-block-end: calc(-3.75rem - var(--space-sm));
+    /* Solid background: the same 12px under the small pill as above it */
+    .header--solid {
+      padding-block-end: var(--space-sm);
     }
 
-    /* The small pill: 12px gap + 60px pill (the first-section pull-up above uses it) */
+    :root:has(.header--solid) {
+      --header-space: calc(3.75rem + var(--space-sm) * 2);
+    }
+
+    /* The small pill: 12px gap + 60px pill (every pull-up above uses it, so they follow on their own) */
     :root {
       --header-space: calc(3.75rem + var(--space-sm));
     }
@@ -737,14 +893,19 @@
       padding-inline: var(--space-lg) var(--space-xs);
     }
 
+    /*
+      The desktop's fluid size (33px at 768px, 37px at 1024px, 39px at 1199px: no jump at 1200px), never
+      above the "Logo text size" setting and never above 40px, so it fits the 60px pill.
+    */
     .header__logo-text {
-      font-size: 1.5rem;
+      font-size: clamp(1.75rem, 1.4rem + 1.4vw, min(var(--logo-text-size), 2.5rem));
     }
 
+    /* The logo image grows the same way: 28px tall at 768px up to 36px, never wider than the Logo width setting */
     .header__logo-image {
       inline-size: auto;
       max-inline-size: var(--logo-width);
-      block-size: 1.5rem;
+      block-size: clamp(1.75rem, 1rem + 1.6vw, 2.25rem);
     }
 
     .header .menu {
@@ -784,25 +945,12 @@
         Figma mobile pill: 58px tall, ~24px inside padding, the logo on the left and a plain menu icon on the right.
       */
       .header__bar {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto auto;
-        align-items: center;
         gap: var(--space-xs);
         padding-inline: var(--space-lg) var(--space-sm);
       }
 
-      .header__menu {
-        display: none;
-      }
-
       .header__logo {
-        grid-column: 1;
-        grid-row: 1;
-        justify-self: start;
         gap: var(--space-xs);
-        min-inline-size: 0; /* a flex/grid item won't shrink below its content without this */
-        max-inline-size: 100%;
-        overflow: hidden;
       }
 
       /* A small mark, a big word: 26px on a 320px phone, 30px at 375px, up to 32px on tablets */
@@ -819,10 +967,7 @@
       }
 
       .header__actions {
-        grid-column: 2;
-        grid-row: 1;
         gap: var(--space-2xs);
-        margin-inline-start: 0;
       }
 
       /*
@@ -841,10 +986,30 @@
         its own), so there is room for search, cart and LOGIN / the account initial in the bar. Once the page
         scrolls they go back into the drawer. (This selector outweighs the hiding rule above.)
       */
+      /*
+        At rest the round buttons sit straight on the hero photo, so they are smaller than in the pill
+        (36px circles, 16px icons) and cover less of the photo. --rest-button / --icon-size are read by
+        search, cart, LOGIN / the account initial and the menu button below. Once the page scrolls, the
+        pill's sizes (40px, 18px) come back.
+      */
+      .header--transparent:not(.is-scrolled):not(:has(:focus-visible)):not(:has(.menu__dropdown[open])) {
+        --rest-button: 2.25rem;
+        --icon-size: 1rem;
+      }
+
       .header--transparent:not(.is-scrolled):not(:has(:focus-visible)):not(:has(.menu__dropdown[open]))
         .header__actions
-        :is([data-search-open], cart-count > a) {
+        :is([data-search-open], cart-count > a, .header__avatar) {
         display: inline-grid; /* the round button's own display: centres the icon (place-items) */
+        inline-size: var(--rest-button);
+        block-size: var(--rest-button);
+      }
+
+      .header--transparent:not(.is-scrolled):not(:has(:focus-visible)):not(:has(.menu__dropdown[open]))
+        .header__actions
+        .header__avatar {
+        display: inline-flex; /* the initial is centred with flexbox (see .header__avatar) */
+        font-size: 1rem;
       }
 
       .header--transparent:not(.is-scrolled):not(:has(:focus-visible)):not(:has(.menu__dropdown[open]))
@@ -857,8 +1022,8 @@
         .header__actions
         .header__login {
         display: inline-flex;
-        inline-size: 2.5rem;
-        min-block-size: 2.5rem;
+        inline-size: var(--rest-button);
+        min-block-size: var(--rest-button);
         padding: 0;
       }
 
@@ -877,38 +1042,11 @@
         block-size: var(--icon-size);
       }
 
-      /* Menu button: a plain icon inside the pill (Figma), 44px tap area */
-      .header .header-drawer__toggle {
-        grid-column: 3;
-        grid-row: 1;
-        inline-size: 2.75rem;
-        block-size: 2.75rem;
-        border: 0;
-        background-color: transparent;
-        box-shadow: none;
-        -webkit-backdrop-filter: none;
-        backdrop-filter: none;
-      }
-
-      .header .header-drawer__toggle:hover {
-        background-color: transparent;
-        color: var(--color-accent);
-      }
-
-      /* At rest over the hero there is no pill behind it: the glass circle like search and cart (no border) */
+      /* The menu icon at rest: the same 16px as search and cart */
       .header--transparent:not(.is-scrolled):not(:has(:focus-visible)):not(:has(.menu__dropdown[open]))
-        .header-drawer__toggle {
-        inline-size: 2.5rem;
-        block-size: 2.5rem;
-        background-color: var(--color-glass);
-        box-shadow: var(--shadow-header);
-        -webkit-backdrop-filter: blur(var(--glass-frost));
-        backdrop-filter: blur(var(--glass-frost));
-      }
-
-      .header-drawer__toggle svg {
-        inline-size: 1.125rem;
-        block-size: auto;
+        .header-drawer__toggle
+        svg {
+        inline-size: var(--icon-size);
       }
   }
 {% endstylesheet %}
@@ -947,8 +1085,28 @@
    *   /cart.js once, update the bubble and the hidden label, then send "cart:updated" with the cart (the
    *   cart page listens to it and redraws itself).
    * - "cart:updated" from the cart page itself already carries the cart: just update the bubble.
+   * There are two <cart-count> elements (the bar and the phone drawer). They share ONE request
+   * (CartCount.pending), and only that request sends "cart:updated", so the cart page redraws once.
    */
   class CartCount extends HTMLElement {
+    static pending = null;
+
+    /** One /cart.js request for every <cart-count> on the page; it announces the new cart once */
+    static fetchCart(root) {
+      if (!CartCount.pending) {
+        CartCount.pending = fetch(`${root}cart.js`, { headers: { Accept: 'application/json' } })
+          .then((response) => response.json())
+          .then((cart) => {
+            document.dispatchEvent(new CustomEvent('cart:updated', { detail: { cart, source: 'header' } }));
+            return cart;
+          })
+          .finally(() => {
+            CartCount.pending = null;
+          });
+      }
+      return CartCount.pending;
+    }
+
     connectedCallback() {
       this.root = window.Shopify?.routes?.root || '/';
       this.onChanged = () => this.refresh();
@@ -966,9 +1124,8 @@
 
     async refresh() {
       try {
-        const cart = await fetch(`${this.root}cart.js`, { headers: { Accept: 'application/json' } }).then((r) => r.json());
+        const cart = await CartCount.fetchCart(this.root);
         this.show(cart.item_count);
-        document.dispatchEvent(new CustomEvent('cart:updated', { detail: { cart, source: 'header' } }));
       } catch (error) {
         // The add itself worked; only the count is stale. The cart page shows the right total.
       }
@@ -1001,8 +1158,12 @@
 
   /**
    * <account-menu>: the signed-in customer's panel is a native popover (the browser opens and closes it:
-   * the avatar button, Escape, a click outside). This only places it before it opens: under the avatar,
-   * its right edge lined up with the avatar's, kept inside the screen.
+   * the avatar button, Escape, a click outside). This places it: under the avatar, its right edge lined
+   * up with the avatar's, kept inside the screen.
+   * While it is open, the avatar can move or disappear: the window is resized, or the page scrolls and a
+   * transparent header changes from "at rest" to the full pill (the pill gets narrower on desktop; on
+   * phones the avatar goes back into the drawer). On each of those changes the panel follows the avatar,
+   * or closes when the avatar is no longer shown. The listeners exist only while the panel is open.
    */
   class AccountMenu extends HTMLElement {
     connectedCallback() {
@@ -1012,11 +1173,51 @@
       this.onBeforeToggle = (event) => {
         if (event.newState === 'open') this.place();
       };
+      this.onToggle = (event) => {
+        if (event.newState === 'open') this.watch();
+        else this.unwatch();
+      };
       this.panel.addEventListener('beforetoggle', this.onBeforeToggle);
+      this.panel.addEventListener('toggle', this.onToggle);
     }
 
     disconnectedCallback() {
       this.panel?.removeEventListener('beforetoggle', this.onBeforeToggle);
+      this.panel?.removeEventListener('toggle', this.onToggle);
+      this.unwatch();
+    }
+
+    /** Follow the avatar while the panel is open (one check per frame at most) */
+    watch() {
+      this.unwatch();
+      this.watcher = new AbortController();
+      const { signal } = this.watcher;
+      const update = () => {
+        if (this.frame) return;
+        this.frame = requestAnimationFrame(() => {
+          this.frame = null;
+          this.follow();
+        });
+      };
+      window.addEventListener('resize', update, { signal });
+      window.addEventListener('scroll', update, { passive: true, signal });
+      // The pill's width animates after "is-scrolled" changes: place the panel again when it ends
+      this.closest('.header')?.addEventListener('transitionend', update, { signal });
+    }
+
+    unwatch() {
+      this.watcher?.abort();
+      this.watcher = null;
+      if (this.frame) cancelAnimationFrame(this.frame);
+      this.frame = null;
+    }
+
+    /** The avatar is hidden (display: none in the bar): close. Otherwise move the panel under it. */
+    follow() {
+      if (!this.panel.matches(':popover-open')) return;
+      const visible = this.button.checkVisibility ? this.button.checkVisibility() : this.button.offsetParent !== null;
+      if (!visible) this.panel.hidePopover();
+      else this.place();
     }
 
     place() {
@@ -1043,6 +1244,22 @@
         {
           "type": "paragraph",
           "content": "t:labels.menu_card_help"
+        },
+        {
+          "type": "paragraph",
+          "content": "t:labels.menu_card_help_collection"
+        },
+        {
+          "type": "paragraph",
+          "content": "t:labels.menu_card_help_link"
+        },
+        {
+          "type": "paragraph",
+          "content": "t:labels.menu_card_help_title"
+        },
+        {
+          "type": "paragraph",
+          "content": "t:labels.menu_card_help_empty"
         },
         {
           "type": "collection",
@@ -1078,10 +1295,22 @@
   ],
   "settings": [
     {
+      "type": "paragraph",
+      "content": "t:labels.header_logo_info"
+    },
+    {
       "type": "color_scheme",
       "id": "color_scheme",
-      "label": "t:labels.color_scheme",
+      "label": "t:labels.header_color_scheme",
       "default": "scheme-1"
+    },
+    {
+      "type": "checkbox",
+      "id": "solid_background",
+      "label": "t:labels.solid_background",
+      "info": "t:labels.solid_background_info",
+      "default": false,
+      "visible_if": "{{ section.settings.transparent_mode != 'all' }}"
     },
     {
       "type": "select",
@@ -1109,24 +1338,16 @@
       "type": "link_list",
       "id": "customer_account_menu",
       "label": "t:labels.customer_account_menu",
+      "info": "t:labels.customer_account_menu_info",
       "default": "customer-account-main-menu"
     },
     {
       "type": "header",
-      "content": "t:labels.small_screens",
-      "info": "t:labels.small_screens_info"
+      "content": "t:labels.search_popup"
     },
     {
-      "type": "checkbox",
-      "id": "mobile_show_search",
-      "label": "t:labels.mobile_show_search",
-      "default": false
-    },
-    {
-      "type": "checkbox",
-      "id": "mobile_show_cart",
-      "label": "t:labels.mobile_show_cart",
-      "default": false
+      "type": "paragraph",
+      "content": "t:labels.header_search_info"
     },
     {
       "type": "header",
@@ -1175,7 +1396,7 @@
     {
       "type": "color_scheme",
       "id": "mega_menu_color_scheme",
-      "label": "t:labels.color_scheme",
+      "label": "t:labels.mega_menu_color_scheme",
       "default": "scheme-2"
     },
     {
@@ -1204,11 +1425,40 @@
     },
     {
       "type": "header",
-      "content": "t:labels.search_popup"
+      "content": "t:labels.small_screens",
+      "info": "t:labels.small_screens_info"
     },
     {
-      "type": "paragraph",
-      "content": "t:labels.header_search_info"
+      "type": "select",
+      "id": "menu_button_breakpoint",
+      "label": "t:labels.menu_button_breakpoint",
+      "info": "t:labels.menu_button_breakpoint_info",
+      "options": [
+        { "value": "phones", "label": "t:options.menu_button_breakpoint.phones" },
+        { "value": "990", "label": "t:options.menu_button_breakpoint.small_tablets" },
+        { "value": "1200", "label": "t:options.menu_button_breakpoint.tablets" }
+      ],
+      "default": "phones"
+    },
+    {
+      "type": "checkbox",
+      "id": "mobile_show_search",
+      "label": "t:labels.mobile_show_search_bar",
+      "info": "t:labels.mobile_show_search_bar_info",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "mobile_show_cart",
+      "label": "t:labels.mobile_show_cart_bar",
+      "info": "t:labels.mobile_show_cart_bar_info",
+      "default": false
+    },
+    {
+      "type": "color_scheme",
+      "id": "drawer_color_scheme",
+      "label": "t:labels.drawer_color_scheme",
+      "default": "scheme-1"
     }
   ]
 }
