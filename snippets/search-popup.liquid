@@ -221,8 +221,48 @@
     border: 0;
     border-radius: var(--radius-lg);
     box-shadow: var(--glass-shadow);
+    /*
+      Up and down only. overflow-y: auto alone turns overflow-x into auto too, so a too-wide row would add a
+      sideways bar; the result grids below already stop that, hidden is the safety net.
+    */
+    overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain; /* scrolling the results doesn't scroll the page behind */
+  }
+
+  /*
+    Scrollbar: a thin pill in the highlight colour instead of the grey system bar (like the filter drawer).
+    Chrome, Edge and Safari: the ::-webkit-scrollbar rules. The 14px bar has a 4px clear border, so the
+    visible thumb is 6px wide and sits 4px in from the edge. The track's margin keeps it out of the 50px
+    round corners, which would otherwise cut its ends off.
+    Chrome ignores these rules as soon as scrollbar-width / scrollbar-color are set, so those two are only
+    for browsers without ::-webkit-scrollbar (Firefox: a thin bar, no track margin there).
+  */
+  .search-popup__dialog::-webkit-scrollbar {
+    inline-size: 0.875rem;
+  }
+
+  .search-popup__dialog::-webkit-scrollbar-track {
+    margin-block: 2.5rem;
+    background: transparent;
+  }
+
+  .search-popup__dialog::-webkit-scrollbar-thumb {
+    border: 0.25rem solid transparent;
+    border-radius: var(--radius-pill);
+    background-color: color-mix(in srgb, var(--color-accent) 55%, transparent);
+    background-clip: padding-box;
+  }
+
+  .search-popup__dialog::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-accent);
+  }
+
+  @supports not selector(::-webkit-scrollbar) {
+    .search-popup__dialog {
+      scrollbar-width: thin;
+      scrollbar-color: color-mix(in srgb, var(--color-accent) 55%, transparent) transparent;
+    }
   }
 
   .search-popup__dialog::backdrop {
@@ -362,9 +402,15 @@
     border-block-start: 1px solid var(--color-tint-border);
   }
 
+  /*
+    minmax(0, 1fr), not the default auto column: a grid column grows to its widest unbreakable content,
+    and the titles are nowrap. With auto, a long article title widened the whole column past the panel
+    (the sideways scrollbar). A 0 minimum keeps every column inside the panel, and the title ends in "…".
+  */
   .search-popup__start,
   .search-popup__matches {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-xl);
   }
 
@@ -421,7 +467,7 @@
     background-color: color-mix(in srgb, var(--color-accent) 85%, #1f1f1f);
   }
 
-  /* In suggestions, Shopify marks the part not typed yet: show it a little bolder, not yellow */
+  /* In suggestions, Shopify marks the part already typed ("<mark>rose</mark> petal"): a little bolder, not yellow */
   .search-popup__chip mark {
     background: none;
     color: inherit;
@@ -434,8 +480,14 @@
   */
   .search-popup__products {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
     gap: var(--space-md) 1.25rem;
+  }
+
+  /* Grid items: min-inline-size 0, so a long nowrap title can't make its column wider than 1fr */
+  .search-popup__products > *,
+  .search-popup__link-groups > * {
+    min-inline-size: 0;
   }
 
   /*
@@ -523,12 +575,13 @@
   /* Collections, pages and articles: one column each, side by side, sharing the full width */
   .search-popup__link-groups {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
     gap: var(--space-lg) 1.25rem;
   }
 
   .search-popup__links {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-sm);
   }
 
