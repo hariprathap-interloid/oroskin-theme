@@ -1019,7 +1019,7 @@
     "announcement_position": "Position",
     "announcement_position_info": "Right side: a vertical band fixed to the right edge of the screen, on large screens; the page leaves room for it. Below 990px it shows above the header.",
     "show_close": "Show close button",
-    "show_close_info": "A closed bar stays hidden for that visitor, also on later visits, until you change a message or its link. Always shown in the theme editor.",
+    "show_close_info": "A closed bar stays hidden while the visitor browses in that tab. A new tab or a new visit shows it again. Always shown in the theme editor.",
     "announcement_link_info": "Without a link label, the whole message is clickable (unless a word in the text is already linked).",
     "announcement_text_info": "To link a word anywhere in the message, select it and use the link button.",
     "announcement_align": "Text alignment",

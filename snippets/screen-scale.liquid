@@ -37,6 +37,13 @@
     min-block-size: calc(100svh - 6.0625rem - var(--announcement-size, 2.25rem));
   }
 
+  /* "Right side" is a bar above the header below 990px (the band only exists from 990px), so it counts too */
+  @media (max-width: 989px) {
+    body:has(.announcement-bar--right:not([hidden]):not(.is-closing)) #MainContent > .shopify-section:first-child .section--fill-screen {
+      min-block-size: calc(100svh - 6.0625rem - var(--announcement-size, 2.25rem));
+    }
+  }
+
   @media (prefers-reduced-motion: no-preference) {
     #MainContent > .shopify-section:first-child .section--fill-screen {
       transition: min-block-size var(--duration-base, 300ms) var(--ease-out);

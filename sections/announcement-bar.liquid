@@ -8,7 +8,8 @@
   - Movement: Static (first message only), Slideshow (one at a time, arrows, optional autoplay) or Marquee.
     Anything that moves has a pause button (WCAG 2.2.2) and never moves with reduced motion. The marquee moves
     whenever Marquee is chosen (not tied to the theme's "Enable animations"), except in the theme editor.
-  - Close button: hides the bar until the messages change (localStorage, keyed by a fingerprint of the
+  - Close button: hides the bar in this browser tab only (sessionStorage: a new tab or a new visit shows it
+    again), and only until the messages change (keyed by a fingerprint of the
     messages, so a new announcement always shows again). The inline script after the bar
     hides it before the first paint, so nothing jumps. Ignored in the theme editor.
 {%- endcomment -%}
@@ -20,19 +21,29 @@
 
   # messages_key joins every shown message (text + links); its md5 fingerprint names the "closed" note, so
   # editing a message or its link gives a new name and the bar shows again for visitors who closed it.
+  # Static shows only the first message, so only that one counts (fixing a typo in a hidden one changes nothing).
   assign count = 0
   assign messages_key = ''
+  assign first_key = ''
   for block in section.blocks
     if block.settings.text != blank
       assign count = count | plus: 1
-      assign messages_key = messages_key | append: block.settings.text | append: block.settings.link | append: block.settings.link_label
+      assign message_key = block.settings.text | append: block.settings.link | append: block.settings.link_label
+      assign messages_key = messages_key | append: message_key
+      if count == 1
+        assign first_key = message_key
+      endif
     endif
   endfor
-  assign close_key = messages_key | md5 | slice: 0, 8 | prepend: 'announcement-closed-'
 
   if count < 2 and mode == 'slideshow'
     assign mode = 'static'
   endif
+
+  if mode == 'static'
+    assign messages_key = first_key
+  endif
+  assign close_key = messages_key | md5 | slice: 0, 8 | prepend: 'announcement-closed-'
 
   assign moves = false
   if mode == 'marquee'
@@ -190,7 +201,7 @@
     <script>
       (function (bar) {
         try {
-          if (!(window.Shopify && Shopify.designMode) && localStorage.getItem(bar.dataset.closeKey) === '1') {
+          if (!(window.Shopify && Shopify.designMode) && sessionStorage.getItem(bar.dataset.closeKey) === '1') {
             bar.hidden = true;
           }
         } catch (error) {}
@@ -249,12 +260,14 @@
     (Slideshow instead lets the arrows hug the text — see below.) The pause and close buttons are taken out
     of the flow and pinned to the two ends, so neither shifts the text. Whenever either button is present,
     both ends reserve the same room, so the message stays centred with one button or two.
+    These rules are written for every bar (not only --top): "Right side" is a bar above the header below
+    990px too, and the band's own rules (min-width: 990px, further down) override them.
   */
   .announcement-bar__messages {
     flex: 1;
   }
 
-  .announcement-bar--top .announcement-bar__inner:is(:has(.announcement-bar__close), :has(.announcement-bar__pause)) {
+  .announcement-bar .announcement-bar__inner:is(:has(.announcement-bar__close), :has(.announcement-bar__pause)) {
     padding-inline: calc(var(--page-margin) + 1.5rem + var(--space-sm));
   }
 
@@ -275,24 +288,18 @@
 
   .announcement-bar__message {
     margin: 0;
-    text-align: center;
   }
 
-  /* Text alignment: along the bar (left / right above the header, top / bottom in the band) */
+  /*
+    Text alignment: moves the slideshow's arrows + message group along the bar (left / right above the
+    header, top / bottom in the band). The text itself is placed by auto margins (see the message line).
+  */
   .announcement-bar--align-start .announcement-bar__inner {
     justify-content: flex-start;
   }
 
   .announcement-bar--align-end .announcement-bar__inner {
     justify-content: flex-end;
-  }
-
-  .announcement-bar--align-start .announcement-bar__message {
-    text-align: start;
-  }
-
-  .announcement-bar--align-end .announcement-bar__message {
-    text-align: end;
   }
 
   .announcement-bar__link-label {
@@ -315,6 +322,7 @@
     min-inline-size: 0;
     /* Don't stretch: the box shrinks to the message so the arrows sit right beside the text, centred as a group */
     flex: 0 1 auto;
+    grid-template-columns: minmax(0, 1fr); /* each line is at most the box's width, so a long one can scroll */
   }
 
   .announcement-bar--slideshow .announcement-bar__message {
@@ -362,16 +370,16 @@
   }
 
   /*
-    Top bar: pause/play is pinned to the start end and close to the other, both out of the flow, and centred
-    vertically so they sit right whatever the bar's height.
+    Bar above the header (Top, and Right side below 990px): pause/play is pinned to the start end and close
+    to the other, both out of the flow, and centred vertically so they sit right whatever the bar's height.
   */
-  .announcement-bar--top .announcement-bar__pause {
+  .announcement-bar .announcement-bar__pause {
     position: absolute;
     inset-inline-start: var(--page-margin);
   }
 
-  .announcement-bar--top .announcement-bar__close,
-  .announcement-bar--top .announcement-bar__pause {
+  .announcement-bar .announcement-bar__close,
+  .announcement-bar .announcement-bar__pause {
     inset-block: 0;
     margin-block: auto;
   }
@@ -463,15 +471,15 @@
     }
 
     /* Phones: tighter icon room so the message keeps more width */
-    .announcement-bar--top .announcement-bar__inner:is(:has(.announcement-bar__close), :has(.announcement-bar__pause)) {
+    .announcement-bar .announcement-bar__inner:is(:has(.announcement-bar__close), :has(.announcement-bar__pause)) {
       padding-inline: calc(var(--space-xs) + 1.5rem);
     }
 
-    .announcement-bar--top .announcement-bar__close {
+    .announcement-bar .announcement-bar__close {
       inset-inline-end: var(--space-2xs);
     }
 
-    .announcement-bar--top .announcement-bar__pause {
+    .announcement-bar .announcement-bar__pause {
       inset-inline-start: var(--space-2xs);
     }
 
@@ -491,13 +499,15 @@
     Slideshow: the arrows hug a short message; a long one fills the room between them and scrolls.
     The right-side band scrolls the same way, but up and down (its text runs top to bottom).
   */
-  .announcement-bar--slideshow .announcement-bar__messages {
-    grid-template-columns: minmax(0, 1fr); /* each line is the box's width, so it can scroll */
-  }
-
+  /*
+    Room for the focus ring: a scroll box clips everything outside its padding (top and bottom too), and the
+    ring needs 6px (4px offset + 2px line). 8px of padding gives it room; the negative margin takes the
+    extra back, so the bar keeps its height.
+  */
   .announcement-bar__scroller {
     overflow-x: auto;
-    padding-block: 0.25rem;
+    padding-block: 0.5rem;
+    margin-block: -0.25rem;
     scrollbar-width: none; /* Firefox: hide the bar; the fades are the cue */
   }
 
@@ -542,7 +552,6 @@
     it. currentColor keeps it visible on any colour scheme (e.g. the red band).
   */
   .announcement-bar__text {
-    display: inline-block;
     border-radius: var(--radius-pill);
   }
 
@@ -569,8 +578,15 @@
       already swaps in the still line, and pausing on focus kept it stopped after pressing play (the button
       keeps focus).
     */
-    .announcement-bar--marquee.is-moving:is(:hover, .is-paused) .announcement-bar__track {
+    .announcement-bar--marquee.is-moving.is-paused .announcement-bar__track {
       animation-play-state: paused;
+    }
+
+    /* Hover only with a real mouse: on touch screens :hover sticks after a tap, which kept it stopped */
+    @media (hover: hover) {
+      .announcement-bar--marquee.is-moving:hover .announcement-bar__track {
+        animation-play-state: paused;
+      }
     }
   }
 
@@ -626,6 +642,7 @@
     */
     .announcement-bar--right .announcement-bar__messages {
       flex: 0 1 auto;
+      min-inline-size: 0;
     }
 
     /*
@@ -658,16 +675,6 @@
 
     .announcement-bar--right.announcement-bar--uppercase .announcement-bar__inner {
       letter-spacing: 0.35em;
-    }
-
-    /* One line only: a long message is cut at the band's end instead of wrapping into a second column */
-    .announcement-bar--right .announcement-bar__messages {
-      overflow: hidden;
-      min-inline-size: 0;
-    }
-
-    .announcement-bar--right .announcement-bar__message {
-      white-space: nowrap;
     }
 
     /*
@@ -704,16 +711,17 @@
       inset-inline-start: var(--space-sm);
     }
 
-    /*
-      With a close button (at the top), both ends keep the button's room plus a gap, like the bar above the
-      header: the text never runs under the button and stays centred in the band.
-    */
     /* Pause / play: at the bottom end of the band, the close button's counterpart at the top */
     .announcement-bar--right .announcement-bar__pause {
       position: absolute;
+      inset-inline-start: auto; /* undo the bar-above-header pin */
       inset-inline-end: var(--space-sm);
     }
 
+    /*
+      With a close or pause button, both ends keep the button's room plus a gap, like the bar above the
+      header: the text never runs under a button and stays centred in the band.
+    */
     .announcement-bar--right .announcement-bar__inner:is(:has(.announcement-bar__close), :has(.announcement-bar__pause)) {
       padding-inline: calc(var(--space-sm) + 1.5rem + var(--space-md));
     }
@@ -730,16 +738,30 @@
   /**
    * <announcement-bar>
    * - Close: hides the bar and remembers it for the visit (not in the theme editor).
-   * - Slideshow: arrows, autoplay (paused on hover / focus and by the pause button). Screen readers hear the
+   * - Slideshow: arrows, autoplay (paused on hover, focus on a message, and by the pause button; off with
+   *   reduced motion, re-checked live). Screen readers hear the
    *   new message only when the visitor changed it (aria-live polite), not every few seconds.
    * - Marquee: shows the pause button when it really moves.
    * Listeners are removed when the editor re-renders the section (AbortController).
    */
   class AnnouncementBar extends HTMLElement {
     connectedCallback() {
+      // Closed earlier (the inline script hid it before the first paint): nothing to run
+      if (this.hidden) return;
+
       this.controller = new AbortController();
       const { signal } = this.controller;
-      this.motion = window.matchMedia('(prefers-reduced-motion: no-preference)').matches;
+      // Reduced motion, re-checked if the visitor changes it while the page is open
+      const motionQuery = window.matchMedia('(prefers-reduced-motion: no-preference)');
+      this.motion = motionQuery.matches;
+      motionQuery.addEventListener(
+        'change',
+        () => {
+          this.motion = motionQuery.matches;
+          if (this.dataset.mode === 'slideshow') this.updateAutoplay();
+        },
+        { signal }
+      );
       this.designMode = Boolean(window.Shopify && Shopify.designMode);
 
       this.querySelector('.announcement-bar__close')?.addEventListener('click', () => this.close(), { signal });
@@ -754,6 +776,11 @@
     }
 
     disconnectedCallback() {
+      this.teardown();
+    }
+
+    // Stops everything: listeners, timers, observers. Also used once the bar is closed.
+    teardown() {
       this.controller?.abort();
       clearInterval(this.timer);
       clearTimeout(this.closeFallback);
@@ -887,7 +914,8 @@
 
     /*
       Right-side band: slides out once the page has scrolled down, and comes back only at the top of the page
-      (not in the middle when scrolling up), or while it has keyboard focus.
+      (not in the middle when scrolling up), or while it has keyboard focus. Checked once at the start too
+      (a reload halfway down the page), and again when focus leaves it (Tab out).
     */
     setUpTuck(signal) {
       const large = window.matchMedia('(min-width: 990px)');
@@ -898,6 +926,17 @@
         const show = !large.matches || atTop || this.contains(document.activeElement);
         this.classList.toggle('is-tucked', !show);
       };
+      update();
+      // The browser may restore the scroll position of a reloaded page a little later: check again then
+      window.addEventListener('load', update, { signal });
+      window.addEventListener('pageshow', update, { signal });
+      this.addEventListener(
+        'focusout',
+        (event) => {
+          if (!this.contains(event.relatedTarget)) requestAnimationFrame(update);
+        },
+        { signal }
+      );
       window.addEventListener(
         'scroll',
         () => {
@@ -912,18 +951,18 @@
     }
 
     close() {
-      // Stop the slideshow timer so it isn't left cycling a hidden bar (or restarted by mouseleave)
-      clearInterval(this.timer);
-      this.userPaused = true;
+      // Stop everything (slideshow timer, marquee and scroll observers, listeners): a closed bar runs nothing
+      this.teardown();
 
       // Remember it first, so a closed bar stays closed even if the animation is cut short
       if (!this.designMode) {
         try {
-          localStorage.setItem(this.dataset.closeKey, '1');
+          // sessionStorage: remembered while the visitor browses in this tab; a new tab shows the bar again
+          sessionStorage.setItem(this.dataset.closeKey, '1');
           // Forget notes for older messages, so they don't pile up
-          Object.keys(localStorage)
+          Object.keys(sessionStorage)
             .filter((key) => key.startsWith('announcement-closed') && key !== this.dataset.closeKey)
-            .forEach((key) => localStorage.removeItem(key));
+            .forEach((key) => sessionStorage.removeItem(key));
         } catch (error) {
           // Storage blocked: the bar comes back on the next page
         }
@@ -943,9 +982,12 @@
       };
 
       this.classList.add('is-closing');
-      // Top bar: collapse its height so the page (and the hero) closes the gap smoothly. The right-side
-      // band keeps its height and only fades (collapsing a full-height fixed band would look wrong).
-      if (this.classList.contains('announcement-bar--top')) {
+      // A bar above the header (Top, or Right side below 990px): collapse its height so the page (and the hero)
+      // closes the gap smoothly. The right-side band keeps its height and only fades (collapsing a
+      // full-height fixed band would look wrong).
+      const band =
+        this.classList.contains('announcement-bar--right') && window.matchMedia('(min-width: 990px)').matches;
+      if (!band) {
         this.style.blockSize = `${this.offsetHeight}px`;
         void this.offsetHeight; // commit that height before animating to 0
         this.style.blockSize = '0';
@@ -998,24 +1040,45 @@
         { signal }
       );
 
-      if (this.dataset.autoplay !== 'true' || !this.motion || this.messages.length < 2) {
+      if (this.dataset.autoplay !== 'true' || this.messages.length < 2) {
         this.region.setAttribute('aria-live', 'polite');
         return;
       }
 
-      if (this.pauseButton) this.pauseButton.hidden = false;
-      // Hover and focus each pause on their own, so leaving one doesn't resume while the other still holds
+      // Hover and focus each pause on their own, so leaving one doesn't resume while the other still holds.
+      // Focus pauses only on a message (to read it or use its link), not on the arrows or the pause button:
+      // a click there gives the button focus, and that kept the slideshow stopped after pressing play.
       this.hoverPaused = false;
       this.focusPaused = false;
-      this.addEventListener('mouseenter', () => { this.hoverPaused = true; this.restart(); }, { signal });
-      this.addEventListener('mouseleave', () => { this.hoverPaused = false; this.restart(); }, { signal });
-      this.addEventListener('focusin', () => { this.focusPaused = true; this.restart(); }, { signal });
-      this.addEventListener('focusout', (event) => {
-        if (!this.contains(event.relatedTarget)) {
-          this.focusPaused = false;
-          this.restart();
-        }
+      const onMessage = (element) =>
+        Boolean(element && this.contains(element) && element.closest('.announcement-bar__message'));
+      // Mouse only: a tap on a phone fires mouseenter but no mouseleave until you tap elsewhere, which kept
+      // the slideshow stopped after tapping play or an arrow
+      this.addEventListener('pointerenter', (event) => {
+        if (event.pointerType !== 'mouse') return;
+        this.hoverPaused = true;
+        this.restart();
       }, { signal });
+      this.addEventListener('pointerleave', (event) => {
+        if (event.pointerType !== 'mouse') return;
+        this.hoverPaused = false;
+        this.restart();
+      }, { signal });
+      this.addEventListener('focusin', (event) => { this.focusPaused = onMessage(event.target); this.restart(); }, { signal });
+      this.addEventListener('focusout', (event) => { this.focusPaused = onMessage(event.relatedTarget); this.restart(); }, { signal });
+      this.updateAutoplay();
+    }
+
+    /*
+      Slideshow autoplay runs only with motion allowed; called at start and whenever the reduced-motion
+      preference changes. The pause button shows only while it can play, and screen readers hear changes
+      (polite) whenever it isn't auto-advancing.
+    */
+    updateAutoplay() {
+      if (!this.region || this.dataset.autoplay !== 'true' || this.messages.length < 2) return;
+      const plays = this.motion;
+      if (this.pauseButton) this.pauseButton.hidden = !plays;
+      this.region.setAttribute('aria-live', plays && !this.userPaused ? 'off' : 'polite');
       this.restart();
     }
 
