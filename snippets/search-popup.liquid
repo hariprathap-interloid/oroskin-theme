@@ -306,8 +306,14 @@
   }
 
   /* The content column (Figma: 931px, the width of the field) */
+  /*
+    100% - 5.25rem: room for the close button on the right (it sits 1.5rem in from the panel edge, is
+    2.375rem wide, plus a 0.75rem gap = 4.625rem, of which the panel's own 2rem padding already gives 2rem).
+    The same room is kept on the left so the column stays centred. Without it, below ~1120px the button
+    sat on top of the search field.
+  */
   .search-popup__inner {
-    max-inline-size: 58.1875rem;
+    max-inline-size: min(58.1875rem, 100% - 5.25rem);
     margin-inline: auto;
   }
 
@@ -496,10 +502,15 @@
     the top and right edges (80% white) and a weaker one bottom-left; Frost 100 = the theme's 35px blur.
     Refraction / Depth / Dispersion / Splay bend the background along the rim (an SVG filter that only
     Chrome supports) and are left out, as on every other glass element.
+    The inner shadow (the frosted look of the Figma panels): one soft grey glow inside all four edges.
+    No offset, so it is even on every side; 6% black keeps it light.
   */
   .search-popup__dialog {
     --search-glass-fill: #ffffff33;
-    --search-glass-rim: inset -1px 1px 0 #ffffffcc, inset 1px -1px 0 #ffffff80;
+    --search-glass-rim:
+      inset -1px 1px 0 #ffffffcc,
+      inset 1px -1px 0 #ffffff80,
+      inset 0 0 0.75rem #0000000f;
   }
 
   /* Product card (snippets/search-product-card.liquid; Figma 297 x 82: photo + glass panel) */
@@ -659,10 +670,13 @@
     opacity: 0.6;
   }
 
-  /* Close (Figma quick view: 38px round button, top right) */
+  /*
+    Close (Figma quick view: 38px round button, top right). Top = the field's top (the panel's 2.5rem
+    padding) + half the height difference (50px field - 38px button), so it lines up with the field.
+  */
   .search-popup__close {
     position: absolute;
-    inset-block-start: var(--space-lg);
+    inset-block-start: calc(2.5rem + (3.125rem - 2.375rem) / 2);
     inset-inline-end: var(--space-lg);
     display: grid;
     place-items: center;
@@ -690,6 +704,16 @@
     .search-popup__panel {
       padding-block-start: 4rem;
       padding-inline: var(--space-md);
+    }
+
+    /* The button is above the field here, so the column can use the full width again */
+    .search-popup__inner {
+      max-inline-size: none;
+    }
+
+    .search-popup__close {
+      inset-block-start: var(--space-md);
+      inset-inline-end: var(--space-md);
     }
   }
 {% endstylesheet %}
