@@ -202,10 +202,34 @@
   /*
     The popup (Figma: 1363px wide like the header pill, radius 50px, cream). showModal() puts the dialog in
     the browser's "top layer", above everything, so the sticky header's z-index and blur don't affect it.
-    It drops in just under the pill: 20px gap + 77px pill + a small gap.
+    It drops in just under the pill, plus a small gap. The pill's real bottom edge changes (a top
+    announcement bar above it, the smaller pill after scrolling, phones), so the script measures it on
+    open and sets --search-popup-header. Without the script value: the desktop 20px gap + 77px pill.
   */
   .search-popup__dialog {
-    --search-popup-top: calc(1.25rem + 4.8125rem + var(--space-sm));
+    --search-popup-top: calc(var(--search-popup-header, 1.25rem + 4.8125rem) + var(--space-sm));
+
+    /*
+      Shared sizes: the field's height, the close button and the room it needs. The close button lines up
+      with the field and the results column keeps clear of it, both calculated from these.
+    */
+    --search-field-size: 3.125rem; /* 50px, Figma */
+    --search-close-size: 2.375rem; /* 38px, Figma */
+    --search-close-inset: var(--space-lg); /* from the panel's right edge */
+    --search-close-gap: 0.75rem; /* between the field and the button */
+    --search-panel-inline: var(--space-xl); /* the panel's side padding */
+
+    /*
+      Glass for the text panels of the product cards and the result rows (see "Glass" further down):
+      the fill and the edges, used by .search-card__text and .search-link__text.
+      The inner shadow (the frosted look of the Figma panels): one soft grey glow inside all four edges.
+      No offset, so it is even on every side; 6% black keeps it light.
+    */
+    --search-glass-fill: #ffffff33;
+    --search-glass-rim:
+      inset -1px 1px 0 #ffffffcc,
+      inset 1px -1px 0 #ffffff80,
+      inset 0 0 0.75rem #0000000f;
 
     /*
       The header's wrapper sets pointer-events: none (so the page under the see-through strip stays
@@ -298,22 +322,35 @@
   /*
     The panel fills the whole dialog, so a click whose target is the <dialog> itself can only be a click
     on the dimmed backdrop outside it: that's how the script knows to close.
+    A one-cell grid: the column and the close button share the cell (both in row 1, column 1), so the
+    button can be position: sticky (it stays on screen while long results scroll) without taking room
+    above the field. It stays after the form in the HTML, so focus still goes to the field first.
   */
   .search-popup__panel {
-    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
     padding-block: 2.5rem 3.5rem;
-    padding-inline: var(--space-xl);
+    padding-inline: var(--search-panel-inline);
+  }
+
+  .search-popup__inner,
+  .search-popup__close {
+    grid-area: 1 / 1;
   }
 
   /* The content column (Figma: 931px, the width of the field) */
   /*
-    100% - 5.25rem: room for the close button on the right (it sits 1.5rem in from the panel edge, is
-    2.375rem wide, plus a 0.75rem gap = 4.625rem, of which the panel's own 2rem padding already gives 2rem).
-    The same room is kept on the left so the column stays centred. Without it, below ~1120px the button
-    sat on top of the search field.
+    Room for the close button: from the panel's right edge it needs inset + button + gap; the panel's
+    side padding already gives part of that, so the column keeps the rest free. The same room is kept on
+    the left so the column stays centred. Without it, below ~1120px the button sat on the search field.
   */
   .search-popup__inner {
-    max-inline-size: min(58.1875rem, 100% - 5.25rem);
+    --search-close-room: calc(
+      var(--search-close-inset) + var(--search-close-size) + var(--search-close-gap) - var(--search-panel-inline)
+    );
+
+    inline-size: 100%;
+    max-inline-size: min(58.1875rem, 100% - 2 * var(--search-close-room));
     margin-inline: auto;
   }
 
@@ -325,7 +362,7 @@
   /* display: block: no inline text line around the field, so the form is exactly as tall as the field */
   .search-popup__form .search-popup__input {
     display: block;
-    min-block-size: 3.125rem; /* 50px, Figma */
+    min-block-size: var(--search-field-size);
     padding-inline: var(--space-xl) 3.5rem; /* room for the magnifier on the right */
     border: 1px solid var(--color-accent);
     border-radius: var(--radius-pill);
@@ -502,16 +539,8 @@
     the top and right edges (80% white) and a weaker one bottom-left; Frost 100 = the theme's 35px blur.
     Refraction / Depth / Dispersion / Splay bend the background along the rim (an SVG filter that only
     Chrome supports) and are left out, as on every other glass element.
-    The inner shadow (the frosted look of the Figma panels): one soft grey glow inside all four edges.
-    No offset, so it is even on every side; 6% black keeps it light.
+    The two values (--search-glass-fill, --search-glass-rim) are set on .search-popup__dialog at the top.
   */
-  .search-popup__dialog {
-    --search-glass-fill: #ffffff33;
-    --search-glass-rim:
-      inset -1px 1px 0 #ffffffcc,
-      inset 1px -1px 0 #ffffff80,
-      inset 0 0 0.75rem #0000000f;
-  }
 
   /* Product card (snippets/search-product-card.liquid; Figma 297 x 82: photo + glass panel) */
   /* The radius matches the photo and panel, so the focus ring (an outline follows border-radius) is rounded too */
@@ -671,27 +700,36 @@
   }
 
   /*
-    Close (Figma quick view: 38px round button, top right). Top = the field's top (the panel's 2.5rem
-    padding) + half the height difference (50px field - 38px button), so it lines up with the field.
+    Close (Figma quick view: 38px round button, top right).
+    In the panel's grid cell it starts at the top of the content, the same line as the field; the top
+    margin centres it on the field's height. The negative end margin moves it from the panel's padding
+    out to --search-close-inset from the edge.
+    Sticky: once the results scroll, it stays --space-md under the top of the popup, so there is always a
+    way out on touch screens (no Escape key). z-index keeps it above the scrolling cards.
   */
   .search-popup__close {
-    position: absolute;
-    inset-block-start: calc(2.5rem + (3.125rem - 2.375rem) / 2);
-    inset-inline-end: var(--space-lg);
+    position: sticky;
+    inset-block-start: var(--space-md);
+    z-index: 1;
+    justify-self: end;
+    align-self: start;
     display: grid;
     place-items: center;
-    inline-size: 2.375rem;
-    block-size: 2.375rem;
+    inline-size: var(--search-close-size);
+    block-size: var(--search-close-size);
+    margin-block-start: calc((var(--search-field-size) - var(--search-close-size)) / 2);
+    margin-inline-end: calc(var(--search-close-inset) - var(--search-panel-inline));
     padding: 0;
     border: 0;
     border-radius: var(--radius-pill);
-    background-color: color-mix(in srgb, var(--color-text) 6%, transparent);
+    /* Solid (mixed with the background, not see-through): it stays on top of scrolling cards */
+    background-color: color-mix(in srgb, var(--color-text) 6%, var(--color-background));
     color: var(--color-text);
     cursor: pointer;
   }
 
   .search-popup__close:hover {
-    background-color: color-mix(in srgb, var(--color-text) 12%, transparent);
+    background-color: color-mix(in srgb, var(--color-text) 12%, var(--color-background));
   }
 
   .search-popup__close svg {
@@ -701,9 +739,13 @@
 
   /* Small screens: the close button sits above the field instead of over it */
   @media (max-width: 749px) {
+    .search-popup__dialog {
+      --search-panel-inline: var(--space-md);
+      --search-close-inset: var(--space-md);
+    }
+
     .search-popup__panel {
       padding-block-start: 4rem;
-      padding-inline: var(--space-md);
     }
 
     /* The button is above the field here, so the column can use the full width again */
@@ -711,9 +753,9 @@
       max-inline-size: none;
     }
 
+    /* Pulled up from the field's line (4rem padding) to --space-md under the popup's top edge */
     .search-popup__close {
-      inset-block-start: var(--space-md);
-      inset-inline-end: var(--space-md);
+      margin-block-start: calc(var(--space-md) - 4rem);
     }
   }
 {% endstylesheet %}
@@ -740,9 +782,20 @@
         this.open();
       });
 
+      /*
+        Close on a backdrop click only. The target alone can't tell: a drag that starts in the field and
+        ends on the backdrop (selecting the typed text), and a click on the popup's own scrollbar, both
+        send their click to the <dialog> too. So the check is the position: the press AND the click must
+        both be outside the dialog's box (the backdrop is outside it, the scrollbar inside).
+      */
+      this.dialog.addEventListener('pointerdown', (event) => {
+        this.pressedBackdrop = this.isOutside(event);
+      });
+
       this.dialog.addEventListener('click', (event) => {
-        // The panel fills the dialog, so the dialog itself is only the target for a backdrop click
-        if (event.target === this.dialog || event.target.closest('[data-search-close]')) {
+        const onBackdrop = this.pressedBackdrop && this.isOutside(event);
+        this.pressedBackdrop = false;
+        if (onBackdrop || event.target.closest('[data-search-close]')) {
           this.dialog.close();
           return;
         }
@@ -753,12 +806,27 @@
 
       this.querySelector('[data-search-form]').addEventListener('submit', () => this.remember(this.input.value));
       this.input.addEventListener('input', () => this.onInput());
-      this.dialog.addEventListener('close', () => this.controller?.abort());
+      this.dialog.addEventListener('close', () => this.stop());
     }
 
     disconnectedCallback() {
+      this.stop();
+    }
+
+    /** Closed: no waiting search, no request in flight, no resize listener */
+    stop() {
       clearTimeout(this.timer);
       this.controller?.abort();
+      this.watcher?.abort();
+    }
+
+    /** True when a pointer event happened on the dialog itself, outside its box (= on the backdrop) */
+    isOutside(event) {
+      if (event.target !== this.dialog) return false;
+      const box = this.dialog.getBoundingClientRect();
+      return (
+        event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom
+      );
     }
 
     open() {
@@ -766,6 +834,44 @@
       this.dialog.showModal();
       this.input.focus();
       this.input.select(); // reopening: typing replaces the old search
+
+      /*
+        Measure after the focus: the focused field is inside the header, so a transparent header at rest
+        turns into the glass pill now (on phones its buttons also grow from 36 to 40px). Measure again
+        when the pill's width transition ends, and when the window changes size (phone rotation).
+      */
+      this.place();
+      this.watcher = new AbortController();
+      const { signal } = this.watcher;
+      window.addEventListener('resize', () => this.place(), { passive: true, signal });
+      const pill = this.closest('.header__bar');
+      pill?.addEventListener(
+        'transitionend',
+        (event) => {
+          if (event.target === pill && event.propertyName === 'max-inline-size') this.place();
+        },
+        { signal }
+      );
+
+      /*
+        Closing cancels a waiting or running search, so the results on screen can be for older words than
+        the field holds ("rose" results, "rosewater" in the field). Bring them back in step.
+      */
+      if (this.input.value.trim() !== (this.shownTerms ?? '')) this.onInput();
+    }
+
+    /**
+     * Puts the popup just under the header pill. Its real bottom edge moves: a top announcement bar
+     * above it, the smaller pill after scrolling, phones. Without a visible pill, the CSS default stays.
+     */
+    place() {
+      const pill = this.closest('.header__bar');
+      const rect = pill?.getBoundingClientRect();
+      if (rect && rect.height > 0) {
+        this.dialog.style.setProperty('--search-popup-header', `${Math.max(0, Math.round(rect.bottom))}px`);
+      } else {
+        this.dialog.style.removeProperty('--search-popup-header');
+      }
     }
 
     /** Waits until typing pauses (250ms), so "rose" is one request, not four */
@@ -804,6 +910,7 @@
         const html = new DOMParser().parseFromString(await response.text(), 'text/html');
         const section = html.getElementById(`shopify-section-${this.dataset.sectionId}`);
         this.results.innerHTML = section ? section.innerHTML : '';
+        this.shownTerms = terms;
         this.showResults();
         this.announce(this.results.querySelector('[data-search-announce]')?.textContent.trim());
       } catch (error) {
@@ -825,6 +932,7 @@
     }
 
     showStart() {
+      this.shownTerms = '';
       this.results.hidden = true;
       this.results.replaceChildren();
       this.start.hidden = false;
