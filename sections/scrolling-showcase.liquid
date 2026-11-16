@@ -51,21 +51,56 @@
   endif
 
   # The photo stack. Each photo: a small, lazy image (shown about 90px wide, so 100/200/300px files cover
-  # every screen density). alt="" because the photos are decoration: the sentence already says it all.
+  # every screen density). Without a link, alt="": the photo is decoration, the sentence says it all.
   # In the theme editor, empty slots show a placeholder so the stack can be judged before choosing photos.
+  # A photo with a Link is an <a> (same class, so it looks the same), named for screen readers by:
+  # Link name -> image alt -> "Shop now". The white copy on the gold repeats the same markup, but it is
+  # inert, so Tab and clicks only reach the real links in the heading underneath.
   capture showcase_images
     for i in (1..3)
       assign image_key = 'image_' | append: i
       assign showcase_image = section.settings[image_key]
-      if showcase_image != blank
-        echo '<span class="scrolling-showcase__image">'
-        echo showcase_image | image_url: width: 300 | image_tag: widths: '100, 200, 300', sizes: '92px', alt: '', loading: 'lazy'
-        echo '</span>'
-      elsif request.design_mode
-        assign placeholder_name = 'product-' | append: i
-        echo '<span class="scrolling-showcase__image scrolling-showcase__image--placeholder">'
-        echo placeholder_name | placeholder_svg_tag
-        echo '</span>'
+      assign link_key = 'image_' | append: i | append: '_link'
+      assign label_key = 'image_' | append: i | append: '_link_label'
+      assign photo_link = section.settings[link_key]
+
+      if showcase_image != blank or request.design_mode
+        assign photo_class = 'scrolling-showcase__image'
+        if showcase_image == blank
+          assign photo_class = photo_class | append: ' scrolling-showcase__image--placeholder'
+        endif
+
+        assign photo_name = ''
+        if photo_link != blank
+          assign photo_name = section.settings[label_key]
+          if photo_name == blank
+            assign photo_name = showcase_image.alt
+          endif
+          if photo_name == blank
+            assign photo_name = 'sections.scrolling_showcase.photo_link' | t
+          endif
+          assign photo_class = photo_class | append: ' scrolling-showcase__image--link'
+          echo '<a class="' | append: photo_class | append: '" href="' | append: photo_link | append: '">'
+        else
+          echo '<span class="' | append: photo_class | append: '">'
+        endif
+
+        if showcase_image != blank
+          echo showcase_image | image_url: width: 300 | image_tag: widths: '100, 200, 300', sizes: '92px', alt: photo_name, loading: 'lazy'
+        else
+          assign placeholder_name = 'product-' | append: i
+          echo placeholder_name | placeholder_svg_tag
+          if photo_link != blank
+            assign photo_name_safe = photo_name | escape
+            echo '<span class="visually-hidden">' | append: photo_name_safe | append: '</span>'
+          endif
+        endif
+
+        if photo_link != blank
+          echo '</a>'
+        else
+          echo '</span>'
+        endif
       endif
     endfor
   endcapture
@@ -82,8 +117,13 @@
   # another filter's arguments)
   assign showcase_text = section.settings.text | replace: '[images]', showcase_images | replace: '[arrow]', showcase_arrow | replace: '[break]', showcase_break
 
-  # The scene's large photos. The merchant sets each photo's spot (centre, % of the screen), width and
-  # tilt; the timing (which photo comes and goes when) is fixed per photo in the CSS.
+  # The scene's cards (large photos). The merchant sets each card's spot (centre, % of the screen), width,
+  # and tilt; the timing (which card comes and goes when) is fixed per card in the CSS.
+  # Phones (< 750px) and tablets (750-1199px) each use one shared width for all three cards (Card width
+  # on phones / on tablets); the per-card width is for large screens (1200px and up) only.
+  # The cards are decoration only (the layer is aria-hidden, alt=""): the sentence already says it all.
+  assign phone_width = section.settings.scene_phone_width | default: 50
+  assign tablet_width = section.settings.scene_tablet_width | default: 40
   capture scene_photos
     if scene
       for i in (1..3)
@@ -93,16 +133,29 @@
         assign y_key = 'scene_y_' | append: i
         assign width_key = 'scene_width_' | append: i
         assign rotate_key = 'scene_rotate_' | append: i
+        assign card_width = section.settings[width_key]
+
         capture photo_style
-          echo '--x: ' | append: section.settings[x_key] | append: '%; --y: ' | append: section.settings[y_key] | append: '%; --w: ' | append: section.settings[width_key] | append: '%; --tilt: ' | append: section.settings[rotate_key] | append: ';'
+          echo '--x: ' | append: section.settings[x_key] | append: '%; --y: ' | append: section.settings[y_key] | append: '%; --w: ' | append: card_width | append: '%; --tilt: ' | append: section.settings[rotate_key] | append: ';'
         endcapture
-        if scene_photo != blank
-          echo '<div class="scrolling-showcase__photo scrolling-showcase__photo--' | append: i | append: '" style="' | append: photo_style | append: '">'
-          echo scene_photo | image_url: width: 1200 | image_tag: widths: '400, 600, 800, 1000, 1200', sizes: '(min-width: 750px) 30vw, 60vw', alt: '', loading: 'lazy'
-          echo '</div>'
-        elsif request.design_mode
-          echo '<div class="scrolling-showcase__photo scrolling-showcase__photo--' | append: i | append: ' scrolling-showcase__photo--placeholder" style="' | append: photo_style | append: '">'
-          echo 'image' | placeholder_svg_tag
+
+        # sizes from the real widths (the stage is the full screen width)
+        capture photo_sizes
+          echo '(min-width: 1200px) ' | append: card_width | append: 'vw, (min-width: 750px) ' | append: tablet_width | append: 'vw, ' | append: phone_width | append: 'vw'
+        endcapture
+
+        assign card_class = 'scrolling-showcase__photo scrolling-showcase__photo--' | append: i
+        if scene_photo == blank
+          assign card_class = card_class | append: ' scrolling-showcase__photo--placeholder'
+        endif
+
+        if scene_photo != blank or request.design_mode
+          echo '<div class="' | append: card_class | append: '" style="' | append: photo_style | append: '">'
+          if scene_photo != blank
+            echo scene_photo | image_url: width: 1200 | image_tag: widths: '400, 600, 800, 1000, 1200', sizes: photo_sizes, alt: '', loading: 'lazy'
+          else
+            echo 'image' | placeholder_svg_tag
+          endif
           echo '</div>'
         endif
       endfor
@@ -113,7 +166,7 @@
 {%- if section.settings.text != blank or section.settings.eyebrow != blank -%}
   <scrolling-showcase
     class="scrolling-showcase full-width section-width--{{ section.settings.section_width | default: 'wide' }} color-{{ scheme_id }}"
-    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --showcase-highlight: {{ section.settings.highlight_color }}; --scene-length: {{ section.settings.scene_length }}; --scene-text: {{ section.settings.scene_text_color }}; --scene-arrow: {{ section.settings.scene_arrow_color }}; --p: 0;"
+    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --showcase-highlight: {{ section.settings.highlight_color }}; --scene-length: {{ section.settings.scene_length }}; --scene-text: {{ section.settings.scene_text_color }}; --scene-arrow: {{ section.settings.scene_arrow_color }}; --phone-card-width: {{ phone_width }}%; --tablet-card-width: {{ tablet_width }}%; --p: 0;"
     {% if scene %}
       data-scene
       data-smoothing="{{ section.settings.scene_smoothing }}"
@@ -150,9 +203,11 @@
           {%- comment -%}
             Three scene layers on top of the real text, bottom to top:
             1. the gold band (clipped to the rising band)
-            2. the photos (NOT clipped, so a photo is never cut off by the band's edge)
+            2. the cards (NOT clipped, so a card is never cut off by the band's edge)
             3. a white copy of the eyebrow + sentence (clipped like the band, so it sits on the gold only)
-            All decorative (aria-hidden); the copy is inert so links in the sentence aren't focusable twice.
+            All decorative (aria-hidden); the copy is inert, so links in the sentence aren't focusable twice
+            and clicks go through it. The band and the cards' layer let clicks through (pointer-events: none),
+            so links typed in the sentence still work under them.
           {%- endcomment -%}
           <div class="scrolling-showcase__band" aria-hidden="true"></div>
           <div class="scrolling-showcase__photos" aria-hidden="true">{{ scene_photos }}</div>
@@ -259,6 +314,29 @@
     margin-inline-start: -0.13em;
   }
 
+  /* Linked photo: the global focus ring, kept on the photo's own rounded corners */
+  .scrolling-showcase__image--link:focus-visible {
+    border-radius: 0.16em;
+  }
+
+  /*
+    The real heading (with the real links) sits under the gold band, so its focus ring hides there.
+    The white copy on top has the same photos in the same spots: draw the ring on the copy's matching
+    photo too. (The copy is clipped to the band, so above the band only the real ring shows.)
+  */
+  .scrolling-showcase:has(.scrolling-showcase__image--link:nth-child(1):focus-visible)
+    .scrolling-showcase__band-text
+    .scrolling-showcase__image--link:nth-child(1),
+  .scrolling-showcase:has(.scrolling-showcase__image--link:nth-child(2):focus-visible)
+    .scrolling-showcase__band-text
+    .scrolling-showcase__image--link:nth-child(2),
+  .scrolling-showcase:has(.scrolling-showcase__image--link:nth-child(3):focus-visible)
+    .scrolling-showcase__band-text
+    .scrolling-showcase__image--link:nth-child(3) {
+    outline: 2px solid var(--scene-text);
+    outline-offset: 3px;
+  }
+
   .scrolling-showcase__image > :is(img, svg) {
     display: block;
     inline-size: 100%;
@@ -359,7 +437,13 @@
     inset-block-start: 0;
     display: grid;
     block-size: 100svh;
+    /*
+      clip, not hidden: hidden is still a scroll container. If something inside got focus (a link typed
+      in the sentence) or a script called scrollIntoView, the browser could scroll the stage and push
+      the layers out of line. clip never scrolls. (hidden first: the fallback for browsers without clip)
+    */
     overflow: hidden;
+    overflow: clip;
   }
 
   /*
@@ -380,6 +464,7 @@
     z-index: 1;
     display: block;
     background-color: var(--showcase-highlight);
+    pointer-events: none; /* links in the real sentence underneath stay clickable */
   }
 
   /* Top edge = the rising band. Only that part of the band and of the white text shows. */
@@ -409,6 +494,7 @@
   .scrolling-showcase[data-scene-active] .scrolling-showcase__photos {
     position: relative;
     z-index: 2;
+    pointer-events: none; /* the layer covers the whole stage: links in the sentence underneath stay clickable */
   }
 
   .scrolling-showcase__photos {
@@ -465,10 +551,24 @@
   .scrolling-showcase__photo--2 { --spin: -10; --in-start: 0.1; --out-start: 0.56; }
   .scrolling-showcase__photo--3 { --spin: 14; --in-start: 0.15; --out-start: 0.67; }
 
-  /* Phones: the screen is narrow, so each photo takes a bigger share of it */
+  /*
+    Phones: one shared width for all three cards (Card width on phones, default 50%). The old rule
+    (desktop width x 1.6) gave 43% = 138px at 320px, too small next to the 56px sentence.
+  */
   @media (max-width: 749px) {
     .scrolling-showcase__photo {
-      inline-size: min(calc(var(--w) * 1.6), 70%);
+      inline-size: var(--phone-card-width, 50%);
+    }
+  }
+
+  /*
+    Tablets and small laptops: the large-screen widths (about 27%, set for 1920px) gave 276px cards at
+    1024px, small on a screen that is as tall as it is wide. One shared width (Card width on tablets,
+    default 40% = 410px at 1024px).
+  */
+  @media (min-width: 750px) and (max-width: 1199px) {
+    .scrolling-showcase__photo {
+      inline-size: var(--tablet-card-width, 40%);
     }
   }
 {% endstylesheet %}
@@ -495,10 +595,27 @@
       // Smoothing: each frame the shown progress moves this share of the way to the real scroll position.
       // 1 = follows the scroll exactly; smaller = glides after it (smooth even with a jumpy mouse wheel).
       this.ease = { off: 1, soft: 0.12, extra: 0.06 }[this.dataset.smoothing] ?? 0.12;
+
+      // Switch the scene on BEFORE the first measure: only then is the track its full scene height.
+      // (Measured first, a page reloaded half-way down got a wrong start value and glided to the right one.)
+      this.setAttribute('data-scene-active', '');
       this.current = this.measure();
       this.style.setProperty('--p', this.current.toFixed(4));
 
-      this.setAttribute('data-scene-active', '');
+      // The cards start below the clipped stage, so the browser's lazy loading would wait until each card
+      // flies in and show an empty card first. Start loading them one screen before the section arrives.
+      this.preloadObserver = new IntersectionObserver(
+        ([entry]) => {
+          if (!entry.isIntersecting) return;
+          this.querySelectorAll('.scrolling-showcase__photo img[loading="lazy"]').forEach((img) => {
+            img.loading = 'eager';
+          });
+          this.preloadObserver.disconnect();
+        },
+        { rootMargin: '100% 0px' }
+      );
+      this.preloadObserver.observe(this.track);
+
       this.run = () => {
         if (!this.frame) this.frame = requestAnimationFrame(() => this.step());
       };
@@ -521,6 +638,7 @@
     disconnectedCallback() {
       this.observer?.disconnect();
       this.introObserver?.disconnect();
+      this.preloadObserver?.disconnect();
       this.stopListening();
     }
 
@@ -593,8 +711,9 @@
     {
       "type": "text",
       "id": "eyebrow",
-      "label": "t:labels.eyebrow",
-      "default": "Find your glow here"
+      "label": "t:labels.showcase_eyebrow",
+      "default": "Find your glow here",
+      "info": "t:labels.showcase_eyebrow_info"
     },
     {
       "type": "inline_richtext",
@@ -604,23 +723,64 @@
       "default": "All the [images] products you [break]need [arrow], right at [break]our shop<em>!!!</em>"
     },
     {
+      "type": "header",
+      "content": "t:labels.showcase_small_photos",
+      "info": "t:labels.showcase_small_photos_info"
+    },
+    {
       "type": "image_picker",
       "id": "image_1",
-      "label": "t:labels.image_1"
+      "label": "t:labels.showcase_small_photo_1"
+    },
+    {
+      "type": "url",
+      "id": "image_1_link",
+      "label": "t:labels.showcase_photo_link",
+      "info": "t:labels.showcase_photo_link_info"
+    },
+    {
+      "type": "text",
+      "id": "image_1_link_label",
+      "label": "t:labels.showcase_photo_label",
+      "info": "t:labels.showcase_photo_label_info"
     },
     {
       "type": "image_picker",
       "id": "image_2",
-      "label": "t:labels.image_2"
+      "label": "t:labels.showcase_small_photo_2"
+    },
+    {
+      "type": "url",
+      "id": "image_2_link",
+      "label": "t:labels.showcase_photo_link",
+      "info": "t:labels.showcase_photo_link_info"
+    },
+    {
+      "type": "text",
+      "id": "image_2_link_label",
+      "label": "t:labels.showcase_photo_label",
+      "info": "t:labels.showcase_photo_label_info"
     },
     {
       "type": "image_picker",
       "id": "image_3",
-      "label": "t:labels.image_3"
+      "label": "t:labels.showcase_small_photo_3"
+    },
+    {
+      "type": "url",
+      "id": "image_3_link",
+      "label": "t:labels.showcase_photo_link",
+      "info": "t:labels.showcase_photo_link_info"
+    },
+    {
+      "type": "text",
+      "id": "image_3_link_label",
+      "label": "t:labels.showcase_photo_label",
+      "info": "t:labels.showcase_photo_label_info"
     },
     {
       "type": "header",
-      "content": "t:labels.style"
+      "content": "t:labels.layout"
     },
     {
       "type": "select",
@@ -648,77 +808,6 @@
       "default": "wide"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-1"
-    },
-    {
-      "type": "color",
-      "id": "highlight_color",
-      "label": "t:labels.highlight_color",
-      "info": "t:labels.highlight_color_info",
-      "default": "#c8a24b"
-    },
-    {
-      "type": "select",
-      "id": "animation",
-      "label": "t:labels.animation",
-      "info": "t:labels.animation_info",
-      "options": [
-        {
-          "value": "none",
-          "label": "t:options.animation.none"
-        },
-        {
-          "value": "fade-up",
-          "label": "t:options.animation.fade_up"
-        },
-        {
-          "value": "zoom-in",
-          "label": "t:options.animation.zoom_in"
-        },
-        {
-          "value": "slide-top",
-          "label": "t:options.animation.slide_top"
-        },
-        {
-          "value": "slide-bottom",
-          "label": "t:options.animation.slide_bottom"
-        },
-        {
-          "value": "slide-left",
-          "label": "t:options.animation.slide_left"
-        },
-        {
-          "value": "slide-right",
-          "label": "t:options.animation.slide_right"
-        }
-      ],
-      "default": "fade-up",
-      "visible_if": "{{ section.settings.enable_scene == false }}"
-    },
-    {
-      "type": "range",
-      "id": "padding_top",
-      "label": "t:labels.padding_top",
-      "min": 0,
-      "max": 200,
-      "step": 8,
-      "unit": "px",
-      "default": 96
-    },
-    {
-      "type": "range",
-      "id": "padding_bottom",
-      "label": "t:labels.padding_bottom",
-      "min": 0,
-      "max": 200,
-      "step": 8,
-      "unit": "px",
-      "default": 160
-    },
-    {
       "type": "header",
       "content": "t:labels.scroll_scene"
     },
@@ -732,7 +821,7 @@
     {
       "type": "range",
       "id": "scene_length",
-      "label": "t:labels.scene_length",
+      "label": "t:labels.showcase_scene_length",
       "info": "t:labels.scene_length_info",
       "min": 200,
       "max": 500,
@@ -780,7 +869,8 @@
     {
       "type": "header",
       "content": "t:labels.scene_image_1",
-      "info": "t:labels.scene_photo_info"
+      "info": "t:labels.scene_photo_info",
+      "visible_if": "{{ section.settings.enable_scene }}"
     },
     {
       "type": "image_picker",
@@ -791,18 +881,19 @@
     {
       "type": "range",
       "id": "scene_x_1",
-      "label": "t:labels.position_horizontal",
+      "label": "t:labels.showcase_card_x",
       "min": 0,
       "max": 100,
       "step": 1,
       "unit": "%",
       "default": 26,
+      "info": "t:labels.showcase_card_position_info",
       "visible_if": "{{ section.settings.enable_scene }}"
     },
     {
       "type": "range",
       "id": "scene_y_1",
-      "label": "t:labels.position_vertical",
+      "label": "t:labels.showcase_card_y",
       "min": 0,
       "max": 100,
       "step": 1,
@@ -813,18 +904,19 @@
     {
       "type": "range",
       "id": "scene_width_1",
-      "label": "t:labels.image_width",
+      "label": "t:labels.showcase_card_width",
       "min": 10,
       "max": 60,
       "step": 1,
       "unit": "%",
       "default": 27,
+      "info": "t:labels.showcase_card_width_info",
       "visible_if": "{{ section.settings.enable_scene }}"
     },
     {
       "type": "range",
       "id": "scene_rotate_1",
-      "label": "t:labels.rotation",
+      "label": "t:labels.showcase_card_angle",
       "min": -30,
       "max": 30,
       "step": 1,
@@ -835,7 +927,8 @@
     {
       "type": "header",
       "content": "t:labels.scene_image_2",
-      "info": "t:labels.scene_photo_info"
+      "info": "t:labels.scene_photo_info",
+      "visible_if": "{{ section.settings.enable_scene }}"
     },
     {
       "type": "image_picker",
@@ -846,18 +939,19 @@
     {
       "type": "range",
       "id": "scene_x_2",
-      "label": "t:labels.position_horizontal",
+      "label": "t:labels.showcase_card_x",
       "min": 0,
       "max": 100,
       "step": 1,
       "unit": "%",
       "default": 72,
+      "info": "t:labels.showcase_card_position_info",
       "visible_if": "{{ section.settings.enable_scene }}"
     },
     {
       "type": "range",
       "id": "scene_y_2",
-      "label": "t:labels.position_vertical",
+      "label": "t:labels.showcase_card_y",
       "min": 0,
       "max": 100,
       "step": 1,
@@ -868,18 +962,19 @@
     {
       "type": "range",
       "id": "scene_width_2",
-      "label": "t:labels.image_width",
+      "label": "t:labels.showcase_card_width",
       "min": 10,
       "max": 60,
       "step": 1,
       "unit": "%",
       "default": 27,
+      "info": "t:labels.showcase_card_width_info",
       "visible_if": "{{ section.settings.enable_scene }}"
     },
     {
       "type": "range",
       "id": "scene_rotate_2",
-      "label": "t:labels.rotation",
+      "label": "t:labels.showcase_card_angle",
       "min": -30,
       "max": 30,
       "step": 1,
@@ -890,7 +985,8 @@
     {
       "type": "header",
       "content": "t:labels.scene_image_3",
-      "info": "t:labels.scene_photo_info"
+      "info": "t:labels.scene_photo_info",
+      "visible_if": "{{ section.settings.enable_scene }}"
     },
     {
       "type": "image_picker",
@@ -901,18 +997,19 @@
     {
       "type": "range",
       "id": "scene_x_3",
-      "label": "t:labels.position_horizontal",
+      "label": "t:labels.showcase_card_x",
       "min": 0,
       "max": 100,
       "step": 1,
       "unit": "%",
       "default": 36,
+      "info": "t:labels.showcase_card_position_info",
       "visible_if": "{{ section.settings.enable_scene }}"
     },
     {
       "type": "range",
       "id": "scene_y_3",
-      "label": "t:labels.position_vertical",
+      "label": "t:labels.showcase_card_y",
       "min": 0,
       "max": 100,
       "step": 1,
@@ -923,24 +1020,146 @@
     {
       "type": "range",
       "id": "scene_width_3",
-      "label": "t:labels.image_width",
+      "label": "t:labels.showcase_card_width",
       "min": 10,
       "max": 60,
       "step": 1,
       "unit": "%",
       "default": 24,
+      "info": "t:labels.showcase_card_width_info",
       "visible_if": "{{ section.settings.enable_scene }}"
     },
     {
       "type": "range",
       "id": "scene_rotate_3",
-      "label": "t:labels.rotation",
+      "label": "t:labels.showcase_card_angle",
       "min": -30,
       "max": 30,
       "step": 1,
       "unit": "°",
       "default": -8,
       "visible_if": "{{ section.settings.enable_scene }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.phones",
+      "info": "t:labels.showcase_phones_info",
+      "visible_if": "{{ section.settings.enable_scene }}"
+    },
+    {
+      "type": "range",
+      "id": "scene_phone_width",
+      "label": "t:labels.showcase_phone_width",
+      "info": "t:labels.showcase_shared_width_info",
+      "min": 30,
+      "max": 70,
+      "step": 1,
+      "unit": "%",
+      "default": 50,
+      "visible_if": "{{ section.settings.enable_scene }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.tablets",
+      "info": "t:labels.showcase_tablets_info",
+      "visible_if": "{{ section.settings.enable_scene }}"
+    },
+    {
+      "type": "range",
+      "id": "scene_tablet_width",
+      "label": "t:labels.showcase_tablet_width",
+      "info": "t:labels.showcase_shared_width_info",
+      "min": 20,
+      "max": 60,
+      "step": 1,
+      "unit": "%",
+      "default": 40,
+      "visible_if": "{{ section.settings.enable_scene }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.animation_header",
+      "visible_if": "{{ section.settings.enable_scene == false }}"
+    },
+    {
+      "type": "select",
+      "id": "animation",
+      "label": "t:labels.animation",
+      "info": "t:labels.showcase_animation_info",
+      "options": [
+        {
+          "value": "none",
+          "label": "t:options.animation.none"
+        },
+        {
+          "value": "fade-up",
+          "label": "t:options.animation.fade_up"
+        },
+        {
+          "value": "zoom-in",
+          "label": "t:options.animation.zoom_in"
+        },
+        {
+          "value": "slide-top",
+          "label": "t:options.animation.slide_top"
+        },
+        {
+          "value": "slide-bottom",
+          "label": "t:options.animation.slide_bottom"
+        },
+        {
+          "value": "slide-left",
+          "label": "t:options.animation.slide_left"
+        },
+        {
+          "value": "slide-right",
+          "label": "t:options.animation.slide_right"
+        }
+      ],
+      "default": "fade-up",
+      "visible_if": "{{ section.settings.enable_scene == false }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.spacing",
+      "info": "t:labels.showcase_spacing_info"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 96
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 160
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "color",
+      "id": "highlight_color",
+      "label": "t:labels.highlight_color",
+      "info": "t:labels.highlight_color_info",
+      "default": "#c8a24b"
     }
   ],
   "presets": [

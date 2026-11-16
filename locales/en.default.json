@@ -296,6 +296,9 @@
       "product_link": "Shop now",
       "pause": "Pause animation"
     },
+    "scrolling_showcase": {
+      "photo_link": "Shop now"
+    },
     "trending": {
       "placeholder_category": "Category"
     },
