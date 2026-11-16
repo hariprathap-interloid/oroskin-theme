@@ -50,8 +50,6 @@
       type="button"
       class="marquee__pause"
       aria-pressed="false"
-      data-label-pause="{{ 'sections.marquee.pause' | t }}"
-      data-label-play="{{ 'sections.marquee.play' | t }}"
       hidden
     >
       <span class="visually-hidden">{{ 'sections.marquee.pause' | t }}</span>
@@ -194,14 +192,26 @@
       this.button = this.querySelector('.marquee__pause');
       if (!this.button || !animations || !motion) return;
 
+      /*
+        The listener is tied to an AbortController, and disconnectedCallback aborts it. The theme editor
+        re-attaches the section when it is moved, so connectedCallback runs again; without this, the
+        button would get a second listener and toggle twice per click (= nothing happens).
+      */
+      this.abortController = new AbortController();
       this.button.hidden = false;
-      this.button.addEventListener('click', () => {
-        const paused = this.classList.toggle('is-paused');
-        this.button.setAttribute('aria-pressed', String(paused));
-        this.button.querySelector('.visually-hidden').textContent = paused
-          ? this.button.dataset.labelPlay
-          : this.button.dataset.labelPause;
-      });
+      this.button.addEventListener(
+        'click',
+        () => {
+          const paused = this.classList.toggle('is-paused');
+          // The label stays "Pause"; aria-pressed says whether it is on (pressed = paused)
+          this.button.setAttribute('aria-pressed', String(paused));
+        },
+        { signal: this.abortController.signal }
+      );
+    }
+
+    disconnectedCallback() {
+      this.abortController?.abort();
     }
   }
 

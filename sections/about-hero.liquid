@@ -103,8 +103,6 @@
               type="button"
               class="about-hero__pause"
               aria-pressed="false"
-              data-label-pause="{{ 'about.heading_pause' | t }}"
-              data-label-play="{{ 'about.heading_play' | t }}"
               hidden
             >
               <span class="visually-hidden">{{ 'about.heading_pause' | t }}</span>
@@ -502,6 +500,14 @@
    */
   class AboutHeroRotator extends HTMLElement {
     connectedCallback() {
+      /*
+        One AbortController for every listener: disconnectedCallback aborts it, which removes them all.
+        The theme editor re-attaches the section when it is moved, so connectedCallback runs again;
+        without this, the pause button would get a second listener and toggle twice per click.
+      */
+      this.abortController = new AbortController();
+      const { signal } = this.abortController;
+
       this.phrases = [...this.querySelectorAll('.about-hero__phrase')];
       const animations = document.documentElement.classList.contains('animations-on');
       const motion = window.matchMedia('(prefers-reduced-motion: no-preference)').matches;
@@ -524,14 +530,14 @@
         this.resize.observe(this);
       }
 
-      this.addEventListener('pointerenter', () => this.stop());
-      this.addEventListener('pointerleave', () => this.start());
+      this.addEventListener('pointerenter', () => this.stop(), { signal });
+      this.addEventListener('pointerleave', () => this.start(), { signal });
 
       // The button sits next to the h1, in the same lettering block
       this.pauseButton = this.closest('.about-hero__lettering')?.querySelector('.about-hero__pause');
       if (this.pauseButton) {
         this.pauseButton.hidden = false;
-        this.pauseButton.addEventListener('click', () => this.togglePause());
+        this.pauseButton.addEventListener('click', () => this.togglePause(), { signal });
       }
 
       this.start();
@@ -540,15 +546,14 @@
     togglePause() {
       this.paused = !this.paused;
       const button = this.pauseButton;
+      // The label stays "Pause"; aria-pressed says whether it is on (pressed = paused)
       button.setAttribute('aria-pressed', String(this.paused));
-      button.querySelector('.visually-hidden').textContent = this.paused
-        ? button.dataset.labelPlay
-        : button.dataset.labelPause;
       if (this.paused) this.stop();
       else this.start();
     }
 
     disconnectedCallback() {
+      this.abortController?.abort(); // removes every listener added with its signal
       this.stop();
       clearTimeout(this.leaveTimer);
       this.resize?.disconnect();

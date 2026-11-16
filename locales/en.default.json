@@ -293,8 +293,7 @@
     },
     "hero": {
       "product_placeholder": "Product image: choose one in the block settings",
-      "pause": "Pause animation",
-      "play": "Play animation"
+      "pause": "Pause animation"
     },
     "trending": {
       "placeholder_category": "Category"
@@ -307,8 +306,7 @@
     "testimonials": {
       "show_review": "Show review {{ index }} of {{ count }}: {{ name }}",
       "rating": "Rated {{ rating }} out of 5",
-      "pause": "Pause reviews",
-      "play": "Play reviews"
+      "pause": "Pause reviews"
     },
     "collection_tiles": {
       "shop": "Shop",
@@ -316,7 +314,6 @@
     },
     "marquee": {
       "pause": "Pause the scrolling text",
-      "play": "Play the scrolling text",
       "empty": "Add the text that scrolls."
     },
     "announcement_bar": {
@@ -518,7 +515,6 @@
     "team_social": "{{ name }} on {{ network }}",
     "values_empty": "Add Value card blocks: one card per value, numbered automatically.",
     "heading_pause": "Pause the changing heading",
-    "heading_play": "Play the changing heading",
     "numbers_empty": "Add Stat figure blocks: one card per number."
   },
   "faq": {

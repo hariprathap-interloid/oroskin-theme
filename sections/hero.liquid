@@ -124,8 +124,6 @@
     type="button"
     class="hero__pause"
     aria-pressed="false"
-    data-label-pause="{{ 'sections.hero.pause' | t }}"
-    data-label-play="{{ 'sections.hero.play' | t }}"
     hidden
   >
     <span class="visually-hidden">{{ 'sections.hero.pause' | t }}</span>
@@ -533,16 +531,21 @@
     }
   }
 
+  /*
+    Starts half visible (0.5), not hidden (0): the headline is readable from the first paint (decision 3:
+    never hide the hero content), and the browser can count it for LCP straight away on phones, where the
+    <h1> can be the largest element.
+  */
   @keyframes hero-in-left {
     from {
-      opacity: 0;
+      opacity: 0.5;
       transform: translateX(-3rem);
     }
   }
 
   @keyframes hero-in-top {
     from {
-      opacity: 0;
+      opacity: 0.5;
       transform: translateY(-2rem);
     }
   }
@@ -708,7 +711,15 @@
    */
   class HeroShowcase extends HTMLElement {
     connectedCallback() {
-      this.setUpPauseButton();
+      /*
+        One AbortController for every listener: disconnectedCallback aborts it, which removes them all at
+        once. The theme editor re-attaches the section when it is moved, so connectedCallback runs again;
+        without this, each listener would be added twice (the pause button would toggle twice per click).
+      */
+      this.abortController = new AbortController();
+      const { signal } = this.abortController;
+
+      this.setUpPauseButton(signal);
       this.products = [...this.querySelectorAll('[data-hero-product]')];
       const brushEm = this.querySelector('.heading--italic-brush em');
       if (!this.products.length) return;
@@ -736,7 +747,7 @@
         clearTimeout(this.resizeTimer);
         this.resizeTimer = setTimeout(() => this.fixBrushWidth(), 150);
       };
-      if (this.brush) window.addEventListener('resize', this.onResize, { passive: true });
+      if (this.brush) window.addEventListener('resize', this.onResize, { passive: true, signal });
 
       // The product that owns the headline's word ("glow") is the starting state
       const ownWord = this.defaultWord.trim().toLowerCase();
@@ -751,20 +762,22 @@
         this.dataset.rotate === 'true' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
       this.products.forEach((product, index) => {
-        product.addEventListener('mouseenter', () => this.hold(index));
-        product.addEventListener('mouseleave', () => this.release());
-        product.addEventListener('focusin', () => this.hold(index));
-        product.addEventListener('focusout', () => this.release());
+        product.addEventListener('mouseenter', () => this.hold(index), { signal });
+        product.addEventListener('mouseleave', () => this.release(), { signal });
+        product.addEventListener('focusin', () => this.hold(index), { signal });
+        product.addEventListener('focusout', () => this.release(), { signal });
       });
 
       // Theme editor: selecting a product block previews its state
-      this.onBlockSelect = (event) => {
-        const index = this.products.findIndex((product) => product.contains(event.target));
-        if (index > -1) this.hold(index);
-      };
-      this.onBlockDeselect = () => this.release();
-      document.addEventListener('shopify:block:select', this.onBlockSelect);
-      document.addEventListener('shopify:block:deselect', this.onBlockDeselect);
+      document.addEventListener(
+        'shopify:block:select',
+        (event) => {
+          const index = this.products.findIndex((product) => product.contains(event.target));
+          if (index > -1) this.hold(index);
+        },
+        { signal }
+      );
+      document.addEventListener('shopify:block:deselect', () => this.release(), { signal });
 
       // Rotate only while the hero is visible
       this.observer = new IntersectionObserver(([entry]) => {
@@ -776,20 +789,21 @@
     }
 
     disconnectedCallback() {
+      this.abortController?.abort(); // removes every listener added with its signal
       this.stop();
       clearTimeout(this.resumeTimer);
-      this.observer?.disconnect();
       clearTimeout(this.resizeTimer);
-      window.removeEventListener('resize', this.onResize);
-      document.removeEventListener('shopify:block:select', this.onBlockSelect);
-      document.removeEventListener('shopify:block:deselect', this.onBlockDeselect);
+      clearTimeout(this.swapTimer);
+      this.observer?.disconnect();
     }
 
     /**
      * Pause / play (WCAG 2.2.2). Shown only if something moves: the rotation, or decorations that animate
      * (animations on, no reduced motion). Pausing stops both; playing restarts them.
+     * The label stays "Pause animation"; aria-pressed tells screen readers whether it is on ("pressed" =
+     * paused). Changing the label as well would give two signals ("Play animation, pressed").
      */
-    setUpPauseButton() {
+    setUpPauseButton(signal) {
       this.pauseButton = this.querySelector('.hero__pause');
       if (!this.pauseButton) return;
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -800,16 +814,17 @@
       if (reduced || (!rotates && !decorationsMove)) return;
 
       this.pauseButton.hidden = false;
-      this.pauseButton.addEventListener('click', () => {
-        this.paused = !this.paused;
-        this.pauseButton.setAttribute('aria-pressed', String(this.paused));
-        this.pauseButton.querySelector('.visually-hidden').textContent = this.paused
-          ? this.pauseButton.dataset.labelPlay
-          : this.pauseButton.dataset.labelPause;
-        this.classList.toggle('hero--paused', this.paused);
-        if (this.paused) this.stop();
-        else if (this.visible && !this.held) this.start();
-      });
+      this.pauseButton.addEventListener(
+        'click',
+        () => {
+          this.paused = !this.paused;
+          this.pauseButton.setAttribute('aria-pressed', String(this.paused));
+          this.classList.toggle('hero--paused', this.paused);
+          if (this.paused) this.stop();
+          else if (this.visible && !this.held) this.start();
+        },
+        { signal }
+      );
     }
 
     start() {

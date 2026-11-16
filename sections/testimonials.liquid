@@ -94,8 +94,6 @@
               type="button"
               class="testimonials__pause"
               aria-pressed="false"
-              data-label-pause="{{ 'sections.testimonials.pause' | t }}"
-              data-label-play="{{ 'sections.testimonials.play' | t }}"
             >
               <span class="visually-hidden">{{ 'sections.testimonials.pause' | t }}</span>
               <svg class="testimonials__pause-icon testimonials__pause-icon--pause" aria-hidden="true" focusable="false" viewBox="0 0 16 16"><rect x="3.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/><rect x="9.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/></svg>
@@ -735,6 +733,15 @@
    */
   class TestimonialShowcase extends HTMLElement {
     connectedCallback() {
+      /*
+        One AbortController for every listener: disconnectedCallback aborts it, which removes them all.
+        The theme editor re-attaches the section when it is moved, so connectedCallback runs again;
+        without this, each listener would be added twice (pause toggling twice, arrow keys skipping 2).
+      */
+      this.abortController = new AbortController();
+      this.signal = this.abortController.signal;
+      const { signal } = this;
+
       this.cards = [...this.querySelectorAll('[data-review-card]')];
       this.dots = [...this.querySelectorAll('.testimonials__dot')];
       this.avatars = [...this.querySelectorAll('.testimonials__avatar')];
@@ -748,7 +755,7 @@
       this.addEventListener('click', (event) => {
         const target = event.target.closest('[data-review-index]');
         if (target) this.show(Number(target.dataset.reviewIndex), true);
-      });
+      }, { signal });
 
       this.querySelector('.testimonials__dots')?.addEventListener('keydown', (event) => {
         const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[event.key];
@@ -757,13 +764,13 @@
         const next = (this.active + step + this.cards.length) % this.cards.length;
         this.show(next, true);
         this.dots[next]?.focus();
-      });
+      }, { signal });
 
       // Theme editor: selecting a Review block shows it
-      document.addEventListener('shopify:block:select', (this.onBlockSelect = (event) => {
+      document.addEventListener('shopify:block:select', (event) => {
         const index = this.cards.indexOf(event.target);
         if (index >= 0) this.show(index, true);
-      }));
+      }, { signal });
 
       // Re-measure when the width changes (text re-wraps); height changes we cause ourselves are ignored
       this.resizeObserver = new ResizeObserver(([entry]) => {
@@ -780,10 +787,10 @@
     }
 
     disconnectedCallback() {
+      this.abortController?.abort(); // removes every listener added with its signal
       this.resizeObserver?.disconnect();
       this.visibilityObserver?.disconnect();
       clearInterval(this.timer);
-      document.removeEventListener('shopify:block:select', this.onBlockSelect);
     }
 
     show(index, byVisitor = false) {
@@ -854,16 +861,15 @@
         this.querySelector('.testimonials__pause')?.setAttribute('hidden', '');
         return;
       }
+      const { signal } = this; // from connectedCallback: removed together on disconnect
       this.delay = delay;
       this.pauseButton = this.querySelector('.testimonials__pause');
       this.pauseButton?.addEventListener('click', () => {
         this.paused = !this.paused;
+        // The label stays "Pause"; aria-pressed says whether it is on (pressed = paused)
         this.pauseButton.setAttribute('aria-pressed', String(this.paused));
-        this.pauseButton.querySelector('.visually-hidden').textContent = this.paused
-          ? this.pauseButton.dataset.labelPlay
-          : this.pauseButton.dataset.labelPause;
         this.restartAutoplay();
-      });
+      }, { signal });
       /*
         What holds the current review (hovering does NOT: the reviews keep moving under the mouse):
         - the visitor CHOSE a review: clicked an avatar or a dot, or moved to a dot with the keyboard.
@@ -873,14 +879,14 @@
       */
       this.addEventListener('click', (event) => {
         if (event.target.closest('[data-review-index]')) this.choiceHold = true;
-      });
+      }, { signal });
       this.addEventListener('focusin', (event) => {
         if (event.target.matches('.testimonials__dot:focus-visible')) this.choiceHold = true;
-      });
+      }, { signal });
       this.addEventListener('focusout', (event) => {
         if (!this.contains(event.relatedTarget)) this.release();
-      });
-      this.addEventListener('pointerleave', () => this.release());
+      }, { signal });
+      this.addEventListener('pointerleave', () => this.release(), { signal });
       this.visibilityObserver = new IntersectionObserver(([entry]) => {
         this.onScreen = entry.isIntersecting;
       });

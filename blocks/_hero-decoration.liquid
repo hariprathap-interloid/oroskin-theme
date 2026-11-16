@@ -24,6 +24,14 @@
 {%- liquid
   assign kind = block.settings.kind
   assign show = true
+
+  # Picture decorations (magnolia, custom image): eager near the top of the page, where the hero normally
+  # is (lazy would wait for the layout to place them first, so they'd pop in late), lazy further down.
+  # Same rule as snippets/image.liquid.
+  assign deco_loading = 'eager'
+  if section.index > 3
+    assign deco_loading = 'lazy'
+  endif
   if kind == 'custom' and block.settings.image == blank
     assign show = false
   endif
@@ -74,7 +82,7 @@
         alt=""
         width="249"
         height="247"
-        loading="lazy"
+        loading="{{ deco_loading }}"
       >
     {%- elsif kind == 'star' -%}
       <span class="hero-decoration__art">{{ 'icon-star.svg' | inline_asset_content }}</span>
@@ -92,7 +100,7 @@
       {{
         block.settings.image
         | image_url: width: 400
-        | image_tag: class: 'hero-decoration__art', alt: '', loading: 'lazy', widths: '200, 400'
+        | image_tag: class: 'hero-decoration__art', alt: '', loading: deco_loading, widths: '200, 400'
       }}
     {%- else -%}
       <span class="hero-decoration__art">{{ 'icon-sparkle.svg' | inline_asset_content }}</span>

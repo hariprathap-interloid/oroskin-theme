@@ -50,6 +50,20 @@
   if product_image == blank and linked_product != blank
     assign product_image = linked_product.featured_image
   endif
+
+  # Alt text: the image's own description, else the name tag ("Makeup"). The image is the link and the
+  # name tag is hidden from screen readers, so without this the link would have no name at all.
+  assign product_alt = product_image.alt | default: product_label
+
+  # sizes: how wide the cut-out shows, so the browser downloads a sharp file that isn't too big.
+  # Phones / tablets (mobile layout): its Phones width, a % of the screen. Larger screens: its Width, a %
+  # of the products area, which is the screen minus "Products area start" (e.g. 34% of 55% = about 19vw).
+  # +2 covers the 4% grow of the active product.
+  assign products_area = 100 | minus: section.settings.products_start
+  assign desktop_vw = block.settings.width | times: products_area | divided_by: 100 | plus: 2
+  capture product_sizes
+    echo '(max-width: 1023px) ' | append: block.settings.mobile_width | append: 'vw, ' | append: desktop_vw | append: 'vw'
+  endcapture
 -%}
 
 {%- if product_image != blank or request.design_mode -%}
@@ -70,10 +84,17 @@
       </span>
     {%- endif -%}
     {%- if product_image != blank -%}
+      {%- comment -%}
+        loading 'eager' with no priority: the cut-outs are on the first screen, so they load straight away,
+        but at normal priority. (Without it the snippet makes every image in section 1 "high", and four
+        cut-outs would compete with the background photo, the page's LCP image.)
+      {%- endcomment -%}
       {% render 'image',
         image: product_image,
         url: product_link,
-        sizes: '(min-width: 990px) 25vw, 45vw',
+        alt: product_alt,
+        sizes: product_sizes,
+        loading: 'eager',
         class: 'hero-product__image'
       %}
     {%- else -%}
