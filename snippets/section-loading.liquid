@@ -1,0 +1,21 @@
+{% doc %}
+  Outputs the loading value for an image in the current section: 'eager' in the first three sections of
+  the page (likely on the first screen, so the browser fetches them at once), 'lazy' further down (fetched
+  only when the visitor scrolls near them).
+
+  The one place for this rule: snippets/image.liquid, the hero and its blocks all use it, so the cut-off
+  can't drift apart. Use it inside a capture, then strip the result: the captured text can start with a
+  newline, and the browser treats loading="\nlazy" as an unknown value (= eager).
+
+  @example
+  {% capture image_loading %}{% render 'section-loading' %}{% endcapture %}
+  {% assign image_loading = image_loading | strip %}
+{% enddoc %}
+
+{%- liquid
+  if section.index > 3
+    echo 'lazy'
+  else
+    echo 'eager'
+  endif
+-%}

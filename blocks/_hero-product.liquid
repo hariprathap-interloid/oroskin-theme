@@ -52,18 +52,48 @@
   endif
 
   # Alt text: the image's own description, else the name tag ("Makeup"). The image is the link and the
-  # name tag is hidden from screen readers, so without this the link would have no name at all.
+  # name tag is hidden from screen readers, so without this the link would have no name at all. A linked
+  # cut-out with neither (e.g. only a Custom link) gets a general "Shop now", so the link is never nameless.
   assign product_alt = product_image.alt | default: product_label
+  if product_alt == blank and product_link != blank
+    assign product_alt = 'sections.hero.product_link' | t
+  endif
+
+  # The mobile layout (Phones settings) exists only with a Mobile image; without one, the products are
+  # hidden below 990px and use the desktop layout from 990px.
+  assign has_mobile_layout = false
+  if section.settings.mobile_image != blank
+    assign has_mobile_layout = true
+  endif
 
   # sizes: how wide the cut-out shows, so the browser downloads a sharp file that isn't too big.
-  # Phones / tablets (mobile layout): its Phones width, a % of the screen. Larger screens: its Width, a %
-  # of the products area, which is the screen minus "Products area start" (e.g. 34% of 55% = about 19vw).
-  # +2 covers the 4% grow of the active product.
+  # Larger screens: its Width, a % of the products area = the screen minus "Products area start" (e.g. 34%
+  # of 55% = about 19vw); +2 covers the 4% grow of the active product. With a mobile layout, below 1024px:
+  # its Phones width, a % of the screen. (A narrower Section width or the right-side band makes the real
+  # image smaller than this, which is safe: a slightly bigger file, never a blurry one.)
   assign products_area = 100 | minus: section.settings.products_start
   assign desktop_vw = block.settings.width | times: products_area | divided_by: 100 | plus: 2
   capture product_sizes
-    echo '(max-width: 1023px) ' | append: block.settings.mobile_width | append: 'vw, ' | append: desktop_vw | append: 'vw'
+    if has_mobile_layout
+      echo '(max-width: 1023px) ' | append: block.settings.mobile_width | append: 'vw, '
+    endif
+    echo desktop_vw | append: 'vw'
   endcapture
+
+  # Loading:
+  # - with a mobile layout: eager in the first three sections, lazy below (snippets/section-loading.liquid).
+  #   No priority: only the background photo (the LCP image) gets "high".
+  # - without one: lazy, because below 990px the products are hidden (display: none) and the browser never
+  #   fetches a lazy image that isn't shown, so phones skip four cut-outs they can't see. On larger screens
+  #   they are on the first screen, so the browser still fetches them as soon as the layout is ready.
+  if has_mobile_layout
+    capture product_loading
+      render 'section-loading'
+    endcapture
+    assign product_loading = product_loading | strip
+  else
+    assign product_loading = 'lazy'
+  endif
 -%}
 
 {%- if product_image != blank or request.design_mode -%}
@@ -85,16 +115,15 @@
     {%- endif -%}
     {%- if product_image != blank -%}
       {%- comment -%}
-        loading 'eager' with no priority: the cut-outs are on the first screen, so they load straight away,
-        but at normal priority. (Without it the snippet makes every image in section 1 "high", and four
-        cut-outs would compete with the background photo, the page's LCP image.)
+        loading is always passed (see product_loading above): without it the snippet makes every image in
+        section 1 "high", and four cut-outs would compete with the background photo, the page's LCP image.
       {%- endcomment -%}
       {% render 'image',
         image: product_image,
         url: product_link,
         alt: product_alt,
         sizes: product_sizes,
-        loading: 'eager',
+        loading: product_loading,
         class: 'hero-product__image'
       %}
     {%- else -%}

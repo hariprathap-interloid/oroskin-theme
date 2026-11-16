@@ -49,13 +49,13 @@
     assign image_loading = 'eager'
     assign image_priority = 'high'
   elsif image_loading == blank
-    if section.index > 3
-      assign image_loading = 'lazy'
-    else
-      assign image_loading = 'eager'
-      if section.index == 1
-        assign image_priority = 'high'
-      endif
+    # eager in the first three sections, lazy below (the rule lives in snippets/section-loading.liquid)
+    capture image_loading
+      render 'section-loading'
+    endcapture
+    assign image_loading = image_loading | strip
+    if section.index == 1
+      assign image_priority = 'high'
     endif
   endif
 

@@ -27,11 +27,11 @@
 
   # Picture decorations (magnolia, custom image): eager near the top of the page, where the hero normally
   # is (lazy would wait for the layout to place them first, so they'd pop in late), lazy further down.
-  # Same rule as snippets/image.liquid.
-  assign deco_loading = 'eager'
-  if section.index > 3
-    assign deco_loading = 'lazy'
-  endif
+  # The shared rule from snippets/section-loading.liquid.
+  capture deco_loading
+    render 'section-loading'
+  endcapture
+  assign deco_loading = deco_loading | strip
   if kind == 'custom' and block.settings.image == blank
     assign show = false
   endif

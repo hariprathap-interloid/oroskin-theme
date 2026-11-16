@@ -293,6 +293,7 @@
     },
     "hero": {
       "product_placeholder": "Product image: choose one in the block settings",
+      "product_link": "Shop now",
       "pause": "Pause animation"
     },
     "trending": {

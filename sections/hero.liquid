@@ -32,13 +32,15 @@
     assign mobile_style = ' --hero-m-ratio: ' | append: mobile_image.aspect_ratio | append: '; --hero-m-start: ' | append: section.settings.mobile_products_start | append: '; --hero-m-text-width: ' | append: section.settings.mobile_text_width | append: '%;'
   endif
 
-  # Loading for the hero photo (same rules as snippets/image.liquid): first section = eager + high priority
-  assign media_loading = 'eager'
+  # Loading for the hero photo (same rules as snippets/image.liquid): eager / lazy by the section's place
+  # (snippets/section-loading.liquid), first section = high priority
+  capture media_loading
+    render 'section-loading'
+  endcapture
+  assign media_loading = media_loading | strip
   assign media_priority = 'auto'
   if is_first
     assign media_priority = 'high'
-  elsif section.index > 3
-    assign media_loading = 'lazy'
   endif
 -%}
 
@@ -724,18 +726,27 @@
       const brushEm = this.querySelector('.heading--italic-brush em');
       if (!this.products.length) return;
 
-      // Wrap the brush word in its own span, so the swap fades only the text and the brush stays still
+      /*
+        Wrap the brush word in its own span, so the swap fades only the text and the brush stays still.
+        The headline's own word is saved on the span (data-default-word) the first time: when the section is
+        re-attached (moved in the editor), the span may be showing a product's word ("scent"), and reading
+        its text again would lose "glow".
+      */
       if (brushEm) {
         this.brush = brushEm.querySelector('.hero-brush-text');
         if (!this.brush) {
           this.brush = document.createElement('span');
           this.brush.className = 'hero-brush-text';
           this.brush.textContent = brushEm.textContent;
+          this.brush.dataset.defaultWord = brushEm.textContent;
           brushEm.replaceChildren(this.brush);
         }
+        // A swap cut short by a disconnect leaves the word faded out: start visible
+        this.brush.classList.remove('is-swapping');
       }
 
-      this.defaultWord = this.brush ? this.brush.textContent : '';
+      this.defaultWord = this.brush ? (this.brush.dataset.defaultWord ?? this.brush.textContent) : '';
+      this.held = false; // a hold from before a disconnect would block the rotation
       this.fixBrushWidth();
 
       /*
@@ -777,7 +788,14 @@
         },
         { signal }
       );
-      document.addEventListener('shopify:block:deselect', () => this.release(), { signal });
+      // Only when the deselected block is in this hero (a block in another section must not end the hold)
+      document.addEventListener(
+        'shopify:block:deselect',
+        (event) => {
+          if (this.contains(event.target)) this.release();
+        },
+        { signal }
+      );
 
       // Rotate only while the hero is visible
       this.observer = new IntersectionObserver(([entry]) => {
@@ -794,6 +812,7 @@
       clearTimeout(this.resumeTimer);
       clearTimeout(this.resizeTimer);
       clearTimeout(this.swapTimer);
+      this.brush?.classList.remove('is-swapping'); // the cancelled timer was the one to remove it
       this.observer?.disconnect();
     }
 
@@ -839,7 +858,14 @@
      */
     async fixBrushWidth() {
       if (!this.brush) return;
+      /*
+        Waiting for the fonts can outlast the element: skip the measuring if it was disconnected meanwhile
+        (aborted signal), or if a newer measurement started (run number), so two never overlap.
+      */
+      const signal = this.abortController?.signal;
+      const run = (this.measureRun = (this.measureRun || 0) + 1);
       await document.fonts?.ready;
+      if (signal?.aborted || run !== this.measureRun) return;
       const words = [this.defaultWord, ...this.products.map((product) => product.dataset.brushWord || '')].filter(Boolean);
       const shown = this.brush.textContent;
       this.brush.style.minInlineSize = '0px';
