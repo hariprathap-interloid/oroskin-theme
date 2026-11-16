@@ -96,9 +96,19 @@
   }
 
   .menu__link:hover,
+  .menu__link:focus-visible,
   .menu__link--active,
   .menu__dropdown[open] > .menu__link {
     color: var(--color-accent);
+  }
+
+  /*
+    Focus ring: a rounded box with room around the word and its brush underline (the global ring sits
+    3px from the text box, which cut through the underline and had square corners).
+  */
+  .menu__link:focus-visible {
+    outline-offset: 0.5rem;
+    border-radius: var(--radius-focus, 0.5rem);
   }
 
   /*

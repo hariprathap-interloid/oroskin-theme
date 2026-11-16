@@ -253,6 +253,15 @@ small {
   outline-offset: 3px;
 }
 
+/*
+  Rounded ring on links, <summary> and other focusable elements without their own corners (the outline
+  follows border-radius). :where() has zero specificity, so any component's own radius (pill buttons,
+  round icon buttons, cards) always wins and keeps its shape.
+*/
+:where(a:focus-visible, summary:focus-visible, [tabindex]:focus-visible) {
+  border-radius: var(--radius-focus, 0.5rem);
+}
+
 /* Fields and buttons: the ring sits directly on the border, with no gap */
 input:focus-visible,
 select:focus-visible,

@@ -419,6 +419,7 @@
   }
 
   .header-drawer__link:hover,
+  .header-drawer__link:focus-visible,
   .header-drawer__link--active {
     color: var(--color-accent);
   }
@@ -535,7 +536,7 @@
     cursor: pointer;
   }
 
-  .header-drawer__back:hover {
+  .header-drawer__back:is(:hover, :focus-visible) {
     color: var(--color-accent);
   }
 
@@ -640,7 +641,7 @@
     backdrop-filter: none;
   }
 
-  .header .header-drawer__icon:hover {
+  .header .header-drawer__icon:is(:hover, :focus-visible) {
     background-color: var(--color-background);
     color: var(--color-accent);
   }
@@ -723,7 +724,7 @@
     text-decoration: none;
   }
 
-  .header-drawer__account-link:hover {
+  .header-drawer__account-link:is(:hover, :focus-visible) {
     color: var(--color-accent);
   }
 
@@ -735,7 +736,7 @@
       translate var(--duration-fast) var(--ease-out);
   }
 
-  .header-drawer__account-link:hover .header-drawer__arrow {
+  .header-drawer__account-link:is(:hover, :focus-visible) .header-drawer__arrow {
     opacity: 1;
     translate: 0.125rem 0;
   }
