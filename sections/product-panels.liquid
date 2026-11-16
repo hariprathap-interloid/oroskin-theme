@@ -1,13 +1,24 @@
 {%- comment -%}
-  Product panels (Figma "Editor's Picks"): an eyebrow, a heading and a "View all" link above a row of
+  Product panels (Figma "Editor's Picks", the homepage preset's heading): an eyebrow, a heading and a "View all" link above a row of
   tall photo strips, one per product of a collection, each with a big faded number (01, 02...).
   One strip is open: wider, with a glass card (title, short text, price) and a round cart button.
   Hovering, focusing (keyboard) or tapping another strip opens that one instead (<product-panels>).
 
   Short text = the product's Subtitle field (custom.subtitle, as on the product cards), else the first
   words of its description. The cart button opens the product for now; Quick add (M4.5) will turn it
-  into add-to-cart. Without JavaScript: the first strip stays open and every strip is a normal link.
-  Phones: the strips become a sideways-scrolling row of cards, all showing their text.
+  into add-to-cart. Without JavaScript: the first strip stays wider, every strip shows its card and
+  cart button, and every strip is a normal link.
+  Strips per row (from 750px): tablet 3, laptop (990px) 4, larger laptop (1200px) 5, monitor (1600px)
+  7. More products wrap into more rows; each row is its own accordion with one open strip. The rows
+  are cut by hidden <li class="product-panels__break"> elements, one after each product, shown only
+  after every 3rd / 4th / 5th / 7th product (CSS nth-child), so the strips keep flex-basis 0 and the
+  open strip widens the same way in every row.
+
+  Phones (below 750px), "Layout" setting in the Phones group:
+  - grid (default, mobile design): 2 square-ish tiles per row; like desktop, one tile is open (details
+    card + cart button) and a first tap on another tile opens it
+  - slider: a sideways-scrolling row of cards, all showing their text
+  - single: one card per row, all showing their text
 {%- endcomment -%}
 
 {%- liquid
@@ -25,11 +36,45 @@
     assign animation = 'none'
   endif
 
+  # Image sizes: the width of an OPEN strip (the widest a photo gets). In a row of n strips the open
+  # one is 1.85 / (n + 0.85) of the width, as a whole vw: 18500 / (100 n + 85), rounded up. A row
+  # never has more strips than there are products (3 products on a monitor = 3 wide strips).
+  assign shown = limit
+  if picks != blank and picks.products_count < limit
+    assign shown = picks.products_count
+  endif
+  assign per_row = shown | at_most: 7
+  assign width_monitor = per_row | times: 100 | plus: 85
+  assign width_monitor = 18500 | divided_by: width_monitor | plus: 1
+  assign per_row = shown | at_most: 5
+  assign width_large = per_row | times: 100 | plus: 85
+  assign width_large = 18500 | divided_by: width_large | plus: 1
+  assign per_row = shown | at_most: 4
+  assign width_laptop = per_row | times: 100 | plus: 85
+  assign width_laptop = 18500 | divided_by: width_laptop | plus: 1
+  assign per_row = shown | at_most: 3
+  assign width_tablet = per_row | times: 100 | plus: 85
+  assign width_tablet = 18500 | divided_by: width_tablet | plus: 1
+  case section.settings.mobile_layout
+    when 'single'
+      assign width_phone = '100vw'
+    when 'slider'
+      assign width_phone = '75vw'
+    else
+      assign width_phone = '50vw'
+  endcase
+  capture image_sizes
+    echo '(min-width: 1600px) ' | append: width_monitor | append: 'vw, '
+    echo '(min-width: 1200px) ' | append: width_large | append: 'vw, '
+    echo '(min-width: 990px) ' | append: width_laptop | append: 'vw, '
+    echo '(min-width: 750px) ' | append: width_tablet | append: 'vw, '
+    echo width_phone
+  endcapture
 -%}
 
 <product-panels
-  class="product-panels full-width section-width--{{ section.settings.section_width | default: 'wide' }} color-{{ scheme_id }}{% if section.settings.fill_screen %} product-panels--fill{% endif %}"
-  style="--color-accent: {{ section.settings.highlight_color }}; --panels-height: {{ section.settings.panel_height }}; --panels-card-radius: {{ section.settings.card_radius }}px;--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
+  class="product-panels full-width section-width--{{ section.settings.section_width | default: 'wide' }} color-{{ scheme_id }} product-panels--mobile-{{ section.settings.mobile_layout | default: 'grid' }}{% if section.settings.fill_screen %} product-panels--fill{% endif %}"
+  style="{% if section.settings.highlight_color != blank %}--color-accent: {{ section.settings.highlight_color }}; {% endif %}--panels-height: {{ section.settings.panel_height }}; --panels-card-radius: {{ section.settings.card_radius }}px; --panels-cart-overlay: {{ section.settings.cart_overlay }}%; --panels-mobile-scale: {{ section.settings.mobile_height | divided_by: 100.0 }}; --section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
 >
   <div class="product-panels__inner">
     <div class="product-panels__header">
@@ -73,7 +118,7 @@
                     image: product.featured_media.preview_image,
                     alt: '',
                     class: 'image--cover',
-                    sizes: '(min-width: 990px) 25vw, 70vw'
+                    sizes: image_sizes
                   %}
                 {%- else -%}
                   {{ 'product-1' | placeholder_svg_tag: 'product-panels__placeholder' }}
@@ -93,6 +138,9 @@
                 <div class="product-panels__price">{% render 'price', product: product %}</div>
               </div>
             </li>
+            {%- unless forloop.last -%}
+              <li class="product-panels__break" aria-hidden="true"></li>
+            {%- endunless -%}
           {%- endfor -%}
         {%- else -%}
           {%- for i in (1..limit) -%}
@@ -106,6 +154,9 @@
                 </div>
               </div>
             </li>
+            {%- unless forloop.last -%}
+              <li class="product-panels__break" aria-hidden="true"></li>
+            {%- endunless -%}
           {%- endfor -%}
         {%- endif -%}
       </ul>
@@ -136,7 +187,7 @@
   .product-panels__header {
     display: flex;
     flex-wrap: wrap;
-    align-items: flex-end;
+    align-items: center;
     justify-content: space-between;
     gap: var(--space-md);
   }
@@ -175,21 +226,103 @@
   }
 
   /*
-    The strips (desktop): one row, all the same height. Every strip grows (flex) by 1; the open one
-    by 1.85, so it is about twice as wide (Figma: ~425px vs ~230px). The width change glides.
+    The strips (from 750px): rows of strips, all the same height. Every strip grows (flex) by 1; the
+    open one by 1.85, so it is about twice as wide (Figma: ~425px vs ~230px). The width change glides.
   */
   .product-panels__list {
+    --panels-strip-height: calc(var(--panels-height, 30) * 1rem);
     display: flex;
-    block-size: calc(var(--panels-height, 30) * 1rem);
+    flex-wrap: wrap;
     margin: 0;
     padding: 0;
     list-style: none;
   }
 
   /*
-    "Fill the screen height" (desktop; Figma: the section is one screen, content in the middle, strips
-    about 45% of the screen height). The strips use the bigger of the Strip height setting and 45% of
-    the screen, so they grow on tall monitors and keep the set height on short laptops.
+    Row breaks: an invisible full-width item, shown after every 3rd / 4th / 5th / 7th product. Each
+    product is followed by a break, so product k is child 2k - 1 and its break is child 2k: a break
+    after every 4th product = :nth-child(8n).
+  */
+  .product-panels__break {
+    display: none;
+    flex-basis: 100%;
+    block-size: 0;
+  }
+
+  /*
+    For each width (n per row):
+    - the break after every n-th product (child 2n) is shown
+    - several rows (product n + 1 = child 2n + 1 exists): every strip is 60% of the Strip height, so
+      2 or 3 rows don't make the section several screens tall
+    - a strip alone in the last row (the last child, right after a shown break) doesn't stretch across
+      the whole width: it keeps the width of an open strip in a full row, 1.85 / (n + 0.85)
+  */
+
+  /* Tablet: 3 per row */
+  @media (min-width: 750px) and (max-width: 989px) {
+    .product-panels__break:nth-child(6n) {
+      display: block;
+    }
+
+    .product-panels__list:has(> .product-panels__item:nth-child(7)) {
+      --panels-strip-height: calc(var(--panels-height, 30) * 0.6rem);
+    }
+
+    .product-panels__break:nth-child(6n) + .product-panels__item:last-child {
+      flex: 0 0 calc(100% * 1.85 / 3.85);
+    }
+  }
+
+  /* Laptop: 4 per row */
+  @media (min-width: 990px) and (max-width: 1199px) {
+    .product-panels__break:nth-child(8n) {
+      display: block;
+    }
+
+    .product-panels__list:has(> .product-panels__item:nth-child(9)) {
+      --panels-strip-height: calc(var(--panels-height, 30) * 0.6rem);
+    }
+
+    .product-panels__break:nth-child(8n) + .product-panels__item:last-child {
+      flex: 0 0 calc(100% * 1.85 / 4.85);
+    }
+  }
+
+  /* Larger laptop: 5 per row */
+  @media (min-width: 1200px) and (max-width: 1599px) {
+    .product-panels__break:nth-child(10n) {
+      display: block;
+    }
+
+    .product-panels__list:has(> .product-panels__item:nth-child(11)) {
+      --panels-strip-height: calc(var(--panels-height, 30) * 0.6rem);
+    }
+
+    .product-panels__break:nth-child(10n) + .product-panels__item:last-child {
+      flex: 0 0 calc(100% * 1.85 / 5.85);
+    }
+  }
+
+  /* Monitor: 7 per row (8 products = a second row with one strip) */
+  @media (min-width: 1600px) {
+    .product-panels__break:nth-child(14n) {
+      display: block;
+    }
+
+    .product-panels__list:has(> .product-panels__item:nth-child(15)) {
+      --panels-strip-height: calc(var(--panels-height, 30) * 0.6rem);
+    }
+
+    .product-panels__break:nth-child(14n) + .product-panels__item:last-child {
+      flex: 0 0 calc(100% * 1.85 / 7.85);
+    }
+  }
+
+  /*
+    "Fill the screen height" (Figma: the section is one screen, content in the middle, strips about 45%
+    of the screen height). The section is at least one screen tall from 750px. On monitors (one row of
+    7) the strips also use the bigger of the Strip height setting and 45% of the screen, so they grow on
+    tall screens. Smaller screens have several rows, so they keep the set height.
   */
   @media (min-width: 750px) {
     .product-panels--fill {
@@ -198,9 +331,11 @@
       justify-content: center;
       min-block-size: 100svh;
     }
+  }
 
+  @media (min-width: 1600px) {
     .product-panels--fill .product-panels__list {
-      block-size: max(calc(var(--panels-height, 30) * 1rem), 45svh);
+      --panels-strip-height: max(calc(var(--panels-height, 30) * 1rem), 45svh);
     }
   }
 
@@ -216,6 +351,7 @@
     flex: 1 1 0;
     flex-direction: column;
     justify-content: flex-end;
+    block-size: var(--panels-strip-height);
     padding: var(--space-md);
     min-inline-size: 0;
     overflow: hidden;
@@ -274,6 +410,28 @@
   }
 
   /*
+    Overlay behind the cart button only: the glass button is white at 25%, so on a white photo it
+    disappears. A soft dark circle, twice the button's size, fades out from its middle and gives the
+    button something to stand on. The rest of the photo stays untouched. Its strength is the
+    "Overlay behind the button" setting (0 = off). The cart (position + z-index) is its own stacking
+    layer, so z-index -1 puts the circle behind the button but still above the photo. It fades in and
+    out with the button (same element).
+  */
+  .product-panels__cart::before {
+    content: "";
+    position: absolute;
+    inset: -50%;
+    z-index: -1;
+    border-radius: 50%;
+    background: radial-gradient(
+      closest-side,
+      color-mix(in srgb, #000000 var(--panels-cart-overlay, 10%), transparent),
+      transparent
+    );
+    pointer-events: none;
+  }
+
+  /*
     Glass card, bottom left of the open strip: title, short text, price. On closed strips it is
     transparent (but still focusable: tabbing to its link opens that strip).
   */
@@ -304,8 +462,9 @@
   }
 
   /*
-    Desktop: invisible on closed strips, so it mustn't catch clicks there (keyboard focus still opens
-    the strip). Phones show every card's button, so they all stay clickable there.
+    From 750px: the cart button is invisible on closed strips, so it mustn't catch clicks there
+    (keyboard focus still opens the strip). The phone grid has its own rule for this (in the phone
+    styles below); the phone slider and "one per row" layouts show every button, so all stay clickable.
   */
   @media (min-width: 750px) {
     .product-panels__item:not(.is-active) .product-panels__cart {
@@ -316,6 +475,20 @@
   .product-panels__item.is-active :is(.product-panels__card, .product-panels__cart) {
     opacity: 1;
     transition-delay: 0.25s;
+  }
+
+  /*
+    Without JavaScript (or before the script runs): every strip shows its card and cart button, so the
+    content of every row is visible and usable. The first strip stays wider (is-active from Liquid).
+    :not(:defined) = the <product-panels> element has no script yet. Once the script runs, the cards
+    of the closed strips fade out. The extra classes beat the "closed strip" rules.
+  */
+  product-panels:not(:defined) :is(.product-panels__card, .product-panels__cart) {
+    opacity: 1;
+  }
+
+  product-panels.product-panels:not(:defined) .product-panels__item .product-panels__cart {
+    pointer-events: auto;
   }
 
   /*
@@ -338,6 +511,10 @@
       transition:
         margin-block-end 0.6s var(--ease-out) 0.05s,
         opacity 0.3s var(--ease-out) 0.05s;
+    }
+
+    product-panels:not(:defined) .product-panels__card {
+      margin-block-end: 0;
     }
   }
 
@@ -393,26 +570,104 @@
     pointer-events: auto;
   }
 
-  /* Phones and small tablets: a sideways-scrolling row of cards, all showing their text */
+  /* Phones and small tablets: three layouts, from the Phones > Layout setting */
   @media (max-width: 749px) {
-    .product-panels__list {
-      gap: var(--space-sm);
+    /*
+      The shape comes from aspect-ratio, not the Strip height. Phones > Strip height scales the
+      layout's own height: 100% = its shape below, 150% = half as tall again (--panels-mobile-scale).
+    */
+    .product-panels__item {
       block-size: auto;
+    }
+
+    /* Slider: a sideways-scrolling row of cards */
+    .product-panels--mobile-slider .product-panels__list {
+      flex-wrap: nowrap;
+      gap: var(--space-sm);
       overflow-x: auto;
       scroll-snap-type: x mandatory;
       scrollbar-width: none;
     }
 
-    .product-panels__item,
-    .product-panels__item.is-active {
+    .product-panels--mobile-slider .product-panels__item {
       flex: 0 0 75%;
-      aspect-ratio: 3 / 4;
+      aspect-ratio: 3 / calc(4 * var(--panels-mobile-scale, 1));
       scroll-snap-align: start;
     }
 
-    .product-panels__card,
-    .product-panels__cart {
+    /* One product per row */
+    .product-panels--mobile-single .product-panels__list {
+      flex-direction: column;
+      gap: var(--space-sm);
+    }
+
+    .product-panels--mobile-single .product-panels__item {
+      flex: none;
+      aspect-ratio: 4 / calc(5 * var(--panels-mobile-scale, 1));
+    }
+
+    /* Slider and one per row: every card shows its details and its cart button */
+    :is(.product-panels--mobile-slider, .product-panels--mobile-single)
+      :is(.product-panels__card, .product-panels__cart) {
       opacity: 1;
+    }
+
+    /*
+      Grid (mobile design): 2 tiles per row, 2px apart, a little taller than wide. As on desktop, only
+      the open tile shows its card and cart button; the others show the photo and the number.
+    */
+    .product-panels--mobile-grid .product-panels__list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 2px;
+    }
+
+    .product-panels--mobile-grid .product-panels__item {
+      aspect-ratio: 10 / calc(11 * var(--panels-mobile-scale, 1));
+      padding: var(--space-xs);
+    }
+
+    .product-panels--mobile-grid .product-panels__item:not(.is-active) .product-panels__cart {
+      pointer-events: none;
+    }
+
+    .product-panels--mobile-grid .product-panels__number {
+      inset-block-start: var(--space-xs);
+      inset-inline-start: var(--space-xs);
+      font-size: var(--font-size-body);
+    }
+
+    /* Smaller cart button on the small tiles (36px; the icon scales with it) */
+    .product-panels--mobile-grid .quick-add__button {
+      --quick-add-size: 2.25rem;
+    }
+
+    .product-panels--mobile-grid .product-panels__cart {
+      inset-block-start: 0.375rem;
+      inset-inline-end: 0.375rem;
+    }
+
+    .product-panels--mobile-grid .product-panels__card {
+      gap: 0.125rem;
+      padding: var(--space-xs) var(--space-sm);
+    }
+
+    /* The tile is small: title (2 lines at most) and price only */
+    .product-panels--mobile-grid .product-panels__title {
+      display: -webkit-box;
+      overflow: hidden;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      font-size: var(--font-size-caption);
+    }
+
+    .product-panels--mobile-grid .product-panels__text {
+      display: none;
+    }
+
+    .product-panels--mobile-grid .product-panels__price .price__current {
+      font-size: var(--font-size-body-sm);
     }
   }
 
@@ -431,30 +686,127 @@
   class ProductPanels extends HTMLElement {
     connectedCallback() {
       this.panels = [...this.querySelectorAll('[data-panel]')];
+      this.rowGroups = null; // measured again by the first syncRows (the section may have moved)
       if (this.panels.length < 2) return;
 
+      /*
+        One AbortController for every listener: disconnectedCallback aborts it, which removes them all
+        at once. The theme editor re-attaches the section when it is moved, so connectedCallback runs
+        again; without this, each strip would get a second set of listeners.
+      */
+      this.abortController = new AbortController();
+      const { signal } = this.abortController;
+
       this.panels.forEach((panel) => {
-        panel.addEventListener('pointerenter', (event) => {
-          if (event.pointerType === 'mouse') this.open(panel);
-        });
-        panel.addEventListener('focusin', () => this.open(panel));
-        panel.addEventListener('pointerdown', (event) => {
-          this.lastPointer = event.pointerType;
-        });
-        panel.addEventListener('click', (event) => {
-          // Tablets / touch laptops: the first tap opens a closed strip. Phones show every card fully
-          // (no widening), so a tap there goes straight to the product.
-          if (!window.matchMedia('(min-width: 750px)').matches) return;
-          if (this.lastPointer !== 'mouse' && !panel.classList.contains('is-active')) {
-            event.preventDefault();
-            this.open(panel);
-          }
+        panel.addEventListener(
+          'pointerenter',
+          (event) => {
+            if (event.pointerType === 'mouse') this.open(panel);
+          },
+          { signal }
+        );
+        panel.addEventListener(
+          'focusin',
+          (event) => {
+            /*
+              A tap focuses the link BEFORE the click event (Android Chrome). If focus opened the strip
+              here, the click would find it open and follow the link on the first tap. So focus from a
+              touch / pen press on this strip (less than 1s ago) is left to the click handler.
+            */
+            const fromTouch =
+              this.lastPointer !== 'mouse' &&
+              this.pointerPanel === panel &&
+              event.timeStamp - this.pointerTime < 1000;
+            if (!fromTouch) this.open(panel);
+          },
+          { signal }
+        );
+        panel.addEventListener(
+          'pointerdown',
+          (event) => {
+            this.lastPointer = event.pointerType;
+            this.pointerPanel = panel;
+            this.pointerTime = event.timeStamp;
+          },
+          { signal }
+        );
+        panel.addEventListener(
+          'click',
+          (event) => {
+            // Touch: the first tap opens a closed strip, a second tap follows its link.
+            if (!this.opensOnTap()) return;
+            if (this.lastPointer !== 'mouse' && !panel.classList.contains('is-active')) {
+              event.preventDefault();
+              this.open(panel);
+            }
+          },
+          { signal }
+        );
+      });
+
+      /*
+        The rows change with the screen width (3, 4, 5 or 7 per row), so every row must keep exactly
+        one open strip. A ResizeObserver on the section checks it after each size change (also when
+        the theme editor's preview changes width).
+      */
+      this.resizeObserver = new ResizeObserver(() => this.syncRows());
+      this.resizeObserver.observe(this);
+      signal.addEventListener('abort', () => this.resizeObserver.disconnect());
+    }
+
+    disconnectedCallback() {
+      this.abortController?.abort(); // removes every listener added with its signal
+    }
+
+    /*
+      Groups the strips into the rows the browser drew: strips with the same top edge are in one row.
+      The phone layouts count as one group: the phone grid opens one tile in the whole grid.
+    */
+    rows() {
+      if (!window.matchMedia('(min-width: 750px)').matches) return [this.panels];
+      const rows = new Map();
+      this.panels.forEach((panel) => {
+        const top = panel.offsetTop;
+        if (!rows.has(top)) rows.set(top, []);
+        rows.get(top).push(panel);
+      });
+      return [...rows.values()];
+    }
+
+    /*
+      Each row keeps its open strip; a row with none (or more than one) opens its first strip.
+      The rows are kept in this.rowGroups: they only change when the width changes, so open() (on
+      every hover) doesn't measure the strips again.
+      A hidden section (display: none) has no layout: every offsetTop is 0, so all strips would look
+      like one row. Then nothing changes, and the rows are measured when it shows again.
+    */
+    syncRows() {
+      if (this.offsetWidth === 0) return;
+      this.rowGroups = this.rows();
+      this.rowGroups.forEach((row) => {
+        const open = row.filter((panel) => panel.classList.contains('is-active'));
+        if (open.length === 1) return;
+        row.forEach((panel, index) => {
+          const keep = open.length ? panel === open[0] : index === 0;
+          panel.classList.toggle('is-active', keep);
         });
       });
     }
 
+    /*
+      Strips open on tap on desktop widths and in the phone grid. The phone slider and "one per row"
+      layouts show every card fully, so a tap there goes straight to the product.
+    */
+    opensOnTap() {
+      if (window.matchMedia('(min-width: 750px)').matches) return true;
+      return this.classList.contains('product-panels--mobile-grid');
+    }
+
+    /* Opens a strip and closes the others in its row only (other rows keep their open strip) */
     open(panel) {
-      this.panels.forEach((item) => item.classList.toggle('is-active', item === panel));
+      const groups = this.rowGroups || this.rows();
+      const row = groups.find((group) => group.includes(panel)) || this.panels;
+      row.forEach((item) => item.classList.toggle('is-active', item === panel));
     }
   }
 
@@ -477,19 +829,19 @@
       "type": "inline_richtext",
       "id": "heading",
       "label": "t:labels.heading",
-      "info": "t:labels.trending_heading_info",
+      "info": "t:labels.panels_heading_info",
       "default": "Editor's <em>Picks</em>"
     },
     {
       "type": "text",
       "id": "link_label",
-      "label": "t:labels.link_label",
+      "label": "t:labels.panels_link_label",
       "default": "View all"
     },
     {
       "type": "url",
       "id": "link",
-      "label": "t:labels.link",
+      "label": "t:labels.panels_link",
       "info": "t:labels.trending_link_info"
     },
     {
@@ -512,9 +864,39 @@
       "default": 7
     },
     {
+      "type": "header",
+      "content": "t:labels.layout"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "wide"
+    },
+    {
       "type": "range",
       "id": "panel_height",
       "label": "t:labels.panel_height",
+      "info": "t:labels.panel_height_info",
       "min": 20,
       "max": 44,
       "step": 1,
@@ -531,13 +913,49 @@
     {
       "type": "range",
       "id": "card_radius",
-      "label": "t:labels.card_radius",
+      "label": "t:labels.panels_card_radius",
       "info": "t:labels.panels_card_radius_info",
       "min": 0,
       "max": 32,
       "step": 2,
       "unit": "px",
       "default": 12
+    },
+    {
+      "type": "header",
+      "content": "t:labels.phones"
+    },
+    {
+      "type": "select",
+      "id": "mobile_layout",
+      "label": "t:labels.panels_mobile_layout",
+      "info": "t:labels.panels_mobile_layout_info",
+      "options": [
+        {
+          "value": "single",
+          "label": "t:options.panels_mobile_layout.single"
+        },
+        {
+          "value": "slider",
+          "label": "t:options.panels_mobile_layout.slider"
+        },
+        {
+          "value": "grid",
+          "label": "t:options.panels_mobile_layout.grid"
+        }
+      ],
+      "default": "grid"
+    },
+    {
+      "type": "range",
+      "id": "mobile_height",
+      "label": "t:labels.panels_mobile_height",
+      "info": "t:labels.panels_mobile_height_info",
+      "min": 80,
+      "max": 200,
+      "step": 10,
+      "unit": "%",
+      "default": 100
     },
     {
       "type": "header",
@@ -575,6 +993,17 @@
       "default": "#ffffff"
     },
     {
+      "type": "range",
+      "id": "cart_overlay",
+      "label": "t:labels.panels_cart_overlay",
+      "info": "t:labels.panels_cart_overlay_info",
+      "min": 0,
+      "max": 80,
+      "step": 5,
+      "unit": "%",
+      "default": 10
+    },
+    {
       "type": "select",
       "id": "cart_options",
       "label": "t:labels.cart_options",
@@ -593,32 +1022,7 @@
     },
     {
       "type": "header",
-      "content": "t:labels.style"
-    },
-    {
-      "type": "select",
-      "id": "section_width",
-      "label": "t:labels.section_width",
-      "info": "t:labels.section_width_info",
-      "options": [
-        {
-          "value": "narrow",
-          "label": "t:options.section_width.narrow"
-        },
-        {
-          "value": "wide",
-          "label": "t:options.section_width.wide"
-        },
-        {
-          "value": "widest",
-          "label": "t:options.section_width.widest"
-        },
-        {
-          "value": "full",
-          "label": "t:options.section_width.full"
-        }
-      ],
-      "default": "wide"
+      "content": "t:labels.colors"
     },
     {
       "type": "color_scheme",
@@ -630,7 +1034,11 @@
       "type": "color",
       "id": "highlight_color",
       "label": "t:labels.highlight_color",
-      "default": "#c8a24b"
+      "info": "t:labels.panels_highlight_color_info"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.animation_header"
     },
     {
       "type": "select",
@@ -670,6 +1078,10 @@
       "default": "fade-up"
     },
     {
+      "type": "header",
+      "content": "t:labels.spacing"
+    },
+    {
       "type": "range",
       "id": "padding_top",
       "label": "t:labels.padding_top",
@@ -692,7 +1104,7 @@
   ],
   "presets": [
     {
-      "name": "t:general.editors_picks"
+      "name": "t:general.product_panels"
     }
   ]
 }

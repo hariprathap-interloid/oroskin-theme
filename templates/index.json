@@ -672,7 +672,7 @@
     },
     "product_panels_Kh9WWd": {
       "type": "product-panels",
-      "name": "t:general.editors_picks",
+      "name": "t:general.product_panels",
       "settings": {
         "eyebrow": "This season",
         "heading": "Editor's <em>Picks</em>",
@@ -683,7 +683,10 @@
         "panel_height": 29,
         "fill_screen": true,
         "card_radius": 12,
+        "mobile_layout": "grid",
+        "mobile_height": 100,
         "cart_size": "60",
+        "cart_overlay": 10,
         "cart_icon_color": "#ffffff",
         "cart_options": "add_first",
         "section_width": "widest",
