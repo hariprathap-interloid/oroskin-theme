@@ -29,11 +29,20 @@
   endif
 -%}
 
+{%- capture avatar_loading -%}{%- render 'section-loading' -%}{%- endcapture -%}
+{%- assign avatar_loading = avatar_loading | strip -%}
+
+{%- if review_count == 0 and request.design_mode -%}
+  <div class="testimonials-empty color-{{ scheme_id }}">
+    <p>{{ 'sections.testimonials.empty' | t }}</p>
+  </div>
+{%- endif -%}
+
 {%- if review_count > 0 -%}
   <testimonial-showcase
     class="testimonials full-width section-width--{{ section.settings.section_width | default: 'wide' }} testimonials--height-{{ section.settings.height | default: 'auto' }} color-{{ scheme_id }}"
-    style="--split-left: {{ split_left }}fr; --split-right: {{ split_right }}fr; --color-accent: {{ section.settings.highlight_color }}; --section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
-    {% if section.settings.autoplay %}
+    style="--split-left: {{ split_left }}fr; --split-right: {{ split_right }}fr; {% if section.settings.highlight_color != blank %}--color-accent: {{ section.settings.highlight_color }}; {% endif %}--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
+    {% if section.settings.autoplay and review_count > 1 %}
       data-autoplay="{{ section.settings.interval | times: 1000 }}"
     {% endif %}
   >
@@ -63,8 +72,13 @@
               data-review-index="{{ forloop.index0 }}"
               tabindex="-1"
             >
+              {%- comment -%}
+                sizes = the large slot (the avatars rotate, so every photo can take it): 11.5rem at
+                1200px+, 36% of the at most 24rem group on tablets (~140px); phones: 36% of the group,
+                which is 42% of the width, so 15vw (a little more than the real size, never less)
+              {%- endcomment -%}
               {%- if block.settings.avatar != blank -%}
-                {{ block.settings.avatar | image_url: width: 240, height: 240, crop: 'center' | image_tag: widths: '120, 240', sizes: '120px', alt: '', loading: 'lazy' }}
+                {{ block.settings.avatar | image_url: width: 368, height: 368, crop: 'center' | image_tag: widths: '120, 184, 240, 368', sizes: '(min-width: 1200px) 184px, (min-width: 750px) 140px, 15vw', alt: '', loading: avatar_loading }}
               {%- else -%}
                 <span class="testimonials__initial">{{ block.settings.name | default: '?' | slice: 0 }}</span>
               {%- endif -%}
@@ -72,10 +86,16 @@
           {%- endfor -%}
         </div>
 
+        {%- comment -%} One review: nothing to switch, so no dots and no pause button {%- endcomment -%}
+        {%- if review_count > 1 -%}
         <div class="testimonials__timeline">
           <ol class="testimonials__dots" role="list">
             {%- for block in section.blocks -%}
-              {%- assign dot_label = 'sections.testimonials.show_review' | t: index: forloop.index, count: review_count, name: block.settings.name -%}
+              {%- if block.settings.name != blank -%}
+                {%- assign dot_label = 'sections.testimonials.show_review' | t: index: forloop.index, count: review_count, name: block.settings.name -%}
+              {%- else -%}
+                {%- assign dot_label = 'sections.testimonials.show_review_unnamed' | t: index: forloop.index, count: review_count -%}
+              {%- endif -%}
               <li>
                 <button
                   type="button"
@@ -101,6 +121,7 @@
             </button>
           {%- endif -%}
         </div>
+        {%- endif -%}
 
         <div class="testimonials__cards-area">
           <span class="testimonials__quote" aria-hidden="true">{{ 'icon-quote-open.svg' | inline_asset_content }}</span>
@@ -150,11 +171,11 @@
             {%- endfor -%}
             {%- comment -%}
               A decorative copy of the first review after the last one (Figma): when the last review is
-              active, the first shows faded below it, so the list feels endless. Hidden from screen
-              readers and not one of the switchable cards.
+              active, the first shows faded below it, so the list feels endless. inert: hidden from
+              screen readers and a link in the review text can't take focus a second time.
             {%- endcomment -%}
             {%- if review_count > 1 -%}
-              <li class="testimonials__card testimonials__card--clone" aria-hidden="true">
+              <li class="testimonials__card testimonials__card--clone" aria-hidden="true" inert>
                 {{ first_card_inner }}
               </li>
             {%- endif -%}
@@ -170,6 +191,12 @@
 {% stylesheet %}
   testimonial-showcase {
     display: block;
+  }
+
+  /* Theme editor only: the section has no Review block */
+  .testimonials-empty {
+    padding: var(--space-2xl) var(--page-margin);
+    text-align: center;
   }
 
   /*
@@ -235,85 +262,80 @@
     font-style: normal;
   }
 
-  /* Three columns (Figma 1920px): avatars ~420px | timeline | cards ~870px */
   /*
-    Figma spacing (1920px): ~90px from the avatars to the dots, ~110px from the dots to the card (the
-    opening quote sits in that gap, over the card's corner). The avatar column scales with the screen
-    and the card column takes all the remaining width, so the section fills its Section width.
+    Phones and tablets (below 1200px, Figma mobile): one column. The avatar group, a row of dots, then
+    the cards. Desktop (1200px+) changes this to three columns, see the media query below.
   */
   .testimonials__body {
     position: relative;
     /* Own layer: the closing quote (z-index -1) stays above the section's background, behind the cards */
     isolation: isolate;
     display: grid;
-    /* Laptops and normal desktops: avatar column up to 30rem, the cards take the rest */
-    grid-template-columns: clamp(16rem, 24vw, 30rem) auto minmax(0, 1fr);
-    column-gap: clamp(2rem, 4.6vw, 5.5rem);
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--space-lg);
     align-items: start;
+    /* Closing ” size: behind the card on phones and tablets, in its own gutter on desktop */
+    --quote-end-size: clamp(6rem, 12vw, 9rem);
   }
 
   /*
-    Desktop: the closing ” gets its own space on the right (Figma: the card stops ~290px before the
-    edge and the quote sits in that gutter, bottom right), instead of lying under the card.
+    Desktop (Figma 1920px): avatars ~420px | timeline | cards ~870px. ~90px from the avatars to the
+    dots, ~110px from the dots to the card (the opening quote sits in that gap, over the card's corner).
+    The closing ” gets its own space on the right (Figma: the card stops ~290px before the edge and the
+    quote sits in that gutter, bottom right), instead of lying under the card.
   */
-  .testimonials__body {
-    --quote-end-size: clamp(6rem, 12vw, 9rem); /* tablets and phones: behind the card, no gutter */
-  }
-
-  /*
-    Desktop: cards are at least the Figma card height (343px), even for a short review; longer reviews
-    still grow (the tallest one sets --card-height). While the script measures, --card-height is
-    'auto', which makes this max() invalid for a moment, so the cards fall back to their natural height
-    and are measured correctly.
-  */
-  @media (min-width: 990px) {
-    .testimonials__card {
-      min-block-size: max(var(--card-height, 0px), 21.4375rem);
-    }
-  }
-
-  /* Laptops and normal desktops: a smaller quote and gutter, so the card keeps enough width */
-  @media (min-width: 990px) {
+  @media (min-width: 1200px) {
     .testimonials__body {
       --quote-end-size: clamp(6rem, 10.5vw, 11rem);
 
+      /* Laptops and normal desktops: avatar column up to 30rem, the cards take the rest */
+      grid-template-columns: clamp(16rem, 24vw, 30rem) auto minmax(0, 1fr);
+      column-gap: clamp(2rem, 4.6vw, 5.5rem);
+      row-gap: 0;
       padding-inline-end: calc(var(--quote-end-size) + 1rem);
     }
   }
 
-  /* Large desktops (1700px+): the Figma size, 292px at 1920px */
+  /*
+    Large desktops (24" and up, 1700px+): the Figma quote size (292px at 1920px) and the Layout split
+    setting, 40/60, 45/55 or 50/50
+  */
   @media (min-width: 1700px) {
     .testimonials__body {
       --quote-end-size: clamp(8rem, 15.2vw, 18.25rem);
-    }
-  }
 
-  /* Large desktops (24" and up, 1700px+): the Layout split setting, 40/60, 45/55 or 50/50 */
-  @media (min-width: 1700px) {
-    .testimonials__body {
       grid-template-columns: minmax(0, var(--split-left, 40fr)) auto minmax(0, var(--split-right, 60fr));
     }
   }
 
   /* ---------- Avatars: fixed slots, the active reviewer in slot 0 (large, top right) ---------- */
   /*
-    The avatar column is a size container: the avatars are sized in cqi (1cqi = 1% of this column's
-    width), so a wider column (bigger screen, or a 50/50 split) gives bigger faces.
+    The avatar group is a size container: the avatars are sized in cqi (1cqi = 1% of the group's
+    width), so a wider group (bigger screen, or a 50/50 split) gives bigger faces.
+    The Figma avatar area is ~420 x 480 (7 : 8). Keeping that shape (height follows the width) puts
+    every slot exactly where the Figma has it at any size.
+    Phones and tablets: the group is centred, 42% of the width (Figma mobile: ~158px of 375px), at
+    least 9.5rem and at most 24rem. Desktop: it fills its column.
   */
   .testimonials__avatars {
     position: relative;
-    /*
-      The Figma avatar area is ~420 x 480 (7 : 8). Keeping that shape (height follows the width) puts
-      every slot exactly where the Figma has it at any size, instead of stretching the group over the
-      tall cards column. Its top lines up with the top of the dots and the card.
-    */
-    align-self: start;
+    justify-self: center;
+    inline-size: clamp(9.5rem, 42%, 24rem);
     aspect-ratio: 7 / 8;
     container-type: inline-size;
   }
 
+  @media (min-width: 1200px) {
+    .testimonials__avatars {
+      justify-self: stretch;
+      inline-size: auto;
+    }
+  }
+
+  /* Phones and tablets (Figma mobile): small faces 25%, the large one 36% of the group */
   .testimonials__avatar {
-    --avatar-size: clamp(4.25rem, 19cqi, 8rem);
+    --avatar-size: 25cqi;
+    --avatar-border: 2px;
 
     position: absolute;
     inset-inline-start: var(--x);
@@ -326,7 +348,7 @@
     margin: 0;
     padding: 0;
     overflow: hidden;
-    border: 3px solid #ffffff;
+    border: var(--avatar-border) solid #ffffff;
     border-radius: var(--radius-pill);
     background-color: var(--color-tint);
     box-shadow: 0 0.5rem 1.25rem #00000026;
@@ -340,6 +362,23 @@
       border-color 0.7s var(--ease-out);
   }
 
+  .testimonials__avatar[data-slot='0'] {
+    --avatar-size: 36cqi;
+
+    border-color: var(--color-accent);
+  }
+
+  @media (min-width: 1200px) {
+    .testimonials__avatar {
+      --avatar-size: clamp(4.25rem, 19cqi, 8rem);
+      --avatar-border: 3px;
+    }
+
+    .testimonials__avatar[data-slot='0'] {
+      --avatar-size: clamp(6rem, 27cqi, 11.5rem);
+    }
+  }
+
   .testimonials__avatar img {
     inline-size: 100%;
     block-size: 100%;
@@ -349,13 +388,7 @@
   .testimonials__initial {
     color: var(--color-accent);
     font-family: var(--font-heading--family);
-    font-size: 1.5rem;
-  }
-
-  .testimonials__avatar[data-slot='0'] {
-    --avatar-size: clamp(6rem, 27cqi, 11.5rem);
-
-    border-color: var(--color-accent);
+    font-size: clamp(1rem, 12cqi, 1.5rem);
   }
 
   /* Slot positions (centre of each avatar, % of the avatar area), measured on the Figma */
@@ -373,6 +406,22 @@
     faces don't crowd the Figma group. Ring order (0 -> 1 -> 3 -> 4 -> ...) goes round the group, so
     the rotation flows. 5 or fewer reviews use the Figma positions above.
   */
+  /*
+    One review: the face in the centre. Phones and tablets: a low group (5 : 2), so no empty area
+    under it; desktop keeps the 7 : 8 column next to the card.
+  */
+  .testimonials__avatars[data-count='1'] {
+    aspect-ratio: 5 / 2;
+  }
+
+  .testimonials__avatars[data-count='1'] .testimonials__avatar[data-slot='0'] { --x: 50%; --y: 50%; }
+
+  @media (min-width: 1200px) {
+    .testimonials__avatars[data-count='1'] {
+      aspect-ratio: 7 / 8;
+    }
+  }
+
   .testimonials__avatars[data-count='6'] .testimonials__avatar[data-slot='0'] { --x: 78%; --y: 13%; }
   .testimonials__avatars[data-count='6'] .testimonials__avatar[data-slot='1'] { --x: 22%; --y: 18%; }
   .testimonials__avatars[data-count='6'] .testimonials__avatar[data-slot='2'] { --x: 50%; --y: 48%; }
@@ -398,38 +447,80 @@
   .testimonials__avatars[data-count='8'] .testimonials__avatar[data-slot='7'] { --x: 92%; --y: 46%; }
 
   /* ---------- Timeline: line + dots ---------- */
+  /*
+    Phones and tablets (Figma mobile): a centred row, the line a little longer than the dots and faded
+    at both ends. Desktop: a vertical line with the dots in a column.
+  */
   .testimonials__timeline {
     position: relative;
+    justify-self: center;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: var(--space-lg);
-    padding-block: var(--space-xl);
+    gap: var(--space-md);
+    padding-inline: 2.5rem;
+  }
+
+  /* No script yet (or none at all): the dots can't switch reviews, so they keep their place hidden */
+  testimonial-showcase:not(:defined) .testimonials__timeline {
+    visibility: hidden;
   }
 
   .testimonials__timeline::before {
     content: "";
     position: absolute;
-    inset-block: 0;
-    inset-inline-start: 50%;
-    inline-size: 1px;
-    background-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
+    inset-block-start: 50%;
+    inset-inline: 0;
+    block-size: 1px;
+    background-image: linear-gradient(
+      to right,
+      transparent,
+      color-mix(in srgb, var(--color-accent) 40%, transparent) 20% 80%,
+      transparent
+    );
   }
 
   .testimonials__dots {
+    --dot-size: 0.75rem;
+
     position: relative;
     display: flex;
-    flex-direction: column;
-    gap: clamp(1.75rem, 2.8vw, 2.5rem);
+    /* Dot centres 30px apart (Figma mobile), more than the 24px target size (WCAG 2.5.8) */
+    gap: 1.125rem;
     margin: 0;
     padding: 0;
     list-style: none;
   }
 
+  @media (min-width: 1200px) {
+    .testimonials__timeline {
+      justify-self: stretch;
+      flex-direction: column;
+      gap: var(--space-lg);
+      padding: var(--space-xl) 0;
+    }
+
+    .testimonials__timeline::before {
+      inset-block: 0;
+      inset-inline-start: 50%;
+      inset-inline-end: auto;
+      inline-size: 1px;
+      block-size: auto;
+      background-image: none;
+      background-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
+    }
+
+    .testimonials__dots {
+      --dot-size: 1rem;
+
+      flex-direction: column;
+      gap: clamp(1.75rem, 2.8vw, 2.5rem);
+    }
+  }
+
   .testimonials__dot {
     display: block;
-    inline-size: 1rem;
-    block-size: 1rem;
+    inline-size: var(--dot-size);
+    block-size: var(--dot-size);
     min-block-size: 0;
     margin: 0;
     padding: 0;
@@ -485,16 +576,19 @@
   /* ---------- Cards: the active one in full, the next one faded below ---------- */
   /*
     The quote marks sit in this wrapper, outside the viewport: the viewport clips (overflow: hidden)
-    and would cut off the marks that overlap the card's top-left corner.
-  */
-  /*
-    The space above the card (for the quote) and the extra gap after the dots are on this wrapper, not
-    inside the clipped viewport: inside it, the previous card would show through above the active one.
+    and would cut off the marks that overlap the card's top-left corner. The space above the card (for
+    the quote) is on this wrapper too: inside the clipped viewport, the previous card would show
+    through above the active one.
   */
   .testimonials__cards-area {
     position: relative;
-    margin-inline-start: clamp(0.75rem, 1.4vw, 1.75rem);
-    padding-block-start: clamp(1.75rem, 2.4vw, 2.8rem);
+    padding-block-start: clamp(1.5rem, 2.4vw, 2.8rem);
+  }
+
+  @media (min-width: 1200px) {
+    .testimonials__cards-area {
+      margin-inline-start: clamp(0.75rem, 1.4vw, 1.75rem);
+    }
   }
 
   .testimonials__viewport {
@@ -522,12 +616,22 @@
     block-size: auto;
   }
 
-  /* Closing: 292px wide at 1920px, gold at 10%, bottom right of the section, behind everything */
+  /*
+    Closing: gold at 10%, behind everything. Desktop: 292px wide at 1920px, bottom right of the
+    section. Phones and tablets (Figma mobile): on the next card's bottom right corner, partly past the
+    screen edge (the section clips it).
+  */
   .testimonials__quote--end {
-    inset: auto 0 calc(var(--quote-end-size) * -0.3) auto;
+    inset: auto calc(var(--page-margin) * -1) calc(var(--quote-end-size) * -0.3) auto;
     z-index: -1;
     inline-size: var(--quote-end-size);
     color: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  }
+
+  @media (min-width: 1200px) {
+    .testimonials__quote--end {
+      inset-inline-end: 0;
+    }
   }
 
   .testimonials__cards {
@@ -540,8 +644,13 @@
   }
 
   /*
-    Light glass card (Figma). All cards get the height of the tallest review (--card-height, set by the
-    script), so the section keeps one height while the reviews change.
+    Light glass card (Figma "Rectangle 2213": 29px corners, cream at 20%). All cards get the height of
+    the tallest review (--card-height, set by the script), so the section keeps one height while the
+    reviews change.
+    Glass edge, the same as the search popup cards: a thin white light on the top and right edges, and
+    a soft dark inner shadow, even on all sides (no offset), at 6% so it stays light. It shows the card
+    on the cream page, where a 20% cream fill alone is invisible. No outer shadow and no backdrop blur
+    (a blur on a flat cream background changes nothing and costs paint time).
   */
   .testimonials__card {
     min-block-size: var(--card-height, auto);
@@ -552,37 +661,37 @@
     /* Figma: ~50px top, ~72px at the sides */
     padding: clamp(1.5rem, 1rem + 2vw, 3.1rem) clamp(1.5rem, 1rem + 3vw, 4.5rem);
     border: 0;
-    /* Figma "Rectangle 2213": 29px corners, fill rgba(252, 246, 232, 0.2) = cream at 20% */
     border-radius: 1.8125rem;
     background-color: #fcf6e833;
-    /*
-      Figma Glass for this card, as INNER shadows only (the Figma card "Rectangle 2213" has no drop
-      shadow; its glass look is all inner light):
-      - Light -45deg 80%: a 1px inner highlight on the top-left edges (80%) and the bottom-right
-        edges (~74%)
-      - Depth 20: a soft 20px inner light band along the edges, the visible effect of the 20px glass
-        bevel on a flat background
-      - Frost 4 = a 1.4px backdrop blur (below)
-      Refraction / Dispersion bend the background behind the rim: invisible on flat cream, left out.
-    */
-    /*
-      Made stronger than the Figma numbers so the card shows on the cream page (a 20% cream fill on
-      cream is otherwise invisible): a 1.5px white rim (top-left 100%, bottom-right 90%), a 24px inner
-      light band at 50%, and a very faint warm outer shadow that only separates it from the page.
-    */
     box-shadow:
-      inset 1.5px 1.5px 0 #ffffff,
-      inset -1.5px -1.5px 0 #ffffffe6,
-      inset 0 0 1.5rem #ffffff80,
-      0 0.5rem 2rem #c8a24b14;
-    -webkit-backdrop-filter: blur(1.4px);
-    backdrop-filter: blur(1.4px);
+      inset -1px 1px 0 #ffffffcc,
+      inset 1px -1px 0 #ffffff80,
+      inset 0 0 1rem #0000000f;
     opacity: 0.45;
     transition: opacity 0.6s var(--ease-out);
   }
 
-  .testimonials__card.is-active {
+  .testimonials__card.is-active,
+  testimonial-showcase:not(.is-enhanced) .testimonials__card {
     opacity: 1;
+  }
+
+  /*
+    Desktop: cards are at least the Figma card height (343px), even for a short review; longer reviews
+    still grow (the tallest one sets --card-height). While the script measures, --card-height is 'auto',
+    which makes this max() invalid for a moment, so the cards fall back to their natural height and are
+    measured correctly. After the base .testimonials__card rule on purpose: same specificity, so the
+    later rule wins.
+  */
+  @media (min-width: 1200px) {
+    .testimonials__card {
+      min-block-size: max(var(--card-height, 0px), 21.4375rem);
+    }
+  }
+
+  /* Without the script all reviews show in a list: the copy of the first one is not needed */
+  testimonial-showcase:not(.is-enhanced) .testimonials__card--clone {
+    display: none;
   }
 
   .testimonials__meta {
@@ -614,6 +723,8 @@
 
   /* Stars: five outlines, with the filled row on top cut to the rating (4.5 -> 90%) */
   .testimonials__stars {
+    --star-size: 1.4rem;
+
     position: relative;
     display: inline-grid;
     color: #e3a83a;
@@ -622,12 +733,12 @@
   .testimonials__stars-row {
     grid-area: 1 / 1;
     display: flex;
-    gap: 0.25rem;
+    gap: calc(var(--star-size) * 0.18);
   }
 
   .testimonials__stars-row svg {
-    inline-size: 1.4rem;
-    block-size: 1.4rem;
+    inline-size: var(--star-size);
+    block-size: var(--star-size);
   }
 
   .testimonials__stars-row--empty svg path {
@@ -648,16 +759,68 @@
     font-size: var(--font-size-body-lg);
   }
 
+  /*
+    Normal wrapping: the theme's text-wrap: pretty shortens the last lines of a paragraph, which makes a
+    ragged block in this narrow card (Figma: full lines)
+  */
   .testimonials__text > * {
     margin: 0;
+    text-wrap: wrap;
+  }
+
+  /*
+    Phones (Figma mobile, 375px): a smaller heading and a smaller card. Name 12px, date 11px, stars
+    13px, review text 14px, ~20px side padding, 16px corners, 12px between the cards.
+  */
+  @media (max-width: 749px) {
+    .testimonials__inner {
+      gap: var(--space-lg);
+    }
+
+    .testimonials__heading {
+      font-size: var(--font-size-h2);
+    }
+
+    .testimonials__cards {
+      gap: var(--space-sm);
+    }
+
+    .testimonials__card {
+      gap: var(--space-sm);
+      padding: 1.125rem 1.25rem 1.25rem;
+      border-radius: 1rem;
+    }
+
+    .testimonials__name {
+      font-size: 0.75rem;
+    }
+
+    .testimonials__date {
+      margin-block-start: 0.125rem;
+      font-size: 0.6875rem;
+    }
+
+    .testimonials__stars {
+      --star-size: 0.8125rem;
+    }
+
+    .testimonials__text {
+      font-size: 0.875rem;
+      line-height: 1.5;
+    }
   }
 
   /*
     With the script: the cards list moves up so the active card sits at the top of the viewport, which
     shows the active card plus the top of the next one, fading out.
   */
+  /*
+    overflow: clip, not hidden: a clipped box can't scroll, so keyboard focus on a link in a review
+    never scrolls the list on top of its translate (hidden = fallback for older browsers)
+  */
   testimonial-showcase.is-enhanced .testimonials__viewport {
     overflow: hidden;
+    overflow: clip;
     block-size: var(--viewport-height, auto);
     /* Only the last ~12% fades, so the next review stays readable (faded), as in the Figma */
     mask-image: linear-gradient(to bottom, #000000 88%, #00000000 100%);
@@ -669,54 +832,10 @@
     transition: translate 0.7s var(--ease-out);
   }
 
-  /* Tablets and phones: avatars in a row above, timeline hidden, the cards below */
-  @media (max-width: 989px) {
-    .testimonials__body {
-      grid-template-columns: 1fr;
-    }
-
-    .testimonials__avatars {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: var(--space-sm);
-      min-block-size: 0;
-      aspect-ratio: auto;
-    }
-
-    .testimonials__avatar,
-    .testimonials__avatar[data-slot] {
-      --avatar-size: 4rem;
-
-      position: static;
-      translate: none;
-    }
-
-    .testimonials__avatar[data-slot='0'] {
-      --avatar-size: 5rem;
-    }
-
-    .testimonials__timeline {
-      flex-direction: row;
-      justify-content: center;
-      padding-block: 0;
-    }
-
-    .testimonials__timeline::before {
-      inset-block: 50% auto;
-      inset-inline: 0;
-      inline-size: auto;
-      block-size: 1px;
-    }
-
-    .testimonials__dots {
-      flex-direction: row;
-    }
-  }
-
   @media (prefers-reduced-motion: reduce) {
     .testimonials__avatar,
     .testimonials__card,
+    .testimonials__dot,
     testimonial-showcase.is-enhanced .testimonials__cards,
     testimonial-showcase.is-enhanced .testimonials__viewport {
       transition: none;
@@ -727,7 +846,7 @@
 {% javascript %}
   /**
    * <testimonial-showcase>: shows one review at a time. Dots (buttons) and avatars switch reviews;
-   * arrow keys move between dots; optional autoplay (with a pause button, paused on hover / focus).
+   * arrow keys move between dots; optional autoplay (with a pause button; a chosen review holds).
    * The cards list slides so the active card is at the top; the avatars move as described in
    * placeAvatars().
    */
@@ -750,11 +869,38 @@
       if (this.cards.length < 2) return;
 
       this.classList.add('is-enhanced');
-      this.active = 0;
+      /*
+        Start from the card the markup (or an earlier connect) marks active: when the editor moves the
+        section, the element is attached again with its old state, so dots, avatars and cards must be
+        put back in step with that card (show() below), not reset to review 1.
+      */
+      this.active = Math.max(0, this.cards.findIndex((card) => card.classList.contains('is-active')));
 
+      /*
+        The visitor CHOOSES a review: it shows, and choiceHold keeps it there (autoplay waits) until
+        they leave the section (release(), set up in setUpAutoplay). Without autoplay the hold does
+        nothing. One click and one focusin handler, so switching and holding never drift apart.
+        - click on a dot or an avatar
+        - keyboard focus on a dot (:focus-visible: a mouse click focuses the dot too, but the click
+          above already handles it)
+        - keyboard focus on a link inside a review: that review shows, so the link is in view
+      */
       this.addEventListener('click', (event) => {
         const target = event.target.closest('[data-review-index]');
-        if (target) this.show(Number(target.dataset.reviewIndex), true);
+        if (!target) return;
+        this.choiceHold = true;
+        this.show(Number(target.dataset.reviewIndex), true);
+      }, { signal });
+
+      this.addEventListener('focusin', (event) => {
+        if (event.target.matches('.testimonials__dot:focus-visible')) {
+          this.choiceHold = true;
+          return;
+        }
+        const card = event.target.closest('[data-review-card]');
+        if (!card) return;
+        this.choiceHold = true;
+        if (!card.classList.contains('is-active')) this.show(this.cards.indexOf(card), true);
       }, { signal });
 
       this.querySelector('.testimonials__dots')?.addEventListener('keydown', (event) => {
@@ -766,10 +912,21 @@
         this.dots[next]?.focus();
       }, { signal });
 
-      // Theme editor: selecting a Review block shows it
+      /*
+        Theme editor: selecting a Review block shows it and holds it (autoplay waits) while the merchant
+        edits it; only the deselect of one of this section's cards releases the hold.
+      */
       document.addEventListener('shopify:block:select', (event) => {
         const index = this.cards.indexOf(event.target);
-        if (index >= 0) this.show(index, true);
+        if (index < 0) return;
+        this.editorHold = true;
+        this.show(index, true);
+      }, { signal });
+
+      document.addEventListener('shopify:block:deselect', (event) => {
+        if (!this.cards.includes(event.target)) return;
+        this.editorHold = false;
+        this.restartAutoplay();
       }, { signal });
 
       // Re-measure when the width changes (text re-wraps); height changes we cause ourselves are ignored
@@ -782,7 +939,21 @@
         this.layout();
       });
       this.resizeObserver.observe(this.viewport);
-      this.layout();
+      this.show(this.active);
+
+      /*
+        Web fonts that load later change the text height but not the width, so the observer above
+        does not see it: measure again when they are ready. Only while they are still loading (after
+        an editor re-attach they are always loaded, and the observer has already measured).
+      */
+      if (document.fonts && document.fonts.status !== 'loaded') {
+        document.fonts.ready.then(() => {
+          if (signal.aborted) return;
+          this.equalizeCards();
+          this.layout();
+        });
+      }
+
       this.setUpAutoplay();
     }
 
@@ -872,17 +1043,12 @@
       }, { signal });
       /*
         What holds the current review (hovering does NOT: the reviews keep moving under the mouse):
-        - the visitor CHOSE a review: clicked an avatar or a dot, or moved to a dot with the keyboard.
-          It stays until they leave: focus moves out of the section, or the mouse leaves it; then the
-          rotation starts again from the chosen review.
+        - the visitor CHOSE a review (choiceHold, set in connectedCallback). It stays until they leave:
+          focus moves out of the section, or the mouse leaves it; then the rotation starts again from
+          the chosen review.
+        - the merchant selected a Review block in the editor (editorHold)
         - the section being off screen (no point changing reviews nobody sees)
       */
-      this.addEventListener('click', (event) => {
-        if (event.target.closest('[data-review-index]')) this.choiceHold = true;
-      }, { signal });
-      this.addEventListener('focusin', (event) => {
-        if (event.target.matches('.testimonials__dot:focus-visible')) this.choiceHold = true;
-      }, { signal });
       this.addEventListener('focusout', (event) => {
         if (!this.contains(event.relatedTarget)) this.release();
       }, { signal });
@@ -905,7 +1071,7 @@
       clearInterval(this.timer);
       if (!this.delay || this.paused) return;
       this.timer = setInterval(() => {
-        if (this.choiceHold || this.onScreen === false) return;
+        if (this.choiceHold || this.editorHold || this.onScreen === false) return;
         this.show(this.active + 1);
       }, this.delay);
     }
@@ -950,7 +1116,8 @@
           "min": 0,
           "max": 5,
           "step": 0.5,
-          "default": 4.5
+          "default": 4.5,
+          "info": "t:labels.testimonials_rating_info"
         },
         {
           "type": "richtext",
@@ -963,6 +1130,10 @@
   ],
   "settings": [
     {
+      "type": "header",
+      "content": "t:labels.content"
+    },
+    {
       "type": "text",
       "id": "eyebrow",
       "label": "t:labels.eyebrow",
@@ -972,34 +1143,12 @@
       "type": "inline_richtext",
       "id": "heading",
       "label": "t:labels.heading",
-      "info": "t:labels.trending_heading_info",
+      "info": "t:labels.testimonials_heading_info",
       "default": "What our <em>Clients</em> Say"
     },
     {
       "type": "header",
-      "content": "t:labels.autoplay"
-    },
-    {
-      "type": "checkbox",
-      "id": "autoplay",
-      "label": "t:labels.testimonials_autoplay",
-      "info": "t:labels.testimonials_autoplay_info",
-      "default": false
-    },
-    {
-      "type": "range",
-      "id": "interval",
-      "label": "t:labels.testimonials_interval",
-      "min": 1,
-      "max": 12,
-      "step": 1,
-      "unit": "s",
-      "default": 7,
-      "visible_if": "{{ section.settings.autoplay }}"
-    },
-    {
-      "type": "header",
-      "content": "t:labels.style"
+      "content": "t:labels.layout"
     },
     {
       "type": "select",
@@ -1076,16 +1225,30 @@
       "default": "40"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-1"
+      "type": "header",
+      "content": "t:labels.autoplay"
     },
     {
-      "type": "color",
-      "id": "highlight_color",
-      "label": "t:labels.highlight_color",
-      "default": "#c8a24b"
+      "type": "checkbox",
+      "id": "autoplay",
+      "label": "t:labels.testimonials_autoplay",
+      "info": "t:labels.testimonials_autoplay_info",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "interval",
+      "label": "t:labels.testimonials_interval",
+      "min": 1,
+      "max": 12,
+      "step": 1,
+      "unit": "s",
+      "default": 7,
+      "visible_if": "{{ section.settings.autoplay }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.animation_header"
     },
     {
       "type": "select",
@@ -1125,6 +1288,10 @@
       "default": "fade-up"
     },
     {
+      "type": "header",
+      "content": "t:labels.spacing"
+    },
+    {
       "type": "range",
       "id": "padding_top",
       "label": "t:labels.padding_top",
@@ -1143,6 +1310,22 @@
       "step": 8,
       "unit": "px",
       "default": 96
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "color",
+      "id": "highlight_color",
+      "label": "t:labels.highlight_color",
+      "info": "t:labels.testimonials_highlight_color_info"
     }
   ],
   "presets": [

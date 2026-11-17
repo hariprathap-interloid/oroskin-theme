@@ -309,6 +309,8 @@
     },
     "testimonials": {
       "show_review": "Show review {{ index }} of {{ count }}: {{ name }}",
+      "show_review_unnamed": "Show review {{ index }} of {{ count }}",
+      "empty": "Add a Review block to show the reviews.",
       "rating": "Rated {{ rating }} out of 5",
       "pause": "Pause reviews"
     },
