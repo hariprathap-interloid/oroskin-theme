@@ -3,8 +3,8 @@
   eyebrow, headings, text, buttons) and optional glass highlight cards on the right.
   Two presets build the Figma homepage sections from this one file:
   - "Image banner with cards" = The New Glow Manifesto (full screen, gradient, 3 highlight cards)
-  - "Promo banner" = The Ultimate Glow-Up Event (shorter, even tint, no cards; the Figma countdown is
-    a parked feature, decision 6)
+  - "Promo banner" = The Ultimate Glow-Up Event (shorter, even tint, a Countdown block in the card
+    column: bottom right from 1200px, under the text from the left below 1200px)
 
   Two static blocks make the two areas (as in the Hero): _banner-content and _highlight-cards.
 
@@ -221,8 +221,30 @@
     }
   }
 
-  .image-banner__cards:not(:has(.highlight-card)) {
+  .image-banner__cards:not(:has(.highlight-card, .countdown:not([hidden]))) {
     display: none;
+  }
+
+  /*
+    Countdown in the card column (Figma promo banner): from 1200px at the bottom of the right column,
+    lower than the text; below 1200px under the text (Figma mobile).
+    The column gets room (2/5 of the width on large screens, the full width below 1200px), so the
+    countdown's Alignment settings can move the tiles in it.
+  */
+  @media (min-width: 1200px) {
+    .image-banner__inner:has(.countdown:not([hidden])) {
+      grid-template-columns: minmax(0, 3fr) minmax(max-content, 2fr);
+    }
+
+    .image-banner__cards:has(.countdown) {
+      align-self: end;
+    }
+  }
+
+  @media (max-width: 1199px) {
+    .image-banner__cards:has(.countdown) {
+      justify-self: stretch;
+    }
   }
 
   /*
@@ -875,7 +897,16 @@
         {
           "type": "_highlight-cards",
           "id": "highlight-cards",
-          "static": true
+          "static": true,
+          "blocks": [
+            {
+              "type": "countdown",
+              "settings": {
+                "end_date": "2026-12-31",
+                "end_time": "23:59"
+              }
+            }
+          ]
         },
         {
           "type": "_trending-sheet",

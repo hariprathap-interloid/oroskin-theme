@@ -137,7 +137,8 @@
     "product_related": "You may also love",
     "announcement_bar": "Announcement bar",
     "announcement": "Announcement",
-    "image_banner_cards": "Image banner with cards"
+    "image_banner_cards": "Image banner with cards",
+    "countdown": "Countdown"
   },
   "labels": {
     "alignment": "Alignment",
@@ -1123,7 +1124,19 @@
     "trending_sheet_phone_products_info": "On screens that are less than 750px wide. The sheet shows only this number of products, so that the list fits on the screen. If this value is more than \"Number of products\" above, the sheet shows all the products.",
     "trending_sheet_tablet_width": "Sheet width",
     "trending_sheet_tablet_width_info": "On screens from 750px to 1199px wide.",
-    "trending_sheet_image_info": "Shows behind the product list."
+    "trending_sheet_image_info": "Shows behind the product list.",
+    "countdown_end_date": "End date",
+    "countdown_end_date_info": "Year-month-day, for example 2026-12-31. If empty, the countdown does not show.",
+    "countdown_end_time": "End time",
+    "countdown_end_time_info": "24-hour clock, for example 23:59. The time zone of the store (Settings > General) applies.",
+    "countdown_show_seconds": "Show seconds",
+    "countdown_after_end": "After the end",
+    "countdown_on_end": "When the time ends",
+    "countdown_end_message": "Message",
+    "countdown_alignment_info": "Applies to screens 1200 px and wider.",
+    "countdown_mobile_alignment":"Alignment on phones and tablets",
+    "countdown_mobile_alignment_info": "Applies to screens narrower than 1200 px. \"Alignment\" applies to larger screens.",
+    "countdown_end_message_info":"Shows in place of the countdown when \"When the time ends\" is \"Show a message\"."
   },
   "options": {
     "panels_mobile_layout": {
@@ -1621,6 +1634,16 @@
     "group_direction": {
       "column": "Column (stacked)",
       "row": "Row (side by side)"
+    },
+    "countdown_on_end": {
+      "hide": "Hide the countdown",
+      "zeros": "Show 00 in all boxes",
+      "message": "Show a message"
+    },
+    "countdown_alignment": {
+      "start": "Left",
+      "center": "Center",
+      "end": "Right"
     }
   },
   "color_scheme": {

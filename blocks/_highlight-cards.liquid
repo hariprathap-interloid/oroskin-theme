@@ -1,6 +1,7 @@
 {% doc %}
   The Image banner's card column (static block, right side): a stack of glass highlight cards
-  (Figma Manifesto: "Stories / 48 Articles", "Films / Ritual Series", "Community / 42k Members").
+  (Figma Manifesto: "Stories / 48 Articles", "Films / Ritual Series", "Community / 42k Members"),
+  and / or a Countdown (Figma promo banner).
   Empty = nothing shown, and the content column gets the full width.
 
   Corner radius applies to every card. Entrance: the cards slide in one after another from the chosen
@@ -30,7 +31,7 @@
     gap: var(--space-lg);
   }
 
-  .highlight-cards:not(:has(.highlight-card)) {
+  .highlight-cards:not(:has(.highlight-card, .countdown:not([hidden]))) {
     display: none;
   }
 
@@ -60,7 +61,7 @@
       transition: none;
     }
 
-    .js.animations-on .highlight-cards[data-animate] .highlight-card {
+    .js.animations-on .highlight-cards[data-animate] :is(.highlight-card, .countdown) {
       transition:
         opacity var(--slide-duration) var(--ease-out),
         transform var(--slide-duration) var(--ease-out),
@@ -69,7 +70,7 @@
       transition-delay: calc(var(--card-index, 0) * var(--slide-stagger)), calc(var(--card-index, 0) * var(--slide-stagger)), 0s, 0s;
     }
 
-    .js.animations-on .highlight-cards[data-animate]:not(.is-visible) .highlight-card {
+    .js.animations-on .highlight-cards[data-animate]:not(.is-visible) :is(.highlight-card, .countdown) {
       opacity: 0;
       transform: translate(var(--slide-from));
     }
@@ -83,6 +84,9 @@
   "blocks": [
     {
       "type": "_highlight-card"
+    },
+    {
+      "type": "countdown"
     }
   ],
   "settings": [

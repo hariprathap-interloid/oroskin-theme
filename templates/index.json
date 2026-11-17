@@ -1136,7 +1136,24 @@
             "duration": 900,
             "stagger": 150
           },
-          "blocks": {}
+          "blocks": {
+            "countdown_Pr0m0C": {
+              "type": "countdown",
+              "settings": {
+                "end_date": "2026-12-31",
+                "end_time": "23:59",
+                "show_seconds": true,
+                "on_end": "hide",
+                "end_message": "This offer has ended.",
+                "alignment": "end",
+                "mobile_alignment": "start"
+              },
+              "blocks": {}
+            }
+          },
+          "block_order": [
+            "countdown_Pr0m0C"
+          ]
         },
         "trending-sheet": {
           "type": "_trending-sheet",
