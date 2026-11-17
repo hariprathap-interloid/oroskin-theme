@@ -1,5 +1,6 @@
 {%- comment -%}
-  Product deck (Figma "New Arrivals"): a centred eyebrow ("Just landed") and heading, a small pill on
+  Product deck (editor name "Product deck", one name everywhere; Figma "New Arrivals", which is the
+  default content, not the name, so the section works for any collection): a centred eyebrow ("Just landed") and heading, a small pill on
   the right ("Fresh this week"), then the products of one collection as photo cards. The cards start
   as a tidy stack and fan out into an arc as the section scrolls into view (<product-deck>, --fan
   0 -> 1). The fan itself never moves. One card is active (the first, leftmost one at first): it comes to the
@@ -891,7 +892,7 @@
 
 {% schema %}
 {
-  "name": "t:general.new_arrivals",
+  "name": "t:general.product_deck",
   "settings": [
     {
       "type": "header",
@@ -1153,7 +1154,7 @@
   ],
   "presets": [
     {
-      "name": "t:general.new_arrivals"
+      "name": "t:general.product_deck"
     }
   ]
 }

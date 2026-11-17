@@ -736,7 +736,7 @@
     },
     "product_deck_rxUqxi": {
       "type": "product-deck",
-      "name": "t:general.new_arrivals",
+      "name": "t:general.product_deck",
       "settings": {
         "eyebrow": "Just landed",
         "heading": "New <em>Arrivals</em>",
