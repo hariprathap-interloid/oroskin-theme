@@ -1,8 +1,9 @@
 {% doc %}
-  One card of the Blog stories mosaic: the article's image (or a custom image), its category (the
+  One card of the Blog stories section: the article's image (or a custom image), its category (the
   article's first tag, or a custom category) and its title, all one link to the article. The pill and
   the excerpt are output on every card; the section's CSS shows them on the featured card only.
-  Without an article: a placeholder card in the theme editor, nothing on the live store.
+  Without an article: a placeholder card when `placeholder` is true (theme editor), else an invisible
+  card that keeps its place when `keep_place` is true, else nothing.
 
   @param {article} [article] - The article to show
   @param {image} [image] - Custom image, replaces the article's image
@@ -10,6 +11,10 @@
   @param {string} [pill_label] - Pill text for the featured card, e.g. "Featured story"
   @param {string} [size] - Card shape: 'featured', 'landscape', 'small' or 'portrait' (default 'small').
     Featured shows the pill, the excerpt and a bigger title
+  @param {string} [sizes] - The image `sizes` attribute, computed by the section from the card's place
+  @param {boolean} [priority] - true for the section's first card when the section is first on the page
+  @param {boolean} [keep_place] - true: without an article, output an empty card that keeps its place
+  @param {boolean} [placeholder] - true: without an article, output a placeholder card (theme editor)
   @param {number} [zoom] - Hover zoom in % (100 = no zoom), default 112
   @param {number} [zoom_x] - Where the zoom heads, % from the left. With zoom_y. Default: the image's
     focal point (set in the image picker), else the centre
@@ -17,7 +22,7 @@
   @param {string} [attributes] - The block's shopify_attributes (theme editor selection)
 
   @example
-  {% render 'story-card', article: story, image: block.settings.image, size: 'featured', attributes: block.shopify_attributes %}
+  {% render 'story-card', article: story, image: block.settings.image, size: 'featured', sizes: '100vw', attributes: block.shopify_attributes %}
 {% enddoc %}
 
 {%- liquid
@@ -46,9 +51,16 @@
   if story_category == blank and article != blank
     assign story_category = article.tags | first
   endif
+
+  # Loading: only the first card may get fetchpriority=high (the image snippet would give it to every
+  # image in section 1); the other cards of a first section still load eager.
+  assign image_loading = ''
+  if priority != true and section.index == 1
+    assign image_loading = 'eager'
+  endif
 -%}
 
-{%- if article != blank or request.design_mode -%}
+{%- if article != blank or placeholder -%}
   <li
     class="blog-stories__card blog-stories__card--{{ card_size }}"
     style="--story-zoom: {{ card_zoom }}; --story-x: {{ card_x }}%; --story-y: {{ card_y }}%;"
@@ -56,7 +68,14 @@
   >
     <div class="blog-stories__media">
       {%- if story_image != blank -%}
-        {% render 'image', image: story_image, alt: '', class: 'image--cover', sizes: '(min-width: 990px) 50vw, 100vw' %}
+        {% render 'image',
+          image: story_image,
+          alt: '',
+          class: 'image--cover',
+          sizes: sizes,
+          priority: priority,
+          loading: image_loading
+        %}
       {%- else -%}
         {{ 'lifestyle-1' | placeholder_svg_tag: 'blog-stories__placeholder' }}
       {%- endif -%}
@@ -85,4 +104,6 @@
       {%- endif -%}
     </div>
   </li>
+{%- elsif keep_place -%}
+  <li class="blog-stories__card blog-stories__card--{{ card_size }} blog-stories__card--empty" aria-hidden="true"></li>
 {%- endif -%}

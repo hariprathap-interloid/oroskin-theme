@@ -1,9 +1,10 @@
 {%- comment -%}
   Blog stories (Figma "Stories of Transformation"): an eyebrow, a heading and a "View journal" link
-  above story cards. With 4 stories on "Automatic": the Figma mosaic (a wide featured story, two
-  stories stacked in the middle, a tall story at the end; Layout "Featured right" mirrors it). Any
-  number of stories can be added; with more than 4, or once a story picks its own Shape, a free grid
-  takes over (see grid_mode below).
+  above story cards. With 4 stories on "Automatic": the Figma mosaic. Large screens: a wide featured
+  story, two stories stacked in the middle, a tall story at the end (Layout "Featured right" mirrors
+  it). Tablets: the featured story full width, two side by side, the fourth full width. Phones (Figma
+  mobile): the featured story full width, then two stacked stories next to the tall one. With more than
+  4 stories, or once a story picks its own Shape, a free grid takes over (see grid_mode below).
 
   Where the stories come from (both work together):
   - Blog: the newest articles of the chosen blog fill the places automatically.
@@ -13,26 +14,88 @@
     work for pinned and automatic stories alike.
   - No blocks at all: the 4 newest blog articles, newest first.
 
-  Highlight colour: the eyebrow, the italic words of the heading and the categories (gold in the
-  Figma; Scheme 1's own accent is the brand red).
+  A place with no article: "Fill empty places" on = the other cards close the gap (the mosaic becomes
+  equal columns); off = the place stays empty. No card at all on the live store = no section.
+
+  Highlight color: the eyebrow, the italic words of the heading and the categories. Empty = the color
+  scheme's "Links and highlights" color (the homepage saves the Figma gold).
 {%- endcomment -%}
 
 {%- liquid
   assign stories_blog = section.settings.blog
   assign scheme_id = section.settings.color_scheme.id | default: 'scheme-1'
+  assign fill_empty = section.settings.fill_empty
 
   # Pinned articles (chosen in a Story block), as "|handle|" marks in one string, so the automatic
   # fill can skip them: contains on "|my-post|" can't match a different post by accident
   assign pinned = '|'
+  assign pinned_count = 0
   for block in section.blocks
     if block.settings.article != blank
       assign pinned = pinned | append: block.settings.article.handle | append: '|'
+      assign pinned_count = pinned_count | plus: 1
     endif
   endfor
-  assign used = '|'
+  # Places = Story blocks, or 4 when there are none.
+  assign place_total = section.blocks.size
+  if place_total == 0
+    assign place_total = 4
+  endif
 
-  # View journal: the link setting, else the chosen blog, else the blog of the first pinned article
-  # (an article URL is /blogs/<blog-handle>/<article-handle>)
+  # The blog's articles that are not pinned, as positions in the blog (newest first). The blog is read
+  # one time here; each place below only takes the next position from this list.
+  assign free_positions = ''
+  if stories_blog != blank
+    for candidate in stories_blog.articles limit: 50
+      assign mark = '|' | append: candidate.handle | append: '|'
+      unless pinned contains mark
+        assign free_positions = free_positions | append: forloop.index0 | append: ','
+      endunless
+    endfor
+  endif
+  assign free_list = free_positions | split: ','
+
+  # The story of each place, decided one time: 'pin' (the block's article), a position in the blog,
+  # or 'none'. Cards = the places that get an article.
+  assign picks = ''
+  assign next_free = 0
+  assign card_count = 0
+  for place in (1..place_total)
+    assign block_index = place | minus: 1
+    assign pick = 'none'
+    if section.blocks[block_index].settings.article != blank
+      assign pick = 'pin'
+    elsif next_free < free_list.size
+      assign pick = free_list[next_free]
+      assign next_free = next_free | plus: 1
+    endif
+    if pick != 'none'
+      assign card_count = card_count | plus: 1
+    endif
+    assign picks = picks | append: pick | append: ','
+  endfor
+  assign pick_list = picks | split: ','
+
+  # Empty places (no article):
+  # - "Fill empty places" on: they are not shown; the other cards close the gap.
+  # - Off: they keep their space (an invisible card; a placeholder in the theme editor).
+  # - No card at all: the theme editor shows a placeholder in every place, the live store no section.
+  # So the editor shows the same layout as the live store.
+  assign keep_place = true
+  if fill_empty
+    assign keep_place = false
+  endif
+  if request.design_mode and card_count == 0
+    assign keep_place = true
+  endif
+  assign column_count = place_total
+  if keep_place == false
+    assign column_count = card_count
+  endif
+
+  # View journal: the link setting, else the chosen blog, else the blog of the first pinned article.
+  # The article URL is cut after the blog handle (/blogs/<blog>/<article> → /blogs/<blog>), so a
+  # language prefix such as /fr stays.
   assign view_all_url = section.settings.link
   if view_all_url == blank and stories_blog != blank
     assign view_all_url = stories_blog.url
@@ -41,7 +104,17 @@
     for block in section.blocks
       if block.settings.article != blank
         assign url_parts = block.settings.article.url | split: '/'
-        assign view_all_url = '/' | append: url_parts[1] | append: '/' | append: url_parts[2]
+        assign previous_part = ''
+        for part in url_parts
+          if part == blank
+            continue
+          endif
+          assign view_all_url = view_all_url | append: '/' | append: part
+          if previous_part == 'blogs'
+            break
+          endif
+          assign previous_part = part
+        endfor
         break
       endif
     endfor
@@ -56,6 +129,8 @@
   # setting). As soon as one block picks its own shape, the grid switches to "custom": a 12-column grid
   # where each card takes its shape's space and the cards pack in order, filling gaps.
   # More than 4 stories don't fit the 4-place mosaic either, so they use the custom grid too.
+  # The mosaic needs 4 places. With fewer (fewer than 4 Story blocks, or empty places that are not
+  # kept), the cards show as equal columns, so the layout has no holes.
   assign grid_mode = section.settings.layout
   if section.blocks.size > 4
     assign grid_mode = 'custom'
@@ -66,65 +141,108 @@
       break
     endif
   endfor
+  if grid_mode != 'custom' and column_count < 4
+    assign grid_mode = 'equal'
+  endif
+
+  # Image sizes: the content width on large screens (Section width), in px; 0 = no limit
+  assign width_cap = 0
+  case section.settings.section_width
+    when 'narrow'
+      assign width_cap = 1200
+    when 'wide'
+      assign width_cap = settings.max_page_width | remove: 'rem' | times: 16 | round
+  endcase
+  assign equal_columns = column_count | at_least: 1
+  assign equal_share = 100 | divided_by: equal_columns
+  assign priority_done = false
+  assign first_card_done = false
 -%}
 
-<div
-  class="blog-stories full-width section-width--{{ section.settings.section_width | default: 'wide' }} color-{{ scheme_id }}"
-  style="--color-accent: {{ section.settings.highlight_color }}; --section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
->
-  <div class="blog-stories__inner">
-    <div class="blog-stories__header">
-      <div class="blog-stories__titles">
-        {%- if section.settings.eyebrow != blank -%}
-          <p class="eyebrow blog-stories__eyebrow">{{ section.settings.eyebrow | escape }}</p>
-        {%- endif -%}
-        {%- if section.settings.heading != blank -%}
-          <h2 class="blog-stories__heading">{{ section.settings.heading }}</h2>
+{%- if card_count > 0 or request.design_mode -%}
+  <div
+    class="blog-stories full-width section-width--{{ section.settings.section_width | default: 'wide' }} color-{{ scheme_id }}"
+    style="{% if section.settings.highlight_color != blank %}--color-accent: {{ section.settings.highlight_color }}; {% endif %}--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
+  >
+    <div class="blog-stories__inner">
+      <div class="blog-stories__header">
+        <div class="blog-stories__titles">
+          {%- if section.settings.eyebrow != blank -%}
+            <p class="eyebrow blog-stories__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+          {%- endif -%}
+          {%- if section.settings.heading != blank -%}
+            <h2 class="blog-stories__heading">{{ section.settings.heading }}</h2>
+          {%- endif -%}
+        </div>
+        {%- if section.settings.link_label != blank and view_all_url != blank -%}
+          <a class="button button--text blog-stories__view-all" href="{{ view_all_url }}">
+            {{- section.settings.link_label | escape -}}
+            <span class="blog-stories__arrow" aria-hidden="true">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+          </a>
         {%- endif -%}
       </div>
-      {%- if section.settings.link_label != blank and view_all_url != blank -%}
-        <a class="button button--text blog-stories__view-all" href="{{ view_all_url }}">
-          {{- section.settings.link_label | escape -}}
-          <span class="blog-stories__arrow" aria-hidden="true">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
-        </a>
-      {%- endif -%}
-    </div>
 
-    <animate-on-scroll>
-      <ul
-        class="blog-stories__grid blog-stories__grid--{{ grid_mode }}"
-        role="list"
-        {% if animation != 'none' %}
-          data-animate="{{ animation }}"
-        {% endif %}
-      >
-        {%- if section.blocks.size > 0 -%}
-          {%- for block in section.blocks -%}
+      <animate-on-scroll>
+        <ul
+          class="blog-stories__grid blog-stories__grid--{{ grid_mode }}"
+          role="list"
+          {% if grid_mode == 'equal' %}
+            style="--cards: {{ equal_columns }};"
+          {% endif %}
+          {% if animation != 'none' %}
+            data-animate="{{ animation }}"
+          {% endif %}
+        >
+          {%- for place in (1..place_total) -%}
             {%- liquid
-              # Pinned article, or else the next newest blog article that isn't pinned or already shown
-              assign story = block.settings.article
-              if story == blank and stories_blog != blank
-                for candidate in stories_blog.articles limit: 50
-                  assign mark = '|' | append: candidate.handle | append: '|'
-                  if pinned contains mark or used contains mark
-                    continue
-                  endif
-                  assign story = candidate
-                  break
-                endfor
+              assign block_index = place | minus: 1
+              assign block = section.blocks[block_index]
+
+              # The story picked for this place above: the pinned article, or the blog article at the
+              # picked position (offset + limit 1 reads that one article only)
+              assign pick = pick_list[block_index]
+              assign story = nil
+              case pick
+                when 'pin'
+                  assign story = block.settings.article
+                when 'none'
+                  assign story = nil
+                else
+                  assign pick_position = pick | plus: 0
+                  for candidate in stories_blog.articles offset: pick_position limit: 1
+                    assign story = candidate
+                  endfor
+              endcase
+
+              # An empty place: skipped, or kept (invisible on the live store, a placeholder in the editor)
+              if story == blank and keep_place == false
+                continue
               endif
-              if story != blank
-                assign used = used | append: story.handle | append: '|'
+              assign show_placeholder = false
+              if story == blank and request.design_mode
+                assign show_placeholder = true
+              endif
+
+              # Pill: the block's own text; with no blocks, "Featured story" on the first card
+              assign pill = block.settings.pill_label
+              if section.blocks.size == 0 and place == 1
+                assign pill = 'sections.blog_stories.featured' | t
               endif
 
               # "Automatic" shape. In the mosaic: 1 featured, 4 portrait, the others small (the mosaic
               # CSS places them). In the custom grid: the repeating pattern Featured, Small, Portrait,
               # Small, which packs into the same mosaic band every 4 stories, so 8 or 12 stories still
-              # look designed.
+              # look designed. In equal columns: the first card shown is featured (pill, excerpt, an H2
+              # title, see the CSS), the others small, so the cards in the row look the same.
               assign card_size = block.settings.size
               if card_size == blank or card_size == 'auto'
-                if grid_mode == 'custom'
-                  assign pattern_place = forloop.index0 | modulo: 4
+                if grid_mode == 'equal'
+                  assign card_size = 'small'
+                  if first_card_done == false
+                    assign card_size = 'featured'
+                  endif
+                elsif grid_mode == 'custom'
+                  assign pattern_place = block_index | modulo: 4
                   case pattern_place
                     when 0
                       assign card_size = 'featured'
@@ -134,7 +252,7 @@
                       assign card_size = 'small'
                   endcase
                 else
-                  case forloop.index
+                  case place
                     when 1
                       assign card_size = 'featured'
                     when 4
@@ -144,6 +262,63 @@
                   endcase
                 endif
               endif
+
+              # Image width in % of the screen: large (≥ 1200px) / tablets / phones, from the card's
+              # place in the layout (the CSS below)
+              case grid_mode
+                when 'equal'
+                  assign share_large = equal_share
+                  assign share_tablet = equal_share
+                  assign share_phone = 100
+                when 'custom'
+                  case card_size
+                    when 'featured'
+                      assign share_large = 50
+                      assign share_tablet = 50
+                      assign share_phone = 100
+                    when 'landscape'
+                      assign share_large = 50
+                      assign share_tablet = 100
+                      assign share_phone = 100
+                    else
+                      assign share_large = 25
+                      assign share_tablet = 50
+                      assign share_phone = 50
+                  endcase
+                else
+                  case place
+                    when 1
+                      assign share_large = 53
+                      assign share_tablet = 100
+                      assign share_phone = 100
+                    when 4
+                      assign share_large = 22
+                      assign share_tablet = 100
+                      assign share_phone = 45
+                    else
+                      assign share_large = 27
+                      assign share_tablet = 50
+                      assign share_phone = 56
+                  endcase
+              endcase
+              if width_cap > 0
+                assign cap_px = width_cap | times: share_large | divided_by: 100
+                assign large_size = 'min(' | append: share_large | append: 'vw, ' | append: cap_px | append: 'px)'
+              else
+                assign large_size = share_large | append: 'vw'
+              endif
+              assign card_sizes = '(min-width: 1200px) ' | append: large_size | append: ', (min-width: 750px) ' | append: share_tablet | append: 'vw, ' | append: share_phone | append: 'vw'
+
+              # fetchpriority=high: only the first card with a photo (custom image or article image),
+              # only in the first section
+              assign card_priority = false
+              if section.index == 1 and priority_done == false
+                if block.settings.image != blank or story.image != blank
+                  assign card_priority = true
+                  assign priority_done = true
+                endif
+              endif
+              assign first_card_done = true
 
               # Zoom point in % (x, y): one of the 9 arrow positions, or blank = the image's focal point
               assign zoom_x = blank
@@ -182,33 +357,23 @@
               article: story,
               image: block.settings.image,
               category: block.settings.category,
-              pill_label: block.settings.pill_label,
+              pill_label: pill,
               size: card_size,
+              sizes: card_sizes,
+              priority: card_priority,
+              keep_place: keep_place,
+              placeholder: show_placeholder,
               zoom: block.settings.zoom,
               zoom_x: zoom_x,
               zoom_y: zoom_y,
               attributes: block.shopify_attributes
             %}
           {%- endfor -%}
-        {%- else -%}
-          {%- for story in stories_blog.articles limit: 4 -%}
-            {%- liquid
-              assign pill = ''
-              assign card_size = 'small'
-              if forloop.first
-                assign pill = 'sections.blog_stories.featured' | t
-                assign card_size = 'featured'
-              elsif forloop.index == 4
-                assign card_size = 'portrait'
-              endif
-            -%}
-            {% render 'story-card', article: story, pill_label: pill, size: card_size %}
-          {%- endfor -%}
-        {%- endif -%}
-      </ul>
-    </animate-on-scroll>
+        </ul>
+      </animate-on-scroll>
+    </div>
   </div>
-</div>
+{%- endif -%}
 
 {% stylesheet %}
   .blog-stories {
@@ -249,7 +414,7 @@
     font-size: var(--font-size-display);
   }
 
-  /* "*Stories of* Transformation": italic words in the highlight colour, not slanted */
+  /* "*Stories of* Transformation": italic words in the highlight color, not slanted */
   .blog-stories__heading em {
     color: var(--color-accent);
     font-style: normal;
@@ -267,11 +432,6 @@
     block-size: auto;
   }
 
-  /*
-    Mosaic (Figma, 1920px): columns about 10 : 5 : 4, two equal rows.
-    Card 1 (featured) = the wide left column, both rows; cards 2 and 3 = middle column, one row each;
-    card 4 = right column, both rows. Tablets: 2 columns; phones: one card per row.
-  */
   .blog-stories__grid {
     display: grid;
     gap: var(--space-lg);
@@ -292,13 +452,118 @@
     color: #ffffff;
   }
 
-  @media (min-width: 750px) {
+  /* "Fill empty places" off: a place with no article keeps its space in the layout */
+  .blog-stories__card--empty {
+    visibility: hidden;
+  }
+
+  /*
+    Phones (Figma mobile): the featured card full width, then two stacked cards next to the tall card
+    (Featured right: the tall card on the left). Columns about 5 : 4. Custom shapes: 2 columns.
+  */
+  @media (max-width: 749px) {
+    /*
+      Figma mobile: the eyebrow on its own line, then the heading with the link next to its last line.
+      The titles box is skipped (display: contents) so the eyebrow can take the full width.
+    */
+    .blog-stories__header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: end;
+    }
+
+    .blog-stories__titles {
+      display: contents;
+    }
+
+    .blog-stories__eyebrow {
+      grid-column: 1 / -1;
+    }
+
+    /* The 50px corners of large cards make the short phone cards look like pills */
+    .blog-stories__card {
+      border-radius: var(--radius-sm);
+    }
+
+    .blog-stories__heading {
+      font-size: clamp(1.5rem, 1rem + 2.5vw, 2.5rem);
+    }
+
+    .blog-stories__view-all {
+      flex: none;
+    }
+
+    .blog-stories__grid {
+      gap: var(--space-sm);
+    }
+
+    .blog-stories__grid--featured-left {
+      grid-template-columns: 5fr 4fr;
+    }
+
+    .blog-stories__grid--featured-right {
+      grid-template-columns: 4fr 5fr;
+    }
+
+    :is(.blog-stories__grid--featured-left, .blog-stories__grid--featured-right) {
+      grid-template-rows: auto repeat(2, minmax(6.5rem, auto));
+    }
+
+    .blog-stories__grid--custom {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-auto-rows: minmax(6.5rem, auto);
+      grid-auto-flow: row dense;
+    }
+
+    :is(.blog-stories__grid--featured-left, .blog-stories__grid--featured-right, .blog-stories__grid--custom) .blog-stories__card {
+      min-block-size: 0;
+    }
+
+    :is(.blog-stories__grid--featured-left, .blog-stories__grid--featured-right) .blog-stories__card:nth-child(1),
+    .blog-stories__grid--custom .blog-stories__card--featured {
+      grid-column: 1 / -1;
+      min-block-size: 15rem;
+    }
+
+    .blog-stories__grid--featured-left .blog-stories__card:nth-child(2) { grid-area: 2 / 1; }
+    .blog-stories__grid--featured-left .blog-stories__card:nth-child(3) { grid-area: 3 / 1; }
+    .blog-stories__grid--featured-left .blog-stories__card:nth-child(4) { grid-area: 2 / 2 / 4 / 3; }
+    .blog-stories__grid--featured-right .blog-stories__card:nth-child(2) { grid-area: 2 / 2; }
+    .blog-stories__grid--featured-right .blog-stories__card:nth-child(3) { grid-area: 3 / 2; }
+    .blog-stories__grid--featured-right .blog-stories__card:nth-child(4) { grid-area: 2 / 1 / 4 / 2; }
+
+    .blog-stories__grid--custom .blog-stories__card--landscape { grid-column: 1 / -1; }
+    .blog-stories__grid--custom .blog-stories__card--portrait { grid-row: span 2; }
+
+    /* The small and tall cards on phones: less padding, smaller text (not Featured, not Landscape) */
+    :is(.blog-stories__grid--featured-left, .blog-stories__grid--featured-right, .blog-stories__grid--custom) .blog-stories__card:not(.blog-stories__card--featured, .blog-stories__card--landscape) .blog-stories__text {
+      gap: 0.25rem;
+      padding: 0.75rem 0.875rem;
+    }
+
+    :is(.blog-stories__grid--featured-left, .blog-stories__grid--featured-right, .blog-stories__grid--custom) .blog-stories__card:not(.blog-stories__card--featured, .blog-stories__card--landscape) .blog-stories__category {
+      font-size: 0.625rem;
+    }
+
+    :is(.blog-stories__grid--featured-left, .blog-stories__grid--featured-right, .blog-stories__grid--custom) .blog-stories__card:not(.blog-stories__card--featured, .blog-stories__card--landscape) .blog-stories__title {
+      font-size: 1rem;
+    }
+
+  }
+
+  /* Tablets: the featured card full width, cards 2 and 3 side by side, card 4 full width */
+  @media (min-width: 750px) and (max-width: 1199px) {
     .blog-stories__grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .blog-stories__card--featured {
-      grid-row: span 2;
+    :is(.blog-stories__grid--featured-left, .blog-stories__grid--featured-right) .blog-stories__card:nth-child(1) {
+      grid-column: 1 / -1;
+      min-block-size: 24rem;
+    }
+
+    :is(.blog-stories__grid--featured-left, .blog-stories__grid--featured-right) .blog-stories__card:nth-child(4) {
+      grid-column: 1 / -1;
     }
 
     /* Custom shapes on tablets: two columns, cards pack in order and fill gaps */
@@ -310,12 +575,17 @@
       grid-column: span 2;
     }
 
-    .blog-stories__grid--custom .blog-stories__card--portrait {
+    .blog-stories__grid--custom :is(.blog-stories__card--featured, .blog-stories__card--portrait) {
       grid-row: span 2;
     }
   }
 
-  @media (min-width: 990px) {
+  /*
+    Large screens: the mosaic (Figma, 1920px): columns about 10 : 5 : 4, two equal rows.
+    Card 1 (featured) = the wide left column, both rows; cards 2 and 3 = middle column, one row each;
+    card 4 = right column, both rows.
+  */
+  @media (min-width: 1200px) {
     .blog-stories__grid {
       /*
         Each row is at least 15-24rem (growing with the screen) and grows further if a card's text needs
@@ -324,11 +594,11 @@
       grid-template-rows: repeat(2, minmax(clamp(15rem, 17vw, 24rem), auto));
     }
 
-    /* Featured left (Figma): wide featured | 2 stacked | tall */
     .blog-stories__card {
       min-block-size: 0;
     }
 
+    /* Featured left (Figma): wide featured | 2 stacked | tall */
     .blog-stories__grid--featured-left {
       grid-template-columns: 10fr 5fr 4fr;
     }
@@ -362,9 +632,17 @@
     }
 
     .blog-stories__grid--custom .blog-stories__card--featured { grid-column: span 6; grid-row: span 2; }
-    .blog-stories__grid--custom .blog-stories__card--landscape { grid-column: span 6; grid-row: auto; }
-    .blog-stories__grid--custom .blog-stories__card--small { grid-column: span 3; grid-row: auto; }
+    .blog-stories__grid--custom .blog-stories__card--landscape { grid-column: span 6; }
+    .blog-stories__grid--custom .blog-stories__card--small { grid-column: span 3; }
     .blog-stories__grid--custom .blog-stories__card--portrait { grid-column: span 3; grid-row: span 2; }
+  }
+
+  /* Equal columns ("Fill empty places" with fewer than 4 cards): one row from tablets up */
+  @media (min-width: 750px) {
+    .blog-stories__grid--equal {
+      grid-template-columns: repeat(var(--cards, 1), minmax(0, 1fr));
+      grid-template-rows: minmax(clamp(18rem, 26vw, 30rem), auto);
+    }
   }
 
   /* Photo fills the card; a dark fade from the bottom keeps the white text readable */
@@ -381,18 +659,26 @@
   }
 
   /*
-    Hover (Figma hover state): the photo slowly zooms in (Story block "Hover zoom", 112% by default;
+    Hover (Figma hover state): the photo slowly zooms in (Story block "Zoom amount", 112% by default;
     100% = none) towards its zoom point: the block's own position, else the image's focal point set in
-    the image picker, else the centre. The text stays still.
+    the image picker, else the centre. The text stays still. Only on screens with a real pointer (a tap
+    must not leave the zoom on) and without reduced motion; keyboard focus zooms the same way.
   */
   .blog-stories__media img {
     transform-origin: var(--story-x, 50%) var(--story-y, 50%);
     transition: transform 0.9s var(--ease-out);
   }
 
-  .blog-stories__card:hover .blog-stories__media img,
-  .blog-stories__card:has(.blog-stories__link:focus-visible) .blog-stories__media img {
-    transform: scale(var(--story-zoom, 1.12));
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .blog-stories__card:hover .blog-stories__media img {
+      transform: scale(var(--story-zoom, 1.12));
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .blog-stories__card:has(.blog-stories__link:focus-visible) .blog-stories__media img {
+      transform: scale(var(--story-zoom, 1.12));
+    }
   }
 
   .blog-stories__media::after {
@@ -462,6 +748,24 @@
     font-size: var(--font-size-body);
   }
 
+  /*
+    Featured title H2 in equal columns (the card is narrower) and on phones; smaller excerpt on phones.
+    These rules come after the base rules above (same specificity: the later rule wins).
+  */
+  .blog-stories__grid--equal .blog-stories__card--featured .blog-stories__title {
+    font-size: var(--font-size-h2);
+  }
+
+  @media (max-width: 749px) {
+    .blog-stories__card--featured .blog-stories__title {
+      font-size: var(--font-size-h2);
+    }
+
+    .blog-stories__excerpt {
+      font-size: var(--font-size-body-sm);
+    }
+  }
+
   /* The title's link covers the whole card: one click target, one tab stop per story */
   .blog-stories__link {
     color: inherit;
@@ -474,13 +778,19 @@
     inset: 0;
   }
 
-  .blog-stories__link:focus-visible {
-    outline: none;
-  }
+  /*
+    Focus ring on the whole card, in the scheme accent (Highlight color if set). Only with :has();
+    other browsers keep the link's own ring, so a keyboard user always sees where the focus is.
+  */
+  @supports selector(:has(*)) {
+    .blog-stories__link:focus-visible {
+      outline: none;
+    }
 
-  .blog-stories__card:has(.blog-stories__link:focus-visible) {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 4px;
+    .blog-stories__card:has(.blog-stories__link:focus-visible) {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 4px;
+    }
   }
 
   /*
@@ -547,12 +857,6 @@
     box-shadow: 0 0 0 1px #00000059, 0 2px 8px #00000066;
     translate: -50% -50%;
   }
-
-  @media (prefers-reduced-motion: reduce) {
-    .blog-stories__card:hover .blog-stories__media img {
-      transform: none;
-    }
-  }
 {% endstylesheet %}
 
 {% javascript %}
@@ -561,6 +865,8 @@
    * point (class is-zoom-preview), so Zoom amount / Zoom towards can be judged without hovering.
    * The editor sends shopify:block:select / shopify:block:deselect to the block's element (the card,
    * which carries block.shopify_attributes), including after a setting change re-renders the section.
+   * The listeners sit on document and are added one time (the flag), so a re-rendered or moved section
+   * adds nothing: no AbortController is needed.
    */
   if (window.Shopify?.designMode && !window.oroskinStoryPreview) {
     window.oroskinStoryPreview = true;
@@ -578,6 +884,10 @@
   "name": "t:general.blog_stories",
   "settings": [
     {
+      "type": "header",
+      "content": "t:labels.content"
+    },
+    {
       "type": "text",
       "id": "eyebrow",
       "label": "t:labels.eyebrow",
@@ -587,7 +897,7 @@
       "type": "inline_richtext",
       "id": "heading",
       "label": "t:labels.heading",
-      "info": "t:labels.trending_heading_info",
+      "info": "t:labels.stories_heading_info",
       "default": "<em>Stories of</em> Transformation"
     },
     {
@@ -603,10 +913,18 @@
       "info": "t:labels.blog_stories_link_info"
     },
     {
+      "type": "header",
+      "content": "t:labels.stories"
+    },
+    {
       "type": "blog",
       "id": "blog",
       "label": "t:labels.blog",
       "info": "t:labels.blog_stories_blog_info"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.layout"
     },
     {
       "type": "select",
@@ -622,11 +940,8 @@
           "label": "t:options.stories_layout.featured_right"
         }
       ],
-      "default": "featured-left"
-    },
-    {
-      "type": "header",
-      "content": "t:labels.style"
+      "default": "featured-left",
+      "info": "t:labels.stories_layout_info"
     },
     {
       "type": "select",
@@ -654,16 +969,15 @@
       "default": "wide"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-1"
+      "type": "checkbox",
+      "id": "fill_empty",
+      "label": "t:labels.stories_fill_empty",
+      "info": "t:labels.stories_fill_empty_info",
+      "default": true
     },
     {
-      "type": "color",
-      "id": "highlight_color",
-      "label": "t:labels.highlight_color",
-      "default": "#c8a24b"
+      "type": "header",
+      "content": "t:labels.animation_header"
     },
     {
       "type": "select",
@@ -703,6 +1017,10 @@
       "default": "fade-up"
     },
     {
+      "type": "header",
+      "content": "t:labels.spacing"
+    },
+    {
       "type": "range",
       "id": "padding_top",
       "label": "t:labels.padding_top",
@@ -721,6 +1039,22 @@
       "step": 8,
       "unit": "px",
       "default": 96
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "color",
+      "id": "highlight_color",
+      "label": "t:labels.highlight_color",
+      "info": "t:labels.stories_highlight_color_info"
     }
   ],
   "presets": [
@@ -734,22 +1068,13 @@
           }
         },
         {
-          "type": "story",
-          "settings": {
-            "pill_label": ""
-          }
+          "type": "story"
         },
         {
-          "type": "story",
-          "settings": {
-            "pill_label": ""
-          }
+          "type": "story"
         },
         {
-          "type": "story",
-          "settings": {
-            "pill_label": ""
-          }
+          "type": "story"
         }
       ]
     }
@@ -759,6 +1084,10 @@
       "type": "story",
       "name": "t:general.story",
       "settings": [
+        {
+          "type": "header",
+          "content": "t:labels.content"
+        },
         {
           "type": "article",
           "id": "article",
@@ -781,8 +1110,7 @@
           "type": "text",
           "id": "pill_label",
           "label": "t:labels.pill_label",
-          "info": "t:labels.pill_label_info",
-          "default": "Featured story"
+          "info": "t:labels.pill_label_info"
         },
         {
           "type": "header",
@@ -794,11 +1122,26 @@
           "label": "t:labels.story_size",
           "info": "t:labels.story_size_info",
           "options": [
-            { "value": "auto", "label": "t:options.story_size.auto" },
-            { "value": "featured", "label": "t:options.story_size.featured" },
-            { "value": "landscape", "label": "t:options.story_size.landscape" },
-            { "value": "small", "label": "t:options.story_size.small" },
-            { "value": "portrait", "label": "t:options.story_size.portrait" }
+            {
+              "value": "auto",
+              "label": "t:options.story_size.auto"
+            },
+            {
+              "value": "featured",
+              "label": "t:options.story_size.featured"
+            },
+            {
+              "value": "landscape",
+              "label": "t:options.story_size.landscape"
+            },
+            {
+              "value": "small",
+              "label": "t:options.story_size.small"
+            },
+            {
+              "value": "portrait",
+              "label": "t:options.story_size.portrait"
+            }
           ],
           "default": "auto"
         },
@@ -823,18 +1166,49 @@
           "label": "t:labels.story_zoom_point",
           "info": "t:labels.story_zoom_point_info",
           "options": [
-            { "value": "focal", "label": "t:options.story_zoom_point.focal" },
-            { "value": "top-left", "label": "t:options.story_zoom_point.top_left" },
-            { "value": "top", "label": "t:options.story_zoom_point.top" },
-            { "value": "top-right", "label": "t:options.story_zoom_point.top_right" },
-            { "value": "left", "label": "t:options.story_zoom_point.left" },
-            { "value": "center", "label": "t:options.story_zoom_point.center" },
-            { "value": "right", "label": "t:options.story_zoom_point.right" },
-            { "value": "bottom-left", "label": "t:options.story_zoom_point.bottom_left" },
-            { "value": "bottom", "label": "t:options.story_zoom_point.bottom" },
-            { "value": "bottom-right", "label": "t:options.story_zoom_point.bottom_right" }
+            {
+              "value": "focal",
+              "label": "t:options.story_zoom_point.focal"
+            },
+            {
+              "value": "top-left",
+              "label": "t:options.story_zoom_point.top_left"
+            },
+            {
+              "value": "top",
+              "label": "t:options.story_zoom_point.top"
+            },
+            {
+              "value": "top-right",
+              "label": "t:options.story_zoom_point.top_right"
+            },
+            {
+              "value": "left",
+              "label": "t:options.story_zoom_point.left"
+            },
+            {
+              "value": "center",
+              "label": "t:options.story_zoom_point.center"
+            },
+            {
+              "value": "right",
+              "label": "t:options.story_zoom_point.right"
+            },
+            {
+              "value": "bottom-left",
+              "label": "t:options.story_zoom_point.bottom_left"
+            },
+            {
+              "value": "bottom",
+              "label": "t:options.story_zoom_point.bottom"
+            },
+            {
+              "value": "bottom-right",
+              "label": "t:options.story_zoom_point.bottom_right"
+            }
           ],
-          "default": "focal"
+          "default": "focal",
+          "visible_if": "{{ block.settings.zoom > 100 }}"
         }
       ]
     }
