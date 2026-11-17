@@ -74,7 +74,7 @@
 
 <product-panels
   class="product-panels full-width section-width--{{ section.settings.section_width | default: 'wide' }} color-{{ scheme_id }} product-panels--mobile-{{ section.settings.mobile_layout | default: 'grid' }}{% if section.settings.fill_screen %} product-panels--fill{% endif %}"
-  style="{% if section.settings.highlight_color != blank %}--color-accent: {{ section.settings.highlight_color }}; {% endif %}--panels-height: {{ section.settings.panel_height }}; --panels-card-radius: {{ section.settings.card_radius }}px; --panels-cart-overlay: {{ section.settings.cart_overlay }}%; --panels-mobile-scale: {{ section.settings.mobile_height | divided_by: 100.0 }}; --section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
+  style="{% if section.settings.highlight_color != blank %}--color-accent: {{ section.settings.highlight_color }}; {% endif %}--panels-height: {{ section.settings.panel_height }}; --panels-card-radius: {{ section.settings.card_radius }}px; --panels-mobile-scale: {{ section.settings.mobile_height | divided_by: 100.0 }}; --section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
 >
   <div class="product-panels__inner">
     <div class="product-panels__header">
@@ -126,7 +126,7 @@
               </div>
               <span class="product-panels__number" aria-hidden="true">{{ number }}</span>
 
-              {% render 'quick-add', product: product, class: 'product-panels__cart', size: section.settings.cart_size, icon_color: section.settings.cart_icon_color, options: section.settings.cart_options %}
+              {% render 'quick-add', product: product, class: 'product-panels__cart', size: section.settings.cart_size, icon_color: section.settings.cart_icon_color, options: section.settings.cart_options, overlay: section.settings.cart_overlay %}
 
               <div class="product-panels__card">
                 <h3 class="product-panels__title">
@@ -400,8 +400,7 @@
     line-height: 1;
   }
 
-  /* Round glass cart button, top right of the open strip */
-  /* The quick add button (snippets/quick-add.liquid): 9px from the open strip's top-right corner */
+  /* Round glass cart button (snippets/quick-add.liquid): 9px from the open strip's top-right corner */
   .product-panels__cart {
     position: absolute;
     inset-block-start: 0.5625rem;
@@ -409,27 +408,7 @@
     z-index: 2;
   }
 
-  /*
-    Overlay behind the cart button only: the glass button is white at 25%, so on a white photo it
-    disappears. A soft dark circle, twice the button's size, fades out from its middle and gives the
-    button something to stand on. The rest of the photo stays untouched. Its strength is the
-    "Overlay behind the button" setting (0 = off). The cart (position + z-index) is its own stacking
-    layer, so z-index -1 puts the circle behind the button but still above the photo. It fades in and
-    out with the button (same element).
-  */
-  .product-panels__cart::before {
-    content: "";
-    position: absolute;
-    inset: -50%;
-    z-index: -1;
-    border-radius: 50%;
-    background: radial-gradient(
-      closest-side,
-      color-mix(in srgb, #000000 var(--panels-cart-overlay, 10%), transparent),
-      transparent
-    );
-    pointer-events: none;
-  }
+  /* The overlay behind the button ("Overlay behind the button") is drawn by the quick-add snippet */
 
   /*
     Glass card, bottom left of the open strip: title, short text, price. On closed strips it is
@@ -453,6 +432,8 @@
     backdrop-filter: blur(var(--glass-frost)) saturate(1.2);
     box-shadow: var(--glass-rim);
     text-shadow: 0 1px 2px #00000033;
+    /* The card must not take the stretched link's place: clicks fall through to it (its own links: below) */
+    pointer-events: none;
   }
 
   .product-panels__card,
@@ -559,11 +540,6 @@
   .product-panels__item:has(.product-panels__link:focus-visible) {
     outline: 2px solid var(--color-accent);
     outline-offset: -2px;
-  }
-
-  /* The card itself must not take the stretched link's place: let clicks fall through to it */
-  .product-panels__card {
-    pointer-events: none;
   }
 
   .product-panels__card a {

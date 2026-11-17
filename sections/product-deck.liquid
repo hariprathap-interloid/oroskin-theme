@@ -9,7 +9,9 @@
 
   Short text = the product's Subtitle field (custom.subtitle), else the first words of its description
   (as in Editor's Picks). Without JavaScript, with reduced motion or with animations off: the fan is
-  open and the first card is active. Phones: the same deck, smaller, the cards overlapping more.
+  open and the first card is active. Below 1200px the cards sit in rows (Figma mobile: tilted cards,
+  3 per row on tablets, 2 on phones, a lone last card centred). The cart button and details card show
+  on the open card only, at every width.
 {%- endcomment -%}
 
 {%- liquid
@@ -35,11 +37,29 @@
   if section.index == 1 or settings.animations_enabled == false
     assign fan = false
   endif
+
+  # Image sizes follow the card width per screen. Large screens: about 22% of the row x Card width,
+  # +12% for the open card, but never more than the 40rem card limit (x 1.12 = ~720px) or, with
+  # Section width Narrow, 25% of its 1200px row x Card width. Below 1200px (rows): a column (phones
+  # 1/2, tablets 1/3).
+  assign card_scale = section.settings.card_size | default: 100
+  assign large_vw = card_scale | times: 25 | divided_by: 100 | at_most: 45
+  assign large_cap = 720
+  if section.settings.section_width == 'narrow'
+    assign large_cap = card_scale | times: 12 | at_most: 720
+  endif
+  capture image_sizes
+    echo '(min-width: 1200px) min(' | append: large_vw | append: 'vw, ' | append: large_cap | append: 'px), (min-width: 750px) 36vw, 54vw'
+  endcapture
+
+  # Rows below 1200px: the number of rows with 2 per row (phones) and 3 per row (tablets)
+  assign rows_2 = count | plus: 1 | divided_by: 2
+  assign rows_3 = count | plus: 2 | divided_by: 3
 -%}
 
 <product-deck
   class="product-deck full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
-  style="--half: {{ middle }}; --card-ratio: {{ section.settings.card_height | divided_by: 100.0 }}; --card-scale: {{ section.settings.card_size | default: 100 | divided_by: 100.0 }}; --color-accent: {{ section.settings.highlight_color }}; --section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
+  style="{% if section.settings.highlight_color != blank %}--color-accent: {{ section.settings.highlight_color }}; {% endif %}--half: {{ middle }}; --rows-2: {{ rows_2 }}; --rows-3: {{ rows_3 }}; --card-ratio: {{ section.settings.card_height | divided_by: 100.0 }}; --card-scale: {{ card_scale | divided_by: 100.0 }}; --section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
   {% if fan %}
     data-fan
     data-fan-style="{{ section.settings.fan_style }}"
@@ -71,10 +91,44 @@
             if deck != blank and deck.products_count > 0
               assign product = deck.products[index]
             endif
+
+            # Fan: one stack from left to right, the leftmost card on top (10 + count - 1 ... 10)
+            assign z = count | minus: index | plus: 9
+
+            # Rows (below 1200px), for 2 and 3 cards per row: the card's row, and its offset from the
+            # middle of its row in columns (2 per row: -0.5 / 0.5; 3: -1 / 0 / 1). A row that is not full
+            # is centred, so a 7th card alone in its row gets 0. The last row is marked, because its
+            # details card opens upwards (no room below the list).
+            # 2 per row: column (0 / 1), row, cards in this row, offset = column - (cards in row - 1) / 2
+            assign row_2 = index | divided_by: 2
+            assign col_2 = index | modulo: 2
+            assign in_row_2 = row_2 | times: -2 | plus: count | at_most: 2
+            assign half_2 = in_row_2 | minus: 1 | divided_by: 2.0
+            assign gx_2 = col_2 | minus: half_2
+
+            # 3 per row: the same
+            assign row_3 = index | divided_by: 3
+            assign col_3 = index | modulo: 3
+            assign in_row_3 = row_3 | times: -3 | plus: count | at_most: 3
+            assign half_3 = in_row_3 | minus: 1 | divided_by: 2.0
+            assign gx_3 = col_3 | minus: half_3
+
+            assign last_row_2 = rows_2 | minus: 1
+            assign last_row_3 = rows_3 | minus: 1
+            assign last_row = ''
+            if row_2 == last_row_2
+              assign last_row = last_row | append: ' 2'
+            endif
+            if row_3 == last_row_3
+              assign last_row = last_row | append: ' 3'
+            endif
           -%}
           <li
             class="product-deck__card{% if index == start %} is-active{% endif %}"
-            style="--o: {{ offset }}; --d: {{ distance }};"
+            style="--i: {{ index }}; --o: {{ offset }}; --d: {{ distance }}; --z: {{ z }}; --row-2: {{ row_2 }}; --gx-2: {{ gx_2 }}; --row-3: {{ row_3 }}; --gx-3: {{ gx_3 }};"
+            {% if last_row != blank %}
+              data-last-row="{{ last_row | strip }}"
+            {% endif %}
             data-card
           >
             <div class="product-deck__media">
@@ -83,7 +137,7 @@
                   image: product.featured_media.preview_image,
                   alt: '',
                   class: 'image--cover',
-                  sizes: '(min-width: 990px) 28vw, 70vw'
+                  sizes: image_sizes
                 %}
               {%- else -%}
                 {{ 'product-1' | placeholder_svg_tag: 'product-deck__placeholder' }}
@@ -96,7 +150,8 @@
 
             {%- comment -%}
               Covers the photo: a tap picks the card, and Tab stops here first, so a keyboard reaches every
-              card (focus picks it), then the active card's cart button and links.
+              card (focus picks it), then the active card's cart button and links. aria-current marks the
+              open card's button (it does not toggle: picking the open card again does nothing).
             {%- endcomment -%}
             {%- liquid
               assign pick_title = 'products.card.placeholder_title' | t
@@ -108,11 +163,14 @@
               class="product-deck__pick"
               type="button"
               aria-label="{{ 'products.deck.show' | t: title: pick_title }}"
+              {% if index == start %}
+                aria-current="true"
+              {% endif %}
               data-pick
             ></button>
 
             {%- if product != blank -%}
-              {% render 'quick-add', product: product, class: 'product-deck__cart', size: section.settings.cart_size, icon_color: section.settings.cart_icon_color, options: section.settings.cart_options %}
+              {% render 'quick-add', product: product, class: 'product-deck__cart', size: section.settings.cart_size, icon_color: section.settings.cart_icon_color, options: section.settings.cart_options, overlay: section.settings.cart_overlay %}
             {%- endif -%}
 
             <div class="product-deck__info">
@@ -304,24 +362,33 @@
     /*
       One stack from left to right: each card lies on top of the next one, so the left cards cover
       their inner neighbour (Figma: the rose card over the serum card) and the right ones tuck in
-      behind the middle card. Leftmost = 10 + 2 x --half, rightmost = 10 (the active card is 20).
+      behind the middle card. Leftmost = 10 + count - 1, rightmost = 10 (the active card is 20).
+      Liquid writes --z, so no CSS round() is needed (older browsers do not know it).
     */
-    z-index: calc(10 + round(down, var(--half, 3) - var(--o), 1));
+    z-index: var(--z, 10);
     inline-size: var(--card-w);
     aspect-ratio: 1 / var(--card-ratio, 0.7); /* Card height setting: height / width, 0.7 = the Figma 10 : 7 */
     margin-inline-start: calc(var(--card-w) / -2);
     transform: translate(var(--x), var(--y)) rotate(var(--r));
   }
 
-  /* A card growing or shrinking glides (not while scrolling: the script drives that, frame by frame) */
-  .product-deck[data-moving] .product-deck__card {
-    transition: transform 0.45s var(--ease-out);
+  /*
+    A card growing or shrinking glides (not while scrolling: the script drives that, frame by frame).
+    Reduced motion: the card changes size at once.
+  */
+  @media (prefers-reduced-motion: no-preference) {
+    .product-deck[data-moving] .product-deck__card {
+      transition: transform 0.45s var(--ease-out);
+    }
   }
 
-  /* The active card: in its own place and tilt, on top and clearly bigger (Figma: about +12%) */
+  /*
+    The active card: in its own place and tilt, on top and clearly bigger (Figma: about +12%; rows
+    below 1200px: +6%, so a tilted outer card stays inside the page margin)
+  */
   .product-deck__card.is-active {
     z-index: 20;
-    transform: translate(var(--x), var(--y)) rotate(var(--r)) scale(calc(1 + 0.12 * var(--fan)));
+    transform: translate(var(--x), var(--y)) rotate(var(--r)) scale(calc(1 + var(--grow, 0.12) * var(--fan)));
   }
 
   .product-deck__media {
@@ -381,6 +448,7 @@
     outline-offset: 4px;
   }
 
+  /* The overlay behind the button ("Overlay behind the button") is drawn by the quick-add snippet */
   .product-deck__cart {
     position: absolute;
     inset-block-start: 7%;
@@ -400,13 +468,18 @@
   .product-deck__info {
     position: absolute;
     inset-block-start: 76%; /* Figma: starts about three quarters down the card and hangs below it */
+    /*
+      6% in from each side, so it never pokes out past a tilted outer card. On small laptops the card is
+      narrow: the padding gets smaller, the price goes above "Buy now" (the footer wraps) and the button
+      text stays on one line.
+    */
     inset-inline: 6%;
     z-index: 4;
     display: flex;
     flex-direction: column;
     gap: var(--space-sm);
-    padding-block: clamp(1.25rem, 1rem + 1.2vw, 2.25rem);
-    padding-inline: clamp(1rem, 0.75rem + 1vw, 1.75rem);
+    padding-block: clamp(1rem, 0.5rem + 1.2vw, 2.25rem);
+    padding-inline: clamp(0.875rem, 0.25rem + 1vw, 1.75rem);
     border-radius: clamp(0.9rem, 1.4cqi, 1.4rem);
     background-color: color-mix(in srgb, var(--color-background) 40%, transparent);
     box-shadow:
@@ -418,8 +491,12 @@
     color: var(--color-text);
   }
 
-  .product-deck__card:not(.is-active) .product-deck__cart,
-  .product-deck__card:not(.is-active) .product-deck__info {
+  /*
+    Hidden: the cart button and details of every card that is not open, and (before the script runs)
+    the open card's while the visitor points at or tabs into another card (see the no-JS rules below)
+  */
+  .product-deck__card:not(.is-active) :is(.product-deck__cart, .product-deck__info),
+  product-deck:not(:defined) .product-deck__list:has(.product-deck__card:not(.is-active):is(:hover, :focus-within)) .is-active :is(.product-deck__cart, .product-deck__info) {
     opacity: 0;
     visibility: hidden;
   }
@@ -440,6 +517,21 @@
     .product-deck__card:not(.is-active) .product-deck__info {
       transform: translateY(0.5rem);
     }
+  }
+
+  /*
+    Before the script runs (or without JavaScript) no card can be picked. Then pointing at a card or
+    tabbing into it shows its details, so a visitor can still reach every product, and the first card's
+    details hide meanwhile, so only one details card shows.
+  */
+  product-deck:not(:defined) .product-deck__card:is(:hover, :focus-within) {
+    z-index: 21;
+  }
+
+  product-deck:not(:defined) .product-deck__card:is(:hover, :focus-within) :is(.product-deck__cart, .product-deck__info) {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
   }
 
   .product-deck__title {
@@ -486,7 +578,8 @@
     --color-button-text: #ffffff;
     min-block-size: 2.5rem;
     padding-block: 0.4rem;
-    padding-inline: 1.1rem;
+    padding-inline: clamp(0.75rem, 0.25rem + 0.7vw, 1.1rem);
+    white-space: nowrap;
   }
 
   .product-deck__buy-icon svg {
@@ -504,7 +597,65 @@
     gap: var(--space-md);
   }
 
-  /* Phones: bigger cards that overlap more, the pill under the heading */
+  /*
+    Rows (below 1200px; Figma mobile): tilted cards in rows,
+    3 per row on tablets, 2 on phones. The cards overlap a little at the sides, and each row lies over
+    the bottom of the row above (later cards on top). Left cards turn left, right cards turn right, a
+    middle card stays straight. A row that is not full is centred (7 cards on a phone: the 7th sits
+    alone in the middle). The open card grows in its own place and its details card covers the row
+    below, as in the Figma.
+    The same --x / --y / --r as the fan, so the animation also works here: --fan 0 = a small stack at
+    the top, 1 = the rows. Liquid writes the numbers, so no CSS mod() / round() is needed (older
+    browsers, e.g. Samsung Internet before Chromium 125, do not know them):
+    --row-2 / --row-3   the card's row with 2 / 3 per row (0, 1, ...)
+    --gx-2 / --gx-3     its column's offset from the middle of its row (2 per row: -0.5 / 0.5; 3: -1 / 0 /
+                        1; a card alone in its row: 0)
+    --rows-2 / --rows-3 the number of rows (on the deck)
+    Card = one column wide, the columns 0.9 of a column apart: the cards overlap a little, and the open
+    outer card (tilted, +6%) still ends inside the page margin, also with Card height 130%.
+    In the last row the details card opens upwards over its own photo (data-last-row), so the list
+    only needs a little room below the cards, whatever the length of the text.
+  */
+  @media (max-width: 1199px) {
+    .product-deck__stage {
+      --cols: 3;
+      --rows: var(--rows-3, 1);
+      --col-w: calc(100cqi / var(--cols));
+      --card-w: var(--col-w);
+      --step-x: calc(var(--col-w) * 0.9);
+      --step-y: calc(var(--card-w) * var(--card-ratio, 0.7) * 0.86);
+      --turn: 6deg; /* per column step: 3 per row = -6 / 0 / 6deg */
+      --grow: 0.06;
+    }
+
+    .product-deck__list {
+      /* The last row's details card hangs 10% below its card (+6% grow, shadow) */
+      --info-room: calc(var(--card-w) * var(--card-ratio, 0.7) * 0.16 + 1rem);
+      block-size: calc(
+        var(--space-md) + var(--card-w) * var(--card-ratio, 0.7) + (var(--rows) - 1) * var(--step-y) +
+          var(--info-room)
+      );
+    }
+
+    .product-deck__card {
+      --row: var(--row-3, 0);
+      --gx: var(--gx-3, 0);
+      --x: calc(var(--gx) * (var(--step-x) * var(--fan) + 0.6rem * (1 - var(--fan))));
+      --y: calc(var(--row) * var(--step-y) * var(--fan));
+      --r: calc(var(--gx) * (var(--turn) * var(--fan) + 3deg * (1 - var(--fan))));
+    }
+
+    /* Later cards on top (the open card stays on top of all: 20) */
+    .product-deck__card:not(.is-active) {
+      z-index: calc(10 + var(--i));
+    }
+
+    .product-deck__card[data-last-row~="3"] .product-deck__info {
+      inset-block: auto -10%;
+    }
+  }
+
+  /* Phones: the pill under the heading */
   @media (max-width: 749px) {
     .product-deck__header {
       grid-template-columns: 1fr;
@@ -517,24 +668,60 @@
       justify-self: center;
     }
 
+    /* Rows: 2 per row, -6 / 6deg (the column offset is half a step here) */
     .product-deck__stage {
-      --card-w: 58cqi;
-      --spread: min(12cqi, 21cqi / max(var(--half, 3), 1));
-      --arc: 2rem;
-      --turn: 6deg;
+      --cols: 2;
+      --rows: var(--rows-2, 1);
+      --turn: 12deg;
     }
 
-    .product-deck__list {
-      --info-room: clamp(11rem, 7rem + 7vw, 16rem);
-    }
-
-    /* Phones: the big cards overlap too much for the Figma order, so the inner cards lie on top */
     .product-deck__card {
-      z-index: calc(10 - round(down, var(--d), 1));
+      --row: var(--row-2, 0);
+      --gx: var(--gx-2, 0);
     }
 
+    /* The last row with 2 per row (first undo the tablet rule, then set this one) */
+    .product-deck__card[data-last-row~="3"] .product-deck__info {
+      inset-block: 76% auto;
+    }
+
+    .product-deck__card[data-last-row~="2"] .product-deck__info {
+      inset-block: auto -10%;
+    }
+
+    /*
+      The details card is centred under its own card, 3% in from each side, so it never goes off the
+      screen. The phone card is narrow, so the padding is small. Only the title, price and "Buy now"
+      show (Figma mobile).
+    */
     .product-deck__info {
-      inset-inline: 4%;
+      inset-inline: 3%;
+      gap: var(--space-xs);
+      padding: 0.75rem;
+    }
+
+    /* Long prices (a unit price such as "Rs. 15,333.33/100ml") wrap inside the narrow card */
+    .product-deck__price {
+      min-inline-size: 0;
+      font-size: 0.875rem;
+      overflow-wrap: anywhere;
+    }
+
+    /* "Buy now": smaller lettering on one line, so it fits next to or under the price */
+    .product-deck__buy {
+      min-block-size: 2.25rem;
+      padding-inline: 0.75rem;
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+
+    .product-deck__title {
+      font-size: 1.05rem;
+    }
+
+    .product-deck__text {
+      display: none;
     }
   }
 {% endstylesheet %}
@@ -543,10 +730,12 @@
   /**
    * <product-deck>: makes a card active (class is-active) when the mouse moves onto it, or when it is
    * tapped or reached with Tab; the active card stays until another one is picked. With data-fan, it
-   * also fans the cards out (--fan-progress 0 -> 1), in one of two ways (setting "How the cards fan out"):
+   * also moves the cards from a stack to their places (--fan-progress 0 -> 1: the fan from 1200px, the
+   * rows below), in one of two ways (setting "Animation > Start of the animation"):
    * - scroll: follows the scroll while the section comes into view (smoothed like the Image banner
    *   scene), and folds back if the visitor scrolls up
-   * - auto: plays once by itself (about 1.2s) when the deck is a third on screen, then stays open
+   * - auto: plays once by itself (about 1.2s) when the deck is a third on screen, then stays open, also
+   *   when the theme editor attaches the section again
    * The cards' places never change: only which one is in front.
    */
   class ProductDeck extends HTMLElement {
@@ -555,12 +744,23 @@
       this.list = this.querySelector('.product-deck__list');
       if (this.cards.length < 2) return;
 
+      /*
+        Every listener on one AbortController: the theme editor attaches the section again when it
+        moves, so connectedCallback runs again. disconnectedCallback removes the old listeners first.
+      */
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+
       this.cards.forEach((card) => {
-        card.addEventListener('pointerenter', (event) => {
-          if (event.pointerType === 'mouse') this.select(card);
-        });
-        card.addEventListener('focusin', () => this.select(card));
-        card.querySelector('[data-pick]')?.addEventListener('click', () => this.select(card));
+        card.addEventListener(
+          'pointerenter',
+          (event) => {
+            if (event.pointerType === 'mouse') this.select(card);
+          },
+          { signal }
+        );
+        card.addEventListener('focusin', () => this.select(card), { signal });
+        card.querySelector('[data-pick]')?.addEventListener('click', () => this.select(card), { signal });
       });
 
       if (this.hasAttribute('data-fan') && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -573,6 +773,7 @@
     }
 
     disconnectedCallback() {
+      this.controller?.abort();
       this.observer?.disconnect();
       this.stopListening();
       clearTimeout(this.movingTimer);
@@ -582,6 +783,12 @@
     /** "Play once": stacked until a third of the deck is on screen, then fans out by itself and stays */
     startAutoFan() {
       this.setAttribute('data-fan-active', '');
+      // Already played (the editor moved the section): stay open, do not play again
+      if (this.played) {
+        this.current = 1;
+        this.paint();
+        return;
+      }
       this.current = 0;
       this.paint();
       this.observer = new IntersectionObserver(
@@ -597,6 +804,7 @@
 
     /** 0 -> 1 over 1.2s, fast at first and gently settling (ease-out cubic), one step per frame */
     play() {
+      this.played = true;
       const duration = 1200;
       const start = performance.now();
       const frame = (now) => {
@@ -614,7 +822,15 @@
       this.setAttribute('data-moving', '');
       clearTimeout(this.movingTimer);
       this.movingTimer = setTimeout(() => this.removeAttribute('data-moving'), 500);
-      this.cards.forEach((item) => item.classList.toggle('is-active', item === card));
+      this.cards.forEach((item) => {
+        item.classList.toggle('is-active', item === card);
+        const pick = item.querySelector('[data-pick]');
+        if (item === card) {
+          pick?.setAttribute('aria-current', 'true');
+        } else {
+          pick?.removeAttribute('aria-current');
+        }
+      });
     }
 
     startFan() {
@@ -675,19 +891,24 @@
 
 {% schema %}
 {
-  "name": "t:general.product_deck",
+  "name": "t:general.new_arrivals",
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
     {
       "type": "text",
       "id": "eyebrow",
-      "label": "t:labels.eyebrow",
+      "label": "t:labels.deck_eyebrow",
+      "info": "t:labels.deck_eyebrow_info",
       "default": "Just landed"
     },
     {
       "type": "inline_richtext",
       "id": "heading",
       "label": "t:labels.heading",
-      "info": "t:labels.trending_heading_info",
+      "info": "t:labels.deck_heading_info",
       "default": "New <em>Arrivals</em>"
     },
     {
@@ -700,14 +921,15 @@
     {
       "type": "text",
       "id": "link_label",
-      "label": "t:labels.link_label",
+      "label": "t:labels.deck_link_label",
+      "info": "t:labels.deck_link_label_info",
       "default": "Explore all"
     },
     {
       "type": "url",
       "id": "link",
-      "label": "t:labels.link",
-      "info": "t:labels.trending_link_info"
+      "label": "t:labels.deck_link",
+      "info": "t:labels.deck_link_info"
     },
     {
       "type": "header",
@@ -743,22 +965,8 @@
       "default": "Buy now"
     },
     {
-      "type": "checkbox",
-      "id": "fan_on_scroll",
-      "label": "t:labels.deck_fan_on_scroll",
-      "info": "t:labels.deck_fan_on_scroll_info",
-      "default": true
-    },
-    {
-      "type": "select",
-      "id": "fan_style",
-      "label": "t:labels.deck_fan_style",
-      "options": [
-        { "value": "scroll", "label": "t:options.deck_fan_style.scroll" },
-        { "value": "auto", "label": "t:options.deck_fan_style.auto" }
-      ],
-      "default": "scroll",
-      "visible_if": "{{ section.settings.fan_on_scroll }}"
+      "type": "header",
+      "content": "t:labels.deck_cards"
     },
     {
       "type": "range",
@@ -781,6 +989,35 @@
       "step": 5,
       "unit": "%",
       "default": 70
+    },
+    {
+      "type": "header",
+      "content": "t:labels.layout"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
     },
     {
       "type": "header",
@@ -818,6 +1055,17 @@
       "default": "#ffffff"
     },
     {
+      "type": "range",
+      "id": "cart_overlay",
+      "label": "t:labels.deck_cart_overlay",
+      "info": "t:labels.deck_cart_overlay_info",
+      "min": 0,
+      "max": 80,
+      "step": 5,
+      "unit": "%",
+      "default": 10
+    },
+    {
       "type": "select",
       "id": "cart_options",
       "label": "t:labels.cart_options",
@@ -836,44 +1084,35 @@
     },
     {
       "type": "header",
-      "content": "t:labels.style"
+      "content": "t:labels.animation_header"
+    },
+    {
+      "type": "checkbox",
+      "id": "fan_on_scroll",
+      "label": "t:labels.deck_fan_on_scroll",
+      "info": "t:labels.deck_fan_on_scroll_info",
+      "default": true
     },
     {
       "type": "select",
-      "id": "section_width",
-      "label": "t:labels.section_width",
-      "info": "t:labels.section_width_info",
+      "id": "fan_style",
+      "label": "t:labels.deck_fan_style",
       "options": [
         {
-          "value": "narrow",
-          "label": "t:options.section_width.narrow"
+          "value": "scroll",
+          "label": "t:options.deck_fan_style.scroll"
         },
         {
-          "value": "wide",
-          "label": "t:options.section_width.wide"
-        },
-        {
-          "value": "widest",
-          "label": "t:options.section_width.widest"
-        },
-        {
-          "value": "full",
-          "label": "t:options.section_width.full"
+          "value": "auto",
+          "label": "t:options.deck_fan_style.auto"
         }
       ],
-      "default": "widest"
+      "default": "scroll",
+      "visible_if": "{{ section.settings.fan_on_scroll }}"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-1"
-    },
-    {
-      "type": "color",
-      "id": "highlight_color",
-      "label": "t:labels.highlight_color",
-      "default": "#c8a24b"
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -894,6 +1133,22 @@
       "step": 8,
       "unit": "px",
       "default": 96
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "color",
+      "id": "highlight_color",
+      "label": "t:labels.highlight_color",
+      "info": "t:labels.deck_highlight_color_info"
     }
   ],
   "presets": [

@@ -337,7 +337,8 @@
     outline-offset: 3px;
   }
 
-  .scrolling-showcase__image > :is(img, svg) {
+  /* The small photos in the sentence and the big scroll photos: the image fills its frame */
+  :is(.scrolling-showcase__image, .scrolling-showcase__photo) > :is(img, svg) {
     display: block;
     inline-size: 100%;
     block-size: 100%;
@@ -491,18 +492,16 @@
   }
 
   /* Photos: placed by their centre (x / y = % of the screen), between the band and the white text */
-  .scrolling-showcase[data-scene-active] .scrolling-showcase__photos {
-    position: relative;
-    z-index: 2;
-    pointer-events: none; /* the layer covers the whole stage: links in the sentence underneath stay clickable */
-  }
-
+  /* Hidden until the scroll effect runs */
   .scrolling-showcase__photos {
     display: none;
   }
 
   .scrolling-showcase[data-scene-active] .scrolling-showcase__photos {
+    position: relative;
+    z-index: 2;
     display: block;
+    pointer-events: none; /* the layer covers the whole stage: links in the sentence underneath stay clickable */
   }
 
   .scrolling-showcase__photo {
@@ -534,13 +533,6 @@
       translateY(calc((1 - var(--in)) * (1 - var(--in)) * 100svh - var(--out) * var(--out) * 120svh))
       rotate(calc((var(--tilt) + (1 - var(--in)) * var(--spin) - var(--out) * var(--spin)) * 1deg));
     will-change: transform;
-  }
-
-  .scrolling-showcase__photo > :is(img, svg) {
-    display: block;
-    inline-size: 100%;
-    block-size: 100%;
-    object-fit: cover;
   }
 
   /*

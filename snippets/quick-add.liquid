@@ -24,6 +24,10 @@
   @param {string} [icon_color] - Colour of the cart icon and speed lines (default white), e.g. dark on
     white photos
   @param {string} [options] - Products with several variants: 'add_first' (default) or 'link'
+  @param {number} [overlay] - Round button only: strength (0-100, %) of a soft dark circle behind the
+    button, so the white glass button stays visible on light photos ("Overlay behind the button" in
+    Product panels and New arrivals). 0 or empty = no circle. The caller must position the button
+    (position + z-index), as those sections do.
   @param {string} [style] - 'round' (default, the glass circle) or 'pill' (the article sidebar's white
     "ADD TO CART" pill: same adding and tick, no driving off; the visible text is the button's name,
     the product name is added for screen readers; sold out = a disabled "Sold out" pill)
@@ -63,6 +67,14 @@
   capture quick_add_style
     echo '--quick-add-size: ' | append: button_size | append: 'px; --quick-add-color: ' | append: button_color | append: ';'
   endcapture
+
+  # Overlay behind the round button: only when a strength above 0 is given
+  assign overlay_class = ''
+  assign overlay_value = overlay | default: 0
+  if button_style == 'round' and overlay_value > 0
+    assign overlay_class = ' quick-add--overlay'
+    assign quick_add_style = quick_add_style | append: ' --quick-add-overlay: ' | append: overlay_value | append: '%;'
+  endif
 -%}
 
 {%- capture quick_add_art -%}
@@ -88,7 +100,7 @@
 
 {%- if can_add -%}
   <quick-add
-    class="quick-add quick-add--{{ button_style }} {{ class }}"
+    class="quick-add quick-add--{{ button_style }}{{ overlay_class }} {{ class }}"
     style="{{ quick_add_style }}"
     data-variant-id="{{ variant.id }}"
     data-label-added="{{ 'products.quick_add.added' | t: title: add_name }}"
@@ -127,7 +139,7 @@
     {%- endif -%}
   </div>
 {%- else -%}
-  <div class="quick-add {{ class }}" style="{{ quick_add_style }}">
+  <div class="quick-add{{ overlay_class }} {{ class }}" style="{{ quick_add_style }}">
     <a class="quick-add__button" href="{{ product.url }}" aria-label="{{ choose_label | escape }}">
       {{ quick_add_art }}
     </a>
@@ -137,6 +149,32 @@
 {% stylesheet %}
   quick-add {
     display: block;
+  }
+
+  /*
+    Overlay behind the round button (overlay: N): the glass button is white at 25%, so on a light photo
+    it disappears. A soft dark circle, twice the button's size, fades out from its middle. The rest of
+    the photo stays untouched. z-index -1 puts the circle behind the button but above the photo: the
+    caller's position + z-index make the button its own stacking layer. :where() keeps this fallback
+    position at zero specificity, so the caller's position: absolute always wins. The circle shows and
+    hides with the button (same element).
+  */
+  :where(.quick-add--overlay) {
+    position: relative;
+  }
+
+  .quick-add--overlay::before {
+    content: "";
+    position: absolute;
+    inset: -50%;
+    z-index: -1;
+    border-radius: 50%;
+    background: radial-gradient(
+      closest-side,
+      color-mix(in srgb, #000000 var(--quick-add-overlay, 0%), transparent),
+      transparent
+    );
+    pointer-events: none;
   }
 
   .quick-add__form {
