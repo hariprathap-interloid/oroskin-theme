@@ -607,6 +607,21 @@ animate-on-scroll {
   border: 0;
 }
 
+/*
+  Text logo that may be long (header, its drawer, footer): snippets/logo-text-scale makes the font smaller
+  first (--logo-text-scale); if the text still does not fit its box, it is cut with …. Screen readers still
+  read all of it. The 0.15em padding, taken back by the negative margin, keeps the tall letters and the end
+  of the italic word from being clipped by overflow: hidden.
+*/
+.logo-text-fit {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0.15em 0.15em 0.15em 0;
+  margin: -0.15em -0.15em -0.15em 0;
+}
+
 /** Section layout utilities */
 
 /**

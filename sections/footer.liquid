@@ -16,6 +16,12 @@
     assign logo_alt = ''
   endif
 
+  # Text logo size factor: long names get smaller (the same rule as the header)
+  capture logo_text_scale
+    render 'logo-text-scale'
+  endcapture
+  assign logo_text_scale = logo_text_scale | strip
+
   # Copyright: the sentence lives in the locale file, the year and shop name are passed in.
   # No | escape on the name: t already escapes its output (keys without _html), escaping twice
   # would turn "Bob & Co" into "Bob &amp;amp; Co".
@@ -23,24 +29,63 @@
 
   # One column per top-level item of the footer menu (Shop, Company, Support...).
   # At least 1 so the CSS never gets repeat(0, ...).
-  assign column_count = section.settings.menu.links.size | at_least: 1
+  assign menu_count = section.settings.menu.links.size | default: 0
+  assign column_count = menu_count | at_least: 1
 
-  # Link grey = the scheme's text mixed into its background. The white glass panel lightens dark
-  # backgrounds (red, dark schemes), so those need more text in the mix to stay at 4.5:1 contrast.
-  # color_brightness: 0 (black) to 255 (white).
+  # Desktop tracks (1200px+), measured at 1920: brand 2fr | the menu (1fr per column, one <nav>) | newsletter
+  # 1.5fr. Built here so a missing menu or newsletter leaves no empty track.
+  assign desktop_tracks = 'minmax(0, 2fr)'
+  if menu_count > 0
+    assign desktop_tracks = desktop_tracks | append: ' minmax(0, ' | append: menu_count | append: 'fr)'
+  endif
+  if section.settings.show_newsletter
+    assign desktop_tracks = desktop_tracks | append: ' minmax(0, 1.5fr)'
+  endif
+
+  # Dark background (red, dark schemes; color_brightness: 0 = black, 255 = white): the white glass would
+  # make a mid-grey panel with poor contrast, so .footer--dark uses a dark glass (CSS below), and the link
+  # grey takes more of the text colour to stay at 4.5:1.
   assign link_mix = 70
+  assign footer_tone = ''
   assign scheme_brightness = section.settings.color_scheme.settings.background | color_brightness
   if scheme_brightness < 128
     assign link_mix = 85
+    assign footer_tone = ' footer--dark'
   endif
+
+  # Wordmark size: the word must fit the panel, also for a long shop name or capitals. Its width is
+  # estimated in em: capitals 0.72, spaces 0.28, other characters 0.42 ("OroSkin" = 3.54em estimated,
+  # 3.22em measured). 100 / that width, in cqi (% of the panel's inner width), fills about 90%; at 1920
+  # this is ~490px, the Figma's ~500px, and min() in the CSS keeps 500px as the largest size.
+  # A for loop stops after 50 items, so characters after the 50th count as 0.5em.
+  if has_logo_text
+    assign wordmark_text = settings.logo_text | append: settings.logo_text_accent
+  else
+    assign wordmark_text = shop.name
+  endif
+  assign wordmark_chars = wordmark_text | split: ''
+  assign wordmark_em = 0.0
+  for wordmark_char in wordmark_chars limit: 50
+    assign wordmark_char_lower = wordmark_char | downcase
+    if wordmark_char == ' '
+      assign wordmark_em = wordmark_em | plus: 0.28
+    elsif wordmark_char != wordmark_char_lower
+      assign wordmark_em = wordmark_em | plus: 0.72
+    else
+      assign wordmark_em = wordmark_em | plus: 0.42
+    endif
+  endfor
+  assign wordmark_extra = wordmark_chars.size | minus: 50 | at_least: 0 | times: 0.5
+  assign wordmark_em = wordmark_em | plus: wordmark_extra | at_least: 1
+  assign wordmark_size = 100.0 | divided_by: wordmark_em | round: 2
 -%}
 
 <footer
-  class="footer full-width color-{{ section.settings.color_scheme.id }}"
-  style="--logo-width: {{ settings.logo_width }}px; --logo-text-size: {{ settings.logo_text_size }}px; --footer-columns: {{ column_count }}; --footer-link-mix: {{ link_mix }}%; --nav-underline: url('{{ 'nav-underline.svg' | asset_url }}');"
+  class="footer full-width color-{{ section.settings.color_scheme.id }}{{ footer_tone }}"
+  style="--logo-width: {{ settings.logo_width }}px; --logo-text-size: {{ settings.logo_text_size }}px; --logo-text-scale: {{ logo_text_scale }}; --footer-columns: {{ column_count }}; --footer-tracks: {{ desktop_tracks }}; --footer-link-mix: {{ link_mix }}%; --wordmark-size: {{ wordmark_size }}cqi; --nav-underline: url('{{ 'nav-underline.svg' | asset_url }}');"
 >
   <div class="footer__panel">
-    <div class="footer__top{% unless section.settings.show_newsletter %} footer__top--no-newsletter{% endunless %}">
+    <div class="footer__top">
       <div class="footer__brand">
         <a class="footer__logo" href="{{ routes.root_url }}">
           {%- if settings.logo != blank -%}
@@ -56,12 +101,12 @@
             }}
           {%- endif -%}
           {%- if has_logo_text -%}
-            <span class="footer__logo-text">
+            <span class="footer__logo-text logo-text-fit">
               {{- settings.logo_text | escape -}}
               {%- if settings.logo_text_accent != blank -%}<em>{{ settings.logo_text_accent | escape }}</em>{%- endif -%}
             </span>
           {%- elsif settings.logo == blank -%}
-            <span class="footer__logo-text">{{ shop.name | escape }}</span>
+            <span class="footer__logo-text logo-text-fit">{{ shop.name | escape }}</span>
           {%- endif -%}
         </a>
 
@@ -76,7 +121,10 @@
         One nested menu builds all the columns: each top-level item ("Shop") is a column heading and
         its sub-items ("All Products", "Skincare"...) are the links underneath. A top-level item with no
         sub-items becomes a column with just that one link, so nothing the merchant adds disappears.
+        One <nav> around all the columns, so screen reader users can jump to the footer menu.
       {%- endcomment -%}
+      {%- if menu_count > 0 -%}
+      <nav class="footer__nav" aria-label="{{ 'footer.menu' | t }}">
       {%- for column in section.settings.menu.links -%}
         <div class="footer__column">
           {%- if column.links.size > 0 -%}
@@ -113,6 +161,8 @@
           {%- endif -%}
         </div>
       {%- endfor -%}
+      </nav>
+      {%- endif -%}
 
       {%- if section.settings.show_newsletter -%}
         <div class="footer__column footer__newsletter">
@@ -167,7 +217,7 @@
         {%- endif -%}
       </div>
 
-      {%- if section.settings.legal_menu != blank -%}
+      {%- if section.settings.legal_menu.links.size > 0 -%}
         <nav class="footer__legal" aria-label="{{ 'footer.legal_menu' | t }}">
           <ul class="footer__legal-list" role="list">
             {%- for link in section.settings.legal_menu.links -%}
@@ -228,6 +278,23 @@
   }
 
   /*
+    Dark background (.footer--dark, set in the Liquid from the scheme's brightness). The theme's white glass
+    (25% white) turns a dark background into a mid grey, where the accent headings, the social icons and
+    the email text fall under 4.5:1. Here the glass is a light veil of the text colour instead, and the
+    social buttons, the email field and the country / language pills use the scheme's raised surface
+    (snippets/css-variables.liquid), so they show clearly on the panel. Light schemes keep the white glass.
+  */
+  .footer--dark {
+    --color-glass: color-mix(in srgb, var(--color-text) 8%, transparent);
+    --color-glass-strong: var(--color-surface-raised);
+  }
+
+  /* The pickers' pill uses --color-glass at rest (snippets/localization-form): on dark, the raised surface too */
+  .footer--dark .localization__toggle {
+    background-color: var(--color-surface-raised);
+  }
+
+  /*
     Full width: the "full-width" class on <footer> (critical.css) lets it span the whole viewport instead
     of Skeleton's page-width column. The panel is then centred with margin-inline: auto and is as wide as
     the viewport minus the Figma's edge gap (16px on phones -> 50px at 1920, so 1822px wide at 1920).
@@ -239,6 +306,7 @@
     --footer-edge: clamp(var(--space-md), 2.6vw, 3.125rem);
 
     position: relative;
+    container-type: inline-size; /* the wordmark's size is a share of the panel's width (cqi) */
     inline-size: calc(100% - var(--footer-edge) * 2);
     margin-inline: auto;
     padding-block-start: clamp(var(--space-2xl), 3.4vw, var(--space-3xl)); /* -> 64px */
@@ -251,21 +319,21 @@
   }
 
   /*
-    Top row, measured at 1920: brand ~490px, each menu ~245px, newsletter ~370px, 32px gaps.
-    That is 2fr | 1fr per menu | 1.5fr.
+    Top row. Phones and tablets: one column (brand, then the menu, then the newsletter).
+    Desktop (1200px+), measured at 1920: brand ~490px, each menu ~245px, newsletter ~370px, 32px gaps, so
+    2fr | 1fr per menu column | 1.5fr; --footer-tracks is built in the Liquid (no empty track).
   */
   .footer__top {
     display: grid;
-    grid-template-columns:
-      minmax(0, 2fr)
-      repeat(var(--footer-columns), minmax(0, 1fr))
-      minmax(0, 1.5fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-2xl) var(--space-xl);
   }
 
-  /* Newsletter turned off: drop its 1.5fr track so no empty column is left on the right */
-  .footer__top--no-newsletter {
-    grid-template-columns: minmax(0, 2fr) repeat(var(--footer-columns), minmax(0, 1fr));
+  /* The menu columns: 2 per row on phones, all in one row from 750px */
+  .footer__nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2xl) var(--space-xl);
   }
 
   .footer__brand {
@@ -277,6 +345,7 @@
 
   .footer__logo {
     display: inline-flex;
+    max-inline-size: 100%; /* a long logo text stays in the brand column (cut with …) */
     align-items: center;
     gap: var(--space-xs);
     color: var(--color-text);
@@ -284,6 +353,7 @@
   }
 
   .footer__logo-image {
+    flex-shrink: 0;
     inline-size: var(--logo-width);
     max-block-size: 4rem;
     block-size: auto;
@@ -293,7 +363,7 @@
   .footer__logo-text {
     font-family: var(--font-logo--family);
     font-weight: var(--font-logo--weight);
-    font-size: var(--logo-text-size);
+    font-size: calc(var(--logo-text-size) * var(--logo-text-scale, 1));
     line-height: 1;
   }
 
@@ -514,7 +584,7 @@
     color: color-mix(in srgb, var(--color-text) 20%, transparent);
     font-family: var(--font-logo--family);
     font-weight: var(--font-logo--weight);
-    font-size: clamp(4rem, 26vw, 31.25rem); /* 64px -> 500px */
+    font-size: min(31.25rem, var(--wordmark-size, 26cqi)); /* fits the panel; 500px at most */
     line-height: 1;
     text-align: center;
     white-space: nowrap;
@@ -549,28 +619,52 @@
   }
 
   /*
-    Smaller screens. No mobile design yet (decision 7): this is just a sensible reflow.
-    Tablet: brand column across the top, the other columns fill rows of at least 10rem each.
-    Phone: one column.
+    Phones (below 750px, no Figma design: the developer chose this reflow): less space between the parts,
+    so the footer is not too long; the bottom row stacks.
   */
-  @media (max-width: 989px) {
-    .footer__top {
-      grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-    }
-
+  @media (max-width: 749px) {
     .footer__brand {
-      grid-column: 1 / -1;
+      gap: var(--space-lg);
     }
-  }
 
-  @media (max-width: 599px) {
-    .footer__top {
-      grid-template-columns: minmax(0, 1fr);
+    .footer__heading {
+      margin-block-end: var(--space-lg);
+    }
+
+    .footer__links {
+      gap: var(--space-md);
+    }
+
+    .footer__newsletter .newsletter-form {
+      margin-block-start: var(--space-lg);
     }
 
     .footer__bottom {
       flex-direction: column;
       align-items: flex-start;
+      margin-block-start: var(--space-2xl);
+    }
+  }
+
+  /*
+    Tablets: as many menu columns in a row as fit at 9rem (144px) each (3 at 750px), the others wrap, so
+    a menu with many items never gets very narrow columns. Desktop: all in one row (--footer-columns).
+  */
+  @media (min-width: 750px) and (max-width: 1199px) {
+    .footer__nav {
+      grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
+    }
+  }
+
+  @media (min-width: 1200px) {
+    .footer__nav {
+      grid-template-columns: repeat(var(--footer-columns), minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1200px) {
+    .footer__top {
+      grid-template-columns: var(--footer-tracks);
     }
   }
 {% endstylesheet %}
@@ -580,10 +674,8 @@
   "name": "t:general.footer",
   "settings": [
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-1"
+      "type": "header",
+      "content": "t:labels.content"
     },
     {
       "type": "link_list",
@@ -591,10 +683,6 @@
       "label": "t:labels.menu",
       "info": "t:labels.footer_menu_info",
       "default": "footer"
-    },
-    {
-      "type": "header",
-      "content": "t:labels.footer_brand"
     },
     {
       "type": "paragraph",
@@ -621,13 +709,17 @@
       "type": "text",
       "id": "newsletter_heading",
       "label": "t:labels.heading",
-      "default": "Newsletter"
+      "info": "t:labels.footer_newsletter_visible_info",
+      "default": "Newsletter",
+      "visible_if": "{{ section.settings.show_newsletter }}"
     },
     {
       "type": "richtext",
       "id": "newsletter_text",
       "label": "t:labels.text",
-      "default": "<p>Receive curated beauty tips, exclusive offers, and new arrivals directly to your inbox.</p>"
+      "info": "t:labels.footer_newsletter_visible_info",
+      "default": "<p>Receive curated beauty tips, exclusive offers, and new arrivals directly to your inbox.</p>",
+      "visible_if": "{{ section.settings.show_newsletter }}"
     },
     {
       "type": "header",
@@ -653,11 +745,26 @@
       "default": true
     },
     {
+      "type": "header",
+      "content": "t:labels.footer_wordmark"
+    },
+    {
       "type": "checkbox",
       "id": "show_wordmark",
       "label": "t:labels.show_wordmark",
       "info": "t:labels.show_wordmark_info",
       "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "info": "t:labels.footer_color_scheme_info",
+      "default": "scheme-1"
     }
   ]
 }

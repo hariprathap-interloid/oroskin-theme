@@ -238,26 +238,40 @@
       this.details = this.querySelector('details');
       if (!this.details) return;
 
-      this.onKeydown = (event) => {
-        if (event.key !== 'Escape' || !this.details.open) return;
-        this.details.open = false;
-        this.details.querySelector('summary').focus();
-      };
-      // relatedTarget is the element receiving focus; it's null when clicking empty space (the click handler covers that)
-      this.onFocusout = (event) => {
-        if (event.relatedTarget && !this.contains(event.relatedTarget)) this.details.open = false;
-      };
-      this.onDocumentClick = (event) => {
-        if (!this.contains(event.target)) this.details.open = false;
-      };
+      // All listeners on one AbortController: the theme editor can move the section (disconnect, then
+      // connect again), and without this the element's own listeners were added a second time.
+      this.controller?.abort();
+      this.controller = new AbortController();
+      const { signal } = this.controller;
 
-      this.addEventListener('keydown', this.onKeydown);
-      this.addEventListener('focusout', this.onFocusout);
-      document.addEventListener('click', this.onDocumentClick);
+      this.addEventListener(
+        'keydown',
+        (event) => {
+          if (event.key !== 'Escape' || !this.details.open) return;
+          this.details.open = false;
+          this.details.querySelector('summary').focus();
+        },
+        { signal }
+      );
+      // relatedTarget is the element receiving focus; it's null when clicking empty space (the click handler covers that)
+      this.addEventListener(
+        'focusout',
+        (event) => {
+          if (event.relatedTarget && !this.contains(event.relatedTarget)) this.details.open = false;
+        },
+        { signal }
+      );
+      document.addEventListener(
+        'click',
+        (event) => {
+          if (!this.contains(event.target)) this.details.open = false;
+        },
+        { signal }
+      );
     }
 
     disconnectedCallback() {
-      if (this.onDocumentClick) document.removeEventListener('click', this.onDocumentClick);
+      this.controller?.abort();
     }
   }
 

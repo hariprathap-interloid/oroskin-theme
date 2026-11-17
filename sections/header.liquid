@@ -31,6 +31,9 @@
 {%- comment -%}
   The logo's contents, captured once: the bar shows them, and the phone drawer repeats them at its top.
 {%- endcomment -%}
+{%- capture logo_text_scale -%}{%- render 'logo-text-scale' -%}{%- endcapture -%}
+{%- assign logo_text_scale = logo_text_scale | strip -%}
+
 {%- capture logo_markup -%}
     {%- liquid
       # Logo = optional image (e.g. the flame mark) + optional text ("Oro" + italic accent "Skin").
@@ -58,12 +61,12 @@
       }}
     {%- endif -%}
     {%- if has_logo_text -%}
-      <span class="header__logo-text">
+      <span class="header__logo-text logo-text-fit">
         {{- settings.logo_text | escape -}}
         {%- if settings.logo_text_accent != blank -%}<em>{{ settings.logo_text_accent | escape }}</em>{%- endif -%}
       </span>
     {%- elsif settings.logo == blank -%}
-      <span class="header__logo-text">{{ shop.name | escape }}</span>
+      <span class="header__logo-text logo-text-fit">{{ shop.name | escape }}</span>
     {%- endif -%}
 {%- endcapture -%}
 
@@ -76,7 +79,7 @@
 <sticky-header>
 <header
   class="header{% if transparent %} header--transparent{% endif %}{% if solid %} header--solid color-{{ section.settings.color_scheme.id }}{% endif %}{% if section.settings.menu_button_breakpoint != 'phones' %} header--menu-button-{{ section.settings.menu_button_breakpoint }}{% endif %}{% if section.settings.mobile_show_search %} header--m-search{% endif %}{% if section.settings.mobile_show_cart %} header--m-cart{% endif %}"
-  style="--logo-width: {{ settings.logo_width }}px; --logo-text-size: {{ settings.logo_text_size }}px; --nav-underline: url('{{ 'nav-underline.svg' | asset_url }}'); --mega-columns: {{ section.settings.mega_menu_columns }};"
+  style="--logo-width: {{ settings.logo_width }}px; --logo-text-size: {{ settings.logo_text_size }}px; --logo-text-scale: {{ logo_text_scale }}; --nav-underline: url('{{ 'nav-underline.svg' | asset_url }}'); --mega-columns: {{ section.settings.mega_menu_columns }};"
 >
   <div class="header__bar color-{{ section.settings.color_scheme.id }}">
     {%- comment -%}
@@ -403,11 +406,15 @@
     }
   }
 
+  /*
+    flex: 0 1 auto + min-inline-size 0: when the bar is too narrow, only the logo gives up space (the menu and
+    the buttons have flex-shrink: 0), so the menu stays on one line. A long logo text is cut with … (below).
+  */
   .header__logo {
     display: flex;
     align-items: center;
     gap: 0.625rem;
-    flex: none;
+    flex: 0 1 auto;
     min-block-size: 1.5rem;
     color: var(--color-text);
     text-decoration: none;
@@ -415,6 +422,7 @@
 
   /* Wide, square and tall logos: fixed width, height follows, but never taller than 4rem */
   .header__logo-image {
+    flex-shrink: 0;
     inline-size: var(--logo-width);
     block-size: auto;
     max-block-size: 3.25rem; /* fits inside the 77px pill */
@@ -426,11 +434,10 @@
   .header__logo-text {
     color: var(--color-text);
     font-family: var(--font-logo--family);
-    font-size: clamp(min(1.75rem, var(--logo-text-size)), 1.4rem + 1.4vw, var(--logo-text-size)); /* never above the setting */
+    font-size: calc(clamp(min(1.75rem, var(--logo-text-size)), 1.4rem + 1.4vw, var(--logo-text-size)) * var(--logo-text-scale, 1)); /* never above the setting */
     font-weight: var(--font-logo--weight);
     line-height: 1;
     letter-spacing: 0;
-    white-space: nowrap;
   }
 
   /* The accent word follows the header's colour scheme (--color-accent), so it stays readable on red / dark schemes */
@@ -439,9 +446,11 @@
     font-style: italic;
   }
 
+  /* They never shrink: only the logo gives up space (see .header__logo), so a menu word never wraps */
   .header__menu,
   .header__actions {
     display: flex;
+    flex-shrink: 0;
     align-items: center;
     gap: var(--space-md);
   }
@@ -788,6 +797,14 @@
     overflow: var(--logo-overflow, visible); /* clips a long logo in the narrow grid column only */
   }
 
+  /*
+    With a logo image, the logo never gets narrower than the image (it does not shrink): only the text gives
+    up its space, so the image can't spill over the menu. 100% keeps it inside a narrow grid column.
+  */
+  .header__logo:has(.header__logo-image) {
+    min-inline-size: min(var(--logo-width), 100%);
+  }
+
   .header__actions {
     grid-column: 2;
     grid-row: 1;
@@ -901,7 +918,7 @@
       above the "Logo text size" setting and never above 40px, so it fits the 60px pill.
     */
     .header__logo-text {
-      font-size: clamp(min(1.75rem, var(--logo-text-size)), 1.4rem + 1.4vw, min(var(--logo-text-size), 2.5rem));
+      font-size: calc(clamp(min(1.75rem, var(--logo-text-size)), 1.4rem + 1.4vw, min(var(--logo-text-size), 2.5rem)) * var(--logo-text-scale, 1));
     }
 
     /* The logo image grows the same way: 28px tall at 768px up to 36px, never wider than the Logo width setting */
@@ -958,7 +975,7 @@
 
       /* A small mark, a big word: 26px on a 320px phone, 30px at 375px, up to 32px on tablets */
       .header__logo-text {
-        font-size: clamp(1.625rem, 8vw, 2rem);
+        font-size: calc(clamp(1.625rem, 8vw, 2rem) * var(--logo-text-scale, 1));
       }
 
       /* Sized by height in the small pill (26px), never wider than the Logo width setting or the column */

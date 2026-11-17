@@ -269,7 +269,8 @@
   "footer": {
     "copyright": "© {{ year }} {{ shop }}. All rights reserved.",
     "legal_menu": "Legal",
-    "payment_methods": "Payment methods"
+    "payment_methods": "Payment methods",
+    "menu": "Footer"
   },
   "newsletter": {
     "email_label": "Email",

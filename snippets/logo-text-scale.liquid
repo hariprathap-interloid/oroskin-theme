@@ -1,0 +1,28 @@
+{% doc %}
+  Outputs the size factor for the text logo (Theme settings > Logo > Logo text + Accent text, or the
+  shop name when both are empty): 1 for up to 12 letters, smaller for longer text (12 / letters), never
+  below 0.6. The header, its drawer and the footer multiply their logo font size by it, so a long name
+  gets smaller before the CSS has to cut it with "…".
+
+  The one place for this rule. Use it inside a capture, then strip the result (the captured text can
+  start with a newline).
+
+  @example
+  {% capture logo_text_scale %}{% render 'logo-text-scale' %}{% endcapture %}
+  {% assign logo_text_scale = logo_text_scale | strip %}
+{% enddoc %}
+
+{%- liquid
+  if settings.logo_text != blank or settings.logo_text_accent != blank
+    assign logo_letters = settings.logo_text | append: settings.logo_text_accent | size
+  else
+    assign logo_letters = shop.name | size
+  endif
+
+  if logo_letters > 12
+    assign logo_scale = 12.0 | divided_by: logo_letters | at_least: 0.6 | round: 3
+    echo logo_scale
+  else
+    echo 1
+  endif
+-%}
