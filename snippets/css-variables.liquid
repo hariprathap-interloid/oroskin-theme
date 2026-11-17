@@ -191,6 +191,18 @@
       --color-tint: color-mix(in srgb, var(--color-accent) 10%, transparent); /* big faded letters */
       --color-tint-border: color-mix(in srgb, var(--color-accent) 25%, transparent); /* info box border */
 
+      {%- comment -%}
+        Raised surface (e.g. the Icon features circles): white on a light background; on a dark one
+        (color_brightness < 128, 0 = black, 255 = white) a light mix of the text colour, so it is not
+        a hard white spot.
+      {%- endcomment -%}
+      {%- assign scheme_brightness = scheme.settings.background | color_brightness %}
+      {% if scheme_brightness < 128 -%}
+        --color-surface-raised: color-mix(in srgb, var(--color-text) 12%, var(--color-background));
+      {%- else -%}
+        --color-surface-raised: #ffffff;
+      {%- endif %}
+
       background-color: var(--color-background);
       color: var(--color-text);
     }

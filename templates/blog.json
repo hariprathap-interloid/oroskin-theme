@@ -150,7 +150,7 @@
           "type": "_icon-feature",
           "settings": {
             "icon": "return",
-            "title": "Easy 30-day return",
+            "title": "Easy 30-day returns",
             "text": "<p>Try it for 30 days first, decide when you're ready.</p>",
             "link": ""
           },
@@ -175,7 +175,7 @@
       ],
       "settings": {
         "columns_desktop": 4,
-        "columns_mobile": "1",
+        "columns_mobile": "2",
         "section_width": "widest",
         "color_scheme": "scheme-2",
         "icon_color": "#7b0000",

@@ -49,7 +49,7 @@
     "promo_banner": "Promo banner",
     "highlight_cards": "Highlight cards",
     "highlight_card": "Highlight card",
-    "icon_features": "Feature icons",
+    "icon_features": "Icon features",
     "icon_feature": "Feature",
     "trending_products": "Trending products",
     "trending_sheet": "Trending sheet",
@@ -1134,9 +1134,19 @@
     "countdown_on_end": "When the time ends",
     "countdown_end_message": "Message",
     "countdown_alignment_info": "Applies to screens 1200 px and wider.",
-    "countdown_mobile_alignment":"Alignment on phones and tablets",
+    "countdown_mobile_alignment": "Alignment on phones and tablets",
     "countdown_mobile_alignment_info": "Applies to screens narrower than 1200 px. \"Alignment\" applies to larger screens.",
-    "countdown_end_message_info":"Shows in place of the countdown when \"When the time ends\" is \"Show a message\"."
+    "countdown_end_message_info": "Shows in place of the countdown when \"When the time ends\" is \"Show a message\".",
+    "icon_features_heading_info": "Screen readers read this heading before the features. It shows on the page only when you select \"Show the heading\".",
+    "icon_features_show_heading": "Show the heading",
+    "icon_features_columns_desktop_info": "For screens of 1200px and more. Tablets show 3 or 4 columns, but not more than this number. If a row is not full, its features are in the center.",
+    "icon_features_columns_phones": "Columns",
+    "icon_features_animation_info": "The features show one by one. Not applied to the first section on a page, so the top of the page shows instantly.",
+    "icon_features_padding_info": "Phones use half of the top and bottom space.",
+    "icon_features_color_scheme_info": "The icon circles are white on a light background. On a dark background, they are a light mix of the text color.",
+    "icon_features_icon_color_info": "If empty, the theme uses the \"Links and highlights\" color of the color scheme.",
+    "icon_feature_custom_icon_info": "Replaces the icon above. Use a simple square image or SVG. The Icon color does not change its color.",
+    "icon_feature_link_info": "The heading is the link. The icon and the heading can be clicked. To use a link, add a heading."
   },
   "options": {
     "panels_mobile_layout": {

@@ -1,34 +1,65 @@
 {%- comment -%}
-  Feature icons (Figma homepage, under the promo): a row of reassurances (Free shipping, Secure
+  Icon features (Figma homepage, under the promo): a row of reassurances (Free shipping, Secure
   payment, Easy returns, Trusted service), each a round icon badge, a title and a short text.
-  Columns on desktop and phones are settings; the icons take the Icon colour (gold in the Figma).
+
+  Columns: phones = "Columns on phones", tablets (750-1199px) = 3 or 4 by the space (container
+  query), desktop (1200px+) = "Columns on desktop". Flex, not grid, so a last row that is not full
+  is centred. The badge reads the scheme's --color-surface-raised (snippets/css-variables.liquid).
+  The heading is hidden by default (the Figma shows none), so the feature titles (h3) always have
+  an h2 above them for screen readers.
+
+  Animation delays go by column (the first feature of each row starts at 0), so a row that scrolls
+  in later does not wait for the rows above it. The column counts per width are written as data
+  attributes, because CSS can't pick :nth-child(Nn) from a variable.
 {%- endcomment -%}
 
 {%- liquid
   assign scheme_id = section.settings.color_scheme.id | default: 'scheme-1'
 
-  assign animation = section.settings.animation
-  if section.index == 1
-    assign animation = 'none'
-  endif
+  # The same "empty" rule as blocks/_icon-feature.liquid: no icon, no title and no text
+  assign visible_count = 0
+  for block in section.blocks
+    if block.settings.icon_image != blank or block.settings.icon != 'none' or block.settings.title != blank or block.settings.text != blank
+      assign visible_count = visible_count | plus: 1
+    endif
+  endfor
+
+  assign columns_desktop = section.settings.columns_desktop
+  assign columns_tablet = columns_desktop | at_most: 3
+  assign columns_tablet_wide = columns_desktop | at_most: 4
 -%}
 
+{%- if visible_count == 0 and request.design_mode -%}
+  <div class="icon-features-empty color-{{ scheme_id }}">
+    <p>{{ 'sections.icon_features.empty' | t }}</p>
+  </div>
+{%- endif -%}
+
 {%- if section.blocks.size > 0 -%}
+  {%- if visible_count > 0 or request.design_mode -%}
   <div
     class="icon-features full-width section-width--{{ section.settings.section_width | default: 'wide' }} color-{{ scheme_id }}"
-    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --columns-desktop: {{ section.settings.columns_desktop }}; --columns-mobile: {{ section.settings.columns_mobile }}; --icon-feature-color: {{ section.settings.icon_color }};"
+    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --columns-desktop: {{ section.settings.columns_desktop }}; --columns-mobile: {{ section.settings.columns_mobile }};{% if section.settings.icon_color != blank %} --icon-feature-color: {{ section.settings.icon_color }};{% endif %}"
   >
     <animate-on-scroll class="icon-features__inner">
+      {%- if section.settings.heading != blank -%}
+        <h2 class="icon-features__heading{% unless section.settings.show_heading %} visually-hidden{% endunless %}">
+          {{- section.settings.heading | escape -}}
+        </h2>
+      {%- endif -%}
+
       <div
         class="icon-features__grid"
-        {% if animation != 'none' %}
-          data-animate="{{ animation }}"
-        {% endif %}
+        data-columns-phone="{{ section.settings.columns_mobile }}"
+        data-columns-tablet="{{ columns_tablet }}"
+        data-columns-tablet-wide="{{ columns_tablet_wide }}"
+        data-columns-desktop="{{ columns_desktop }}"
       >
         {% content_for 'blocks' %}
       </div>
     </animate-on-scroll>
   </div>
+  {%- endif -%}
 {%- endif -%}
 
 {% stylesheet %}
@@ -36,7 +67,13 @@
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
   }
 
+  .icon-features-empty {
+    padding: var(--space-2xl) var(--page-margin);
+    text-align: center;
+  }
+
   .icon-features__inner {
+    container-type: inline-size;
     inline-size: min(
       calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
       calc(100% - var(--page-margin) * 2)
@@ -44,23 +81,131 @@
     margin-inline: auto;
   }
 
-  .icon-features__grid {
-    display: grid;
-    grid-template-columns: repeat(var(--columns-mobile), minmax(0, 1fr));
-    gap: var(--space-2xl) var(--space-lg);
+  .icon-features__heading {
+    margin: 0 0 var(--space-2xl);
+    text-align: center;
   }
 
-  /* Tablets: at most 2 columns, so the titles don't squeeze */
-  @media (min-width: 750px) {
-    .icon-features__grid {
-      grid-template-columns: repeat(min(var(--columns-desktop), 2), minmax(0, 1fr));
+  /*
+    Each feature takes 1/--columns of the row (minus the gaps). justify-content: center puts a last
+    row that is not full in the middle.
+  */
+  .icon-features__grid {
+    --columns: var(--columns-mobile);
+    --column-gap: var(--space-md);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-xl) var(--column-gap);
+  }
+
+  .icon-features__grid > * {
+    flex: 0 0 calc((100% - (var(--columns) - 1) * var(--column-gap)) / var(--columns));
+    min-inline-size: 0;
+  }
+
+  /*
+    One by one, per row: --col = the feature's column (0 = first), set below for each column count.
+    The first feature of each row starts at once, the next ones 100ms after each other.
+  */
+  .icon-features__grid > * {
+    --animate-delay: calc(var(--col, 0) * 100ms);
+  }
+
+  /* Phones: half the section padding (Figma mobile) */
+  @media (max-width: 749px) {
+    .icon-features {
+      padding-block: calc(var(--section-padding-top) / 2) calc(var(--section-padding-bottom) / 2);
+    }
+
+    .icon-features__grid[data-columns-phone='2'] > :nth-child(2n) {
+      --col: 1;
     }
   }
 
-  @media (min-width: 990px) {
+  @media (min-width: 750px) {
     .icon-features__grid {
-      grid-template-columns: repeat(var(--columns-desktop), minmax(0, 1fr));
-      gap: var(--space-xl);
+      --column-gap: var(--space-lg);
+      row-gap: var(--space-2xl);
+    }
+  }
+
+  /*
+    Tablets: 3 columns, 4 when the row is 50rem (800px) or wider, so each column keeps about 180px.
+    Never more than "Columns on desktop" (Liquid writes both counts as data attributes).
+  */
+  @media (min-width: 750px) and (max-width: 1199px) {
+    .icon-features__grid {
+      --columns: min(var(--columns-desktop), 3);
+    }
+
+    @container (width < 50rem) {
+      .icon-features__grid[data-columns-tablet='2'] > :nth-child(2n),
+      .icon-features__grid[data-columns-tablet='3'] > :nth-child(3n + 2) {
+        --col: 1;
+      }
+
+      .icon-features__grid[data-columns-tablet='3'] > :nth-child(3n) {
+        --col: 2;
+      }
+    }
+
+    @container (width >= 50rem) {
+      .icon-features__grid {
+        --columns: min(var(--columns-desktop), 4);
+      }
+
+      .icon-features__grid[data-columns-tablet-wide='2'] > :nth-child(2n),
+      .icon-features__grid[data-columns-tablet-wide='3'] > :nth-child(3n + 2),
+      .icon-features__grid[data-columns-tablet-wide='4'] > :nth-child(4n + 2) {
+        --col: 1;
+      }
+
+      .icon-features__grid[data-columns-tablet-wide='3'] > :nth-child(3n),
+      .icon-features__grid[data-columns-tablet-wide='4'] > :nth-child(4n + 3) {
+        --col: 2;
+      }
+
+      .icon-features__grid[data-columns-tablet-wide='4'] > :nth-child(4n) {
+        --col: 3;
+      }
+    }
+  }
+
+  @media (min-width: 1200px) {
+    .icon-features__grid {
+      --columns: var(--columns-desktop);
+      --column-gap: var(--space-xl);
+    }
+
+    .icon-features__grid[data-columns-desktop='2'] > :nth-child(2n),
+    .icon-features__grid[data-columns-desktop='3'] > :nth-child(3n + 2),
+    .icon-features__grid[data-columns-desktop='4'] > :nth-child(4n + 2),
+    .icon-features__grid[data-columns-desktop='5'] > :nth-child(5n + 2),
+    .icon-features__grid[data-columns-desktop='6'] > :nth-child(6n + 2) {
+      --col: 1;
+    }
+
+    .icon-features__grid[data-columns-desktop='3'] > :nth-child(3n),
+    .icon-features__grid[data-columns-desktop='4'] > :nth-child(4n + 3),
+    .icon-features__grid[data-columns-desktop='5'] > :nth-child(5n + 3),
+    .icon-features__grid[data-columns-desktop='6'] > :nth-child(6n + 3) {
+      --col: 2;
+    }
+
+    .icon-features__grid[data-columns-desktop='4'] > :nth-child(4n),
+    .icon-features__grid[data-columns-desktop='5'] > :nth-child(5n + 4),
+    .icon-features__grid[data-columns-desktop='6'] > :nth-child(6n + 4) {
+      --col: 3;
+    }
+
+    .icon-features__grid[data-columns-desktop='5'] > :nth-child(5n),
+    .icon-features__grid[data-columns-desktop='6'] > :nth-child(6n + 5) {
+      --col: 4;
+    }
+
+    .icon-features__grid[data-columns-desktop='6'] > :nth-child(6n) {
+      --col: 5;
     }
   }
 {% endstylesheet %}
@@ -76,33 +221,25 @@
   "max_blocks": 8,
   "settings": [
     {
-      "type": "range",
-      "id": "columns_desktop",
-      "label": "t:labels.columns_desktop",
-      "min": 2,
-      "max": 6,
-      "step": 1,
-      "default": 4
+      "type": "header",
+      "content": "t:labels.content"
     },
     {
-      "type": "select",
-      "id": "columns_mobile",
-      "label": "t:labels.columns_mobile",
-      "options": [
-        {
-          "value": "1",
-          "label": "1"
-        },
-        {
-          "value": "2",
-          "label": "2"
-        }
-      ],
-      "default": "1"
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.icon_features_heading_info",
+      "default": "Our promises"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_heading",
+      "label": "t:labels.icon_features_show_heading",
+      "default": false
     },
     {
       "type": "header",
-      "content": "t:labels.style"
+      "content": "t:labels.layout"
     },
     {
       "type": "select",
@@ -130,22 +267,44 @@
       "default": "wide"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-1"
+      "type": "range",
+      "id": "columns_desktop",
+      "label": "t:labels.columns_desktop",
+      "info": "t:labels.icon_features_columns_desktop_info",
+      "min": 2,
+      "max": 6,
+      "step": 1,
+      "default": 4
     },
     {
-      "type": "color",
-      "id": "icon_color",
-      "label": "t:labels.icon_color",
-      "default": "#c8a24b"
+      "type": "header",
+      "content": "t:labels.phones"
+    },
+    {
+      "type": "select",
+      "id": "columns_mobile",
+      "label": "t:labels.icon_features_columns_phones",
+      "options": [
+        {
+          "value": "1",
+          "label": "1"
+        },
+        {
+          "value": "2",
+          "label": "2"
+        }
+      ],
+      "default": "2"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.animation_header"
     },
     {
       "type": "select",
       "id": "animation",
       "label": "t:labels.animation",
-      "info": "t:labels.animation_info",
+      "info": "t:labels.icon_features_animation_info",
       "options": [
         {
           "value": "none",
@@ -179,9 +338,14 @@
       "default": "fade-up"
     },
     {
+      "type": "header",
+      "content": "t:labels.spacing"
+    },
+    {
       "type": "range",
       "id": "padding_top",
       "label": "t:labels.padding_top",
+      "info": "t:labels.icon_features_padding_info",
       "min": 0,
       "max": 160,
       "step": 8,
@@ -197,6 +361,23 @@
       "step": 8,
       "unit": "px",
       "default": 80
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "info": "t:labels.icon_features_color_scheme_info",
+      "default": "scheme-1"
+    },
+    {
+      "type": "color",
+      "id": "icon_color",
+      "label": "t:labels.icon_color",
+      "info": "t:labels.icon_features_icon_color_info"
     }
   ],
   "presets": [
