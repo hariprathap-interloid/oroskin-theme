@@ -974,7 +974,7 @@
           "blocks": {}
         }
       },
-      "name": "t:general.image_banner_stats",
+      "name": "t:general.image_banner_cards",
       "settings": {
         "image": "shopify://shop_images/6a9da17c3473051a785c2d23aa0bb872cbfeedf7.png",
         "height": "full",

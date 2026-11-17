@@ -52,7 +52,8 @@
     display: flex;
     align-items: center;
     gap: var(--space-md);
-    inline-size: clamp(15rem, 14vw, 17rem);
+    min-inline-size: clamp(15rem, 14vw, 17rem); /* grows for a long value; the cards in a column get the same width */
+    max-inline-size: 100%;
     padding: var(--space-md) var(--space-lg);
     border: 1px solid #ffffff59;
     border-radius: var(--highlight-card-radius, var(--radius-lg));
@@ -108,6 +109,13 @@
   .highlight-card__value {
     font-size: var(--font-size-h3);
     line-height: 1.2;
+  }
+
+  /* Large screens: the value stays on one line (the card grows); smaller screens let a long value wrap */
+  @media (min-width: 1200px) {
+    .highlight-card__value {
+      white-space: nowrap;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {

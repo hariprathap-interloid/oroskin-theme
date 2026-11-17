@@ -2,7 +2,7 @@
   Image banner: a full-width photo with a dark overlay, content on the left (any theme blocks:
   eyebrow, headings, text, buttons) and optional glass highlight cards on the right.
   Two presets build the Figma homepage sections from this one file:
-  - "Image banner with stats" = The New Glow Manifesto (full screen, gradient, 3 highlight cards)
+  - "Image banner with cards" = The New Glow Manifesto (full screen, gradient, 3 highlight cards)
   - "Promo banner" = The Ultimate Glow-Up Event (shorter, even tint, no cards; the Figma countdown is
     a parked feature, decision 6)
 
@@ -18,6 +18,10 @@
   from below), and "Slide in the heading and View all" brings those in from outside the sheet once it
   is in place (data-scene-style / data-sheet-header from Liquid, data-sheet-placed from the script).
   Both sit next to "Scroll animation", so all the banner's animation choices are in one place.
+
+  Layout: from 1200px the content is on the left and the cards on the right. Below 1200px (Figma mobile,
+  also used on tablets) the cards are small, under the content, at the right. Phones use the gradient
+  from the left too, but darker, and half of the top / bottom padding.
 
   Entrance on first view: the banner's text uses this section's "Scroll animation" setting and the
   cards their own block setting (e.g. text from the right, cards from the left).
@@ -91,10 +95,12 @@
     display: block;
   }
 
+  /* clip, not hidden: a focused link that is moved out of view must not scroll the stage itself */
   .image-banner__stage {
     position: relative;
     display: grid;
     overflow: hidden;
+    overflow: clip;
     isolation: isolate;
   }
 
@@ -164,10 +170,54 @@
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
   }
 
-  /* From tablet landscape up: content left, cards right (the cards column only when it has cards) */
-  @media (min-width: 990px) {
+  /* Large screens: content left, cards right (the cards column only when it has cards) */
+  @media (min-width: 1200px) {
     .image-banner__inner {
       grid-template-columns: 1fr auto;
+    }
+  }
+
+  /*
+    Phones and tablets (Figma mobile): the content, then the small cards under it at the right.
+    The content group sits low on the photo (align-content: end), so the face stays clear.
+  */
+  @media (max-width: 1199px) {
+    .image-banner__inner {
+      align-content: safe end; /* safe: content taller than the box overflows at the bottom, never the top */
+      gap: var(--space-lg);
+    }
+
+    .image-banner__cards {
+      justify-self: end;
+    }
+
+    .image-banner .highlight-cards {
+      gap: var(--space-sm);
+    }
+
+    .image-banner .highlight-card {
+      gap: var(--space-sm);
+      min-inline-size: clamp(8rem, 5rem + 8vw, 11rem);
+      padding: var(--space-xs) var(--space-sm);
+      border-radius: min(var(--highlight-card-radius, var(--radius-lg)), 0.875rem);
+    }
+
+    .image-banner .highlight-card__icon {
+      inline-size: clamp(1.75rem, 1.25rem + 1.5vw, 2.25rem);
+      block-size: clamp(1.75rem, 1.25rem + 1.5vw, 2.25rem);
+    }
+
+    .image-banner .highlight-card__icon :is(svg, img) {
+      inline-size: 0.875rem;
+      block-size: 0.875rem;
+    }
+
+    .image-banner .highlight-card__label {
+      font-size: 0.625rem;
+    }
+
+    .image-banner .highlight-card__value {
+      font-size: var(--font-size-small);
     }
   }
 
@@ -192,6 +242,7 @@
 
     position: sticky;
     inset-block-start: 0;
+    grid-template-rows: 100%; /* the row is the screen height, also when the content is taller */
     block-size: 100svh;
     min-block-size: 0;
   }
@@ -269,22 +320,35 @@
     transform: translateX(calc(100% + 4rem));
   }
 
-  /* Phones: the sheet takes the full width */
-  @media (max-width: 749px) {
+  /* Sheet width: tablets and phones have their own setting (Trending sheet block) */
+  @media (max-width: 1199px) {
     .image-banner[data-scene-active] .banner-sheet {
-      inline-size: 100%;
+      inline-size: var(--sheet-width-tablet, 70%);
     }
   }
 
-  /* Phones: the text needs the full width, so the tint covers the whole photo */
   @media (max-width: 749px) {
-    .image-banner--overlay-gradient .image-banner__overlay,
-    .image-banner--overlay-gradient-right .image-banner__overlay {
-      background: linear-gradient(0deg, #000000 0%, #000000b3 60%, #00000066 100%);
+    .image-banner[data-scene-active] .banner-sheet {
+      inline-size: var(--sheet-width-phone, 80%);
     }
 
-    .image-banner .highlight-cards {
-      flex-flow: row wrap;
+    /* Figma mobile: the text needs the full width, so the tint from the left is darker and goes further */
+    .image-banner--overlay-gradient .image-banner__overlay {
+      background: linear-gradient(90deg, #000000 0%, #000000b3 45%, #00000059 100%);
+    }
+
+    .image-banner--overlay-gradient-right .image-banner__overlay {
+      background: linear-gradient(270deg, #000000 0%, #000000b3 45%, #00000059 100%);
+    }
+
+    /* Half of the padding */
+    .image-banner__inner {
+      padding-block: calc(var(--section-padding-top) / 2) calc(var(--section-padding-bottom) / 2);
+    }
+
+    /* While the stage is pinned, the sticky header covers its top: the text starts below the header */
+    .image-banner[data-scene-active] .image-banner__inner {
+      padding-block-start: max(calc(var(--section-padding-top) / 2), var(--header-space, 6rem));
     }
   }
 {% endstylesheet %}
@@ -302,7 +366,51 @@
       this.track = this.querySelector('.image-banner__track');
       this.stage = this.querySelector('.image-banner__stage');
       if (!this.sheet || !this.track || !this.stage || !this.hasAttribute('data-scene')) return;
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+      // One controller for every listener: the editor can move the section (disconnect + connect again)
+      this.inner = this.querySelector('.image-banner__inner');
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+      this.motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+      this.motion.addEventListener('change', () => this.update(), { signal });
+      // A resize can make the content too tall for the screen (or fit again): check again
+      window.addEventListener(
+        'resize',
+        () => {
+          cancelAnimationFrame(this.resizeFrame);
+          this.resizeFrame = requestAnimationFrame(() => this.update());
+        },
+        { signal }
+      );
+      this.update();
+    }
+
+    /**
+     * The scene runs only when motion is allowed and the banner content fits on one screen: a pinned
+     * stage can't scroll, so taller content (a small phone, a long text) would be cut off. Then the
+     * sheet simply sits under the banner.
+     */
+    update() {
+      const active = this.hasAttribute('data-scene-active');
+      const fits = this.inner.scrollHeight <= window.innerHeight + 1;
+      if (!this.motion.matches && fits) {
+        if (!active) this.start();
+      } else if (active) {
+        this.stop();
+      }
+    }
+
+    disconnectedCallback() {
+      this.stop();
+      this.controller?.abort();
+      cancelAnimationFrame(this.resizeFrame);
+    }
+
+    /** Pins the stage and follows the scroll */
+    start() {
+      this.stop();
+      this.sceneController = new AbortController();
+      const { signal } = this.sceneController;
 
       this.style.setProperty('--scene-length', this.sheet.dataset.sceneLength || 250);
       this.setAttribute('data-scene-active', '');
@@ -312,30 +420,51 @@
       this.run = () => {
         if (!this.frame) this.frame = requestAnimationFrame(() => this.step());
       };
+      // Scroll and resize are only followed while the scene is on screen
       this.observer = new IntersectionObserver(([entry]) => {
+        this.scrollController?.abort();
         if (entry.isIntersecting) {
-          window.addEventListener('scroll', this.run, { passive: true });
-          window.addEventListener('resize', this.run);
+          this.scrollController = new AbortController();
+          window.addEventListener('scroll', this.run, { passive: true, signal: this.scrollController.signal });
+          window.addEventListener('resize', this.run, { signal: this.scrollController.signal });
           this.run();
         } else {
-          this.stopListening();
           this.current = this.measure();
           this.paint();
         }
       });
       this.observer.observe(this.track);
+
+      // Keyboard: a link that gets focus while it is out of view (the sheet before it slides in, or the
+      // banner text under the sheet) scrolls the page to the point of the scene where it shows
+      this.addEventListener('focusin', (event) => this.reveal(event.target), { signal });
     }
 
-    disconnectedCallback() {
+    /** Back to the plain layout (reduced motion switched on, or the section left the page) */
+    stop() {
+      this.sceneController?.abort();
+      this.scrollController?.abort();
       this.observer?.disconnect();
-      this.stopListening();
-    }
-
-    stopListening() {
-      window.removeEventListener('scroll', this.run);
-      window.removeEventListener('resize', this.run);
       if (this.frame) cancelAnimationFrame(this.frame);
       this.frame = null;
+      ['data-scene-active', 'data-sheet-shown', 'data-sheet-placed'].forEach((name) => this.removeAttribute(name));
+      this.style.setProperty('--p', 0);
+    }
+
+    /**
+     * Scrolls to 0.8 (sheet in place) for a link in the sheet, to 0 (banner text) for any other link.
+     * The banner text starts to fade at 0.12 (see --out), so a banner link needs a scroll from there on.
+     */
+    reveal(target) {
+      const inSheet = this.sheet.contains(target);
+      if (inSheet && this.hasAttribute('data-sheet-placed')) return;
+      if (!inSheet && this.current <= 0.12) return;
+      const distance = this.track.offsetHeight - this.stage.offsetHeight;
+      const top = this.track.getBoundingClientRect().top + window.scrollY;
+      const progress = inSheet ? 0.8 : 0;
+      window.scrollTo({ top: top + distance * progress, behavior: 'instant' });
+      this.current = progress;
+      this.paint();
     }
 
     /** 0 when the stage pins, 1 when it lets go (measured against the stage's own height) */
@@ -384,10 +513,18 @@
   ],
   "settings": [
     {
+      "type": "header",
+      "content": "t:labels.content"
+    },
+    {
       "type": "image_picker",
       "id": "image",
       "label": "t:labels.image",
       "info": "t:labels.image_banner_image_info"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.layout"
     },
     {
       "type": "select",
@@ -419,40 +556,6 @@
     },
     {
       "type": "select",
-      "id": "overlay_style",
-      "label": "t:labels.overlay_style",
-      "options": [
-        {
-          "value": "gradient",
-          "label": "t:options.overlay_style.gradient"
-        },
-        {
-          "value": "gradient-right",
-          "label": "t:options.overlay_style.gradient_right"
-        },
-        {
-          "value": "even",
-          "label": "t:options.overlay_style.even"
-        }
-      ],
-      "default": "gradient"
-    },
-    {
-      "type": "range",
-      "id": "overlay_opacity",
-      "label": "t:labels.overlay_opacity",
-      "min": 0,
-      "max": 90,
-      "step": 5,
-      "unit": "%",
-      "default": 75
-    },
-    {
-      "type": "header",
-      "content": "t:labels.style"
-    },
-    {
-      "type": "select",
       "id": "section_width",
       "label": "t:labels.section_width",
       "info": "t:labels.section_width_info",
@@ -477,11 +580,71 @@
       "default": "wide"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "info": "t:labels.image_banner_scheme_info",
-      "default": "scheme-5"
+      "type": "header",
+      "content": "t:labels.image_banner_tint"
+    },
+    {
+      "type": "select",
+      "id": "overlay_style",
+      "label": "t:labels.image_banner_tint_style",
+      "info": "t:labels.image_banner_tint_style_info",
+      "options": [
+        {
+          "value": "gradient",
+          "label": "t:options.overlay_style.gradient"
+        },
+        {
+          "value": "gradient-right",
+          "label": "t:options.overlay_style.gradient_right"
+        },
+        {
+          "value": "even",
+          "label": "t:options.overlay_style.even"
+        }
+      ],
+      "default": "gradient"
+    },
+    {
+      "type": "range",
+      "id": "overlay_opacity",
+      "label": "t:labels.image_banner_tint_strength",
+      "min": 0,
+      "max": 90,
+      "step": 5,
+      "unit": "%",
+      "default": 75
+    },
+    {
+      "type": "header",
+      "content": "t:labels.image_banner_scene"
+    },
+    {
+      "type": "select",
+      "id": "scene_style",
+      "label": "t:labels.image_banner_scene_style",
+      "info": "t:labels.image_banner_scene_style_info",
+      "options": [
+        {
+          "value": "sideways",
+          "label": "t:options.sheet_scene_style.sideways"
+        },
+        {
+          "value": "vertical",
+          "label": "t:options.sheet_scene_style.vertical"
+        }
+      ],
+      "default": "sideways"
+    },
+    {
+      "type": "checkbox",
+      "id": "header_slide",
+      "label": "t:labels.image_banner_header_slide",
+      "info": "t:labels.image_banner_header_slide_info",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.animation"
     },
     {
       "type": "select",
@@ -521,27 +684,14 @@
       "default": "fade-up"
     },
     {
-      "type": "select",
-      "id": "scene_style",
-      "label": "t:labels.sheet_scene_style",
-      "info": "t:labels.sheet_scene_style_info",
-      "options": [
-        { "value": "sideways", "label": "t:options.sheet_scene_style.sideways" },
-        { "value": "vertical", "label": "t:options.sheet_scene_style.vertical" }
-      ],
-      "default": "sideways"
-    },
-    {
-      "type": "checkbox",
-      "id": "header_slide",
-      "label": "t:labels.sheet_header_slide",
-      "info": "t:labels.sheet_header_slide_info",
-      "default": true
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
       "id": "padding_top",
       "label": "t:labels.padding_top",
+      "info": "t:labels.image_banner_padding_info",
       "min": 0,
       "max": 200,
       "step": 8,
@@ -552,16 +702,28 @@
       "type": "range",
       "id": "padding_bottom",
       "label": "t:labels.padding_bottom",
+      "info": "t:labels.image_banner_padding_info",
       "min": 0,
       "max": 200,
       "step": 8,
       "unit": "px",
       "default": 120
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "info": "t:labels.image_banner_scheme_info",
+      "default": "scheme-5"
     }
   ],
   "presets": [
     {
-      "name": "t:general.image_banner_stats",
+      "name": "t:general.image_banner_cards",
       "settings": {
         "height": "full",
         "overlay_style": "gradient",

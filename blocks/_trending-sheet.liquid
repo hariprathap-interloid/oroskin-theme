@@ -7,6 +7,9 @@
   slides in from the left over the photo, then the page continues. Without JavaScript, with reduced
   motion or with the theme's animations off, the sheet simply sits under the banner content.
 
+  Width: "Sheet width" from 1200px, "Sheet width on tablets" from 750px, "Sheet width on phones" below (defaults: 70% on tablets, 80% on phones).
+  "Products on phones" hides the later rows below 750px, so the sheet fits the screen (Figma mobile: 5).
+
   The scene's "Transition" (sideways / vertical) and "Slide in the heading and View all" are settings
   of the Image banner section itself, next to its "Scroll animation".
 
@@ -15,22 +18,39 @@
 {% enddoc %}
 
 {%- if block.settings.show -%}
+  {%- liquid
+    assign phone_width = block.settings.phone_width | default: 80
+    assign tablet_width = block.settings.tablet_width | default: 70
+  -%}
   <div
     class="banner-sheet"
-    style="--sheet-width: {{ block.settings.width }}%;"
+    style="--sheet-width: {{ block.settings.width }}%; --sheet-width-tablet: {{ tablet_width }}%; --sheet-width-phone: {{ phone_width }}%;"
     data-banner-sheet
     data-scene-length="{{ block.settings.scene_length }}"
     {{ block.shopify_attributes }}
   >
     {%- if block.settings.background_image != blank -%}
-      {%- assign bg_opacity = block.settings.background_opacity | divided_by: 100.0 -%}
+      {%- liquid
+        assign bg_opacity = block.settings.background_opacity | divided_by: 100.0
+        # The sheet has its set widths only in the scroll scene (theme animations on). Without it the sheet is
+        # full width. Lazy: the sheet shows only after some scrolling, so it never competes with the LCP image.
+        if settings.animations_enabled
+          capture bg_sizes
+            echo '(min-width: 1200px) ' | append: block.settings.width | append: 'vw, (min-width: 750px) '
+            echo tablet_width | append: 'vw, ' | append: phone_width | append: 'vw'
+          endcapture
+        else
+          assign bg_sizes = '100vw'
+        endif
+      -%}
       <div class="trending-bg" style="--trending-bg-opacity: {{ bg_opacity }};" aria-hidden="true">
-        {{ block.settings.background_image | image_url: width: 1600 | image_tag: widths: '600, 900, 1200, 1600', sizes: '(min-width: 990px) 50vw, 100vw', alt: '', loading: 'lazy' }}
+        {{ block.settings.background_image | image_url: width: 1600 | image_tag: widths: '400, 600, 900, 1200, 1600', sizes: bg_sizes, alt: '', loading: 'lazy' }}
       </div>
     {%- endif -%}
     {% render 'trending-list',
       collection: block.settings.collection,
       limit: block.settings.products_to_show,
+      phone_limit: block.settings.products_to_show_phone,
       heading: block.settings.heading,
       link_label: block.settings.link_label,
       link: block.settings.link,
@@ -84,6 +104,21 @@
     gap: clamp(0.75rem, 2svh, 2rem);
   }
 
+  /*
+    Phones (Figma mobile): the rows stay together under the heading with an even gap (no spread to the
+    bottom), and the heading is closer to the list; the space left under the list stays empty.
+  */
+  @media (max-width: 749px) {
+    .banner-sheet .trending-list {
+      gap: 1.25rem;
+    }
+
+    .banner-sheet .trending-list__rows {
+      justify-content: flex-start;
+      gap: 1.5rem;
+    }
+  }
+
   .banner-sheet::-webkit-scrollbar {
     inline-size: 6px;
   }
@@ -107,8 +142,12 @@
       "type": "checkbox",
       "id": "show",
       "label": "t:labels.show_trending_sheet",
-      "info": "t:labels.show_trending_sheet_info",
+      "info": "t:labels.trending_sheet_show_info",
       "default": false
+    },
+    {
+      "type": "header",
+      "content": "t:labels.content"
     },
     {
       "type": "inline_richtext",
@@ -133,6 +172,10 @@
       "visible_if": "{{ block.settings.show }}"
     },
     {
+      "type": "header",
+      "content": "t:labels.products"
+    },
+    {
       "type": "collection",
       "id": "collection",
       "label": "t:labels.collection",
@@ -149,9 +192,14 @@
       "visible_if": "{{ block.settings.show }}"
     },
     {
+      "type": "header",
+      "content": "t:labels.layout"
+    },
+    {
       "type": "range",
       "id": "width",
       "label": "t:labels.sheet_width",
+      "info": "t:labels.trending_sheet_width_info",
       "min": 40,
       "max": 70,
       "step": 5,
@@ -163,12 +211,55 @@
       "type": "range",
       "id": "scene_length",
       "label": "t:labels.scene_length",
-      "info": "t:labels.sheet_scene_length_info",
+      "info": "t:labels.trending_sheet_scene_length_info",
       "min": 150,
       "max": 400,
       "step": 25,
       "unit": "%",
       "default": 250,
+      "visible_if": "{{ block.settings.show }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.phones"
+    },
+    {
+      "type": "range",
+      "id": "phone_width",
+      "label": "t:labels.trending_sheet_phone_width",
+      "info": "t:labels.trending_sheet_phone_width_info",
+      "min": 50,
+      "max": 100,
+      "step": 2,
+      "unit": "%",
+      "default": 80,
+      "visible_if": "{{ block.settings.show }}"
+    },
+    {
+      "type": "range",
+      "id": "products_to_show_phone",
+      "label": "t:labels.trending_sheet_phone_products",
+      "info": "t:labels.trending_sheet_phone_products_info",
+      "min": 3,
+      "max": 8,
+      "step": 1,
+      "default": 5,
+      "visible_if": "{{ block.settings.show }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.tablets"
+    },
+    {
+      "type": "range",
+      "id": "tablet_width",
+      "label": "t:labels.trending_sheet_tablet_width",
+      "info": "t:labels.trending_sheet_tablet_width_info",
+      "min": 40,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 70,
       "visible_if": "{{ block.settings.show }}"
     },
     {
@@ -191,6 +282,7 @@
       "type": "range",
       "id": "title_size",
       "label": "t:labels.title_size_px",
+      "info": "t:labels.size_px_info",
       "min": 14,
       "max": 40,
       "step": 1,
@@ -206,6 +298,7 @@
       "type": "image_picker",
       "id": "background_image",
       "label": "t:labels.image",
+      "info": "t:labels.trending_sheet_image_info",
       "visible_if": "{{ block.settings.show }}"
     },
     {

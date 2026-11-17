@@ -9,6 +9,7 @@
 
   @param {collection} [collection] - The collection to list. Empty = placeholder rows
   @param {number} [limit] - How many products, default 5
+  @param {number} [phone_limit] - How many products on phones (below 750px); the other rows are hidden there. Default: all
   @param {string} [heading] - Heading HTML (inline rich text: italic words show in the accent colour)
   @param {string} [link_label] - "View all" text
   @param {string} [link] - "View all" URL; default the collection's page
@@ -22,6 +23,7 @@
 
 {%- liquid
   assign row_limit = limit | default: 5
+  assign phone_rows = phone_limit | default: row_limit
   assign row_animation = animation | default: 'none'
 
   # Custom sizes: the same fluid formula as the Heading / Text blocks (snippets/fluid-font-size.liquid)
@@ -82,7 +84,7 @@
             assign badges_field = product.metafields.custom.badges
           -%}
           <li
-            class="trending-list__row"
+            class="trending-list__row{% if forloop.index > phone_rows %} trending-list__row--no-phone{% endif %}"
             {% if row_animation != 'none' %}
               data-animate="{{ row_animation }}"
               style="--animate-delay: {{ delay }}ms;"
@@ -96,38 +98,38 @@
                 {{ 'product-1' | placeholder_svg_tag }}
               {%- endif -%}
             </div>
-            <div class="trending-list__text">
+            <div class="trending-list__meta">
               {%- if product.type != blank -%}
                 <p class="trending-list__category">{{ product.type | escape }}</p>
               {%- endif -%}
-              <h3 class="trending-list__title">
-                <a class="trending-list__link" href="{{ product.url }}">{{ product.title | escape }}</a>
-              </h3>
-            </div>
-            <div class="trending-list__badge">
-              {%- if badges_field != blank -%}
-                {%- if badges_field.type contains 'list.' -%}
-                  {%- for badge in badges_field.value limit: 1 -%}
-                    {% render 'product-badge', badge: badge %}
-                  {%- endfor -%}
-                {%- else -%}
-                  {% render 'product-badge', badge: badges_field.value %}
+              <div class="trending-list__badge">
+                {%- if badges_field != blank -%}
+                  {%- if badges_field.type contains 'list.' -%}
+                    {%- for badge in badges_field.value limit: 1 -%}
+                      {% render 'product-badge', badge: badge %}
+                    {%- endfor -%}
+                  {%- else -%}
+                    {% render 'product-badge', badge: badges_field.value %}
+                  {%- endif -%}
                 {%- endif -%}
-              {%- endif -%}
+              </div>
             </div>
+            <h3 class="trending-list__title">
+              <a class="trending-list__link" href="{{ product.url }}">{{ product.title | escape }}</a>
+            </h3>
             <div class="trending-list__price">{% render 'price', product: product %}</div>
           </li>
         {%- endfor -%}
       {%- else -%}
         {%- for i in (1..row_limit) -%}
-          <li class="trending-list__row">
+          <li class="trending-list__row{% if forloop.index > phone_rows %} trending-list__row--no-phone{% endif %}">
             <span class="trending-list__number" aria-hidden="true">{{ forloop.index | prepend: '0' | slice: -2, 2 }}</span>
             <div class="trending-list__thumb">{{ 'product-1' | placeholder_svg_tag }}</div>
-            <div class="trending-list__text">
+            <div class="trending-list__meta">
               <p class="trending-list__category">{{ 'sections.trending.placeholder_category' | t }}</p>
-              <h3 class="trending-list__title">{{ 'products.card.placeholder_title' | t }}</h3>
+              <div class="trending-list__badge"></div>
             </div>
-            <div class="trending-list__badge"></div>
+            <h3 class="trending-list__title">{{ 'products.card.placeholder_title' | t }}</h3>
             <div class="trending-list__price">
               <div class="price"><span class="price__current">{{ 1999 | money }}</span></div>
             </div>
@@ -139,7 +141,10 @@
 </div>
 
 {% stylesheet %}
+  /* The rows change layout by the list's own width (container query), not by the screen width:
+     the list can be a narrow sheet on a wide screen. */
   .trending-list {
+    container-type: inline-size;
     display: flex;
     flex-direction: column;
     gap: clamp(2rem, 1rem + 3vw, 5rem);
@@ -165,9 +170,16 @@
   }
 
   /* Custom sizes: the typed size at 1920px, shrinking in a straight line to the phone size */
-  .trending-list__heading--custom,
-  .trending-list__rows--custom .trending-list__title {
+  .trending-list__heading--custom {
     font-size: clamp(
+      var(--fs-min),
+      calc(var(--fs-min) + (100vw - 390px) * var(--fs-diff) / 1530),
+      var(--fs-max)
+    );
+  }
+
+  .trending-list__rows--custom {
+    --title-size: clamp(
       var(--fs-min),
       calc(var(--fs-min) + (100vw - 390px) * var(--fs-diff) / 1530),
       var(--fs-max)
@@ -214,13 +226,82 @@
     list-style: none;
   }
 
-  /* One row: number · thumbnail · category + title · badge · price */
+  /*
+    One row (wide list, Figma desktop): number · thumbnail · category over title · badge · price.
+    The meta wrapper "disappears" (display: contents), so the category and the badge are grid items.
+  */
   .trending-list__row {
     position: relative;
     display: grid;
-    grid-template-columns: auto clamp(5rem, 4rem + 3vw, 7.5rem) 1fr auto auto;
+    grid-template-columns: auto clamp(5rem, 4rem + 3vw, 7.5rem) minmax(0, 1fr) auto auto;
+    grid-template-rows: auto auto;
     align-items: center;
-    gap: var(--space-sm) clamp(1rem, 0.5rem + 1.5vw, 2.25rem);
+    column-gap: clamp(1rem, 0.5rem + 1.5vw, 2.25rem);
+  }
+
+  .trending-list__number,
+  .trending-list__thumb,
+  .trending-list__badge,
+  .trending-list__price {
+    grid-row: 1 / span 2;
+  }
+
+  .trending-list__meta {
+    display: contents;
+  }
+
+  .trending-list__category {
+    grid-column: 3;
+    grid-row: 1;
+    align-self: end;
+  }
+
+  .trending-list__title {
+    grid-column: 3;
+    grid-row: 2;
+    align-self: start;
+  }
+
+  /* No category (product without a type): the title takes both rows, centred like the rest of the row */
+  .trending-list__row:not(:has(.trending-list__category)) .trending-list__title {
+    grid-row: 1 / span 2;
+    align-self: center;
+  }
+
+  .trending-list__badge {
+    grid-column: 4;
+    white-space: nowrap;
+  }
+
+  .trending-list__price {
+    grid-column: 5;
+  }
+
+  /*
+    Figma badge ("Hot", "New"): a pill with a faint accent fill, a thin accent edge and light accent text.
+    Two classes, so it beats the one-class colour scheme class that product-badge adds (that scheme can be
+    the same colour as the sheet, so the pill didn't show). A Badge entry with its own colours keeps them.
+  */
+  .trending-list__badge .product-card__badge {
+    display: inline-block;
+    padding: 0.25em 0.8em;
+    border: 1px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
+    border-radius: var(--radius-pill);
+    background-color: color-mix(in srgb, var(--color-accent) 18%, transparent);
+    color: color-mix(in srgb, var(--color-accent) 75%, var(--color-text));
+    font-size: var(--font-size-caption);
+    line-height: 1.3;
+  }
+
+  /* Own colours: a thin edge in its text colour, so the pill shows also when its fill = the sheet colour */
+  .trending-list__badge .product-card__badge--own-colors {
+    border-color: color-mix(in srgb, var(--badge-fg) 45%, transparent);
+    background-color: var(--badge-bg);
+    color: var(--badge-fg);
+  }
+
+  .trending-list__badge:empty {
+    display: none;
   }
 
   .trending-list__number {
@@ -244,10 +325,6 @@
     object-fit: cover;
   }
 
-  .trending-list__text {
-    min-inline-size: 0;
-  }
-
   .trending-list__category {
     margin: 0 0 var(--space-xs);
     color: var(--color-accent);
@@ -259,7 +336,7 @@
 
   .trending-list__title {
     margin: 0;
-    font-size: var(--font-size-h3);
+    font-size: var(--title-size, var(--font-size-h3));
     font-weight: var(--font-heading--weight);
   }
 
@@ -292,6 +369,7 @@
 
   /* Figma: the price in white, bold, body font (the theme's price is accent-coloured elsewhere) */
   .trending-list__price .price__current {
+    white-space: nowrap;
     color: var(--color-text);
     font-size: var(--font-size-body-lg);
     font-weight: 600;
@@ -301,23 +379,80 @@
     justify-content: flex-end;
   }
 
-  /* Phones: badge and price move under the title */
-  @media (max-width: 749px) {
+  /*
+    Narrow list (less than 40rem wide: phones, tablets, the sheet on small laptops), Figma mobile:
+    number and photo on the left; category and badge on one line (the badge goes under the category
+    when the line is too short), then the title, then the price. Sizes follow the list's width (cqi).
+  */
+  @container (max-width: 40rem) {
     .trending-list__row {
-      grid-template-columns: auto 5rem 1fr;
+      grid-template-columns: auto clamp(3.5rem, 18cqi, 5rem) minmax(0, 1fr);
+      grid-template-rows: none;
+      gap: 0.25rem clamp(0.75rem, 4cqi, 1.25rem);
     }
 
-    .trending-list__badge,
-    .trending-list__price {
+    .trending-list__number,
+    .trending-list__thumb {
+      grid-row: 1 / span 3;
+    }
+
+    .trending-list__number {
+      font-size: clamp(1.125rem, 7cqi, var(--font-size-h2));
+    }
+
+    .trending-list__meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.25rem var(--space-xs);
       grid-column: 3;
     }
 
-    .trending-list__badge:empty {
-      display: none;
+    .trending-list__title,
+    .trending-list__price {
+      grid-column: 3;
+      grid-row: auto;
+    }
+
+    .trending-list__category {
+      margin: 0;
+    }
+
+    /* Figma mobile: the badge at the right end of the category line (also when it wraps to its own line) */
+    .trending-list__badge {
+      margin-inline-start: auto;
+    }
+
+    .trending-list__badge .product-card__badge {
+      padding: 0.15em 0.6em;
+      font-size: 0.6875rem;
+    }
+
+    .trending-list__heading {
+      font-size: min(var(--font-size-display), 16cqi);
+    }
+
+    .trending-list__heading--custom {
+      font-size: min(clamp(var(--fs-min), calc(var(--fs-min) + (100vw - 390px) * var(--fs-diff) / 1530), var(--fs-max)), 16cqi);
+    }
+
+    .trending-list__title {
+      font-size: min(var(--title-size, var(--font-size-h3)), max(0.9375rem, 6.5cqi));
     }
 
     .trending-list__price .price {
       justify-content: flex-start;
+    }
+
+    .trending-list__price .price__current {
+      font-size: clamp(0.875rem, 6.5cqi, var(--font-size-body-lg));
+    }
+  }
+
+  @media (max-width: 749px) {
+    .trending-list__row--no-phone {
+      display: none;
     }
   }
 {% endstylesheet %}
