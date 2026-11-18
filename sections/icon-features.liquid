@@ -38,7 +38,7 @@
 {%- if section.blocks.size > 0 -%}
   {%- if visible_count > 0 or request.design_mode -%}
   <div
-    class="icon-features full-width section-width--{{ section.settings.section_width | default: 'wide' }} color-{{ scheme_id }}"
+    class="icon-features icon-features--{{ section.settings.feature_style | default: 'plain' }} full-width section-width--{{ section.settings.section_width | default: 'wide' }} color-{{ scheme_id }}"
     style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --columns-desktop: {{ section.settings.columns_desktop }}; --columns-mobile: {{ section.settings.columns_mobile }};{% if section.settings.icon_color != blank %} --icon-feature-color: {{ section.settings.icon_color }};{% endif %}"
   >
     <animate-on-scroll class="icon-features__inner">
@@ -208,6 +208,28 @@
       --col: 5;
     }
   }
+  /*
+    "Feature style: Card" (collection page design): each feature in a soft rounded card, a light tint of
+    the highlight colour on the scheme background with a faint edge. The cards in a row are the same height
+    (flex stretch), and the gaps are the same both ways.
+  */
+  .icon-features--card .icon-features__grid {
+    row-gap: var(--column-gap);
+  }
+
+  .icon-features--card .icon-feature {
+    justify-content: flex-start;
+    padding: var(--space-lg) var(--space-md);
+    border: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
+    border-radius: var(--radius-md);
+    background-color: color-mix(in srgb, var(--color-accent) 4%, var(--color-background));
+  }
+
+  @media (min-width: 1200px) {
+    .icon-features--card .icon-feature {
+      padding: var(--space-2xl) var(--space-xl);
+    }
+  }
 {% endstylesheet %}
 
 {% schema %}
@@ -275,6 +297,23 @@
       "max": 6,
       "step": 1,
       "default": 4
+    },
+    {
+      "type": "select",
+      "id": "feature_style",
+      "label": "t:labels.icon_features_style",
+      "info": "t:labels.icon_features_style_info",
+      "options": [
+        {
+          "value": "plain",
+          "label": "t:options.icon_features_style.plain"
+        },
+        {
+          "value": "card",
+          "label": "t:options.icon_features_style.card"
+        }
+      ],
+      "default": "plain"
     },
     {
       "type": "header",

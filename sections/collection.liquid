@@ -8,15 +8,38 @@
     here in Liquid (grid column + row) and handed to CSS as variables. The rows are sized in "Figma
     pixels" (the Figma grid is 1831px wide), so the whole pattern scales with the page width.
   - Even grid: equal tiles, 2-5 per row, in the chosen shape.
-  Phones and tablets (below 990px) always get the even grid, 2 per row.
+  Photo tile: phones 1 per row, tablets 2, 990-1199px 3, the bento from 1200px.
 
-  Both use the product card's tile style (snippets/product-card.liquid, style: 'tile').
+  Product card setting:
+  - Photo tile (style: 'tile'): the photo fills the tile, details on hover. Bento or even grid.
+  - Card (style: 'full', the phone design in design/collection): details under the photo, always
+    visible. Always the even grid, with a column switch next to the count: "fewer" / "more" products
+    per row = phones 1 / 2, tablets 2 / 3, laptops 1200-1599px 3 / 4, large screens 1600px+ "Columns on
+    desktop" / 6 (6 was too narrow at 1440px). Without a choice: phones
+    "more", tablets and desktop "fewer". The browser remembers the choice (localStorage); a small inline
+    script puts it on the section before the grid is drawn, so nothing moves. The bento has no switch.
   An empty collection shows a short message and a link to the whole shop.
 {%- endcomment -%}
 
 {%- liquid
   assign scheme_id = section.settings.color_scheme.id | default: 'scheme-1'
   assign layout = section.settings.layout | default: 'bento'
+  assign card_style = section.settings.card_style | default: 'tile'
+  assign show_switch = false
+  if card_style == 'full'
+    # Details under the photo don't fit tiles of different heights: the card always uses the even grid
+    assign layout = 'grid'
+    if section.settings.show_view_switch
+      assign show_switch = true
+    endif
+  endif
+
+  # Card photo sizes: the default view (phones 2, tablets 2, desktop "Columns on desktop"), and the two
+  # views of the switch (the script swaps them when the visitor picks one)
+  assign desktop_vw = 100 | divided_by: section.settings.columns_desktop | plus: 1
+  assign sizes_default = '(min-width: 1600px) ' | append: desktop_vw | append: 'vw, (min-width: 1200px) 34vw, 50vw'
+  assign sizes_fewer = '(min-width: 1600px) ' | append: desktop_vw | append: 'vw, (min-width: 1200px) 34vw, (min-width: 750px) 50vw, 100vw'
+  assign sizes_more = '(min-width: 1600px) 17vw, (min-width: 1200px) 25vw, (min-width: 750px) 34vw, 50vw'
 
   # The Figma pattern, one entry per tile: column-column span-row-row span (rows 1-12 of a cycle).
   # Rows 1-5 = the first band (8 tiles), 6-9 = the second (8), 10-12 = the third (6).
@@ -41,7 +64,24 @@
 <div
   class="collection-section full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
   style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --grid-columns: {{ section.settings.columns_desktop }};"
+  {% if show_switch %}
+    data-grid-view
+    data-sizes-fewer="{{ sizes_fewer }}"
+    data-sizes-more="{{ sizes_more }}"
+  {% endif %}
 >
+  {%- if show_switch -%}
+    {%- comment -%}
+      The visitor's saved view, on the section BEFORE the grid is parsed: the grid is drawn once, in the
+      right columns (no jump). try: storage can be blocked (private mode).
+    {%- endcomment -%}
+    <script>
+      try {
+        var oroskinView = localStorage.getItem('oroskin-collection-view');
+        if (oroskinView === 'fewer' || oroskinView === 'more') document.currentScript.parentNode.setAttribute('data-view', oroskinView);
+      } catch (error) {}
+    </script>
+  {%- endif -%}
   {%- comment -%}
     <results-view> (snippets/results-view.liquid) reloads the results in place when the sort or the filters
     change, a filter pill is removed or the page changes: Section Rendering API, then it swaps every
@@ -71,7 +111,7 @@
       # (the count says "0 products" and the Filters button lets the visitor undo it).
       assign show_tools = false
       if collection.all_products_count > 0
-        if section.settings.show_count or section.settings.show_sort
+        if section.settings.show_count or section.settings.show_sort or show_switch
           assign show_tools = true
         endif
       endif
@@ -142,6 +182,36 @@
               >
                 {{- 'collections.products_count' | t: count: collection.products_count -}}
               </p>
+            {%- endif -%}
+
+            {%- if show_switch -%}
+              {%- comment -%}
+                Two radios (fewer / more per row), dressed as the design's icons: each draws the real number of
+                columns on this screen (snippets/grid-view-icon.liquid, one icon per screen size, CSS shows
+                one); the chosen one is red, the other grey.
+                Hidden until the script runs: without it there is nothing to switch.
+              {%- endcomment -%}
+              <grid-view-switch class="grid-view">
+                <fieldset class="grid-view__group">
+                  <legend class="visually-hidden">{{ 'collections.view_legend' | t }}</legend>
+                  <input class="visually-hidden" type="radio" id="GridViewFewer-{{ section.id }}" name="GridView-{{ section.id }}" value="fewer">
+                  <label class="grid-view__option" for="GridViewFewer-{{ section.id }}" title="{{ 'collections.view_fewer' | t }}">
+                    {%- render 'grid-view-icon', columns: 1, class: 'grid-view__icon--phone' -%}
+                    {%- render 'grid-view-icon', columns: 2, class: 'grid-view__icon--tablet' -%}
+                    {%- render 'grid-view-icon', columns: 3, class: 'grid-view__icon--laptop' -%}
+                    {%- render 'grid-view-icon', columns: section.settings.columns_desktop, class: 'grid-view__icon--desktop' -%}
+                    <span class="visually-hidden">{{ 'collections.view_fewer' | t }}</span>
+                  </label>
+                  <input class="visually-hidden" type="radio" id="GridViewMore-{{ section.id }}" name="GridView-{{ section.id }}" value="more">
+                  <label class="grid-view__option" for="GridViewMore-{{ section.id }}" title="{{ 'collections.view_more' | t }}">
+                    {%- render 'grid-view-icon', columns: 2, class: 'grid-view__icon--phone' -%}
+                    {%- render 'grid-view-icon', columns: 3, class: 'grid-view__icon--tablet' -%}
+                    {%- render 'grid-view-icon', columns: 4, class: 'grid-view__icon--laptop' -%}
+                    {%- render 'grid-view-icon', columns: 6, class: 'grid-view__icon--desktop' -%}
+                    <span class="visually-hidden">{{ 'collections.view_more' | t }}</span>
+                  </label>
+                </fieldset>
+              </grid-view-switch>
             {%- endif -%}
 
             {%- if section.settings.show_sort -%}
@@ -306,7 +376,7 @@
         -%}
         <div class="collection-grid-wrap">
           <ul
-            class="collection-grid collection-grid--{{ layout }} collection-grid--{{ section.settings.image_ratio | default: 'portrait' }}"
+            class="collection-grid collection-grid--{{ layout }} collection-grid--{{ section.settings.image_ratio | default: 'portrait' }}{% if card_style == 'full' %} collection-grid--full{% endif %}"
             role="list"
             {% if layout == 'bento' %}
               style="--bento-rows: {{ bento_rows | strip }};"
@@ -319,6 +389,12 @@
                 if forloop.index <= 4
                   assign loading = 'eager'
                 endif
+                # With the column switch the photos stay lazy: an eager photo starts while the browser reads
+                # the HTML, before any script, so a saved "fewer" view (bigger photos) would download each
+                # first-row photo twice. Lazy photos load after the switch has set their sizes.
+                if show_switch
+                  assign loading = 'lazy'
+                endif
 
                 # Bento: this tile's place.
                 # - Figma tiles: pos = where it falls in the 22-tile pattern, cycle = which repeat of
@@ -327,6 +403,9 @@
                 assign tile_style = ''
                 # Photo width: 1 per row on phones (100vw), 2 on tablets (50vw), bento / grid on desktop
                 assign sizes = '(min-width: 990px) 25vw, (min-width: 750px) 50vw, 100vw'
+                if card_style == 'full'
+                  assign sizes = sizes_default
+                endif
                 if layout == 'bento'
                   if forloop.index0 < figma_count
                     assign pos = forloop.index0 | modulo: 22
@@ -353,7 +432,8 @@
               <li class="collection-grid__item" {% if tile_style != blank %}style="{{ tile_style }}"{% endif %}>
                 {%- render 'product-card',
                   product: product,
-                  style: 'tile',
+                  style: card_style,
+                  image_ratio: section.settings.image_ratio,
                   sizes: sizes,
                   loading: loading,
                   heading_tag: 'h2',
@@ -617,10 +697,43 @@
       flex: 1 1 auto;
     }
 
+    /* Count + switch on the left, SORT on the right; on a very narrow screen SORT moves to the next line */
     .collection-toolbar__end {
       flex: 1 1 100%;
+      flex-wrap: wrap;
       justify-content: space-between;
+      gap: var(--space-xs);
       margin-inline-start: 0;
+    }
+
+    /* Smaller controls, so Filters + pills and count + switch + SORT fit a 375px screen */
+    .collection-toolbar .filter-drawer__toggle {
+      min-block-size: 2.5rem;
+      padding-inline: var(--space-md);
+      font-size: var(--font-size-small);
+    }
+
+    .collection-toolbar .collection-pill {
+      padding: 0.6rem var(--space-sm);
+      font-size: var(--font-size-small);
+    }
+
+    .collection-toolbar__count {
+      font-size: var(--font-size-caption);
+    }
+
+    .collection-sort {
+      margin-inline-start: auto;
+    }
+
+    .collection-sort form {
+      gap: var(--space-xs);
+      padding-inline: var(--space-md) var(--space-sm);
+    }
+
+    .collection-sort .collection-sort__select {
+      min-block-size: 2.5rem;
+      font-size: var(--font-size-small);
     }
   }
 
@@ -697,6 +810,126 @@
       grid-row: var(--row);
       aspect-ratio: auto;
     }
+  }
+
+  /*
+    Card style (style 'full'): the card grows with its content (no tile shape). Columns by view:
+    phones 2 (fewer: 1), tablets 2 (more: 3), desktop "Columns on desktop" (more: 6). Three classes,
+    so they beat the even grid's 990px rule above.
+  */
+  .collection-grid.collection-grid--full {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-sm);
+  }
+
+  .collection-grid--full .collection-grid__item {
+    aspect-ratio: auto;
+  }
+
+  @media (max-width: 749px) {
+    [data-view='fewer'] .collection-grid.collection-grid--full {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-md);
+    }
+  }
+
+  @media (min-width: 750px) and (max-width: 1199px) {
+    .collection-grid.collection-grid--full {
+      gap: var(--space-lg);
+    }
+
+    [data-view='more'] .collection-grid.collection-grid--full {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  /* Laptops (1200-1599px): 3, or 4 with "more" */
+  @media (min-width: 1200px) {
+    .collection-grid.collection-grid--full {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--space-xl);
+    }
+
+    [data-view='more'] .collection-grid.collection-grid--full {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  /* Large screens (1600px+): "Columns on desktop", or 6 with "more" */
+  @media (min-width: 1600px) {
+    .collection-grid.collection-grid--full {
+      grid-template-columns: repeat(var(--grid-columns, 4), minmax(0, 1fr));
+    }
+
+    [data-view='more'] .collection-grid.collection-grid--full {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: var(--space-lg);
+    }
+  }
+
+  /* The column switch: two small icons, the chosen one red (design); hidden without JS */
+  grid-view-switch:not(:defined) {
+    display: none;
+  }
+
+  .grid-view__group {
+    display: flex;
+    gap: var(--space-2xs);
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  /* A tap area at least 24px wide and 32px tall around each icon; the icon is 10px tall (2 rows), as wide as its columns */
+  .grid-view__option {
+    display: grid;
+    place-items: center;
+    min-inline-size: 1.5rem; /* 24px: the smallest tap target (WCAG 2.5.8) */
+    block-size: 2rem;
+    padding-inline: var(--space-2xs);
+    border-radius: var(--radius-xs);
+    color: color-mix(in srgb, var(--color-text) 35%, transparent);
+    cursor: pointer;
+  }
+
+  .grid-view__icon {
+    display: none;
+    inline-size: auto;
+    block-size: 0.625rem;
+    fill: currentColor;
+  }
+
+  @media (max-width: 749px) {
+    .grid-view__icon--phone {
+      display: block;
+    }
+  }
+
+  @media (min-width: 750px) and (max-width: 1199px) {
+    .grid-view__icon--tablet {
+      display: block;
+    }
+  }
+
+  @media (min-width: 1200px) and (max-width: 1599px) {
+    .grid-view__icon--laptop {
+      display: block;
+    }
+  }
+
+  @media (min-width: 1600px) {
+    .grid-view__icon--desktop {
+      display: block;
+    }
+  }
+
+  :checked + .grid-view__option {
+    color: var(--color-accent);
+  }
+
+  :focus-visible + .grid-view__option {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 1px;
   }
 
   /*
@@ -782,10 +1015,75 @@
   }
 {% endstylesheet %}
 
+{% javascript %}
+  /**
+   * <grid-view-switch>: the "fewer / more per row" radios of the card grid. The choice goes on the
+   * section (data-view, read by the CSS) and into localStorage; the photos get the matching sizes, also
+   * after the results are swapped (sort, filters, pages: the results:updated event of <results-view>).
+   * With no saved choice the radio follows the screen: phones show "more" (2), wider screens "fewer".
+   */
+  class GridViewSwitch extends HTMLElement {
+    connectedCallback() {
+      this.section = this.closest('[data-grid-view]');
+      if (!this.section) return;
+
+      this.controller?.abort();
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+      this.phone = window.matchMedia('(max-width: 749px)');
+
+      this.addEventListener('change', (event) => this.choose(event.target.value), { signal });
+      this.phone.addEventListener('change', () => this.showChoice(), { signal });
+      this.section.addEventListener('results:updated', () => this.applySizes(), { signal });
+
+      this.showChoice();
+      this.applySizes();
+    }
+
+    disconnectedCallback() {
+      this.controller?.abort();
+    }
+
+    showChoice() {
+      const view = this.section.dataset.view || (this.phone.matches ? 'more' : 'fewer');
+      this.querySelectorAll('input[type="radio"]').forEach((input) => {
+        input.checked = input.value === view;
+      });
+    }
+
+    choose(view) {
+      if (view !== 'fewer' && view !== 'more') return;
+      this.section.dataset.view = view;
+      try {
+        localStorage.setItem('oroskin-collection-view', view);
+      } catch (error) {
+        // Storage blocked: the view still changes for this page
+      }
+      this.applySizes();
+    }
+
+    /** No saved choice: the cards keep the sizes Liquid wrote for the default view */
+    applySizes() {
+      const view = this.section.dataset.view;
+      if (!view) return;
+      const sizes = view === 'more' ? this.section.dataset.sizesMore : this.section.dataset.sizesFewer;
+      this.section.querySelectorAll('.collection-grid--full .product-card__media img').forEach((image) => {
+        image.sizes = sizes;
+      });
+    }
+  }
+
+  if (!customElements.get('grid-view-switch')) customElements.define('grid-view-switch', GridViewSwitch);
+{% endjavascript %}
+
 {% schema %}
 {
-  "name": "t:general.collection",
+  "name": "t:general.product_grid",
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
     {
       "type": "checkbox",
       "id": "show_title",
@@ -815,9 +1113,18 @@
       "id": "pill_image_animation",
       "label": "t:labels.pill_image_animation",
       "options": [
-        { "value": "collection-pills--image-rise", "label": "t:options.pill_image_animation.rise" },
-        { "value": "collection-pills--image-scale", "label": "t:options.pill_image_animation.scale" },
-        { "value": "collection-pills--image-fade", "label": "t:options.pill_image_animation.fade" }
+        {
+          "value": "collection-pills--image-rise",
+          "label": "t:options.pill_image_animation.rise"
+        },
+        {
+          "value": "collection-pills--image-scale",
+          "label": "t:options.pill_image_animation.scale"
+        },
+        {
+          "value": "collection-pills--image-fade",
+          "label": "t:options.pill_image_animation.fade"
+        }
       ],
       "default": "collection-pills--image-rise",
       "visible_if": "{{ section.settings.show_pills }}"
@@ -858,6 +1165,31 @@
     },
     {
       "type": "select",
+      "id": "card_style",
+      "label": "t:labels.product_grid_card_style",
+      "info": "t:labels.product_grid_card_style_info",
+      "options": [
+        {
+          "value": "full",
+          "label": "t:options.product_grid_card_style.full"
+        },
+        {
+          "value": "tile",
+          "label": "t:options.product_grid_card_style.tile"
+        }
+      ],
+      "default": "full"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_view_switch",
+      "label": "t:labels.product_grid_show_view_switch",
+      "info": "t:labels.product_grid_show_view_switch_info",
+      "default": true,
+      "visible_if": "{{ section.settings.card_style == 'full' }}"
+    },
+    {
+      "type": "select",
       "id": "layout",
       "label": "t:labels.layout",
       "info": "t:labels.collection_layout_info",
@@ -871,7 +1203,8 @@
           "label": "t:options.collection_layout.grid"
         }
       ],
-      "default": "bento"
+      "default": "bento",
+      "visible_if": "{{ section.settings.card_style == 'tile' }}"
     },
     {
       "type": "range",
@@ -891,7 +1224,8 @@
       "max": 5,
       "step": 1,
       "default": 4,
-      "visible_if": "{{ section.settings.layout == 'grid' }}"
+      "visible_if": "{{ section.settings.layout == 'grid' or section.settings.card_style == 'full' }}",
+      "info": "t:labels.product_grid_columns_info"
     },
     {
       "type": "select",
@@ -912,71 +1246,7 @@
         }
       ],
       "default": "portrait",
-      "visible_if": "{{ section.settings.layout == 'grid' }}"
-    },
-    {
-      "type": "header",
-      "content": "t:labels.card_details_group"
-    },
-    {
-      "type": "checkbox",
-      "id": "show_details",
-      "label": "t:labels.show_card_details",
-      "info": "t:labels.show_card_details_info",
-      "default": true
-    },
-    {
-      "type": "checkbox",
-      "id": "show_rating",
-      "label": "t:labels.show_card_rating",
-      "info": "t:labels.show_card_rating_info",
-      "default": true,
-      "visible_if": "{{ section.settings.show_details }}"
-    },
-    {
-      "type": "checkbox",
-      "id": "show_description",
-      "label": "t:labels.show_card_description",
-      "default": true,
-      "visible_if": "{{ section.settings.show_details }}"
-    },
-    {
-      "type": "select",
-      "id": "cart_options",
-      "label": "t:labels.cart_options",
-      "info": "t:labels.cart_options_info",
-      "options": [
-        {
-          "value": "add_first",
-          "label": "t:options.cart_options.add_first"
-        },
-        {
-          "value": "link",
-          "label": "t:options.cart_options.link"
-        }
-      ],
-      "default": "add_first",
-      "visible_if": "{{ section.settings.show_details }}"
-    },
-    {
-      "type": "header",
-      "content": "t:labels.collection_empty_group"
-    },
-    {
-      "type": "collection",
-      "id": "empty_collection",
-      "label": "t:labels.collection_empty_products",
-      "info": "t:labels.collection_empty_products_info"
-    },
-    {
-      "type": "inline_richtext",
-      "id": "empty_heading",
-      "label": "t:labels.heading",
-      "default": "You might <em>love</em>"
-    },
-    {
-      "type": "header",
-      "content": "t:labels.style"
+      "visible_if": "{{ section.settings.layout == 'grid' or section.settings.card_style == 'full' }}"
     },
     {
       "type": "select",
@@ -1004,10 +1274,69 @@
       "default": "widest"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-1"
+      "type": "header",
+      "content": "t:labels.card_details_group"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_details",
+      "label": "t:labels.show_card_details",
+      "info": "t:labels.show_card_details_info",
+      "default": true,
+      "visible_if": "{{ section.settings.card_style == 'tile' }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_rating",
+      "label": "t:labels.show_card_rating",
+      "info": "t:labels.show_card_rating_info",
+      "default": true,
+      "visible_if": "{{ section.settings.card_style == 'full' or section.settings.show_details }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_description",
+      "label": "t:labels.show_card_description",
+      "default": true,
+      "visible_if": "{{ section.settings.card_style == 'tile' and section.settings.show_details }}"
+    },
+    {
+      "type": "select",
+      "id": "cart_options",
+      "label": "t:labels.cart_options",
+      "info": "t:labels.cart_options_info",
+      "options": [
+        {
+          "value": "add_first",
+          "label": "t:options.cart_options.add_first"
+        },
+        {
+          "value": "link",
+          "label": "t:options.cart_options.link"
+        }
+      ],
+      "default": "add_first",
+      "visible_if": "{{ section.settings.card_style == 'tile' and section.settings.show_details }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.collection_empty_group"
+    },
+    {
+      "type": "collection",
+      "id": "empty_collection",
+      "label": "t:labels.collection_empty_products",
+      "info": "t:labels.collection_empty_products_info"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "empty_heading",
+      "label": "t:labels.heading",
+      "default": "You might <em>love</em>"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -1028,6 +1357,16 @@
       "step": 8,
       "unit": "px",
       "default": 96
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
     }
   ]
 }

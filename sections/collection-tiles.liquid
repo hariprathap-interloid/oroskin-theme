@@ -3,25 +3,68 @@
   bar along the bottom. Each "Tile" block points to a collection or a product; the picture and name
   come from there unless the block sets its own. Product tiles show the price, collection tiles "Shop".
 
+  Two styles ("Tile style"):
+  - Photo tile: the photo fills the tile, the name on a frosted glass bar.
+  - Promo card (Figma collection page, under the grid): a white card with a small heading ("SHOP SALE"),
+    the name with an offer pill ("10% OFFER") and a "SHOP ALL ->" link on the left, the cut-out photo on
+    the right, over the card's edge. The link's ::after covers the card, so the whole card is one link
+    (one Tab stop); its hidden text adds the name ("Shop all: Skincare").
+
   Usable on any page. On the cart page, "Only when the cart is empty" shows it under the empty bag
   message and hides it while the cart has items; the cart's script renders it again after each change
   (data-cart-refresh), like the Product list.
 {%- endcomment -%}
 
 {%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-1'
+  assign tile_style = section.settings.tile_style | default: 'photo'
+
+  # Eager only as the page's first section. Not the theme's "first 3 sections" rule (section-loading):
+  # these tiles usually sit under a long list (the collection grid, the empty cart), far below the
+  # first screen, even as the 2nd or 3rd section.
+  assign tiles_loading = 'lazy'
+  if section.index == 1
+    assign tiles_loading = 'eager'
+  endif
+
+  # Tiles with something to show: a collection, a product or a name. Empty tiles show only in the editor
+  # (as placeholders), and no tile at all = no section on the store (a note in the editor).
+  # The ids of the tiles with content, so the count and the render loop use the same test
+  assign tile_count = 0
+  assign content_ids = ','
+  for block in section.blocks
+    if block.settings.collection != blank or block.settings.product != blank or block.settings.label != blank
+      assign tile_count = tile_count | plus: 1
+      assign content_ids = content_ids | append: block.id | append: ','
+    endif
+  endfor
+
+
+  # Promo card names: h2 when the section has no heading of its own, else h3 under it
+  assign name_tag = 'h2'
+  if section.settings.heading != blank
+    assign name_tag = 'h3'
+  endif
+
   assign hidden_by_cart = false
   if section.settings.show_only_empty_cart and cart.item_count > 0
     assign hidden_by_cart = true
   endif
 -%}
 
+{%- if tile_count == 0 and request.design_mode and hidden_by_cart == false -%}
+  <div class="collection-tiles-empty color-{{ scheme_id }}">
+    <p>{{ 'sections.collection_tiles.empty' | t }}</p>
+  </div>
+{%- endif -%}
+
 {%- if hidden_by_cart -%}
   {%- comment -%} Kept so the cart's script knows to render this section again when the cart changes {%- endcomment -%}
   <div data-cart-refresh hidden></div>
-{%- else -%}
+{%- elsif tile_count > 0 or request.design_mode -%}
   <div
-    class="collection-tiles full-width section-width--{{ section.settings.section_width | default: 'wide' }} color-{{ section.settings.color_scheme.id }}"
-    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --tile-ratio: {{ section.settings.tile_ratio }};"
+    class="collection-tiles collection-tiles--{{ tile_style }}{% if section.settings.photo_animation == 'float' %} collection-tiles--float{% endif %} full-width section-width--{{ section.settings.section_width | default: 'wide' }} color-{{ scheme_id }}"
+    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --tile-ratio: {{ section.settings.tile_ratio }};{% if section.settings.highlight_color != blank %} --color-accent: {{ section.settings.highlight_color }};{% endif %}"
     {% if section.settings.show_only_empty_cart %}
       data-cart-refresh
     {% endif %}
@@ -40,6 +83,11 @@
       >
         {%- for block in section.blocks -%}
           {%- liquid
+            assign block_key = ',' | append: block.id | append: ','
+            unless content_ids contains block_key or request.design_mode
+              continue
+            endunless
+
             # A product (when one is picked) wins over the collection; nothing picked = a placeholder tile
             assign tile_url = nil
             assign tile_image = block.settings.image
@@ -66,6 +114,66 @@
               endif
             endif
           -%}
+          {%- if tile_style == 'promo' -%}
+            {%- liquid
+              assign tile_name = tile_label
+              if tile_name == blank
+                assign tile_name = 'sections.collection_tiles.placeholder' | t
+              endif
+              assign link_text = block.settings.link_label
+              if link_text == blank
+                assign link_text = 'sections.collection_tiles.shop' | t
+              endif
+
+              # The photo's place (Photo group of the block). sizes grows with its Size, so a big photo stays sharp.
+              assign photo_scale = block.settings.image_scale | default: 100
+              assign photo_desktop = photo_scale | times: 14 | divided_by: 100.0 | ceil
+              assign photo_tablet = photo_scale | times: 20 | divided_by: 100.0 | ceil
+              assign photo_phone = photo_scale | times: 40 | divided_by: 100.0 | ceil
+              capture photo_sizes
+                echo '(min-width: 990px) ' | append: photo_desktop | append: 'vw, (min-width: 750px) ' | append: photo_tablet | append: 'vw, ' | append: photo_phone | append: 'vw'
+              endcapture
+            -%}
+            <li class="collection-tiles__item" {{ block.shopify_attributes }}>
+              <div
+                class="collection-tiles__card"
+                style="--photo-rotate: {{ block.settings.image_rotate | default: 0 }}deg; --photo-scale: {{ photo_scale | divided_by: 100.0 }}; --photo-x: {{ block.settings.image_x | default: 0 }}%; --photo-y: {{ block.settings.image_y | default: 0 }}%;"
+              >
+                <div class="collection-tiles__card-text">
+                  {%- if block.settings.eyebrow != blank -%}
+                    <p class="collection-tiles__eyebrow">{{ block.settings.eyebrow | escape }}</p>
+                  {%- endif -%}
+                  {%- comment -%} The offer is next to the heading, not in it: the heading is only the name {%- endcomment -%}
+                  <div class="collection-tiles__card-name">
+                    <{{ name_tag }} class="collection-tiles__card-title">{{ tile_name | escape }}</{{ name_tag }}>
+                    {%- if block.settings.badge != blank -%}
+                      <span class="collection-tiles__badge">{{ block.settings.badge | escape }}</span>
+                    {%- endif -%}
+                  </div>
+                  <a class="collection-tiles__card-link" href="{{ tile_url | default: routes.all_products_collection_url }}">
+                    {{- link_text | escape -}}
+                    <span class="visually-hidden">: {{ tile_name | escape }}</span>
+                    {{- 'icon-arrow.svg' | inline_asset_content -}}
+                  </a>
+                </div>
+                {%- if tile_image != blank -%}
+                  {{
+                    tile_image
+                    | image_url: width: 800
+                    | image_tag:
+                      widths: '200, 300, 400, 600, 800',
+                      sizes: photo_sizes,
+                      alt: '',
+                      loading: tiles_loading,
+                      class: 'collection-tiles__cutout'
+                  }}
+                {%- elsif request.design_mode -%}
+                  {{ 'product-1' | placeholder_svg_tag: 'collection-tiles__cutout' }}
+                {%- endif -%}
+              </div>
+            </li>
+            {%- continue -%}
+          {%- endif -%}
           <li class="collection-tiles__item" {{ block.shopify_attributes }}>
             <a class="collection-tiles__link" href="{{ tile_url | default: routes.all_products_collection_url }}">
               {%- if tile_image != blank -%}
@@ -77,7 +185,7 @@
                     widths: '400, 600, 800, 1200',
                     sizes: '(min-width: 990px) 33vw, 90vw',
                     alt: '',
-                    loading: 'lazy',
+                    loading: tiles_loading,
                     class: 'collection-tiles__image'
                 }}
               {%- else -%}
@@ -112,6 +220,11 @@
 {% stylesheet %}
   .collection-tiles {
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  .collection-tiles-empty {
+    padding: var(--space-2xl) var(--page-margin);
+    text-align: center;
   }
 
   /* The "Section width" setting (critical.css: --section-width), minus the page margins */
@@ -212,6 +325,173 @@
     color: var(--color-text);
     font-weight: 700;
   }
+  /*
+    ---------- Promo card (Figma) ----------
+    Phones 1 per row, tablets 2, desktop 3. A white card (the scheme's raised surface), text on the left,
+    the cut-out on the right reaching over the top and bottom edges (overflow stays visible).
+    Small heading, offer pill and link in the highlight colour (empty = the scheme's accent).
+  */
+  .collection-tiles--promo .collection-tiles__list {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-lg);
+  }
+
+  @media (min-width: 750px) {
+    .collection-tiles--promo .collection-tiles__list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1200px) {
+    .collection-tiles--promo .collection-tiles__list {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--space-xl);
+    }
+  }
+
+  .collection-tiles__card {
+    position: relative;
+    display: flex;
+    min-block-size: 12rem;
+    padding: var(--space-xl) var(--space-xl) var(--space-lg);
+    border-radius: var(--radius-md);
+    background-color: var(--color-surface-raised, #ffffff);
+    box-shadow: 0 0.75rem 2.5rem #0000000d;
+  }
+
+  .collection-tiles__card-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    max-inline-size: 64%;
+  }
+
+  .collection-tiles__eyebrow {
+    margin: 0;
+    color: var(--color-accent);
+    font-size: var(--font-size-small);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  .collection-tiles__card-name {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-xs) var(--space-sm);
+  }
+
+  .collection-tiles__card-title {
+    margin: 0;
+    font-size: var(--font-size-h3);
+  }
+
+  .collection-tiles__badge {
+    padding: 0.25em 0.8em;
+    border-radius: var(--radius-pill);
+    background-color: color-mix(in srgb, var(--color-accent) 14%, var(--color-surface-raised, #ffffff));
+    color: var(--color-accent);
+    font-family: var(--font-body--family);
+    font-size: var(--font-size-caption);
+  }
+
+  .collection-tiles__card-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin-block-start: auto;
+    padding-block: var(--space-sm) 0.35em;
+    border-block-end: 1px solid currentColor;
+    color: var(--color-accent);
+    font-size: var(--font-size-small);
+    letter-spacing: var(--letter-spacing-label);
+    text-decoration: none;
+    text-transform: uppercase;
+  }
+
+  /* The link covers the whole card: one click target, one Tab stop */
+  .collection-tiles__card-link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border-radius: inherit;
+  }
+
+  .collection-tiles__card-link svg {
+    inline-size: 1em;
+    block-size: 1em;
+    transition: translate var(--duration-fast) var(--ease-out);
+  }
+
+  .collection-tiles__card:hover .collection-tiles__card-link svg {
+    translate: 0.25em 0;
+  }
+
+  /* Focus ring on the whole card; without :has() the link keeps its own ring */
+  @supports selector(:has(*)) {
+    .collection-tiles__card:has(.collection-tiles__card-link:focus-visible) {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 3px;
+    }
+
+    .collection-tiles__card-link:focus-visible {
+      outline: none;
+    }
+  }
+
+  /*
+    The cut-out: right side, reaching a little over the top and bottom edges (Figma). The block's Photo
+    settings turn, size and move it (rotate / scale / translate, % of its own box), so the text never moves.
+    Hover: 4% bigger. "Photo animation: Float" adds the footer wordmark's slow up-and-down loop (transform,
+    so it adds to the settings), only with motion allowed and the theme's "Enable animations" on.
+  */
+  .collection-tiles__cutout {
+    position: absolute;
+    inset-block: -8%;
+    inset-inline-end: 4%;
+    inline-size: 36%;
+    block-size: 116%;
+    object-fit: contain;
+    filter: drop-shadow(0 0.75rem 1rem #00000026);
+    translate: var(--photo-x, 0%) var(--photo-y, 0%);
+    rotate: var(--photo-rotate, 0deg);
+    scale: var(--photo-scale, 1);
+    transition: scale var(--duration-slow) var(--ease-out);
+  }
+
+  .collection-tiles__card:hover .collection-tiles__cutout {
+    scale: calc(var(--photo-scale, 1) * 1.04);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .animations-on .collection-tiles--float .collection-tiles__cutout {
+      animation: collection-tiles-float 6s ease-in-out infinite;
+    }
+
+    /* The cards float out of step, not all together */
+    .animations-on .collection-tiles--float .collection-tiles__item:nth-child(2n) .collection-tiles__cutout {
+      animation-delay: -2s;
+    }
+
+    .animations-on .collection-tiles--float .collection-tiles__item:nth-child(3n) .collection-tiles__cutout {
+      animation-delay: -4s;
+    }
+  }
+
+  @keyframes collection-tiles-float {
+    50% {
+      transform: translateY(-6%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .collection-tiles__card-link svg,
+    .collection-tiles__cutout {
+      transition: none;
+    }
+  }
 {% endstylesheet %}
 
 {% schema %}
@@ -225,7 +505,7 @@
       "settings": [
         {
           "type": "paragraph",
-          "content": "t:labels.tile_info"
+          "content": "t:labels.collection_tiles_tile_info"
         },
         {
           "type": "collection",
@@ -241,18 +521,96 @@
           "type": "image_picker",
           "id": "image",
           "label": "t:labels.image",
-          "info": "t:labels.tile_image_info"
+          "info": "t:labels.collection_tiles_image_info"
         },
         {
           "type": "text",
           "id": "label",
           "label": "t:labels.tile_label",
-          "info": "t:labels.tile_label_info"
+          "info": "t:labels.collection_tiles_label_info"
+        },
+        {
+          "type": "header",
+          "content": "t:labels.collection_tiles_promo_group"
+        },
+        {
+          "type": "paragraph",
+          "content": "t:labels.collection_tiles_promo_info"
+        },
+        {
+          "type": "text",
+          "id": "eyebrow",
+          "label": "t:labels.collection_tiles_eyebrow"
+        },
+        {
+          "type": "text",
+          "id": "badge",
+          "label": "t:labels.collection_tiles_badge"
+        },
+        {
+          "type": "text",
+          "id": "link_label",
+          "label": "t:labels.collection_tiles_link_label",
+          "default": "Shop all"
+        },
+        {
+          "type": "header",
+          "content": "t:labels.collection_tiles_photo_group"
+        },
+        {
+          "type": "paragraph",
+          "content": "t:labels.collection_tiles_photo_info"
+        },
+        {
+          "type": "range",
+          "id": "image_rotate",
+          "label": "t:labels.collection_tiles_rotate",
+          "min": -45,
+          "max": 45,
+          "step": 1,
+          "unit": "°",
+          "default": 0
+        },
+        {
+          "type": "range",
+          "id": "image_scale",
+          "label": "t:labels.collection_tiles_scale",
+          "min": 50,
+          "max": 150,
+          "step": 5,
+          "unit": "%",
+          "default": 100
+        },
+        {
+          "type": "range",
+          "id": "image_x",
+          "label": "t:labels.collection_tiles_move_x",
+          "min": -30,
+          "max": 30,
+          "step": 1,
+          "unit": "%",
+          "default": 0,
+          "info": "t:labels.collection_tiles_move_x_info"
+        },
+        {
+          "type": "range",
+          "id": "image_y",
+          "label": "t:labels.collection_tiles_move_y",
+          "min": -30,
+          "max": 30,
+          "step": 1,
+          "unit": "%",
+          "default": 0,
+          "info": "t:labels.collection_tiles_move_y_info"
         }
       ]
     }
   ],
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
     {
       "type": "text",
       "id": "heading",
@@ -260,16 +618,76 @@
       "default": "Where would you like to start?"
     },
     {
+      "type": "header",
+      "content": "t:labels.layout"
+    },
+    {
+      "type": "select",
+      "id": "tile_style",
+      "label": "t:labels.collection_tiles_style",
+      "info": "t:labels.collection_tiles_style_info",
+      "options": [
+        {
+          "value": "photo",
+          "label": "t:options.collection_tiles_style.photo"
+        },
+        {
+          "value": "promo",
+          "label": "t:options.collection_tiles_style.promo"
+        }
+      ],
+      "default": "photo"
+    },
+    {
       "type": "select",
       "id": "tile_ratio",
-      "label": "t:labels.tile_shape",
+      "label": "t:labels.collection_tiles_shape",
       "options": [
-        { "value": "4 / 5", "label": "t:options.image_shape.portrait" },
-        { "value": "1 / 1", "label": "t:options.image_shape.square" },
-        { "value": "4 / 3", "label": "t:options.image_shape.landscape" },
-        { "value": "16 / 9", "label": "t:options.image_shape.wide" }
+        {
+          "value": "4 / 5",
+          "label": "t:options.image_shape.portrait"
+        },
+        {
+          "value": "1 / 1",
+          "label": "t:options.image_shape.square"
+        },
+        {
+          "value": "4 / 3",
+          "label": "t:options.image_shape.landscape"
+        },
+        {
+          "value": "16 / 9",
+          "label": "t:options.image_shape.wide"
+        }
       ],
-      "default": "4 / 3"
+      "default": "4 / 3",
+      "visible_if": "{{ section.settings.tile_style == 'photo' }}",
+      "info": "t:labels.collection_tiles_shape_info"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "wide"
     },
     {
       "type": "checkbox",
@@ -280,26 +698,29 @@
     },
     {
       "type": "header",
-      "content": "t:labels.style"
+      "content": "t:labels.animation_header"
     },
     {
       "type": "select",
-      "id": "section_width",
-      "label": "t:labels.section_width",
-      "info": "t:labels.section_width_info",
+      "id": "photo_animation",
+      "label": "t:labels.collection_tiles_photo_animation",
+      "info": "t:labels.collection_tiles_photo_animation_info",
       "options": [
-        { "value": "narrow", "label": "t:options.section_width.narrow" },
-        { "value": "wide", "label": "t:options.section_width.wide" },
-        { "value": "widest", "label": "t:options.section_width.widest" },
-        { "value": "full", "label": "t:options.section_width.full" }
+        {
+          "value": "none",
+          "label": "t:options.collection_tiles_photo_animation.none"
+        },
+        {
+          "value": "float",
+          "label": "t:options.collection_tiles_photo_animation.float"
+        }
       ],
-      "default": "wide"
+      "default": "none",
+      "visible_if": "{{ section.settings.tile_style == 'promo' }}"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-1"
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -320,15 +741,68 @@
       "step": 8,
       "unit": "px",
       "default": 64
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "color",
+      "id": "highlight_color",
+      "label": "t:labels.highlight_color",
+      "info": "t:labels.collection_tiles_highlight_info",
+      "visible_if": "{{ section.settings.tile_style == 'promo' }}"
     }
   ],
   "presets": [
     {
       "name": "t:general.collection_tiles",
       "blocks": [
-        { "type": "tile" },
-        { "type": "tile" },
-        { "type": "tile" }
+        {
+          "type": "tile"
+        },
+        {
+          "type": "tile"
+        },
+        {
+          "type": "tile"
+        }
+      ]
+    },
+    {
+      "name": "t:general.collection_tiles_promo",
+      "settings": {
+        "heading": "",
+        "tile_style": "promo"
+      },
+      "blocks": [
+        {
+          "type": "tile",
+          "settings": {
+            "eyebrow": "Shop sale",
+            "badge": "10% offer"
+          }
+        },
+        {
+          "type": "tile",
+          "settings": {
+            "eyebrow": "Shop new",
+            "badge": "The double deal"
+          }
+        },
+        {
+          "type": "tile",
+          "settings": {
+            "eyebrow": "Shop bestsellers",
+            "badge": "Buy 2 get 1"
+          }
+        }
       ]
     }
   ]

@@ -615,25 +615,29 @@
       this.boxes = { min: this.querySelector('[data-price-box="min"]'), max: this.querySelector('[data-price-box="max"]') };
       this.top = Number(this.thumbs.max.max) || 0;
 
+      // All listeners on one AbortController: the theme editor can attach the section again (connectedCallback
+      // runs again), and the thumbs and boxes are the same elements, so they would get a second listener.
+      this.controller?.abort();
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+
       Object.entries(this.thumbs).forEach(([side, thumb]) => {
-        thumb.addEventListener('input', () => this.fromThumb(side));
+        thumb.addEventListener('input', () => this.fromThumb(side), { signal });
       });
       Object.entries(this.boxes).forEach(([side, box]) => {
-        box.addEventListener('input', () => this.fromBox(side));
+        box.addEventListener('input', () => this.fromBox(side), { signal });
       });
 
       // Closing the drawer without applying runs form.reset(): the thumbs and boxes jump back, but no input
       // event fires, so repaint the red part of the track. 'reset' fires before the values change, hence the
       // next frame.
-      this.form = this.closest('form');
-      this.onReset = () => requestAnimationFrame(() => this.paint());
-      this.form?.addEventListener('reset', this.onReset);
+      this.closest('form')?.addEventListener('reset', () => requestAnimationFrame(() => this.paint()), { signal });
 
       this.paint();
     }
 
     disconnectedCallback() {
-      this.form?.removeEventListener('reset', this.onReset);
+      this.controller?.abort();
     }
 
     fromThumb(side) {

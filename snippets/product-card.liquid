@@ -30,8 +30,19 @@
   - the quick add button (snippets/quick-add.liquid) and a "View details" label
   Phones and tablets (no hover) keep the short strip: a tap opens the product.
 
+  Full style (style: 'full', the phone design of the collection page, design/collection): the photo on
+  top and everything under it, always visible: category line (the product type) and rating, the
+  title, the price with a "Save 24%" pill, the first option's values (size pills or colour dots, at most
+  6), then the round cart button (quick-add) and BUY. BUY is a link to Shopify's cart permalink
+  (/cart/<variant id>:1), which opens the checkout with that one product: no second form per card.
+  Sold out: "Notify me", a link to the product page (back-in-stock is an app, decision 6).
+  The option values are real choices (radios) only when the product has ONE option: choosing one swaps
+  the price (a <template> rendered by snippets/price.liquid, so labels and the unit price stay right),
+  the cart button's variant and the BUY link, or shows Notify me for a sold-out value. With several
+  options they only show which values exist.
+
   @param {product} [product] - The product. Leave empty for a placeholder card
-  @param {string} [style] - 'card' (default: image on top, info below) or 'tile' (see above)
+  @param {string} [style] - 'card' (default: image on top, info below), 'tile' or 'full' (see above)
   @param {string} [image_ratio] - Card style: 'portrait' (4:5, default), 'square', 'landscape' (4:3) or 'original'
   @param {string} [sizes] - The image's sizes attribute. Default: 4 per row on desktop, 2 on phones
   @param {string} [loading] - 'eager' or 'lazy' to override the image snippet's automatic choice
@@ -79,7 +90,32 @@
     if product.compare_at_price > product.price
       assign on_sale = true
     endif
+
+    # Rating (tile details and the full card): Shopify's standard review fields, filled by a review app.
+    # .value of a rating field is a rating object: .rating (e.g. 4.9) and .scale_max (e.g. 5).
+    assign rating = nil
+    if show_rating
+      assign rating = product.metafields.reviews.rating.value
+      assign rating_count = product.metafields.reviews.rating_count.value | default: 0
+      # scale_max is stored as "5.0": round it so screen readers hear "out of 5"
+      assign rating_max = rating.scale_max | round
+    endif
   -%}
+  {%- capture rating_markup -%}
+    {%- if rating != blank -%}
+      <p class="product-card__rating">
+        <span class="product-card__stars" aria-hidden="true">
+          {{- rating.rating | round: 1 }} <span class="product-card__star">★</span>
+        </span>
+        <span class="visually-hidden">
+          {{- 'products.card.rating' | t: rating: rating.rating, max: rating_max -}}
+        </span>
+        {%- if rating_count > 0 -%}
+          <span class="product-card__reviews">{{ 'products.card.reviews_count' | t: count: rating_count }}</span>
+        {%- endif -%}
+      </p>
+    {%- endif -%}
+  {%- endcapture -%}
   <div class="product-card product-card--{{ card_style }}{% if secondary_image %} product-card--has-secondary{% endif %}">
     <div class="product-card__media {{ media_class }}">
       {%- liquid
@@ -96,20 +132,6 @@
           <span class="product-card__badge color-{{ settings.sold_out_badge_color_scheme.id }}">{{ 'products.sold_out' | t }}</span>
         {%- elsif on_sale -%}
           <span class="product-card__badge color-{{ settings.sale_badge_color_scheme.id }}">{{ 'products.badge.sale' | t }}</span>
-        {%- endif -%}
-        {%- comment -%}
-          In stock overall, but one of its variants (a size, a shade) is sold out. Shopify's Availability filter
-          works per variant, so "Out of stock" also finds these products; the badge says why they're there.
-        {%- endcomment -%}
-        {%- if product.available -%}
-          {%- for variant in product.variants -%}
-            {%- unless variant.available -%}
-              <span class="product-card__badge color-{{ settings.sold_out_badge_color_scheme.id }}">
-                {{- 'products.badge.partly_sold_out' | t -}}
-              </span>
-              {%- break -%}
-            {%- endunless -%}
-          {%- endfor -%}
         {%- endif -%}
         {%- comment -%}
           The product's "Badges" field (custom.badges). Usually a list (.value is an array), but a single
@@ -131,6 +153,197 @@
       </div>
     </div>
 
+    {%- if card_style == 'full' -%}
+      {%- liquid
+        assign variant = product.selected_or_first_available_variant
+        assign first_option = product.options_with_values.first
+        assign options_interactive = false
+        if product.options.size == 1 and product.has_only_default_variant == false
+          assign options_interactive = true
+        endif
+
+        # Only 6 values show: the card's variant must be one of them (the first available one, else the
+        # first), so the price and BUY never belong to a value the shopper can't see
+        if options_interactive
+          assign variant = first_option.values.first.variant
+          for value in first_option.values limit: 6
+            if value.available
+              assign variant = value.variant
+              break
+            endif
+          endfor
+        endif
+
+        # #9: a price <template> per value only when the values cost different amounts
+        assign price_templates = false
+        if product.price_varies or product.compare_at_price_varies
+          assign price_templates = true
+        endif
+
+        # "Save 24%": the first variant's saving (the script updates it with the chosen value)
+        assign save_percent = 0
+        if variant.compare_at_price > variant.price
+          assign save_percent = variant.compare_at_price | minus: variant.price | times: 100.0 | divided_by: variant.compare_at_price | round
+        endif
+
+        assign buy_url = routes.cart_url | append: '/' | append: variant.id | append: ':1'
+        assign card_id = 'Card-' | append: product.id | append: '-' | append: section.id
+      -%}
+      <card-options class="product-card__body" data-cart-url="{{ routes.cart_url }}">
+        <div class="product-card__meta">
+          {%- comment -%} The product type only (the design's short "SKINCARE" line); the subtitle can be a whole sentence {%- endcomment -%}
+          {%- if product.type != blank -%}
+            <p class="product-card__category">{{ product.type | escape }}</p>
+          {%- endif -%}
+          {%- if rating != blank -%}
+            {%- liquid
+              # Design: "★ 4.9 (1.2k)": the count short from 1000 (1234 -> 1.2k)
+              assign count_short = rating_count
+              if rating_count >= 1000
+                assign count_whole = rating_count | divided_by: 1000
+                assign count_tenth = rating_count | divided_by: 100 | modulo: 10
+                assign count_short = count_whole | append: 'k'
+                if count_tenth > 0
+                  assign count_short = count_whole | append: '.' | append: count_tenth | append: 'k'
+                endif
+              endif
+            -%}
+            <p class="product-card__score">
+              <span aria-hidden="true">
+                <span class="product-card__star">★</span> {{ rating.rating | round: 1 -}}
+                {%- if rating_count > 0 %} ({{ count_short }}){% endif -%}
+              </span>
+              <span class="visually-hidden">
+                {{- 'products.card.rating' | t: rating: rating.rating, max: rating_max -}}
+                {%- if rating_count > 0 %}, {{ 'products.card.reviews_count' | t: count: rating_count }}{% endif -%}
+              </span>
+            </p>
+          {%- endif -%}
+        </div>
+
+        <{{ title_tag }} class="product-card__title">
+          <a class="product-card__link" href="{{ product.url }}">{{ product.title | escape }}</a>
+        </{{ title_tag }}>
+
+        <div class="product-card__pricing">
+          <div data-card-price>{% render 'price', product: product, variant: variant %}</div>
+          <span
+            class="product-card__save"
+            data-card-save
+            data-template="{{ 'products.card.save' | t: percent: '[percent]' | escape }}"
+            {% if save_percent == 0 %}
+              hidden
+            {% endif %}
+          >
+            {{- 'products.card.save' | t: percent: save_percent -}}
+          </span>
+        </div>
+
+        {%- unless product.has_only_default_variant -%}
+          {%- liquid
+            assign is_swatch = false
+            if first_option.values.first.swatch != blank
+              assign is_swatch = true
+            endif
+          -%}
+          {%- if options_interactive -%}
+            <fieldset class="product-card__options{% if is_swatch %} product-card__options--swatches{% endif %}">
+              <legend class="visually-hidden">{{ first_option.name | escape }}</legend>
+              {%- for value in first_option.values limit: 6 -%}
+                {%- liquid
+                  assign value_variant = value.variant
+                  assign input_id = card_id | append: '-' | append: forloop.index
+                  assign value_save = 0
+                  if value_variant.compare_at_price > value_variant.price
+                    assign value_save = value_variant.compare_at_price | minus: value_variant.price | times: 100.0 | divided_by: value_variant.compare_at_price | round
+                  endif
+                  assign value_add_name = product.title | append: ' - ' | append: value.name
+                -%}
+                <input
+                  class="visually-hidden"
+                  type="radio"
+                  id="{{ input_id }}"
+                  name="{{ card_id }}"
+                  value="{{ value_variant.id }}"
+                  data-available="{{ value.available }}"
+                  data-save="{{ value_save }}"
+                  data-add-label="{{ 'products.quick_add.add' | t: title: value_add_name | escape }}"
+                  data-added-label="{{ 'products.quick_add.added' | t: title: value_add_name | escape }}"
+                  {% if value_variant.id == variant.id %}
+                    checked
+                  {% endif %}
+                >
+                <label
+                  class="product-card__option{% if is_swatch %} product-card__option--swatch{% endif %}{% unless value.available %} product-card__option--sold-out{% endunless %}"
+                  for="{{ input_id }}"
+                  {% if is_swatch %}
+                    title="{{ value.name | escape }}"
+                    {% if value.swatch.color %}
+                      style="--swatch-color: {{ value.swatch.color }};"
+                    {% endif %}
+                  {% endif %}
+                >
+                  {%- if is_swatch -%}
+                    {%- if value.swatch.image -%}
+                      {{ value.swatch.image | image_url: width: 48 | image_tag: alt: '', loading: 'lazy' }}
+                    {%- endif -%}
+                    <span class="visually-hidden">{{ value.name | escape }}</span>
+                  {%- else -%}
+                    {{- value.name | escape -}}
+                  {%- endif -%}
+                </label>
+                {%- if price_templates -%}
+                  <template data-price-for="{{ value_variant.id }}">{% render 'price', product: product, variant: value_variant %}</template>
+                {%- endif -%}
+              {%- endfor -%}
+            </fieldset>
+          {%- else -%}
+            {%- comment -%} Several options: the first option's values, for information (the product page chooses) {%- endcomment -%}
+            <ul class="product-card__options product-card__options--static{% if is_swatch %} product-card__options--swatches{% endif %}" role="list">
+              {%- for value in first_option.values limit: 6 -%}
+                <li
+                  class="product-card__option{% if is_swatch %} product-card__option--swatch{% endif %}"
+                  {% if is_swatch and value.swatch.color %}
+                    style="--swatch-color: {{ value.swatch.color }};"
+                  {% endif %}
+                >
+                  {%- if is_swatch -%}
+                    <span class="visually-hidden">{{ value.name | escape }}</span>
+                  {%- else -%}
+                    {{- value.name | escape -}}
+                  {%- endif -%}
+                </li>
+              {%- endfor -%}
+            </ul>
+          {%- endif -%}
+        {%- endunless -%}
+
+        <div class="product-card__buy">
+          {%- if product.available -%}
+            <div class="product-card__buy-now" data-card-buy>
+              {% render 'quick-add', product: product, size: 40, icon_color: 'var(--color-accent)', options: 'add_first', class: 'product-card__quick-add' %}
+              <a class="button product-card__buy-link" href="{{ buy_url }}" data-card-buy-link>
+                {{- 'icon-buy-now.svg' | inline_asset_content -}}
+                {{- 'products.card.buy' | t -}}
+                <span class="visually-hidden">: {{ product.title | escape }}</span>
+              </a>
+            </div>
+          {%- endif -%}
+          <a
+            class="button button--secondary product-card__notify"
+            href="{{ product.url }}"
+            data-card-notify
+            {% if product.available %}
+              hidden
+            {% endif %}
+          >
+            {{- 'icon-bell.svg' | inline_asset_content -}}
+            {{- 'products.card.notify' | t -}}
+            <span class="visually-hidden">: {{ product.title | escape }}</span>
+          </a>
+        </div>
+      </card-options>
+    {%- else -%}
     <div class="product-card__panel">
       <div class="product-card__info">
         <div class="product-card__text">
@@ -147,16 +360,6 @@
 
       {%- if card_style == 'tile' and show_details -%}
         {%- liquid
-          # Rating: Shopify's standard review fields, filled by a review app. .value of a rating field
-          # is a rating object: .rating (e.g. 4.9) and .scale_max (e.g. 5).
-          assign rating = nil
-          if show_rating
-            assign rating = product.metafields.reviews.rating.value
-            assign rating_count = product.metafields.reviews.rating_count.value | default: 0
-            # scale_max is stored as "5.0": round it so screen readers hear "out of 5"
-            assign rating_max = rating.scale_max | round
-          endif
-
           assign description = ''
           if show_description
             assign description = product.description | strip_html | strip_newlines | truncatewords: 16
@@ -164,19 +367,7 @@
         -%}
         <div class="product-card__details">
           <div class="product-card__details-inner">
-            {%- if rating != blank -%}
-              <p class="product-card__rating">
-                <span class="product-card__stars" aria-hidden="true">
-                  {{- rating.rating | round: 1 }} <span class="product-card__star">★</span>
-                </span>
-                <span class="visually-hidden">
-                  {{- 'products.card.rating' | t: rating: rating.rating, max: rating_max -}}
-                </span>
-                {%- if rating_count > 0 -%}
-                  <span class="product-card__reviews">{{ 'products.card.reviews_count' | t: count: rating_count }}</span>
-                {%- endif -%}
-              </p>
-            {%- endif -%}
+            {{- rating_markup -}}
 
             {%- if description != blank -%}
               <p class="product-card__description">{{ description }}</p>
@@ -197,6 +388,7 @@
         </div>
       {%- endif -%}
     </div>
+    {%- endif -%}
   </div>
 {%- else -%}
   {%- comment -%} Placeholder card: same layout, sample content, no link {%- endcomment -%}
@@ -726,4 +918,237 @@
       font-size: var(--font-size-body);
     }
   }
+  /*
+    ---------- Full style (phone design of the collection page) ----------
+    Photo on top, everything under it. The controls (options, cart, BUY, Notify me) sit above the
+    stretched title link (z-index 2), so they get the clicks; the rest of the card opens the product.
+  */
+  .product-card__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-sm) var(--space-md);
+  }
+
+  .product-card__meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2xs) var(--space-xs);
+  }
+
+  .product-card__category {
+    overflow: hidden;
+    flex: 1 1 0;
+    min-inline-size: 0;
+    margin: 0;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-accent);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .product-card__score {
+    flex: none;
+    margin: 0;
+    color: color-mix(in srgb, var(--color-text) 75%, var(--color-background));
+    font-size: var(--font-size-caption);
+    white-space: nowrap;
+  }
+
+  .product-card__pricing {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-xs);
+  }
+
+  .product-card--full .price {
+    color: var(--color-accent);
+    font-size: var(--font-size-body);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .product-card__save {
+    padding: 0.2em 0.7em;
+    border-radius: var(--radius-pill);
+    background-color: color-mix(in srgb, var(--color-accent) 10%, var(--color-background));
+    color: var(--color-accent);
+    font-size: var(--font-size-caption);
+  }
+
+  .product-card__save[hidden],
+  .product-card__buy-now[hidden],
+  .product-card__notify[hidden] {
+    display: none;
+  }
+
+  .product-card__options {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    list-style: none;
+  }
+
+  /* Size pills: the chosen one dark (design), a sold-out one struck through */
+  .product-card__option {
+    display: inline-block;
+    overflow: hidden;
+    max-inline-size: 100%;
+    padding: 0.3em 0.7em;
+    line-height: 1.3;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border: 1px solid color-mix(in srgb, var(--color-text) 30%, transparent);
+    border-radius: var(--radius-pill);
+    font-size: var(--font-size-caption);
+    cursor: pointer;
+  }
+
+  .product-card__options--static .product-card__option {
+    cursor: default;
+  }
+
+  :checked + .product-card__option {
+    border-color: var(--color-text);
+    background-color: var(--color-text);
+    color: var(--color-background);
+  }
+
+  :focus-visible + .product-card__option {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  .product-card__option--sold-out {
+    color: color-mix(in srgb, var(--color-text) 55%, transparent);
+    text-decoration: line-through;
+  }
+
+  /* Colour dots (the option has swatches): a ring shows the chosen one */
+  .product-card__option--swatch {
+    overflow: hidden;
+    inline-size: 1.5rem;
+    min-block-size: 0;
+    block-size: 1.5rem;
+    padding: 0;
+    border: 2px solid var(--color-background);
+    background-color: var(--swatch-color, var(--color-tint));
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 25%, transparent);
+  }
+
+  :checked + .product-card__option--swatch {
+    border-color: var(--color-background);
+    background-color: var(--swatch-color, var(--color-tint));
+    box-shadow: 0 0 0 2px var(--color-text);
+  }
+
+  .product-card__option--swatch img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  /* Cart + BUY at the bottom, BUY on the right (design) */
+  .product-card__buy {
+    position: relative;
+    z-index: 2;
+    margin-block-start: auto;
+    padding-block-start: var(--space-xs);
+  }
+
+  .product-card__buy-now {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-xs);
+  }
+
+  .product-card__buy-link,
+  .product-card__notify {
+    gap: 0.4em;
+    min-block-size: 2.25rem;
+    padding-inline: 1em;
+    font-size: var(--font-size-caption);
+  }
+
+  .product-card__notify {
+    inline-size: 100%;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+
+  .product-card__buy-link svg,
+  .product-card__notify svg {
+    inline-size: 1.1em;
+    block-size: 1.1em;
+  }
 {% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <card-options> (full product card): a size pill or colour dot was chosen. Swaps the price (the
+   * value's <template>), the "Save" pill, the cart button's variant and name, and the BUY link; a
+   * sold-out value hides cart + BUY and shows "Notify me". One AbortController for the editor re-attach.
+   */
+  class CardOptions extends HTMLElement {
+    connectedCallback() {
+      this.controller?.abort();
+      this.controller = new AbortController();
+      this.addEventListener('change', (event) => this.choose(event.target), { signal: this.controller.signal });
+      // The cart button was rendered with its own first variant: start in step with the checked value
+      const checked = this.querySelector('input[type="radio"]:checked');
+      if (checked) this.choose(checked);
+    }
+
+    disconnectedCallback() {
+      this.controller?.abort();
+    }
+
+    choose(input) {
+      if (input.type !== 'radio') return;
+      const id = input.value;
+
+      // No templates = every value costs the same: the price stays
+      const price = this.querySelector('[data-card-price]');
+      const template = this.querySelector(`template[data-price-for="${id}"]`);
+      if (price && template) price.replaceChildren(template.content.cloneNode(true));
+
+      const save = this.querySelector('[data-card-save]');
+      if (save) {
+        const percent = Number(input.dataset.save) || 0;
+        save.hidden = percent === 0;
+        save.textContent = (save.dataset.template || '').replace('[percent]', percent);
+      }
+
+      const quickAdd = this.querySelector('quick-add');
+      if (quickAdd) {
+        quickAdd.dataset.variantId = id;
+        const field = quickAdd.querySelector('input[name="id"]');
+        if (field) field.value = id;
+        quickAdd.querySelector('.quick-add__button')?.setAttribute('aria-label', input.dataset.addLabel);
+        quickAdd.dataset.labelAdded = input.dataset.addedLabel;
+      }
+
+      const link = this.querySelector('[data-card-buy-link]');
+      if (link) link.href = `${this.dataset.cartUrl}/${id}:1`;
+
+      const available = input.dataset.available === 'true';
+      const buy = this.querySelector('[data-card-buy]');
+      if (buy) buy.hidden = !available;
+      const notify = this.querySelector('[data-card-notify]');
+      if (notify) notify.hidden = available;
+    }
+  }
+
+  if (!customElements.get('card-options')) customElements.define('card-options', CardOptions);
+{% endjavascript %}

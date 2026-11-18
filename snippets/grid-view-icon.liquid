@@ -1,0 +1,30 @@
+{% doc %}
+  Draws a small grid icon for the Product grid's column switch: 2 rows of squares, `columns` per row
+  (the design: a 3-column grid next to a 4-column grid). The squares use currentColor, so the switch
+  makes the chosen one red and the other grey. Decorative (aria-hidden): the radio's label names it.
+
+  @param {number} columns - Squares per row (1-6)
+  @param {string} [class] - Extra class, e.g. the screen size it is shown on
+
+  @example
+  {% render 'grid-view-icon', columns: 4, class: 'grid-view__icon--laptop' %}
+{% enddoc %}
+
+{%- liquid
+  # Each square is 4 units with 2 units between: a row of N squares is 6N - 2 units wide
+  assign icon_columns = columns | default: 2 | at_least: 1 | at_most: 6
+  assign icon_width = icon_columns | times: 6 | minus: 2
+-%}
+<svg
+  class="grid-view__icon {{ class }}"
+  aria-hidden="true"
+  focusable="false"
+  viewBox="0 0 {{ icon_width }} 10"
+  style="--icon-columns: {{ icon_columns }};"
+>
+  {%- for column in (1..icon_columns) -%}
+    {%- assign x = forloop.index0 | times: 6 -%}
+    <rect x="{{ x }}" y="0" width="4" height="4" rx="0.6"/>
+    <rect x="{{ x }}" y="6" width="4" height="4" rx="0.6"/>
+  {%- endfor -%}
+</svg>

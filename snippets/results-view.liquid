@@ -106,6 +106,9 @@
           if (fresh) part.replaceWith(fresh);
         });
 
+        // New results are in: e.g. the column switch gives the new photos their sizes
+        this.dispatchEvent(new CustomEvent('results:updated', { bubbles: true }));
+
         this.querySelectorAll('[data-results-text]').forEach((part) => {
           const fresh = html.getElementById(part.id);
           if (fresh) part.textContent = fresh.textContent;

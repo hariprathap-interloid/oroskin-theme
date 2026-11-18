@@ -154,7 +154,10 @@
       "other": "{{ count }} stars"
     },
     "no_match_title": "No products match these filters",
-    "no_match_text": "Try removing a filter, or clear them all to see everything in this collection."
+    "no_match_text": "Try removing a filter, or clear them all to see everything in this collection.",
+    "view_legend": "Products per row",
+    "view_fewer": "Fewer, larger products",
+    "view_more": "More, smaller products"
   },
   "gift_card": {
     "add_to_apple_wallet": "Add to Apple Wallet",
@@ -317,7 +320,8 @@
     },
     "collection_tiles": {
       "shop": "Shop",
-      "placeholder": "Choose a collection"
+      "placeholder": "Choose a collection",
+      "empty": "Add a Tile block and select a collection or a product."
     },
     "marquee": {
       "pause": "Pause the scrolling text",
@@ -362,8 +366,7 @@
     "add_to_cart": "Add to cart",
     "sold_out": "Sold out",
     "badge": {
-      "sale": "Sale",
-      "partly_sold_out": "Some options sold out"
+      "sale": "Sale"
     },
     "card": {
       "placeholder_title": "Product title",
@@ -372,7 +375,10 @@
         "one": "{{ count }} review",
         "other": "{{ count }} reviews"
       },
-      "view_details": "View details"
+      "view_details": "View details",
+      "save": "Save {{ percent }}%",
+      "buy": "Buy",
+      "notify": "Notify me"
     },
     "variant": "Variant",
     "quantity": "Quantity",

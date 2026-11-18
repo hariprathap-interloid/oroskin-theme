@@ -24,11 +24,17 @@
     assign highlight = 'var(--color-accent)'
   endif
 
-  # The banner is normally the first section: its images then load straight away (they're on screen)
-  assign image_loading = 'lazy'
-  if section.index <= 2
-    assign image_loading = 'eager'
-  endif
+  # The banner is normally the first section: its images then load straight away (they're on screen).
+  # The theme's one eager / lazy rule (snippets/section-loading.liquid); strip: the capture can start with a newline.
+  capture image_loading
+    render 'section-loading'
+  endcapture
+  assign image_loading = image_loading | strip
+
+  # Large image width: the "Image width" setting (% of the screen) from 990px; below 990px it sits in the
+  # top-right corner at 1.5 times that width (24% -> 36%, the phone design). sizes follows both.
+  assign image_width_small = section.settings.image_width | times: 3 | divided_by: 2
+  assign large_sizes = '(min-width: 990px) ' | append: section.settings.image_width | append: 'vw, ' | append: image_width_small | append: 'vw'
 
   # Large image: by default the collection's own image wins and the section's image is the fallback.
   # With "Use the collection's image" off, the section's image is always used (e.g. one cut-out for all).
@@ -60,6 +66,13 @@
       assign code = '[' | append: prefix | append: ']'
       assign small_image = section.settings[prefix]
 
+      # The photo is as tall as the text x its Size (%); the text is at most 40px (h2), so its width is at
+      # most 40 x size / 100 x the photo's width / height
+      if small_image != blank
+        assign small_width = section.settings[size_key] | times: 40 | divided_by: 100.0 | times: small_image.aspect_ratio | ceil
+        assign small_sizes = small_width | append: 'px'
+      endif
+
       capture photo_style
         echo '--photo-size: ' | append: section.settings[size_key] | append: '; --photo-rotate: ' | append: section.settings[rotate_key] | append: 'deg; --photo-shift: ' | append: section.settings[shift_key] | append: '%;'
       endcapture
@@ -67,7 +80,7 @@
       capture photo
         if small_image != blank
           echo '<span class="collection-banner__photo" style="' | append: photo_style | append: '">'
-          echo small_image | image_url: width: 400 | image_tag: widths: '100, 200, 300, 400', sizes: '120px', alt: '', loading: image_loading
+          echo small_image | image_url: width: 400 | image_tag: widths: '100, 200, 300, 400', sizes: small_sizes, alt: '', loading: image_loading
           echo '</span>'
         elsif request.design_mode
           echo '<span class="collection-banner__photo collection-banner__photo--placeholder" style="' | append: photo_style | append: '">'
@@ -138,7 +151,7 @@
       image: banner_image,
       class: 'collection-banner__image',
       alt: '',
-      sizes: '(min-width: 990px) 40vw, 60vw',
+      sizes: large_sizes,
       widths: '300, 450, 600, 800, 1000, 1200'
     -%}
   {%- elsif request.design_mode -%}
@@ -360,25 +373,45 @@
   }
 
   /*
-    Below 990px there's no room beside the text: the image moves under it, smaller and centred.
-    (No mobile design yet: this is a sensible default, to revisit when the mobile designs arrive.)
+    Below 990px (phone design, design/collection): the large image sits on the right, behind the text, at
+    1.5 times the Image width, its bottom at the end of the text; the sentence starts on the left under the breadcrumb, one line
+    per row, and "Staggered" keeps its steps at about a third of the desktop indent (11em on a 375px
+    phone would push the line off the screen).
   */
   @media (max-width: 989px) {
     .collection-banner__content {
+      align-items: flex-start;
       max-inline-size: 100%;
+      margin-inline: 0;
+      text-align: start;
     }
 
+    .collection-banner__line {
+      display: block;
+    }
+
+    .collection-banner__sentence--staggered .collection-banner__line {
+      margin-inline-start: calc(var(--line-indent, 0em) * 0.35);
+    }
+
+    /*
+      Its bottom lines up with the end of the text (Figma). Its box is at most as tall as the text area
+      (the section minus its top and bottom padding), so a tall photo gets narrower instead of reaching
+      up under the header pill or the section above; the photo sits in the box's bottom-right corner.
+    */
     .collection-banner .collection-banner__image {
-      position: static;
-      inline-size: min(60%, 20rem);
+      inset-block: var(--section-padding-top) var(--section-padding-bottom);
+      inline-size: calc(var(--banner-image-width) * 1.5);
       block-size: auto;
-      margin: var(--space-xl) auto 0;
+    }
+
+    .collection-banner--under-header .collection-banner__image {
+      inset-block-start: calc(var(--header-space) + var(--section-padding-top));
     }
 
     .collection-banner .collection-banner__image img,
     .collection-banner .collection-banner__image svg {
-      block-size: auto;
-      object-position: center;
+      object-position: bottom right;
     }
   }
 {% endstylesheet %}
@@ -390,6 +423,10 @@
     "templates": ["collection"]
   },
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
     {
       "type": "checkbox",
       "id": "show_breadcrumb",
@@ -652,16 +689,8 @@
       "default": "widest"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-1"
-    },
-    {
-      "type": "color",
-      "id": "highlight_color",
-      "label": "t:labels.highlight_color",
-      "info": "t:labels.banner_highlight_info"
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -682,6 +711,22 @@
       "step": 8,
       "unit": "px",
       "default": 32
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "color",
+      "id": "highlight_color",
+      "label": "t:labels.highlight_color",
+      "info": "t:labels.banner_highlight_info"
     }
   ],
   "presets": [

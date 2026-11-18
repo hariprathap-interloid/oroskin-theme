@@ -138,7 +138,9 @@
     "announcement_bar": "Announcement bar",
     "announcement": "Announcement",
     "image_banner_cards": "Image banner with cards",
-    "countdown": "Countdown"
+    "countdown": "Countdown",
+    "product_grid": "Product grid",
+    "collection_tiles_promo": "Promo cards"
   },
   "labels": {
     "alignment": "Alignment",
@@ -591,8 +593,6 @@
     "product_tab_label": "Tab label",
     "product_tab_label_info": "Leave empty to use the collection name.",
     "cart_empty_button_label_info": "Links to the Continue shopping link above.",
-    "tile_info": "Pick a collection or a product. When both are picked, the product is used.",
-    "tile_image_info": "Optional. Leave empty to use the collection or product image.",
     "banner_sentence": "Big sentence under the title",
     "banner_sentence_info": "Optional. Type [image_1], [image_2] or [image_3] where a small photo goes, and [break] for a new line (desktop only). Make words italic to show them in the highlight color. Empty = the collection title is shown big instead.",
     "show_collection_description": "Show the collection description",
@@ -656,7 +656,6 @@
     "banner_image_width": "Large image width (% of the screen)",
     "banner_highlight_info": "Breadcrumb, small title and italic words. Leave empty to use the color scheme's accent.",
     "tile_label": "Label",
-    "tile_label_info": "Optional. Leave empty to use the collection or product name.",
     "tile_shape": "Tile shape",
     "contact_heading_info": "Italic words show in the accent color. Empty: the page title.",
     "contact_text_info": "Empty: the page's own content (Online Store > Pages).",
@@ -1148,7 +1147,37 @@
     "icon_feature_link_info": "The heading is the link. The icon and the heading can be clicked. To use a link, add a heading.",
     "footer_newsletter_visible_info": "Shows when \"Show the email sign-up\" is on.",
     "footer_wordmark": "Wordmark",
-    "footer_color_scheme_info": "On a dark background, the footer panel, the social buttons and the email field are dark too, so that the text is easy to read."
+    "footer_color_scheme_info": "On a dark background, the footer panel, the social buttons and the email field are dark too, so that the text is easy to read.",
+    "product_grid_card_style": "Product card",
+    "product_grid_card_style_info": "Card: the details show under the photo, with sizes or colors, the cart button and Buy. The products are always in an even grid. Photo tile: the photo fills the tile and the details show when the pointer is on it. You can use the bento layout.",
+    "product_grid_show_view_switch": "Show the column switch",
+    "product_grid_show_view_switch_info": "Shows when \"Product card\" is Card. Shoppers can show fewer or more products in each row: phones 1 or 2, tablets 2 or 3, laptops 3 or 4, large screens \"Columns on desktop\" or 6. The browser keeps the choice.",
+    "product_grid_columns_info": "For screens of 1600px and more (1200px to 1599px show 3). With Card, the column switch also shows 6 (4 on 1200px to 1599px).",
+    "collection_tiles_style": "Tile style",
+    "collection_tiles_style_info": "Photo tile: the photo fills the tile and the name is on a glass bar. Promo card: a white card with the small heading, the name, the offer and a link, and the photo on the right. Use a photo with a transparent background for the promo card.",
+    "collection_tiles_promo_group": "Promo card",
+    "collection_tiles_promo_info": "These show only when \"Tile style\" in the section is Promo card.",
+    "collection_tiles_eyebrow": "Small heading",
+    "collection_tiles_badge": "Offer",
+    "collection_tiles_link_label": "Link text",
+    "collection_tiles_highlight_info": "If empty, the theme uses the \"Links and highlights\" color of the color scheme. It colors the small heading, the offer and the link.",
+    "collection_tiles_tile_info": "Select a collection or a product. If you select both, the tile uses the product. A tile with no collection, no product and no name does not show on the store.",
+    "collection_tiles_label_info": "Optional. If empty, the tile uses the name of the collection or product.",
+    "collection_tiles_image_info": "Optional. If empty, the tile uses the image of the collection or product. For the promo card, use a photo with a transparent background.",
+    "collection_tiles_shape": "Tile shape",
+    "collection_tiles_shape_info": "Shows when \"Tile style\" is Photo tile.",
+    "collection_tiles_photo_group": "Photo in the promo card",
+    "collection_tiles_photo_info": "These show only when \"Tile style\" in the section is Promo card.",
+    "collection_tiles_rotate": "Rotation",
+    "collection_tiles_scale": "Size",
+    "collection_tiles_move_x": "Move left or right",
+    "collection_tiles_move_x_info": "Negative values move the photo to the left.",
+    "collection_tiles_move_y": "Move up or down",
+    "collection_tiles_move_y_info": "Negative values move the photo up, over the top edge of the card.",
+    "collection_tiles_photo_animation": "Photo animation",
+    "collection_tiles_photo_animation_info": "Shows when \"Tile style\" is Promo card. Float: the photos move slowly up and down. They stay still for visitors who ask for less motion, and when \"Enable animations\" in Theme settings is off.",
+    "icon_features_style": "Feature style",
+    "icon_features_style_info": "Plain: the features are on the section background. Card: each feature is in a soft rounded card."
   },
   "options": {
     "panels_mobile_layout": {
@@ -1656,6 +1685,22 @@
       "start": "Left",
       "center": "Center",
       "end": "Right"
+    },
+    "product_grid_card_style": {
+      "full": "Card (details under the photo)",
+      "tile": "Photo tile (details on hover)"
+    },
+    "collection_tiles_style": {
+      "photo": "Photo tile",
+      "promo": "Promo card"
+    },
+    "collection_tiles_photo_animation": {
+      "none": "None",
+      "float": "Float"
+    },
+    "icon_features_style": {
+      "plain": "Plain",
+      "card": "Card"
     }
   },
   "color_scheme": {
