@@ -314,8 +314,12 @@
     border-radius: var(--radius-lg);
     background-color: var(--color-glass);
     box-shadow: var(--shadow-collection), var(--shadow-glass-edge);
-    -webkit-backdrop-filter: blur(var(--glass-frost));
-    backdrop-filter: blur(var(--glass-frost));
+    /*
+      No backdrop-filter here: nothing scrolls behind the panel (it sits on the section's flat colour), so a
+      blur changes nothing you can see. It also caused a dark band on phones: when the panel's top goes
+      past the top of the screen, the blur has no pixels there and fills them with dark, and the header's
+      own blur then shows that band. (Like the header pill, the panel is still a see-through glass colour.)
+    */
   }
 
   /*
@@ -509,6 +513,8 @@
   .footer__utilities {
     display: flex;
     flex-wrap: wrap;
+    min-inline-size: 0;
+    max-inline-size: 100%; /* phones: the stacked row is never wider than the panel (long country names) */
     align-items: center;
     gap: var(--space-md) var(--space-lg);
   }

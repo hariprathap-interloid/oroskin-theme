@@ -40,7 +40,7 @@
             {%- liquid
               assign current_currency = localization.country.currency
             -%}
-            <span>
+            <span class="localization__label">
               {{- localization.country.name }} ({{ current_currency.iso_code }} {{ current_currency.symbol }})
             </span>
             {{- 'icon-chevron.svg' | inline_asset_content -}}
@@ -75,11 +75,18 @@
         <details class="localization__details">
           <summary class="localization__toggle">
             <span class="visually-hidden">{{ 'localization.language' | t }}:</span>
-            <span>{{ localization.language.endonym_name | capitalize }}</span>
+            {%- comment -%} The pill shows the name in capitals (text-transform), so no first-letter fix here {%- endcomment -%}
+            <span class="localization__label">{{ localization.language.endonym_name }}</span>
             {{- 'icon-chevron.svg' | inline_asset_content -}}
           </summary>
           <ul class="localization__list" role="list">
             {%- for language in localization.available_languages -%}
+              {%- liquid
+                # Only the first letter capital: capitalize would also make every other letter small
+                # ("English (United Kingdom)" -> "English (united kingdom)")
+                assign language_first = language.endonym_name | slice: 0 | upcase
+                assign language_rest = language.endonym_name | slice: 1, 200
+              -%}
               <li>
                 <button
                   type="submit"
@@ -91,7 +98,7 @@
                     aria-current="true"
                   {% endif %}
                 >
-                  {{- language.endonym_name | capitalize -}}
+                  {{- language_first }}{{ language_rest -}}
                 </button>
               </li>
             {%- endfor -%}
@@ -107,19 +114,24 @@
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-xs);
+    min-inline-size: 0; /* a flex item: without this it can't get narrower than its text */
+    max-inline-size: 100%; /* never wider than its row, so a long name is cut in the pill */
   }
 
   .localization__picker {
     display: block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
 
   .localization__details {
     position: relative;
   }
 
-  /* The pill: same glass as the header's round buttons */
+  /* The pill: same glass as the header's round buttons. Never wider than its row (long names, below). */
   .localization__toggle {
     display: inline-flex;
+    max-inline-size: 100%;
     align-items: center;
     gap: var(--space-xs);
     min-block-size: 2.75rem; /* 44px touch target */
@@ -138,6 +150,17 @@
       background-color var(--duration-fast) var(--ease-out);
     -webkit-backdrop-filter: blur(var(--glass-frost));
     backdrop-filter: blur(var(--glass-frost));
+  }
+
+  /*
+    A long name ("Bosnia & Herzegovina (BAM КМ)") stays on one line in the pill and is cut with …; the
+    full name is still in the text, so screen readers read all of it, and the list shows it in full.
+  */
+  .localization__label {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   /* Remove the browser's default triangle on <summary> */
@@ -168,7 +191,9 @@
     inset-inline-start: 0;
     display: grid;
     gap: 2px;
-    min-inline-size: max(100%, 15rem);
+    /* At least the pill's width and 15rem, but never wider than the screen minus its margins (min() wins) */
+    min-inline-size: min(max(100%, 15rem), calc(100vw - var(--page-margin) * 2));
+    translate: var(--list-shift, 0) 0; /* set by the script only when the list fits on neither side */
     max-block-size: min(20rem, 60vh);
     overflow-y: auto;
     margin: 0;
@@ -178,6 +203,14 @@
     color: var(--color-text);
     box-shadow: var(--shadow-panel);
     list-style: none;
+  }
+
+  /*
+    No space on the opening side (e.g. the language pill at the right on a phone): the script sets
+    data-align="end", and the list opens from the pill's other edge. Without JS it opens from the start.
+  */
+  .localization__list[data-align='end'] {
+    inset-inline: auto 0;
   }
 
   /*
@@ -249,7 +282,7 @@
         (event) => {
           if (event.key !== 'Escape' || !this.details.open) return;
           this.details.open = false;
-          this.details.querySelector('summary').focus();
+          this.details.querySelector('summary')?.focus();
         },
         { signal }
       );
@@ -261,6 +294,32 @@
         },
         { signal }
       );
+      // The list must never go past the side of the screen, not even for one frame: a short sideways
+      // overflow can make a phone browser pan or zoom the page. So the script opens the list itself and
+      // places it in the same step; the browser paints only after this handler. Enter and Space on the
+      // summary also fire click. Closing keeps the browser's own behaviour.
+      this.list = this.details.querySelector('.localization__list');
+      const summary = this.details.querySelector('summary');
+      if (summary && this.list) {
+        summary.addEventListener(
+          'click',
+          (event) => {
+            if (this.details.open) return;
+            event.preventDefault();
+            this.details.open = true;
+            this.placeList();
+          },
+          { signal }
+        );
+        // A rotation or resize while the list is open: place it again
+        window.addEventListener(
+          'resize',
+          () => {
+            if (this.details.open) this.placeList();
+          },
+          { signal }
+        );
+      }
       document.addEventListener(
         'click',
         (event) => {
@@ -272,6 +331,35 @@
 
     disconnectedCallback() {
       this.controller?.abort();
+    }
+
+    /**
+     * Measures the open list (its real size, so it always matches the CSS) and picks the edge it opens
+     * from: the pill's start edge, or the end edge when the start does not fit. If neither fits (a very
+     * narrow or zoomed screen), it keeps the better edge and moves the list back onto the screen.
+     */
+    placeList() {
+      const list = this.list;
+      list.style.removeProperty('--list-shift');
+      delete list.dataset.align;
+
+      const screen = document.documentElement.clientWidth;
+      const overflow = (box) => Math.max(0, box.right - screen) + Math.max(0, -box.left);
+
+      const startBox = list.getBoundingClientRect();
+      if (overflow(startBox) === 0) return;
+
+      list.dataset.align = 'end';
+      const endBox = list.getBoundingClientRect();
+      if (overflow(endBox) === 0) return;
+
+      let box = endBox;
+      if (overflow(startBox) < overflow(endBox)) {
+        delete list.dataset.align;
+        box = startBox;
+      }
+      const shift = box.left < 0 ? -box.left : screen - box.right;
+      list.style.setProperty('--list-shift', `${shift}px`);
     }
   }
 
