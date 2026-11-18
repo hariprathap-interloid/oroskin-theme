@@ -11,6 +11,76 @@
   "type": "header",
   "name": "t:general.header",
   "sections": {
+    "announcement_bar": {
+      "type": "announcement-bar",
+      "blocks": {
+        "announcement_band": {
+          "type": "announcement",
+          "settings": {
+            "text": "OroSkin • Signature collection • Estd. 2026",
+            "link": "",
+            "link_label": ""
+          }
+        },
+        "announcement_AkLVKK": {
+          "type": "announcement",
+          "settings": {
+            "text": "Free shipping on orders over $200&nbsp;",
+            "link": "shopify://policies/shipping-policy",
+            "link_label": "Shipping details"
+          }
+        },
+        "announcement_q9zJBA": {
+          "type": "announcement",
+          "settings": {
+            "text": "The Glow-Up Event: up to 40% off&nbsp;",
+            "link": "shopify://collections/all",
+            "link_label": "Shop the sale"
+          }
+        },
+        "announcement_WhHLt6": {
+          "type": "announcement",
+          "settings": {
+            "text": "New arrivals are here&nbsp;",
+            "link": "shopify://collections/new-arrivals",
+            "link_label": "See new arrivals"
+          }
+        },
+        "announcement_qq4iCy": {
+          "type": "announcement",
+          "settings": {
+            "text": "Easy 30-day returns",
+            "link": "shopify://policies/refund-policy",
+            "link_label": "Returns policy"
+          }
+        }
+      },
+      "block_order": [
+        "announcement_band",
+        "announcement_AkLVKK",
+        "announcement_q9zJBA",
+        "announcement_WhHLt6",
+        "announcement_qq4iCy"
+      ],
+      "settings": {
+        "mode": "slideshow",
+        "autoplay": true,
+        "interval": 5,
+        "show_arrows": true,
+        "speed": 40,
+        "direction": "left",
+        "position": "top",
+        "text_align": "center",
+        "hide_on_scroll": true,
+        "text_style": "uppercase",
+        "text_size": 14,
+        "bar_size": 36,
+        "letter_spacing": "auto",
+        "font": "body",
+        "show_close": true,
+        "color_scheme": "scheme-3"
+      }
+    },
     "header": {
       "type": "header",
       "blocks": {
@@ -52,6 +122,7 @@
       ],
       "settings": {
         "color_scheme": "",
+        "solid_background": false,
         "transparent_mode": "home",
         "menu": "main-menu",
         "customer_account_menu": "customer-account-main-menu",
@@ -62,34 +133,11 @@
         "mega_menu_color_scheme": "",
         "mega_menu_shop_all_show": true,
         "mega_menu_shop_all_label": "",
-        "mega_menu_shop_all_link": "shopify://collections/all"
-      }
-    },
-    "announcement_bar": {
-      "type": "announcement-bar",
-      "blocks": {
-        "announcement_band": {
-          "type": "announcement",
-          "settings": {
-            "text": "OroSkin • Signature collection • Estd. 2026",
-            "link": ""
-          }
-        }
-      },
-      "block_order": [
-        "announcement_band"
-      ],
-      "settings": {
-        "mode": "static",
-        "autoplay": true,
-        "interval": 5,
-        "show_arrows": true,
-        "speed": 40,
-        "direction": "left",
-        "position": "right",
-        "text_style": "uppercase",
-        "show_close": false,
-        "color_scheme": "scheme-3"
+        "mega_menu_shop_all_link": "shopify://collections/all",
+        "menu_button_breakpoint": "phones",
+        "mobile_show_search": false,
+        "mobile_show_cart": false,
+        "drawer_color_scheme": ""
       }
     }
   },

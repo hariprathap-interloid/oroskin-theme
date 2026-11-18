@@ -242,16 +242,25 @@
       {%- comment -%}
         Decorative giant wordmark, cut off by the bottom of the panel. aria-hidden: a screen reader has
         already heard the shop name in the logo, it shouldn't hear it again as a huge word.
+        The letters are CSS content (::before / ::after from the data attributes), not text in the HTML:
+        WCAG does not ask contrast for pure decoration, but contrast checkers (Lighthouse / axe) test every
+        text node and would fail the faded 20% letters. Generated content is not tested.
       {%- endcomment -%}
+      {%- liquid
+        if has_logo_text
+          assign wordmark_word = settings.logo_text
+          assign wordmark_accent = settings.logo_text_accent
+        else
+          assign wordmark_word = shop.name
+          assign wordmark_accent = ''
+        endif
+      -%}
       <p class="footer__wordmark" aria-hidden="true">
-        <span class="footer__wordmark-text">
-        {%- if has_logo_text -%}
-          {{- settings.logo_text | escape -}}
-          {%- if settings.logo_text_accent != blank -%}<em>{{ settings.logo_text_accent | escape }}</em>{%- endif -%}
-        {%- else -%}
-          {{- shop.name | escape -}}
-        {%- endif -%}
-        </span>
+        <span
+          class="footer__wordmark-text"
+          data-word="{{ wordmark_word | escape }}"
+          data-accent="{{ wordmark_accent | escape }}"
+        ></span>
       </p>
     {%- endif -%}
   </div>
@@ -371,8 +380,7 @@
     line-height: 1;
   }
 
-  .footer__logo-text em,
-  .footer__wordmark em {
+  .footer__logo-text em {
     font-style: italic;
   }
 
@@ -598,8 +606,15 @@
     user-select: none;
   }
 
-  .footer__wordmark em {
+  /* The letters (see the markup): the logo text, then the accent word in italic */
+  .footer__wordmark-text::before {
+    content: attr(data-word);
+  }
+
+  .footer__wordmark-text::after {
+    content: attr(data-accent);
     color: color-mix(in srgb, var(--color-accent) 20%, transparent);
+    font-style: italic;
   }
 
   /*

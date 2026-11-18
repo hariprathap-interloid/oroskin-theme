@@ -69,6 +69,8 @@
                   aria-label="{{ 'products.lightbox.zoom' | t }}"
                   data-lightbox-zoom
                 >
+                  {%- comment -%} No alt text on the media: the product title, so the img always has a name {%- endcomment -%}
+                  {%- assign lightbox_alt = media.alt | default: product.title -%}
                   {{
                     media.preview_image
                     | image_url: width: 2400
@@ -76,7 +78,7 @@
                       loading: 'lazy',
                       widths: '800, 1200, 1600, 2000, 2400',
                       sizes: '100vw',
-                      alt: media.alt,
+                      alt: lightbox_alt,
                       class: 'product-lightbox__image',
                       draggable: 'false'
                   }}

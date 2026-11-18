@@ -59,8 +59,11 @@
     endif
   endif
 
+  # default: '' matters: a photo with no alt text in Content > Files has image.alt = nil, and image_tag then
+  # writes NO alt attribute at all (screen readers read the file name; Lighthouse fails image-alt).
+  # alt="" says "decorative", which is right when the merchant gave no text.
   if alt == nil
-    assign image_alt = image.alt | escape
+    assign image_alt = image.alt | default: '' | escape
   else
     assign image_alt = alt | escape
   endif

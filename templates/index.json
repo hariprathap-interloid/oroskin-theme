@@ -680,16 +680,16 @@
         "link": "",
         "collection": "editors-picks",
         "products_to_show": 7,
+        "section_width": "widest",
         "panel_height": 29,
         "fill_screen": true,
         "card_radius": 12,
         "mobile_layout": "grid",
         "mobile_height": 100,
         "cart_size": "60",
-        "cart_overlay": 10,
         "cart_icon_color": "#ffffff",
+        "cart_overlay": 10,
         "cart_options": "add_first",
-        "section_width": "widest",
         "color_scheme": "",
         "highlight_color": "#c8a24b",
         "animation": "fade-up",
@@ -704,14 +704,15 @@
         "eyebrow": "Find your glow here",
         "text": "All the [images] products you [break]need [arrow], right at [break]our shop<em>!!!</em>",
         "image_1": "shopify://shop_images/31038e5e4d8264fe6801fb289237a5b14d361dfb.png",
+        "image_1_link": "",
+        "image_1_link_label": "",
         "image_2": "shopify://shop_images/8ca1650e0bc1395f1a1db019baf881e298994caf.png",
+        "image_2_link": "",
+        "image_2_link_label": "",
         "image_3": "shopify://shop_images/362cb2bed5f5c376c1542cc46c8f94a272735447.png",
+        "image_3_link": "",
+        "image_3_link_label": "",
         "section_width": "widest",
-        "color_scheme": "scheme-1",
-        "highlight_color": "#c8a24b",
-        "animation": "fade-up",
-        "padding_top": 96,
-        "padding_bottom": 160,
         "enable_scene": true,
         "scene_length": 300,
         "scene_smoothing": "extra",
@@ -731,7 +732,14 @@
         "scene_x_3": 36,
         "scene_y_3": 77,
         "scene_width_3": 24,
-        "scene_rotate_3": -8
+        "scene_rotate_3": -8,
+        "scene_phone_width": 50,
+        "scene_tablet_width": 40,
+        "animation": "fade-up",
+        "padding_top": 96,
+        "padding_bottom": 160,
+        "color_scheme": "scheme-1",
+        "highlight_color": "#c8a24b"
       }
     },
     "product_deck_rxUqxi": {
@@ -747,18 +755,19 @@
         "products_to_show": 7,
         "badge": "New",
         "buy_label": "Buy now",
-        "fan_on_scroll": true,
-        "fan_style": "auto",
         "card_size": 100,
         "card_height": 85,
+        "section_width": "widest",
         "cart_size": "50",
         "cart_icon_color": "#ffffff",
+        "cart_overlay": 10,
         "cart_options": "add_first",
-        "section_width": "widest",
-        "color_scheme": "",
-        "highlight_color": "#c8a24b",
+        "fan_on_scroll": true,
+        "fan_style": "auto",
         "padding_top": 128,
-        "padding_bottom": 128
+        "padding_bottom": 128,
+        "color_scheme": "",
+        "highlight_color": "#c8a24b"
       }
     },
     "blog_stories_JzWXeh": {
@@ -820,15 +829,16 @@
         "eyebrow": "Beauty rituals",
         "heading": "<em>Stories of</em> Transformation",
         "link_label": "View journal",
-        "link": "",
+        "link": "shopify://blogs/featured",
         "blog": "featured",
         "layout": "featured-left",
         "section_width": "widest",
-        "color_scheme": "",
-        "highlight_color": "#c8a24b",
+        "fill_empty": true,
         "animation": "slide-bottom",
         "padding_top": 96,
-        "padding_bottom": 96
+        "padding_bottom": 96,
+        "color_scheme": "",
+        "highlight_color": "#c8a24b"
       }
     },
     "image_banner_JWCLdE": {
@@ -967,6 +977,9 @@
             "products_to_show": 7,
             "width": 50,
             "scene_length": 250,
+            "phone_width": 80,
+            "products_to_show_phone": 5,
+            "tablet_width": 70,
             "heading_size": 74,
             "title_size": 26,
             "background_opacity": 10
@@ -978,15 +991,15 @@
       "settings": {
         "image": "shopify://shop_images/6a9da17c3473051a785c2d23aa0bb872cbfeedf7.png",
         "height": "full",
+        "section_width": "widest",
         "overlay_style": "gradient",
         "overlay_opacity": 80,
-        "section_width": "widest",
-        "color_scheme": "scheme-5",
-        "animation": "slide-right",
         "scene_style": "vertical",
         "header_slide": true,
+        "animation": "slide-right",
         "padding_top": 120,
-        "padding_bottom": 120
+        "padding_bottom": 120,
+        "color_scheme": "scheme-5"
       }
     },
     "testimonials_ExrT4N": {
@@ -1054,16 +1067,16 @@
       "settings": {
         "eyebrow": "Our reviews",
         "heading": "What our <em>Clients</em> Say",
-        "autoplay": true,
-        "interval": 4,
         "height": "full",
         "section_width": "widest",
         "split": "40",
-        "color_scheme": "",
-        "highlight_color": "#c8a24b",
+        "autoplay": true,
+        "interval": 4,
         "animation": "fade-up",
         "padding_top": 96,
-        "padding_bottom": 96
+        "padding_bottom": 96,
+        "color_scheme": "",
+        "highlight_color": "#c8a24b"
       }
     },
     "image_banner_8GrUnC": {
@@ -1167,6 +1180,9 @@
             "products_to_show": 5,
             "width": 50,
             "scene_length": 250,
+            "phone_width": 80,
+            "products_to_show_phone": 5,
+            "tablet_width": 70,
             "heading_size": 72,
             "title_size": 24,
             "background_opacity": 30
@@ -1178,15 +1194,15 @@
       "settings": {
         "image": "shopify://shop_images/f3d7c3aaceecd21ad298d3526e6f2e831f93a409.png",
         "height": "medium",
+        "section_width": "widest",
         "overlay_style": "gradient",
         "overlay_opacity": 45,
-        "section_width": "widest",
-        "color_scheme": "scheme-5",
-        "animation": "fade-up",
         "scene_style": "sideways",
         "header_slide": true,
+        "animation": "fade-up",
         "padding_top": 120,
-        "padding_bottom": 120
+        "padding_bottom": 120,
+        "color_scheme": "scheme-5"
       }
     },
     "icon_features_fEU3xe": {
@@ -1198,7 +1214,7 @@
             "icon": "truck",
             "title": "Free shipping",
             "text": "<p>Orders over $200 qualify for fast, free delivery</p>",
-            "link": ""
+            "link": "shopify://policies/shipping-policy"
           },
           "blocks": {}
         },
@@ -1208,7 +1224,7 @@
             "icon": "shield",
             "title": "Secure payment",
             "text": "<p>Trusted payment processing with advanced security</p>",
-            "link": ""
+            "link": "shopify://pages/terms-of-service"
           },
           "blocks": {}
         },
@@ -1218,7 +1234,7 @@
             "icon": "return",
             "title": "Easy 30-day returns",
             "text": "<p>Try it for 30 days first, decide when you're ready.</p>",
-            "link": ""
+            "link": "shopify://pages/returns-refunds"
           },
           "blocks": {}
         },
@@ -1241,14 +1257,16 @@
       ],
       "name": "t:general.icon_features",
       "settings": {
+        "heading": "Our promises",
+        "show_heading": false,
+        "section_width": "widest",
         "columns_desktop": 4,
         "columns_mobile": "2",
-        "section_width": "widest",
-        "color_scheme": "",
-        "icon_color": "#c8a24b",
         "animation": "slide-bottom",
         "padding_top": 80,
-        "padding_bottom": 80
+        "padding_bottom": 80,
+        "color_scheme": "",
+        "icon_color": "#c8a24b"
       }
     }
   },

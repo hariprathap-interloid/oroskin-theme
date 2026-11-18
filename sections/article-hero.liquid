@@ -59,6 +59,8 @@
 
     <div class="article-hero__card{% if article.image == blank %} article-hero__card--no-image{% endif %}">
       {%- if article.image != blank -%}
+        {%- comment -%} default: '' so the img always has an alt attribute (nil = no attribute at all) {%- endcomment -%}
+        {%- assign hero_image_alt = article.image.alt | default: '' -%}
         <div class="article-hero__media">
           {{
             article.image
@@ -66,7 +68,7 @@
             | image_tag:
               widths: '750, 1100, 1500, 1920, 2560, 3840',
               sizes: '(min-width: 1920px) 1820px, 96vw',
-              alt: article.image.alt,
+              alt: hero_image_alt,
               loading: 'eager',
               fetchpriority: 'high'
           }}
