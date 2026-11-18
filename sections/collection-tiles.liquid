@@ -63,8 +63,8 @@
   <div data-cart-refresh hidden></div>
 {%- elsif tile_count > 0 or request.design_mode -%}
   <div
-    class="collection-tiles collection-tiles--{{ tile_style }}{% if section.settings.photo_animation == 'float' %} collection-tiles--float{% endif %} full-width section-width--{{ section.settings.section_width | default: 'wide' }} color-{{ scheme_id }}"
-    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --tile-ratio: {{ section.settings.tile_ratio }};{% if section.settings.highlight_color != blank %} --color-accent: {{ section.settings.highlight_color }};{% endif %}"
+    class="collection-tiles collection-tiles--{{ tile_style }} collection-tiles--anim-{{ section.settings.photo_animation | default: 'none' }} full-width section-width--{{ section.settings.section_width | default: 'wide' }} color-{{ scheme_id }}"
+    style="--photo-speed: {{ section.settings.photo_animation_speed | default: 6 }}s; --section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --tile-ratio: {{ section.settings.tile_ratio }};{% if section.settings.highlight_color != blank %} --color-accent: {{ section.settings.highlight_color }};{% endif %}"
     {% if section.settings.show_only_empty_cart %}
       data-cart-refresh
     {% endif %}
@@ -444,8 +444,7 @@
   /*
     The cut-out: right side, reaching a little over the top and bottom edges (Figma). The block's Photo
     settings turn, size and move it (rotate / scale / translate, % of its own box), so the text never moves.
-    Hover: 4% bigger. "Photo animation: Float" adds the footer wordmark's slow up-and-down loop (transform,
-    so it adds to the settings), only with motion allowed and the theme's "Enable animations" on.
+    Hover: 4% bigger. "Photo animation" (below) moves it in a slow loop.
   */
   .collection-tiles__cutout {
     position: absolute;
@@ -465,25 +464,62 @@
     scale: calc(var(--photo-scale, 1) * 1.04);
   }
 
+  /*
+    "Photo animation": the hero decoration's movements (blocks/_hero-decoration.liquid), sized for a
+    product photo. Set on the section, so all cards move together. transform only: it adds to the
+    x
+  */
   @media (prefers-reduced-motion: no-preference) {
-    .animations-on .collection-tiles--float .collection-tiles__cutout {
-      animation: collection-tiles-float 6s ease-in-out infinite;
+    .motion-on .collection-tiles:not(.collection-tiles--anim-none) .collection-tiles__cutout {
+      animation-duration: var(--photo-speed, 6s);
+      animation-iteration-count: infinite;
+      animation-timing-function: ease-in-out;
     }
 
-    /* The cards float out of step, not all together */
-    .animations-on .collection-tiles--float .collection-tiles__item:nth-child(2n) .collection-tiles__cutout {
-      animation-delay: -2s;
-    }
+    .motion-on .collection-tiles--anim-breathe .collection-tiles__cutout { animation-name: tiles-breathe; }
+    .motion-on .collection-tiles--anim-float .collection-tiles__cutout { animation-name: tiles-float; }
+    .motion-on .collection-tiles--anim-sway .collection-tiles__cutout { animation-name: tiles-sway; }
+    .motion-on .collection-tiles--anim-twinkle .collection-tiles__cutout { animation-name: tiles-twinkle; }
+    .motion-on .collection-tiles--anim-rock .collection-tiles__cutout { animation-name: tiles-rock; }
+    .motion-on .collection-tiles--anim-flash .collection-tiles__cutout { animation-name: tiles-flash; }
 
-    .animations-on .collection-tiles--float .collection-tiles__item:nth-child(3n) .collection-tiles__cutout {
-      animation-delay: -4s;
+    .motion-on .collection-tiles--anim-spin .collection-tiles__cutout {
+      animation-name: tiles-spin;
+      animation-timing-function: linear;
     }
   }
 
-  @keyframes collection-tiles-float {
-    50% {
-      transform: translateY(-6%);
-    }
+  @keyframes tiles-breathe {
+    50% { transform: scale(1.06); }
+  }
+
+  @keyframes tiles-float {
+    50% { transform: translateY(-6%); }
+  }
+
+  @keyframes tiles-sway {
+    0%, 100% { transform: rotate(-4deg); }
+    50% { transform: rotate(4deg); }
+  }
+
+  @keyframes tiles-twinkle {
+    50% { transform: scale(0.94); opacity: 0.35; }
+  }
+
+  @keyframes tiles-spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes tiles-rock {
+    50% { transform: rotate(12deg); }
+  }
+
+  /* Appear, turn and disappear: hidden at the start and end, so the loop restarts without a jump */
+  @keyframes tiles-flash {
+    0% { transform: scale(0.3) rotate(0deg); opacity: 0; }
+    15% { transform: scale(1) rotate(30deg); opacity: 1; }
+    65% { transform: scale(1) rotate(180deg); opacity: 1; }
+    80%, 100% { transform: scale(0.3) rotate(240deg); opacity: 0; }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -708,15 +744,51 @@
       "options": [
         {
           "value": "none",
-          "label": "t:options.collection_tiles_photo_animation.none"
+          "label": "t:options.decoration_animation.none"
+        },
+        {
+          "value": "breathe",
+          "label": "t:options.decoration_animation.breathe"
         },
         {
           "value": "float",
-          "label": "t:options.collection_tiles_photo_animation.float"
+          "label": "t:options.decoration_animation.float"
+        },
+        {
+          "value": "sway",
+          "label": "t:options.decoration_animation.sway"
+        },
+        {
+          "value": "twinkle",
+          "label": "t:options.decoration_animation.twinkle"
+        },
+        {
+          "value": "spin",
+          "label": "t:options.decoration_animation.spin"
+        },
+        {
+          "value": "rock",
+          "label": "t:options.decoration_animation.rock"
+        },
+        {
+          "value": "flash",
+          "label": "t:options.decoration_animation.flash"
         }
       ],
       "default": "none",
       "visible_if": "{{ section.settings.tile_style == 'promo' }}"
+    },
+    {
+      "type": "range",
+      "id": "photo_animation_speed",
+      "label": "t:labels.animation_speed",
+      "info": "t:labels.collection_tiles_speed_info",
+      "min": 2,
+      "max": 20,
+      "step": 1,
+      "unit": "s",
+      "default": 6,
+      "visible_if": "{{ section.settings.tile_style == 'promo' and section.settings.photo_animation != 'none' }}"
     },
     {
       "type": "header",

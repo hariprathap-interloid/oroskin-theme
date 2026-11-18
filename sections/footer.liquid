@@ -621,14 +621,14 @@
     The whole word floats: it sinks a little further into the bottom edge and rises back, in a slow
     loop (only down from its resting place: the box clips at the top too, so moving up would cut the
     tops of the letters). transform only, so it costs no layout. With the theme's "Enable animations"
-    setting on and motion allowed.
+    setting on (.motion-on: also in the theme editor) and motion allowed.
   */
   .footer__wordmark-text {
     display: inline-block;
   }
 
   @media (prefers-reduced-motion: no-preference) {
-    .animations-on .footer__wordmark-text {
+    .motion-on .footer__wordmark-text {
       animation: footer-wordmark-float 7s ease-in-out infinite;
     }
   }

@@ -1,13 +1,16 @@
 <!doctype html>
 {%- liquid
-  # Scroll animations run only when the merchant turned them on, and never inside the theme editor
-  # (merchants must see and edit all content there).
+  # Scroll animations (.animations-on) run only when the merchant turned them on, and never inside the
+  # theme editor: a scroll reveal hides content until it scrolls in, and merchants must see and edit all
+  # content there.
+  # Looping movements that never hide content (e.g. the promo card photos) use .motion-on instead: on
+  # with the same setting, also in the editor, so the merchant can see the chosen movement.
   assign animations_on = false
   if settings.animations_enabled and request.design_mode == false
     assign animations_on = true
   endif
 -%}
-<html class="no-js{% if animations_on %} animations-on{% endif %}" lang="{{ request.locale.iso_code }}">
+<html class="no-js{% if animations_on %} animations-on{% endif %}{% if settings.animations_enabled %} motion-on{% endif %}" lang="{{ request.locale.iso_code }}">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">

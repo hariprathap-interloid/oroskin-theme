@@ -1175,9 +1175,10 @@
     "collection_tiles_move_y": "Move up or down",
     "collection_tiles_move_y_info": "Negative values move the photo up, over the top edge of the card.",
     "collection_tiles_photo_animation": "Photo animation",
-    "collection_tiles_photo_animation_info": "Shows when \"Tile style\" is Promo card. Float: the photos move slowly up and down. They stay still for visitors who ask for less motion, and when \"Enable animations\" in Theme settings is off.",
+    "collection_tiles_photo_animation_info": "Shows when \"Tile style\" is Promo card. All photos move together, in a slow loop. They stay still for visitors who ask for less motion, and when \"Enable animations\" in Theme settings is off.",
     "icon_features_style": "Feature style",
-    "icon_features_style_info": "Plain: the features are on the section background. Card: each feature is in a soft rounded card."
+    "icon_features_style_info": "Plain: the features are on the section background. Card: each feature is in a soft rounded card.",
+    "collection_tiles_speed_info": "Shows when \"Photo animation\" is not No movement. Seconds for one movement. A smaller number is faster."
   },
   "options": {
     "panels_mobile_layout": {
@@ -1693,10 +1694,6 @@
     "collection_tiles_style": {
       "photo": "Photo tile",
       "promo": "Promo card"
-    },
-    "collection_tiles_photo_animation": {
-      "none": "None",
-      "float": "Float"
     },
     "icon_features_style": {
       "plain": "Plain",
