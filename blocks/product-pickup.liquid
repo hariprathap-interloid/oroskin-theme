@@ -113,7 +113,8 @@
     font-size: var(--font-size-small);
   }
 
-  .product-pickup:not(:has(.product-pickup__line)) {
+  /* Nothing to show (no delivery note, no pickup line for the chosen variant): no heading either */
+  .product-pickup:not(:has(.product-pickup__line:not([hidden]))) {
     display: none;
   }
 {% endstylesheet %}
@@ -122,19 +123,26 @@
   /** Shows the pickup line of the variant chosen in the Buy buttons block (same section only) */
   class ProductPickup extends HTMLElement {
     connectedCallback() {
-      this.scope = this.closest('.shopify-section') || document;
-      this.onChange = (event) => {
-        const id = event.detail?.variantId;
-        if (!id) return;
-        const lines = this.querySelectorAll('[data-variant-id]');
-        // A variant with no pickup location has no line: then hide them all
-        lines.forEach((line) => (line.hidden = line.dataset.variantId !== String(id)));
-      };
-      this.scope.addEventListener('variant:change', this.onChange);
+      this.controller?.abort();
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+      const scope = this.closest('.shopify-section') || document;
+      scope.addEventListener('variant:change', (event) => this.show(event.detail), { signal });
     }
 
     disconnectedCallback() {
-      this.scope?.removeEventListener('variant:change', this.onChange);
+      this.controller?.abort();
+    }
+
+    /**
+     * variantId null = the chosen options match no variant ("Unavailable"): every variant line hides.
+     * A variant with no pickup location has no line: then they all hide too. The delivery note has no
+     * data-variant-id, so it always stays. An event without a variantId changes nothing.
+     */
+    show(detail) {
+      if (!detail || detail.variantId === undefined) return;
+      const id = detail.variantId === null ? null : String(detail.variantId);
+      this.querySelectorAll('[data-variant-id]').forEach((line) => (line.hidden = line.dataset.variantId !== id));
     }
   }
 

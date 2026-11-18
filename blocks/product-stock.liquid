@@ -3,8 +3,10 @@
   and label, a thin line, and how many are left. The number shows only when it's low (at or under
   "Show the number from"), so a well-stocked product just says "In stock". Products that Shopify
   doesn't track, or that can be sold when out of stock, show the label only. Sold out: "Sold out".
-  It follows the chosen variant (the Buy buttons' "variant:change"). The product comes from
-  closest.product.
+  It follows the chosen variant (the Buy buttons' "variant:change"); a combination of values that is
+  no variant hides the line. The product comes from closest.product.
+  Settings: the labels ("Low stock text" with [count]), hide the line when sold out, and the colours of
+  the label (empty = the scheme's accent).
 
   @example
   {% content_for 'block', type: 'product-stock', id: 'product-stock' %}
@@ -19,10 +21,31 @@
   # Two steps: in one line, | t would also try to translate the merchant's own label
   assign in_stock_default = 'products.in_stock' | t
   assign in_stock_label = block.settings.label | default: in_stock_default
+  assign low_text = block.settings.low_stock_text | strip
+  assign show_sold_out = block.settings.show_sold_out
+  if show_sold_out == nil
+    assign show_sold_out = true
+  endif
+
+  # Colours: only written when set, so the CSS falls back to the scheme's accent
+  capture stock_style
+    if block.settings.in_stock_color != blank
+      echo '--stock-color: ' | append: block.settings.in_stock_color | append: ';'
+    endif
+    if block.settings.low_stock_color != blank
+      echo '--stock-low-color: ' | append: block.settings.low_stock_color | append: ';'
+    endif
+  endcapture
 -%}
 
 {%- if stock_product != blank -%}
-  <product-stock class="product-stock" data-threshold="{{ threshold }}" {{ block.shopify_attributes }}>
+  <product-stock
+    class="product-stock"
+    {% if stock_style != blank %}
+      style="{{ stock_style }}"
+    {% endif %}
+    {{ block.shopify_attributes }}
+  >
     {%- comment -%} One line per variant, rendered by Liquid; the script shows the chosen variant's {%- endcomment -%}
     {%- for variant in stock_product.variants -%}
       {%- liquid
@@ -30,9 +53,22 @@
         if variant.inventory_management == 'shopify' and variant.inventory_policy == 'deny'
           assign tracked = true
         endif
+        assign is_low = false
+        if variant.available and tracked and variant.inventory_quantity <= threshold and variant.inventory_quantity > 0
+          assign is_low = true
+        endif
+        assign line_class = ''
+        if variant.available == false
+          assign line_class = ' product-stock__line--out'
+          unless show_sold_out
+            assign line_class = ' product-stock__line--out product-stock__line--none'
+          endunless
+        elsif is_low
+          assign line_class = ' product-stock__line--low'
+        endif
       -%}
       <p
-        class="product-stock__line{% unless variant.available %} product-stock__line--out{% endunless %}"
+        class="product-stock__line{{ line_class }}"
         data-variant-id="{{ variant.id }}"
         {% unless variant == stock_variant %}
           hidden
@@ -45,9 +81,17 @@
             {{- 'products.sold_out' | t -}}
           {%- endif -%}
         </span>
-        {%- if variant.available and tracked and variant.inventory_quantity <= threshold and variant.inventory_quantity > 0 -%}
+        {%- if is_low -%}
+          {%- liquid
+            assign count_text = variant.inventory_quantity
+            if low_text != blank
+              assign count_text = low_text | replace: '[count]', count_text
+            else
+              assign count_text = 'products.pieces_left' | t: count: variant.inventory_quantity
+            endif
+          -%}
           <span class="product-stock__rule" aria-hidden="true"></span>
-          <span class="product-stock__count">{{ 'products.pieces_left' | t: count: variant.inventory_quantity }}</span>
+          <span class="product-stock__count">{{ count_text | escape }}</span>
         {%- endif -%}
       </p>
     {%- endfor -%}
@@ -70,7 +114,8 @@
     text-transform: uppercase;
   }
 
-  .product-stock__line[hidden] {
+  .product-stock__line[hidden],
+  .product-stock__line--none {
     display: none;
   }
 
@@ -78,8 +123,12 @@
     display: inline-flex;
     align-items: center;
     gap: var(--space-sm);
-    color: var(--color-accent);
+    color: var(--stock-color, var(--color-accent));
     font-weight: var(--font-weight-medium);
+  }
+
+  .product-stock__line--low .product-stock__label {
+    color: var(--stock-low-color, var(--stock-color, var(--color-accent)));
   }
 
   .product-stock__label::before {
@@ -113,19 +162,30 @@
    */
   class ProductStock extends HTMLElement {
     connectedCallback() {
+      // One controller: the theme editor re-attaches a moved block and runs connectedCallback again
+      this.controller?.abort();
+      this.controller = new AbortController();
       this.scope = this.closest('.shopify-section') || document;
-      this.onChange = (event) => {
-        const id = event.detail?.variantId;
-        if (!id || !this.querySelector(`[data-variant-id="${id}"]`)) return;
-        this.querySelectorAll('[data-variant-id]').forEach((line) => {
-          line.hidden = line.dataset.variantId !== String(id);
-        });
-      };
-      this.scope.addEventListener('variant:change', this.onChange);
+      this.scope.addEventListener(
+        'variant:change',
+        (event) => {
+          const id = event.detail?.variantId;
+          // null = the chosen values are no variant ("Unavailable"): no stock line
+          if (id === null) {
+            this.querySelectorAll('[data-variant-id]').forEach((line) => (line.hidden = true));
+            return;
+          }
+          if (!id || !this.querySelector(`[data-variant-id="${id}"]`)) return;
+          this.querySelectorAll('[data-variant-id]').forEach((line) => {
+            line.hidden = line.dataset.variantId !== String(id);
+          });
+        },
+        { signal: this.controller.signal }
+      );
     }
 
     disconnectedCallback() {
-      this.scope?.removeEventListener('variant:change', this.onChange);
+      this.controller?.abort();
     }
   }
 
@@ -138,10 +198,31 @@
   "tag": null,
   "settings": [
     {
+      "type": "header",
+      "content": "t:labels.content"
+    },
+    {
       "type": "text",
       "id": "label",
       "label": "t:labels.product_stock_label",
       "info": "t:labels.product_stock_label_info"
+    },
+    {
+      "type": "text",
+      "id": "low_stock_text",
+      "label": "t:labels.product_stock_low_text",
+      "info": "t:labels.product_stock_low_text_info"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_sold_out",
+      "label": "t:labels.product_stock_show_sold_out",
+      "info": "t:labels.product_stock_show_sold_out_info",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.product_stock_low_stock"
     },
     {
       "type": "range",
@@ -152,6 +233,22 @@
       "max": 50,
       "step": 1,
       "default": 10
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color",
+      "id": "in_stock_color",
+      "label": "t:labels.product_stock_color",
+      "info": "t:labels.product_stock_color_info"
+    },
+    {
+      "type": "color",
+      "id": "low_stock_color",
+      "label": "t:labels.product_stock_low_color",
+      "info": "t:labels.product_stock_low_color_info"
     }
   ],
   "presets": [

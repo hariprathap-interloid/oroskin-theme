@@ -29,7 +29,7 @@
 {%- if media_count > 0 -%}
   <product-lightbox class="product-lightbox">
     <dialog class="product-lightbox__dialog" aria-label="{{ lightbox_label | escape }}">
-      <div class="product-lightbox__inner">
+      <div class="product-lightbox__inner{% if media_count == 1 %} product-lightbox__inner--single{% endif %}">
         <p class="product-lightbox__counter">
           <span aria-hidden="true"><span data-lightbox-current>1</span> / {{ media_count }}</span>
           {%- comment -%} Read out on every change: "Image 2 of 7" {%- endcomment -%}
@@ -49,9 +49,8 @@
         <div class="product-lightbox__stage">
           {%- for media in product.media -%}
             <div
-              class="product-lightbox__slide product-lightbox__slide--{{ media.media_type }}"
+              class="product-lightbox__slide"
               data-lightbox-slide="{{ forloop.index0 }}"
-              data-media-type="{{ media.media_type }}"
               style="--media-ratio: {{ media.preview_image.aspect_ratio | default: 1 }};"
               {% unless forloop.first %}
                 hidden
@@ -60,13 +59,13 @@
               {%- if media.media_type == 'image' -%}
                 {%- comment -%}
                   A button, so full screen also works from the keyboard; aria-pressed tells a screen reader
-                  whether it's on. The image is large (up to 2400px) because full screen shows it big.
+                  whether it's on. Its name = the image's alt text + "View full screen" (an aria-label would
+                  hide the alt text). The image is large (up to 2400px) because full screen shows it big.
                 {%- endcomment -%}
                 <button
                   type="button"
                   class="product-lightbox__zoom"
                   aria-pressed="false"
-                  aria-label="{{ 'products.lightbox.zoom' | t }}"
                   data-lightbox-zoom
                 >
                   {%- comment -%} No alt text on the media: the product title, so the img always has a name {%- endcomment -%}
@@ -82,6 +81,7 @@
                       class: 'product-lightbox__image',
                       draggable: 'false'
                   }}
+                  <span class="visually-hidden">{{ 'products.lightbox.zoom' | t }}</span>
                   <span class="product-lightbox__hint" aria-hidden="true">
                     <span class="product-lightbox__hint-text product-lightbox__hint-text--mouse">
                       {{- 'products.lightbox.hint' | t -}}
@@ -138,7 +138,7 @@
                         | image_tag:
                           loading: 'lazy',
                           widths: '200, 300, 400',
-                          sizes: '(min-width: 990px) 10vw, 30vw',
+                          sizes: '(min-width: 990px) 10vw, 120px',
                           alt: '',
                           class: 'product-lightbox__thumb-image'
                       }}
@@ -300,10 +300,6 @@
     touch-action: pan-y; /* sideways finger moves are left to the script (swipe = next / previous) */
   }
 
-  .product-lightbox__zoom:hover {
-    background: none;
-  }
-
   .product-lightbox__zoom:focus-visible {
     outline: none;
   }
@@ -311,6 +307,11 @@
   .product-lightbox__zoom:focus-visible .product-lightbox__image {
     outline: 2px solid var(--color-accent);
     outline-offset: 4px;
+  }
+
+  /* Full screen: the image fills the screen, so the ring goes inside it */
+  .product-lightbox.is-full .product-lightbox__zoom:focus-visible .product-lightbox__image {
+    outline-offset: -6px;
   }
 
   .product-lightbox__image {
@@ -396,10 +397,24 @@
     }
   }
 
-  /* Thumbnails: 3 columns of their own shapes, the middle one higher, the right one lower */
+  /* One medium: no thumbnails, the image takes the whole width */
+  .product-lightbox__inner--single {
+    grid-template-columns: minmax(0, 1fr);
+    padding-inline-end: max(var(--space-md), calc(50 * var(--px, 0.0625rem)));
+  }
+
+  /*
+    Thumbnails: 3 columns of their own shapes, the middle one higher, the right one lower. Many media:
+    the list scrolls inside the screen height (the image stays in view)
+  */
   .product-lightbox__thumbs {
     grid-column: 2;
     display: grid;
+    max-block-size: var(--lightbox-image-max);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    padding-block: 4px;
     grid-template-columns: 125fr 168fr 106fr;
     align-items: start;
     gap: max(var(--space-sm), calc(16 * var(--px, 0.0625rem)));
@@ -512,9 +527,13 @@
       --lightbox-image-max: 55svh;
     }
 
+    /*
+      Rows: counter + close / the image (a fixed height, so it never covers the thumbnails) / the
+      thumbnails in the space left (they scroll when there are many)
+    */
     .product-lightbox__inner {
       grid-template-columns: minmax(0, 1fr);
-      grid-template-rows: auto minmax(0, 1fr) auto;
+      grid-template-rows: auto var(--lightbox-image-max) minmax(0, 1fr);
       align-items: start;
       gap: var(--space-lg);
       padding: var(--space-md) var(--space-sm);
@@ -526,7 +545,9 @@
       grid-row: 1;
     }
 
+    /* Column 1 too (with no column, the grid made a 2nd column for it and moved everything left) */
     .product-lightbox__counter {
+      grid-column: 1;
       justify-self: start;
       padding: 0.4em 1em;
     }
@@ -547,7 +568,12 @@
       grid-row: 3;
       justify-self: center;
       inline-size: min(100%, 20rem);
-      padding: 0;
+      max-block-size: 100%;
+      padding: 4px;
+    }
+
+    .product-lightbox__inner--single {
+      padding-inline-end: var(--space-sm);
     }
 
     .product-lightbox__thumb-column--1 {
@@ -586,6 +612,12 @@
    */
   class ProductLightbox extends HTMLElement {
     connectedCallback() {
+      // One controller for every listener: the theme editor re-attaches a moved section and runs
+      // connectedCallback again (without it, one arrow press moved two images)
+      this.controller?.abort();
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+
       this.dialog = this.querySelector('dialog');
       this.slides = [...this.querySelectorAll('[data-lightbox-slide]')];
       this.thumbs = [...this.querySelectorAll('[data-lightbox-thumb]')];
@@ -593,50 +625,76 @@
 
       // The opener buttons live in the gallery, outside this element: listen on the whole section
       this.scope = this.closest('.shopify-section') || document;
-      this.onOpenClick = (event) => {
-        const opener = event.target.closest('[data-lightbox-open]');
-        if (!opener) return;
-        this.opener = opener;
-        this.open(Number(opener.dataset.lightboxOpen));
-      };
-      this.scope.addEventListener('click', this.onOpenClick);
+      this.scope.addEventListener(
+        'click',
+        (event) => {
+          const opener = event.target.closest('[data-lightbox-open]');
+          if (!opener) return;
+          this.opener = opener;
+          this.open(Number(opener.dataset.lightboxOpen));
+        },
+        { signal }
+      );
 
-      this.dialog.addEventListener('click', (event) => {
-        const thumb = event.target.closest('[data-lightbox-thumb]');
-        const step = event.target.closest('[data-lightbox-step]');
-        if (thumb) this.show(Number(thumb.dataset.lightboxThumb));
-        else if (step) this.show(this.current + Number(step.dataset.lightboxStep));
-        else if (event.target.closest('[data-lightbox-close]')) this.dialog.close();
-        else if (event.target.closest('[data-lightbox-zoom]')) {
-          // A swipe also ends in a click: it already changed the image, so it doesn't toggle full screen
-          if (this.swiped) this.swiped = false;
-          else this.fullScreen(!this.classList.contains('is-full'));
-        }
-      });
+      this.dialog.addEventListener(
+        'click',
+        (event) => {
+          const thumb = event.target.closest('[data-lightbox-thumb]');
+          const step = event.target.closest('[data-lightbox-step]');
+          if (thumb) this.show(Number(thumb.dataset.lightboxThumb));
+          else if (step) this.show(this.current + Number(step.dataset.lightboxStep));
+          else if (event.target.closest('[data-lightbox-close]')) this.dialog.close();
+          else if (event.target.closest('[data-lightbox-zoom]')) {
+            // A swipe also ends in a click: it already changed the image, so it doesn't toggle full screen
+            if (this.swiped) this.swiped = false;
+            else this.fullScreen(!this.classList.contains('is-full'));
+          }
+        },
+        { signal }
+      );
 
-      this.dialog.addEventListener('keydown', (event) => {
-        if (event.key === 'ArrowRight') this.show(this.current + 1);
-        else if (event.key === 'ArrowLeft') this.show(this.current - 1);
-      });
+      this.dialog.addEventListener(
+        'keydown',
+        (event) => {
+          // ← / → on a video or a 3D model seek / turn it: leave them to the medium
+          if (this.inMedia(event.target)) return;
+          if (event.key === 'ArrowRight') this.show(this.current + 1);
+          else if (event.key === 'ArrowLeft') this.show(this.current - 1);
+        },
+        { signal }
+      );
 
       // Escape: the dialog's "cancel" event. In full screen, the first Escape only leaves it
-      this.dialog.addEventListener('cancel', (event) => {
-        if (!this.classList.contains('is-full')) return;
-        event.preventDefault();
-        this.fullScreen(false);
-      });
+      this.dialog.addEventListener(
+        'cancel',
+        (event) => {
+          if (!this.classList.contains('is-full')) return;
+          event.preventDefault();
+          this.fullScreen(false);
+        },
+        { signal }
+      );
 
-      this.dialog.addEventListener('close', () => {
-        this.fullScreen(false);
-        this.pauseMedia();
-        this.opener?.focus();
-      });
+      this.dialog.addEventListener(
+        'close',
+        () => {
+          this.fullScreen(false);
+          this.pauseMedia();
+          this.opener?.focus();
+        },
+        { signal }
+      );
 
-      this.setUpSwipe();
+      this.setUpSwipe(signal);
     }
 
     disconnectedCallback() {
-      this.scope?.removeEventListener('click', this.onOpenClick);
+      this.controller?.abort();
+    }
+
+    /** A video, a 3D model or an embedded player (YouTube, Vimeo) handles its own keys and drags */
+    inMedia(target) {
+      return Boolean(target?.closest?.('video, model-viewer, iframe'));
     }
 
     open(index) {
@@ -663,7 +721,7 @@
 
       const number = this.current + 1;
       this.querySelector('[data-lightbox-current]').textContent = number;
-      // "Image 2 of 7" for screen readers (the visible counter is hidden from them)
+      // "Item 2 of 7" for screen readers (the visible counter is hidden from them)
       const status = this.querySelector('[data-lightbox-status]');
       if (this.dialog.open) status.textContent = status.dataset.template.replace('[index]', number);
     }
@@ -677,32 +735,54 @@
     }
 
     /** Touch / pen: a sideways swipe of more than 50px goes to the next / previous medium */
-    setUpSwipe() {
+    setUpSwipe(signal) {
       const stage = this.querySelector('.product-lightbox__stage');
       let start = null;
 
-      stage.addEventListener('pointerdown', (event) => {
-        if (event.pointerType === 'mouse') return;
-        start = { x: event.clientX, y: event.clientY };
-      });
+      stage.addEventListener(
+        'pointerdown',
+        (event) => {
+          // A drag on a 3D model turns it, a drag on a video's bar seeks: not a swipe
+          if (event.pointerType === 'mouse' || this.inMedia(event.target)) return;
+          start = { x: event.clientX, y: event.clientY };
+        },
+        { signal }
+      );
 
-      stage.addEventListener('pointerup', (event) => {
-        if (!start) return;
-        const dx = event.clientX - start.x;
-        const dy = event.clientY - start.y;
-        start = null;
-        if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return;
-        this.swiped = true;
-        setTimeout(() => (this.swiped = false), 400); // no click followed: forget it
-        this.show(this.current + (dx < 0 ? 1 : -1));
-      });
+      stage.addEventListener(
+        'pointerup',
+        (event) => {
+          if (!start) return;
+          const dx = event.clientX - start.x;
+          const dy = event.clientY - start.y;
+          start = null;
+          if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return;
+          this.swiped = true;
+          setTimeout(() => (this.swiped = false), 400); // no click followed: forget it
+          this.show(this.current + (dx < 0 ? 1 : -1));
+        },
+        { signal }
+      );
 
-      stage.addEventListener('pointercancel', () => (start = null));
+      stage.addEventListener('pointercancel', () => (start = null), { signal });
     }
 
-    /** Stops any playing video when the viewer moves on or closes */
+    /**
+     * Stops what plays in the shown slide when the viewer moves on or closes: a video, or a YouTube /
+     * Vimeo player with a pause message (product-media turns on YouTube's message API: enablejsapi=1)
+     */
     pauseMedia() {
-      this.querySelectorAll('video').forEach((video) => video.pause());
+      const slide = this.slides[this.current];
+      if (!slide) return;
+      slide.querySelectorAll('video').forEach((video) => video.pause());
+      slide.querySelectorAll('iframe').forEach((frame) => {
+        const src = frame.getAttribute('src') || '';
+        if (src.includes('vimeo')) {
+          frame.contentWindow?.postMessage('{"method":"pause"}', '*');
+        } else if (src.includes('youtube')) {
+          frame.contentWindow?.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+        }
+      });
     }
   }
 

@@ -16,7 +16,6 @@
   assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
   assign media_count = product.media.size
   assign parent_collection = product.collections.first
-  assign gallery_sizes = '(min-width: 990px) 18vw, 33vw'
   # A link with ?variant= opens with that variant's image first (top of the middle column).
   # selected_variant is only set by the URL (?variant=), so a plain product link keeps the merchant's order
   assign lead_media = product.selected_variant.featured_media
@@ -58,8 +57,24 @@
             endif
           -%}
           {%- for column in column_order -%}
-            {%- assign column_number = column | plus: 0 -%}
-            <div class="product__column product__column--{{ forloop.index }}" data-gallery-column="{{ column_number }}">
+            {%- liquid
+              assign column_number = column | plus: 0
+              # sizes: the column's width. The gallery is ~40% of the screen from 990px (766 of the 1920 Figma
+              # frame) and the full page width below; its 3 columns are 297 (middle) / 220 (left) / 188 (right)
+              # of 705. With 1 or 2 media there is one column, as wide as the gallery
+              case column_number
+                when 0
+                  assign gallery_sizes = '(min-width: 990px) 18vw, 40vw'
+                when 1
+                  assign gallery_sizes = '(min-width: 990px) 13vw, 30vw'
+                else
+                  assign gallery_sizes = '(min-width: 990px) 11vw, 26vw'
+              endcase
+              if media_count < 3
+                assign gallery_sizes = '(min-width: 990px) 40vw, 92vw'
+              endif
+            -%}
+            <div class="product__column product__column--{{ forloop.index }}" data-gallery-column="{{ column_number }}" data-sizes="{{ gallery_sizes }}">
               {%- for media in product.media -%}
                 {%- liquid
                   assign place = forloop.index0
@@ -176,7 +191,7 @@
   /* The gallery stays in view under the header while the info column scrolls (when it fits the screen) */
   .product__gallery {
     position: sticky;
-    inset-block-start: 7rem;
+    inset-block-start: calc(var(--header-space, 6.0625rem) + var(--space-sm));
     display: grid;
     grid-template-columns: 220fr 297fr 188fr;
     align-items: start;
@@ -256,10 +271,6 @@
     cursor: zoom-in;
   }
 
-  .product__open:hover {
-    background: none;
-  }
-
   .product__open:focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: -4px;
@@ -281,6 +292,13 @@
 
   .product__open--corner:hover {
     background-color: var(--color-background);
+  }
+
+  /* Without JavaScript the viewer can't open: no buttons that do nothing */
+  @media (scripting: none) {
+    .product__open {
+      display: none;
+    }
   }
 
   .product__placeholder {
@@ -333,16 +351,45 @@
    */
   class ProductPage extends HTMLElement {
     connectedCallback() {
+      // One controller: the theme editor re-attaches a moved section and runs connectedCallback again
+      this.controller?.abort();
+      this.controller = new AbortController();
       // Every medium in the merchant's order (data-media-index), whatever column it is in now
       this.media = [...this.querySelectorAll('[data-media-index]')].sort(
         (a, b) => a.dataset.mediaIndex - b.dataset.mediaIndex
       );
-      this.onVariantChange = (event) => this.showVariant(event.detail || {});
-      this.addEventListener('variant:change', this.onVariantChange);
+      this.addEventListener('variant:change', (event) => this.showVariant(event.detail || {}), {
+        signal: this.controller.signal,
+      });
+      this.loadModelViewer();
     }
 
     disconnectedCallback() {
-      this.removeEventListener('variant:change', this.onVariantChange);
+      this.controller?.abort();
+    }
+
+    /**
+     * 3D models: Shopify's loader adds the viewer's controls (play, zoom, full screen) to each
+     * <model-viewer>, here and in the image viewer. Only when the product has a model
+     */
+    loadModelViewer() {
+      if (!this.querySelector('model-viewer') || this.modelViewerLoaded || !window.Shopify?.loadFeatures) return;
+      this.modelViewerLoaded = true;
+      window.Shopify.loadFeatures([
+        {
+          name: 'model-viewer-ui',
+          version: '1.0',
+          onLoad: (error) => {
+            if (error || !window.Shopify.ModelViewerUI) return;
+            this.querySelectorAll('model-viewer').forEach((model) => {
+              if (!model.dataset.ui) {
+                model.dataset.ui = 'true';
+                new window.Shopify.ModelViewerUI(model);
+              }
+            });
+          },
+        },
+      ]);
     }
 
     showVariant({ variantId, mediaId }) {
@@ -368,6 +415,8 @@
       order.forEach((item, place) => {
         const column = columns.length < 3 ? byNumber[0] : byNumber[place % 3];
         item.style.order = ''; // the DOM order now matches, the Liquid order is no longer needed
+        // The image now has the width of its new column
+        if (column.dataset.sizes) item.querySelectorAll('img[sizes]').forEach((img) => (img.sizes = column.dataset.sizes));
         column.append(item);
       });
     }
@@ -384,36 +433,18 @@
   "blocks": [{ "type": "@theme" }, { "type": "@app" }],
   "settings": [
     {
+      "type": "header",
+      "content": "t:labels.content"
+    },
+    {
       "type": "checkbox",
       "id": "show_breadcrumb",
       "label": "t:labels.show_breadcrumb",
       "default": true
     },
     {
-      "type": "checkbox",
-      "id": "show_sticky_bar",
-      "label": "t:labels.show_sticky_bar",
-      "info": "t:labels.show_sticky_bar_info",
-      "default": true
-    },
-    {
-      "type": "checkbox",
-      "id": "sticky_minimize",
-      "label": "t:labels.sticky_minimize",
-      "info": "t:labels.sticky_minimize_info",
-      "default": true,
-      "visible_if": "{{ section.settings.show_sticky_bar }}"
-    },
-    {
-      "type": "checkbox",
-      "id": "enable_lightbox",
-      "label": "t:labels.enable_lightbox",
-      "info": "t:labels.enable_lightbox_info",
-      "default": true
-    },
-    {
       "type": "header",
-      "content": "t:labels.style"
+      "content": "t:labels.layout"
     },
     {
       "type": "select",
@@ -451,7 +482,7 @@
       "type": "range",
       "id": "text_scale",
       "label": "t:labels.text_scale",
-      "info": "t:labels.text_scale_info",
+      "info": "t:labels.product_text_scale_info",
       "min": 100,
       "max": 130,
       "step": 5,
@@ -460,10 +491,38 @@
       "visible_if": "{{ section.settings.scale_screen }}"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
+      "type": "header",
+      "content": "t:labels.product_viewer"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_lightbox",
+      "label": "t:labels.enable_lightbox",
+      "info": "t:labels.product_lightbox_info",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.product_sticky_bar"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_sticky_bar",
+      "label": "t:labels.show_sticky_bar",
+      "info": "t:labels.product_sticky_bar_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "sticky_minimize",
+      "label": "t:labels.sticky_minimize",
+      "info": "t:labels.product_sticky_minimize_info",
+      "default": true,
+      "visible_if": "{{ section.settings.show_sticky_bar }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -484,6 +543,16 @@
       "step": 8,
       "unit": "px",
       "default": 64
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ]
 }

@@ -11,26 +11,38 @@
 {%- liquid
   assign heading_default = 'products.offers.heading' | t
   assign offers_heading = block.settings.heading | default: heading_default
+
 -%}
 
-{%- if block.blocks.size > 0 -%}
+{%- comment -%}
+  The tickets are rendered first and kept: an empty offer (blocks/_offer.liquid: no bank, offer or
+  code) outputs nothing, so empty output = no ticket shows. (block.blocks can't read the offers'
+  settings here.) Store: then nothing at all (no empty list, no heading). Editor: the list is always
+  output (the editor needs it to place new offers), with a note when nothing shows yet.
+{%- endcomment -%}
+{%- capture offers_tickets -%}{% content_for 'blocks' %}{%- endcapture -%}
+{%- assign offers_tickets_check = offers_tickets | strip -%}
+
+{%- if offers_tickets_check != blank or request.design_mode -%}
   <div class="product-offers" {{ block.shopify_attributes }}>
-    {%- if offers_heading != blank -%}
-      {% render 'product-block-heading', text: offers_heading %}
+    {%- if offers_tickets_check != blank -%}
+      {%- if offers_heading != blank -%}
+        {% render 'product-block-heading', text: offers_heading %}
+      {%- endif -%}
+    {%- else -%}
+      <p class="product-offers__empty">{{ 'products.offers.empty' | t }}</p>
     {%- endif -%}
     <div class="product-offers__list" role="list">
-      {% content_for 'blocks' %}
+      {{- offers_tickets -}}
     </div>
   </div>
-{%- elsif request.design_mode -%}
-  <p class="product-offers__empty" {{ block.shopify_attributes }}>{{ 'products.offers.empty' | t }}</p>
 {%- endif -%}
 
 {% stylesheet %}
   /*
     Figma: 4 tickets ~186px wide, overlapping a few px and slightly tilted, each its own angle. The
-    angles are set here on Shopify's block wrappers (the ticket is the only child of its wrapper, so
-    the ticket itself can't tell which one it is).
+    tickets are the list's direct children (the blocks have no wrapper: "tag": null) and an empty
+    offer outputs nothing, so :nth-child counts only the tickets that show.
   */
   /* The container is the block, not the list: a container query only styles the container's children */
   .product-offers {
@@ -46,10 +58,11 @@
   @container (min-width: 40rem) {
     .product-offers__list {
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 0;
+      gap: var(--space-sm) 0;
     }
 
-    .product-offers__list > * + * {
+    /* Each ticket overlaps the one at its left; the first of each row of 4 has none at its left */
+    .product-offers__list > :not(:nth-child(4n + 1)) {
       margin-inline-start: -0.25rem;
     }
   }

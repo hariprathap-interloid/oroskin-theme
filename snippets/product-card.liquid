@@ -134,22 +134,11 @@
           <span class="product-card__badge color-{{ settings.sale_badge_color_scheme.id }}">{{ 'products.badge.sale' | t }}</span>
         {%- endif -%}
         {%- comment -%}
-          The product's "Badges" field (custom.badges). Usually a list (.value is an array), but a single
-          value (one metaobject or one text) is handled too, so a badge never silently disappears.
-          snippets/product-badge.liquid draws one badge: own colours for a Badge metaobject entry,
-          otherwise the default badge colour scheme.
+          The product's "Badges" field (custom.badges): snippets/product-badges reads it (list or single
+          value) and draws each badge (own colours for a Badge metaobject entry, else the default badge
+          colour scheme).
         {%- endcomment -%}
-        {%- assign badges_field = product.metafields.custom.badges -%}
-        {%- if badges_field != blank -%}
-          {%- assign badges_value = badges_field.value -%}
-          {%- if badges_field.type contains 'list.' -%}
-            {%- for badge in badges_value -%}
-              {% render 'product-badge', badge: badge %}
-            {%- endfor -%}
-          {%- else -%}
-            {% render 'product-badge', badge: badges_value %}
-          {%- endif -%}
-        {%- endif -%}
+        {% render 'product-badges', field: product.metafields.custom.badges %}
       </div>
     </div>
 

@@ -3,7 +3,8 @@
   - image: the responsive image snippet, with the merchant's alt text
   - video (uploaded to Shopify): a <video> with the browser's controls, never autoplaying
   - external_video (YouTube / Vimeo): the platform's player in an iframe
-  - model (3D): Shopify's <model-viewer>; the section loads its controls (model-viewer-ui)
+  - model (3D): Shopify's <model-viewer>; the section loads its controls (model-viewer-ui: Featured
+    product and the product page's <product-page>)
 
   The parent decides the box size; everything here fills it.
 
@@ -23,7 +24,15 @@
     {%- when 'video' -%}
       {{ media | video_tag: controls: true, preload: 'metadata' }}
     {%- when 'external_video' -%}
-      {{ media | external_video_tag }}
+      {%- comment -%}
+        Lazy: the player (about 1 MB of script) loads only when it comes near the screen. YouTube gets
+        enablejsapi=1, so the image viewer can pause it with a message (Vimeo accepts those by default)
+      {%- endcomment -%}
+      {%- if media.host == 'youtube' -%}
+        {{ media | external_video_url: enablejsapi: '1' | external_video_tag: loading: 'lazy' }}
+      {%- else -%}
+        {{ media | external_video_tag: loading: 'lazy' }}
+      {%- endif -%}
     {%- when 'model' -%}
       {{ media | model_viewer_tag: reveal: 'interaction', toggleable: true }}
     {%- else -%}

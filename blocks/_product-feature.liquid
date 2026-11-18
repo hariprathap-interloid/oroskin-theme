@@ -10,9 +10,21 @@
 
 {%- liquid
   assign builtin_icon = block.settings.builtin_icon | default: 'none'
+
+  # The icon is decoration (its meaning is the label), so a feature without a label shows nothing on
+  # the store. The editor still shows its icon, so the merchant can find it and add the label.
+  # Product features reads this block's output: no output on the store = no list there.
+  assign show_feature = false
+  if block.settings.label != blank
+    assign show_feature = true
+  elsif request.design_mode
+    if block.settings.icon != blank or builtin_icon != 'none'
+      assign show_feature = true
+    endif
+  endif
 -%}
 
-{%- if block.settings.label != blank or block.settings.icon != blank -%}
+{%- if show_feature -%}
   <div class="product-feature" role="listitem" {{ block.shopify_attributes }}>
     <span class="product-feature__icon" aria-hidden="true">
       {%- if block.settings.icon != blank -%}

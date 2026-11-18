@@ -1,0 +1,26 @@
+{% doc %}
+  Renders a product's merchant badges from its "Badges" field (custom.badges), one product-badge each.
+  The one place that reads the field: usually a list (.value is an array), but a single value (one Badge
+  metaobject entry or one text) is handled too, so a badge never silently disappears. Used by the product
+  cards (every badge) and the product page eyebrow (the first one).
+
+  @param {object} field - The metafield: product.metafields.custom.badges
+  @param {number} [limit] - Show at most this many badges (empty = all)
+
+  @example
+  {% render 'product-badges', field: product.metafields.custom.badges %}
+  {% render 'product-badges', field: product.metafields.custom.badges, limit: 1 %}
+{% enddoc %}
+
+{%- if field != blank -%}
+  {%- liquid
+    assign badges_limit = limit | default: 50
+    if field.type contains 'list.'
+      for badge in field.value limit: badges_limit
+        render 'product-badge', badge: badge
+      endfor
+    else
+      render 'product-badge', badge: field.value
+    endif
+  -%}
+{%- endif -%}

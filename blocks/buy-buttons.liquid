@@ -67,17 +67,38 @@
   assign recommended_label = block.settings.recommended_label | default: recommended_default
   assign perk_default = 'products.plans.perk' | t
   assign plan_perk = block.settings.plan_perk | default: perk_default
+
+  # "Show images for options": a list of option names ("Scent, Color"), compared in lower case. Each name is
+  # trimmed on its own, so extra spaces ("Scent ,  Color") still match
+  assign image_options_raw = block.settings.option_images | downcase | split: ','
+  assign image_options_list = ''
+  for image_option in image_options_raw
+    assign image_option_name = image_option | strip
+    if image_option_name != blank
+      assign image_options_list = image_options_list | append: image_option_name | append: '|'
+    endif
+  endfor
+  assign image_options = image_options_list | split: '|'
+
+  # Quantity rules (B2B catalogs): min 1, step 1 and no max for every other customer
+  assign quantity_min = current_variant.quantity_rule.min | default: 1
+  assign quantity_step = current_variant.quantity_rule.increment | default: 1
+  assign quantity_max = current_variant.quantity_rule.max
 -%}
 
 {%- if buy_product != blank -%}
   <buy-buttons
-    class="buy-buttons buy-buttons--{{ layout }}"
+    class="buy-buttons buy-buttons--{{ layout }}{% if block.settings.unavailable_style == 'cross' %} buy-buttons--cross{% endif %}"
     data-label-add="{{ 'products.add_to_cart' | t }}"
     data-label-sold-out="{{ 'products.sold_out' | t }}"
     data-label-unavailable="{{ 'products.unavailable' | t }}"
     data-label-added="{{ 'products.added' | t | escape_once }}"
     data-label-added-status="{{ 'products.quick_add.added' | t: title: buy_product.title | escape }}"
     data-label-error="{{ 'products.quick_add.error' | t | escape_once }}"
+    {%- assign fly_image = current_variant.featured_image | default: buy_product.featured_image -%}
+    {%- if fly_image != blank %}
+      data-image="{{ fly_image | image_url: width: 160 }}"
+    {%- endif %}
     {{ block.shopify_attributes }}
   >
     {%- form 'product', buy_product, class: 'buy-buttons__form' -%}
@@ -94,6 +115,11 @@
               assign is_swatch = false
               if block.settings.show_swatches and option.values.first.swatch != blank
                 assign is_swatch = true
+              endif
+              assign option_name_down = option.name | downcase | strip
+              assign has_images = false
+              if is_swatch == false and image_options contains option_name_down
+                assign has_images = true
               endif
             -%}
             <fieldset class="buy-buttons__option" data-option>
@@ -116,6 +142,30 @@
                         assign price_difference = value_min | minus: buy_product.price_min
                       endif
                     endif
+
+                    # The value's image: the image of the first variant with this value that has one
+                    assign value_image = blank
+                    if has_images
+                      assign value_image = buy_product.variants | where: option_key, value.name | map: 'featured_image' | compact | first
+                    endif
+
+                    # With the other chosen values: no such variant = unavailable, a variant that can't be
+                    # bought = sold out (the script does the same after each choice)
+                    assign value_state = ''
+                    if value.variant == blank
+                      assign value_state = 'unavailable'
+                    elsif value.variant.available == false
+                      assign value_state = 'sold-out'
+                    endif
+
+                    # The note screen readers hear after the value name (the script writes the same after
+                    # each choice, in updateStates)
+                    assign value_note = ''
+                    if value_state == 'sold-out'
+                      assign value_note = 'products.sold_out' | t | prepend: ' (' | append: ')'
+                    elsif value_state == 'unavailable'
+                      assign value_note = 'products.unavailable' | t | prepend: ' (' | append: ')'
+                    endif
                   -%}
                   <input
                     class="buy-buttons__pill-input"
@@ -125,6 +175,9 @@
                     value="{{ value.name | escape }}"
                     {% if value.selected %}
                       checked
+                    {% endif %}
+                    {% if value_state != '' %}
+                      data-state="{{ value_state }}"
                     {% endif %}
                     data-option-input
                   >
@@ -140,15 +193,31 @@
                       {%- if value.swatch.image -%}
                         {{ value.swatch.image | image_url: width: 80 | image_tag: alt: '', loading: 'lazy', class: 'buy-buttons__swatch-image' }}
                       {%- endif -%}
-                      <span class="visually-hidden">{{ value.name | escape }}</span>
+                      <span class="visually-hidden">
+                        {{- value.name | escape -}}
+                        <span data-value-note>{{ value_note }}</span>
+                      </span>
                     </label>
                   {%- else -%}
-                    <label class="buy-buttons__pill" for="{{ input_id }}">
+                    <label class="buy-buttons__pill{% if value_image != blank %} buy-buttons__pill--image{% endif %}" for="{{ input_id }}">
+                      {%- if value_image != blank -%}
+                        {{
+                          value_image
+                          | image_url: width: 96
+                          | image_tag:
+                            alt: '',
+                            loading: 'lazy',
+                            widths: '48, 96',
+                            sizes: '32px',
+                            class: 'buy-buttons__pill-image'
+                        }}
+                      {%- endif -%}
                       {{- value.name | escape -}}
                       {%- if price_difference > 0 -%}
                         {%- assign price_difference_money = price_difference | money -%}
                         <span class="buy-buttons__pill-extra">{{ 'products.price_difference' | t: price: price_difference_money }}</span>
                       {%- endif -%}
+                      <span class="visually-hidden" data-value-note>{{ value_note }}</span>
                     </label>
                   {%- endif -%}
                 {%- endfor -%}
@@ -165,6 +234,13 @@
                 value="{{ variant.id }}"
                 data-options="{{ variant.options | join: '||' | escape }}"
                 data-available="{{ variant.available }}"
+                data-qty-min="{{ variant.quantity_rule.min | default: 1 }}"
+                data-qty-step="{{ variant.quantity_rule.increment | default: 1 }}"
+                data-qty-max="{{ variant.quantity_rule.max }}"
+                {%- assign variant_fly_image = variant.featured_image | default: buy_product.featured_image -%}
+                {%- if variant_fly_image != blank %}
+                  data-image="{{ variant_fly_image | image_url: width: 160 }}"
+                {%- endif %}
                 {% if variant.featured_media %}
                   data-media-id="{{ variant.featured_media.id }}"
                 {% endif %}
@@ -372,17 +448,21 @@
             data-step="-1"
             aria-label="{{ 'products.quantity_decrease' | t }}"
           >
-            &minus;
+            {{- 'icon-minus.svg' | inline_asset_content -}}
           </button>
           <input
             id="Quantity-{{ block.id }}"
             class="buy-buttons__quantity-input"
             type="number"
             name="quantity"
-            min="1"
-            step="1"
-            value="1"
+            min="{{ quantity_min }}"
+            step="{{ quantity_step }}"
+            {% if quantity_max != blank %}
+              max="{{ quantity_max }}"
+            {% endif %}
+            value="{{ quantity_min }}"
             inputmode="numeric"
+            aria-describedby="QuantityRules-{{ block.id }}"
           >
           <button
             type="button"
@@ -390,7 +470,7 @@
             data-step="1"
             aria-label="{{ 'products.quantity_increase' | t }}"
           >
-            +
+            {{- 'icon-plus.svg' | inline_asset_content -}}
           </button>
         </div>
 
@@ -423,6 +503,62 @@
       {%- unless layout == 'inline' -%}
         {{ payment_buttons }}
       {%- endunless -%}
+
+      {%- comment -%}
+        Quantity rules and volume pricing (B2B catalogs): one block per variant that has them, the script
+        shows the chosen variant's. Normal customers have none, so nothing shows.
+      {%- endcomment -%}
+      <div class="buy-buttons__rules" id="QuantityRules-{{ block.id }}">
+        {%- for variant in buy_product.variants -%}
+          {%- liquid
+            assign rule = variant.quantity_rule
+            assign has_rule = false
+            if rule.min > 1 or rule.increment > 1 or rule.max != blank
+              assign has_rule = true
+            endif
+          -%}
+          {%- if has_rule or variant.quantity_price_breaks_configured? -%}
+            <div
+              class="buy-buttons__rule"
+              data-variant-rules="{{ variant.id }}"
+              {% unless variant == current_variant %}
+                hidden
+              {% endunless %}
+            >
+              {%- if has_rule -%}
+                <p class="buy-buttons__rule-line">
+                  {%- if rule.min > 1 -%}
+                    <span>{{ 'products.quantity_rules.min' | t: min: rule.min }}</span>
+                  {%- endif -%}
+                  {%- if rule.max != blank -%}
+                    <span>{{ 'products.quantity_rules.max' | t: max: rule.max }}</span>
+                  {%- endif -%}
+                  {%- if rule.increment > 1 -%}
+                    <span>{{ 'products.quantity_rules.increment' | t: step: rule.increment }}</span>
+                  {%- endif -%}
+                </p>
+              {%- endif -%}
+              {%- if variant.quantity_price_breaks_configured? -%}
+                <p class="buy-buttons__rule-title">{{ 'products.quantity_rules.volume_pricing' | t }}</p>
+                {%- assign base_price = variant.price | money -%}
+                <ul class="buy-buttons__breaks" role="list">
+                  <li>
+                    <span>{{ rule.min }}+</span>
+                    <span>{{ 'products.quantity_rules.each' | t: price: base_price }}</span>
+                  </li>
+                  {%- for price_break in variant.quantity_price_breaks -%}
+                    {%- assign break_price = price_break.price | money -%}
+                    <li>
+                      <span>{{ price_break.minimum_quantity }}+</span>
+                      <span>{{ 'products.quantity_rules.each' | t: price: break_price }}</span>
+                    </li>
+                  {%- endfor -%}
+                </ul>
+              {%- endif -%}
+            </div>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
 
       {%- comment -%}
         After a background add: why it was refused (stock…), and "Serum added to your cart" for screen readers
@@ -470,19 +606,38 @@
     text-transform: none;
   }
 
-  /* Without JavaScript: the select is the picker, the pills stay hidden (they need the script) */
+  /*
+    Without JavaScript the select is the picker and the pills stay hidden (they need the script). With
+    JavaScript the pills show from the first paint (scripting media query), so the card does not move when
+    the script runs
+  */
   .buy-buttons__options {
     display: none;
   }
 
-  buy-buttons.is-enhanced .buy-buttons__options {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-md);
-  }
+  @media (scripting: enabled) {
+    .buy-buttons__options {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
 
-  buy-buttons.is-enhanced .buy-buttons__select {
-    display: none;
+    .buy-buttons__select {
+      display: none;
+    }
+
+    /* Two classes: the base rule (display: none) comes later in this file */
+    .buy-buttons .buy-buttons__step {
+      display: grid;
+    }
+
+    /*
+      Until the script has run (slow connection), the pills and − / + can't change the hidden select: they
+      don't react, so Add to cart always sends the variant the pills show
+    */
+    buy-buttons:not(:defined) :is(.buy-buttons__pills, .buy-buttons__step) {
+      pointer-events: none;
+    }
   }
 
   .buy-buttons__option {
@@ -524,6 +679,44 @@
   .buy-buttons__pill-extra {
     margin-inline-start: 0.35em;
     opacity: 0.75;
+  }
+
+  /* "Show images for options": the variant's image in a small circle before the name */
+  .buy-buttons__pill--image {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+    padding-block: 0.25em;
+    padding-inline-start: 0.25em;
+  }
+
+  .buy-buttons__pill-image {
+    flex: none;
+    inline-size: 2rem;
+    block-size: 2rem;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  /*
+    A value that can't be bought with the other chosen values: dimmed (default), or also crossed out
+    ("Unavailable values" setting). It can still be chosen: the button then says Sold out / Unavailable
+  */
+  .buy-buttons__pill-input[data-state] + :is(.buy-buttons__pill, .buy-buttons__swatch) {
+    opacity: 0.45;
+  }
+
+  .buy-buttons--cross .buy-buttons__pill-input[data-state] + .buy-buttons__pill {
+    text-decoration: line-through;
+  }
+
+  .buy-buttons--cross .buy-buttons__pill-input[data-state] + .buy-buttons__swatch::after {
+    content: "";
+    position: absolute;
+    inset: 50% -10%;
+    block-size: 1px;
+    background-color: var(--color-text);
+    transform: rotate(-45deg);
   }
 
   .buy-buttons__pill-input:checked + .buy-buttons__pill {
@@ -749,11 +942,12 @@
     min-block-size: 3.125rem;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-pill);
-    background-color: #ffffff;
+    background-color: var(--color-surface-raised);
   }
 
+  /* In a row: a pale accent edge (the tint of the "Recommended" pill), softer than Add to cart */
   .buy-buttons--inline .buy-buttons__quantity {
-    border-color: transparent;
+    border-color: color-mix(in srgb, var(--color-accent) 35%, transparent);
     box-shadow: var(--shadow-glass-edge);
   }
 
@@ -768,13 +962,15 @@
     border-radius: var(--radius-pill);
     background: none;
     color: var(--color-text);
-    font-size: 1.25rem;
     line-height: 1;
     cursor: pointer;
   }
 
-  buy-buttons.has-js .buy-buttons__step {
-    display: grid;
+  /* − / + are SVG icons (a text "+" sat lower than "−": the font draws them at different heights) */
+  .buy-buttons__step svg {
+    display: block;
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
   }
 
   .buy-buttons__step:hover {
@@ -851,8 +1047,10 @@
     font-size: var(--font-size-small);
   }
 
+  /* In a row: each button as wide as its label (never on two lines), the free space shared out; the row
+     breaks only when the labels do not fit side by side */
   .buy-buttons--inline .buy-buttons__payment {
-    flex: 1 1 12rem;
+    flex: 1 1 auto;
   }
 
   .buy-buttons--inline .buy-buttons__payment .shopify-payment-button__button--unbranded {
@@ -885,8 +1083,10 @@
     flex: 1;
   }
 
-  .buy-buttons--inline .buy-buttons__submit {
-    flex: 1 1 12rem;
+  .buy-buttons--inline .buy-buttons__submit,
+  .buy-buttons--inline .buy-buttons__payment .shopify-payment-button__button--unbranded {
+    flex: 1 1 auto;
+    white-space: nowrap;
   }
 
   /*
@@ -904,29 +1104,133 @@
     background-color: color-mix(in srgb, var(--color-secondary-button-text) 8%, var(--color-secondary-button));
   }
 
+  /* The icons sit on the middle of the label line (block svg: no space under it for text descenders) */
   .buy-buttons__submit-icon {
     display: inline-flex;
+    align-items: center;
   }
 
   .buy-buttons__submit-icon svg {
+    display: block;
     inline-size: 1.125rem;
     block-size: 1.125rem;
   }
 
-  /* "Added ✓" for 2s after a background add */
-  .buy-buttons__submit.is-added [data-submit-label]::after {
-    content: " ✓";
-  }
-
+  /*
+    While it adds: the button keeps its colour, the label dims a little and a small spinning ring takes
+    the place of the cart icon (the sticky bar draws the same on its own button). Then the product photo flies to the
+    header cart (script) and the label says "Added" for 2s
+  */
   .buy-buttons__submit.is-adding {
     cursor: progress;
-    opacity: 0.75;
+  }
+
+  .buy-buttons__submit.is-adding .buy-buttons__submit-icon {
+    display: none;
+  }
+
+  .buy-buttons__submit.is-adding [data-submit-label] {
+    opacity: 0.7;
+  }
+
+  .buy-buttons__submit.is-adding::before {
+    content: "";
+    flex: none;
+    inline-size: 1em;
+    block-size: 1em;
+    border: 2px solid color-mix(in srgb, currentcolor 25%, transparent);
+    border-block-start-color: currentcolor;
+    border-radius: 50%;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .buy-buttons__submit.is-adding::before {
+      animation: buy-buttons-spin 0.7s linear infinite;
+    }
+  }
+
+  @keyframes buy-buttons-spin {
+    to {
+      rotate: 1turn;
+    }
+  }
+
+  /* The flying photo (made by the script, on <body>); the header draws the cart icon's bump when it lands */
+  /*
+    A light glass bubble: a thin accent ring, a small light gap round the photo and a soft glow in the
+    accent colour (it follows the colour scheme, so it suits red and dark schemes too)
+  */
+  .cart-flight {
+    position: fixed;
+    z-index: 1000;
+    inline-size: 3.5rem;
+    block-size: 3.5rem;
+    padding: 3px;
+    border: 1.5px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--color-surface-raised, #ffffff) 85%, transparent);
+    box-shadow:
+      0 10px 28px color-mix(in srgb, var(--color-accent) 30%, transparent),
+      inset 0 1px 0 #ffffffcc;
+    pointer-events: none;
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+  }
+
+  .cart-flight img {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    border-radius: 50%;
+    object-fit: cover;
   }
 
   .buy-buttons__message {
     margin: 0;
     color: var(--color-error);
     font-size: var(--font-size-small);
+  }
+
+  /* Quantity rules and volume pricing (B2B): small grey text under the buttons */
+  .buy-buttons__rules:empty,
+  .buy-buttons__rules:not(:has(.buy-buttons__rule:not([hidden]))),
+  .buy-buttons__rule[hidden] {
+    display: none;
+  }
+
+  .buy-buttons__rule {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    color: color-mix(in srgb, var(--color-text) 75%, var(--color-background));
+    font-size: var(--font-size-small);
+  }
+
+  .buy-buttons__rule-line {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 var(--space-md);
+    margin: 0;
+  }
+
+  .buy-buttons__rule-title {
+    margin: var(--space-xs) 0 0;
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-transform: uppercase;
+  }
+
+  .buy-buttons__breaks {
+    display: grid;
+    grid-template-columns: max-content max-content;
+    gap: 0.25rem var(--space-lg);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .buy-buttons__breaks li {
+    display: contents;
   }
 
   .buy-buttons__submit:disabled {
@@ -955,6 +1259,80 @@
     .buy-buttons__plan-note {
       grid-column: 2 / -1;
     }
+
+    /*
+      Figma phone (Variant96): quantity, Add to cart and Buy now in one row. Smaller stepper and padding;
+      the row still wraps when the card is too narrow for the labels
+    */
+    .buy-buttons--inline .buy-buttons__row {
+      gap: var(--space-sm) 0.375rem;
+    }
+
+    /* 24px − / +: the WCAG 2.2 minimum target size */
+    .buy-buttons--inline .buy-buttons__step {
+      inline-size: 1.5rem;
+    }
+
+    /* Room for 3 digits (a B2B rule can start at 6 and go up in steps) */
+    .buy-buttons.buy-buttons--inline .buy-buttons__quantity-input {
+      inline-size: 3ch;
+    }
+
+    .buy-buttons--inline .buy-buttons__submit,
+    .buy-buttons--inline .buy-buttons__payment .shopify-payment-button__button--unbranded {
+      gap: 0.25rem;
+      padding-inline: 0.375rem;
+      font-size: 0.6875rem; /* Figma phone ~11px */
+      letter-spacing: 0.05em;
+    }
+
+    .buy-buttons--inline .buy-buttons__submit-icon svg,
+    .buy-buttons--inline .buy-buttons__payment .shopify-payment-button__button--unbranded::before {
+      inline-size: 1rem;
+      block-size: 1rem;
+    }
+  }
+  /*
+    Small laptops (990–1449px): the info card is narrow, so less padding and gap keep quantity, Add to cart
+    and Buy now on one line
+  */
+  @media (min-width: 990px) and (max-width: 1449px) {
+    .buy-buttons--inline .buy-buttons__row {
+      column-gap: var(--space-sm);
+    }
+
+    .buy-buttons--inline .buy-buttons__submit,
+    .buy-buttons--inline .buy-buttons__payment .shopify-payment-button__button--unbranded {
+      padding-inline: var(--space-md);
+    }
+  }
+
+  /* 990–1199px: the narrowest info card. Also a narrower stepper and less letter spacing */
+  @media (min-width: 990px) and (max-width: 1199px) {
+    .buy-buttons--inline .buy-buttons__step {
+      inline-size: 2rem;
+    }
+
+    .buy-buttons.buy-buttons--inline .buy-buttons__quantity-input {
+      inline-size: 2.25rem;
+    }
+
+    .buy-buttons--inline .buy-buttons__submit,
+    .buy-buttons--inline .buy-buttons__payment .shopify-payment-button__button--unbranded {
+      padding-inline: var(--space-sm);
+      letter-spacing: 0.06em;
+    }
+  }
+
+  /*
+    Small phones (under 390px) and the first laptop widths (990–1079px, the narrowest info card): no icons
+    in the two buttons, so the row still fits
+  */
+  @media (max-width: 389px), (min-width: 990px) and (max-width: 1079px) {
+    .buy-buttons--inline .buy-buttons__submit-icon,
+    .buy-buttons--inline .buy-buttons__payment .shopify-payment-button__button--unbranded::before {
+      display: none;
+    }
   }
 {% endstylesheet %}
 
@@ -966,57 +1344,94 @@
    */
   class BuyButtons extends HTMLElement {
     connectedCallback() {
+      // One controller for every listener: the theme editor re-attaches a moved block, and connectedCallback
+      // then runs again (without it, one press on + added 2)
+      this.controller?.abort();
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+
       this.select = this.querySelector('select[name="id"]');
       this.submit = this.querySelector('[data-submit]');
-      this.setUpQuantity();
-      this.setUpPlans();
-      this.setUpAdd();
-      this.onPageShow = () => this.syncFromForm();
-      window.addEventListener('pageshow', this.onPageShow);
-      if (!this.select || !this.querySelector('[data-option]')) return;
+      this.form = this.querySelector('form');
+      this.quantity = this.querySelector('input[name="quantity"]');
+      this.enhanced = Boolean(this.select && this.querySelector('[data-option]'));
 
-      this.classList.add('is-enhanced');
-      this.addEventListener('change', (event) => {
-        if (event.target.matches('[data-option-input]')) this.onOptionChange();
-      });
+      this.setUpQuantity(signal);
+      this.setUpPlans(signal);
+      this.setUpAdd(signal);
+      window.addEventListener('pageshow', () => this.syncFromForm(), { signal });
+      if (!this.enhanced) return;
+
+      this.addEventListener(
+        'change',
+        (event) => {
+          if (event.target.matches('[data-option-input]')) this.onOptionChange();
+        },
+        { signal }
+      );
     }
 
     disconnectedCallback() {
-      window.removeEventListener('pageshow', this.onPageShow);
+      this.controller?.abort();
+      clearTimeout(this.addedTimer);
     }
 
     /**
-     * Back / forward: the browser puts the visitor's earlier choices back into the form (the ticked plan,
-     * the variant pills) without any change event, after this script has run, so the price showed the
-     * one-time price under a ticked plan and the hidden selling_plan field was empty (what you saw and
-     * what would be bought no longer matched). "pageshow" fires after that restore, and also when the
-     * page comes back from the back-forward cache: read the form again, so everything follows what is
-     * ticked
+     * "pageshow" fires on every load, and also after Back / Forward, when the browser has put the visitor's
+     * earlier choices back into the form without a change event. Only when the pills differ from what
+     * Liquid rendered (defaultChecked) is the variant announced again: a plain product link keeps the
+     * merchant's image order and gets no ?variant= in the address
      */
     syncFromForm() {
-      if (this.classList.contains('is-enhanced')) this.onOptionChange();
-      else this.updatePlans();
+      // The quantity may also be restored: tell the sticky bar
+      this.quantity?.dispatchEvent(new Event('change', { bubbles: true }));
+      if (!this.enhanced) {
+        this.updatePlans();
+        return;
+      }
+      const restored = [...this.querySelectorAll('[data-option-input]')].some(
+        (input) => input.checked !== input.defaultChecked
+      );
+      if (restored) {
+        this.onOptionChange();
+      } else {
+        this.updateStates();
+        this.updatePlans();
+      }
     }
 
     /**
      * Add to cart without leaving the page: the form's own fields (variant, quantity, selling plan, gift
-     * card recipient) go to Shopify's Cart AJAX API (/cart/add.js) as FormData. Then "Added ✓" for 2s,
-     * the header's cart count, and a "product:added" event for the sticky bar. A refused add (stock…)
-     * shows Shopify's reason under the buttons. A form carrying return_to (the sticky bar's Buy now
+     * card recipient) go to Shopify's Cart AJAX API (/cart/add.js) as FormData. While it adds, a small
+     * spinning ring takes the place of the cart icon ("product:adding" tells the sticky bar). Then the
+     * product photo flies from the pressed button to the header cart, the label says "Added" for 2s, the
+     * header's cart count updates, and a "product:added" event goes to the sticky bar. A refused add
+     * (stock…) shows Shopify's reason under the buttons. A form carrying return_to (the sticky bar's Buy now
      * fallback) is sent normally, so it can go to checkout. Without JavaScript the form posts as before.
      */
-    setUpAdd() {
-      this.form = this.querySelector('form');
-      this.form?.addEventListener('submit', (event) => {
-        if (this.form.querySelector('input[name="return_to"]')) return;
-        event.preventDefault();
-        this.add();
-      });
+    setUpAdd(signal) {
+      this.form?.addEventListener(
+        'submit',
+        (event) => {
+          if (this.form.querySelector('input[name="return_to"]')) return;
+          event.preventDefault();
+          this.add();
+        },
+        { signal }
+      );
     }
 
     async add() {
+      // The sticky bar marks the form when its own Add to cart sent it: the photo then flies from there.
+      // Read and cleared first, so an add that stops early can't leave it for the next one
+      const fromSticky = this.form.dataset.addSource === 'sticky';
+      delete this.form.dataset.addSource;
       if (this.busy || this.submit?.disabled) return;
       this.busy = true;
+      const source = fromSticky
+        ? this.closest('.shopify-section')?.querySelector('[data-sticky-add]')
+        : this.submit;
+      this.dispatchEvent(new CustomEvent('product:adding', { bubbles: true }));
       const label = this.submit?.querySelector('[data-submit-label]');
       const message = this.querySelector('[data-buy-message]');
       const root = window.Shopify?.routes?.root || '/';
@@ -1043,6 +1458,7 @@
           }, 2000);
         }
         this.announce(this.dataset.labelAddedStatus);
+        BuyButtons.flyToCart(source, this.select?.selectedOptions[0]?.dataset.image || this.dataset.image);
         this.dispatchEvent(new CustomEvent('product:added', { bubbles: true, detail: { item: data } }));
         // The header's <cart-count> refreshes the count (and tells the cart page)
         document.dispatchEvent(new CustomEvent('cart:changed'));
@@ -1059,6 +1475,73 @@
       }
     }
 
+    /**
+     * A round copy of the product photo flies in an arc from the pressed button to the header's cart
+     * (or, on phones, to the menu button: the cart is in the drawer there); the icon bumps when it lands.
+     * Reduced motion, no photo, or the button not on screen: only the bump
+     */
+    static flyToCart(source, imageSrc) {
+      const shown = (element) => {
+        if (!element) return false;
+        const box = element.getBoundingClientRect();
+        return (
+          box.width > 0 &&
+          box.bottom > 0 &&
+          box.top < window.innerHeight &&
+          getComputedStyle(element).visibility !== 'hidden'
+        );
+      };
+      const target = [...document.querySelectorAll('cart-count .header__icon-button, .header-drawer__toggle')].find(shown);
+      if (!target) return;
+      const bump = () => {
+        target.classList.remove('is-cart-bump');
+        void target.offsetWidth; // restart the animation
+        target.classList.add('is-cart-bump');
+      };
+      if (!imageSrc || !shown(source) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        bump();
+        return;
+      }
+
+      const from = source.getBoundingClientRect();
+      const to = target.getBoundingClientRect();
+      const flight = document.createElement('div');
+      flight.className = 'cart-flight';
+      flight.setAttribute('aria-hidden', 'true');
+      const image = document.createElement('img');
+      image.alt = '';
+      image.src = imageSrc;
+      flight.append(image);
+      document.body.append(flight);
+
+      const size = flight.offsetWidth;
+      const x = from.left + from.width / 2 - size / 2;
+      const y = from.top + from.height / 2 - size / 2;
+      const dx = to.left + to.width / 2 - size / 2 - x;
+      const dy = to.top + to.height / 2 - size / 2 - y;
+      flight.style.left = `${x}px`;
+      flight.style.top = `${y}px`;
+      const animation = flight.animate(
+        [
+          { transform: 'translate(0, 0) scale(0.6)', opacity: 0 },
+          { transform: 'translate(0, -1.5rem) scale(1)', opacity: 1, offset: 0.15 },
+          { transform: `translate(${dx * 0.55}px, ${dy * 0.55 - 60}px) scale(0.8)`, opacity: 1, offset: 0.55 },
+          { transform: `translate(${dx}px, ${dy}px) scale(0.25)`, opacity: 0.4 },
+        ],
+        { duration: 800, easing: 'cubic-bezier(0.45, 0, 0.3, 1)' }
+      );
+      let landed = false;
+      const land = () => {
+        if (landed) return;
+        landed = true;
+        flight.remove();
+        bump();
+      };
+      animation.onfinish = land;
+      animation.oncancel = land;
+      setTimeout(land, 1100); // a paused animation (hidden tab) never finishes: the photo must not stay
+    }
+
     announce(text) {
       const status = this.querySelector('[data-buy-status]');
       if (!status) return;
@@ -1066,23 +1549,57 @@
       requestAnimationFrame(() => (status.textContent = text));
     }
 
-
-    /** − / + change the number by one, never below 1 */
-    setUpQuantity() {
-      const input = this.querySelector('input[name="quantity"]');
-      if (!input) return;
-      this.classList.add('has-js');
+    /** − / + move by the variant's step (1, or the B2B quantity rule), between its min and max */
+    setUpQuantity(signal) {
+      if (!this.quantity) return;
       this.querySelectorAll('[data-step]').forEach((button) => {
-        button.addEventListener('click', () => {
-          const next = (parseInt(input.value, 10) || 1) + Number(button.dataset.step);
-          input.value = Math.max(1, next);
-          input.dispatchEvent(new Event('change', { bubbles: true }));
-        });
+        button.addEventListener(
+          'click',
+          () => {
+            const { min, step } = this.quantityRule();
+            const current = parseInt(this.quantity.value, 10) || min;
+            this.setQuantity(current + Number(button.dataset.step) * step);
+          },
+          { signal }
+        );
+      });
+    }
+
+    quantityRule() {
+      const input = this.quantity;
+      return {
+        min: Number(input.min) || 1,
+        step: Number(input.step) || 1,
+        max: input.max ? Number(input.max) : Infinity,
+      };
+    }
+
+    /** Keeps the number inside the rule: not under min, not over max, on a step from min */
+    setQuantity(value) {
+      const { min, step, max } = this.quantityRule();
+      let next = Math.max(min, Math.min(max, value));
+      next = min + Math.round((next - min) / step) * step;
+      if (next > max) next -= step;
+      this.quantity.value = next;
+      this.quantity.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    /** The chosen variant's quantity rule (from its <option>) and its rules / volume pricing lines */
+    applyQuantityRule(option) {
+      if (!this.quantity || !option) return;
+      const { qtyMin = '1', qtyStep = '1', qtyMax = '' } = option.dataset;
+      this.quantity.min = qtyMin;
+      this.quantity.step = qtyStep;
+      if (qtyMax) this.quantity.max = qtyMax;
+      else this.quantity.removeAttribute('max');
+      this.setQuantity(parseInt(this.quantity.value, 10) || Number(qtyMin));
+      this.querySelectorAll('[data-variant-rules]').forEach((rule) => {
+        rule.hidden = rule.dataset.variantRules !== option.value;
       });
     }
 
     /** Purchase options: choosing a card or a frequency updates the prices and the selling plan field */
-    setUpPlans() {
+    setUpPlans(signal) {
       this.plans = this.querySelector('[data-plans]');
       if (!this.plans) return;
       this.sellingPlan = this.querySelector('[data-selling-plan]');
@@ -1092,17 +1609,21 @@
         this.planPrices = {};
       }
 
-      this.plans.addEventListener('change', (event) => {
-        const frequency = event.target.closest('select[data-plan-select]');
-        if (frequency) {
-          // Picking a frequency also picks its card, and updates the first tick
-          const card = frequency.closest('[data-plan-card]');
-          card.querySelector('[data-plan-choice]').checked = true;
-          const delivery = card.querySelector('[data-plan-delivery]');
-          if (delivery) delivery.textContent = frequency.selectedOptions[0]?.dataset.delivery || '';
-        }
-        this.updatePlans();
-      });
+      this.plans.addEventListener(
+        'change',
+        (event) => {
+          const frequency = event.target.closest('select[data-plan-select]');
+          if (frequency) {
+            // Picking a frequency also picks its card, and updates the first tick
+            const card = frequency.closest('[data-plan-card]');
+            card.querySelector('[data-plan-choice]').checked = true;
+            const delivery = card.querySelector('[data-plan-delivery]');
+            if (delivery) delivery.textContent = frequency.selectedOptions[0]?.dataset.delivery || '';
+          }
+          this.updatePlans();
+        },
+        { signal }
+      );
       // A plan chosen on load (?selling_plan= or a subscription-only product): announce it once the rest
       // of the section (Price block, sticky bar) is on the page and listening
       requestAnimationFrame(() => this.updatePlans());
@@ -1129,16 +1650,18 @@
       // Tells the Price block and the sticky bar which price the chosen option costs (the plan's price,
       // already formatted by Liquid's money filter) and the one-time price to compare it with. The cents
       // say which is cheaper: a prepaid plan (several deliveries at once) costs more than one bottle
-      this.dispatchEvent(new CustomEvent('plan:change', {
-        bubbles: true,
-        detail: {
-          variantId,
-          planId,
-          price: prices[planId] || '',
-          regular: prices[''] || '',
-          cheaper: planId !== '' && prices[`${planId}:cents`] < prices[':cents'],
-        },
-      }));
+      this.dispatchEvent(
+        new CustomEvent('plan:change', {
+          bubbles: true,
+          detail: {
+            variantId,
+            planId,
+            price: prices[planId] || '',
+            regular: prices[''] || '',
+            cheaper: planId !== '' && prices[`${planId}:cents`] < prices[':cents'],
+          },
+        })
+      );
     }
 
     /**
@@ -1186,6 +1709,39 @@
       }
     }
 
+    /**
+     * Marks each value that can't be bought together with the other chosen values: no such variant =
+     * "unavailable", a variant that is sold out = "sold-out" (dimmed or crossed out by the CSS). The hidden
+     * note in its label tells screen readers the same
+     */
+    updateStates() {
+      const groups = [...this.querySelectorAll('[data-option]')];
+      const chosen = groups.map((group) => group.querySelector('input:checked')?.value);
+      const variants = [...this.select.options].map((option) => ({
+        values: (option.dataset.options || '').split('||'),
+        available: option.dataset.available === 'true',
+      }));
+
+      groups.forEach((group, index) => {
+        group.querySelectorAll('[data-option-input]').forEach((input) => {
+          const wanted = [...chosen];
+          wanted[index] = input.value;
+          const variant = variants.find((item) => item.values.every((value, i) => value === wanted[i]));
+          let state = '';
+          if (!variant) state = 'unavailable';
+          else if (!variant.available) state = 'sold-out';
+
+          if (state) input.dataset.state = state;
+          else delete input.dataset.state;
+          const note = input.nextElementSibling?.querySelector('[data-value-note]');
+          if (note) {
+            const text = state === 'unavailable' ? this.dataset.labelUnavailable : this.dataset.labelSoldOut;
+            note.textContent = state ? ` (${text})` : '';
+          }
+        });
+      });
+    }
+
     /** Finds the variant whose option values match the checked pills ("15ml||Rose" etc.) */
     onOptionChange() {
       const chosen = [...this.querySelectorAll('[data-option]')].map((group) => {
@@ -1194,6 +1750,7 @@
         if (label) label.textContent = value || '';
         return value;
       });
+      this.updateStates();
       const match = [...this.select.options].find((option) => option.dataset.options === chosen.join('||'));
 
       if (!match) {
@@ -1208,6 +1765,7 @@
       this.select.dispatchEvent(new Event('change', { bubbles: true }));
       const available = match.dataset.available === 'true';
       this.updateButton(available, available ? this.dataset.labelAdd : this.dataset.labelSoldOut);
+      this.applyQuantityRule(match);
       this.updatePlans();
       this.notify(match.value, match.dataset.mediaId);
     }
@@ -1243,12 +1801,23 @@
   "tag": null,
   "settings": [
     {
+      "type": "header",
+      "content": "t:labels.layout"
+    },
+    {
       "type": "select",
       "id": "layout",
       "label": "t:labels.buy_buttons_layout",
+      "info": "t:labels.buy_buttons_layout_info",
       "options": [
-        { "value": "stacked", "label": "t:options.buy_buttons_layout.stacked" },
-        { "value": "inline", "label": "t:options.buy_buttons_layout.inline" }
+        {
+          "value": "stacked",
+          "label": "t:options.buy_buttons_layout.stacked"
+        },
+        {
+          "value": "inline",
+          "label": "t:options.buy_buttons_layout.inline"
+        }
       ],
       "default": "stacked"
     },
@@ -1257,24 +1826,16 @@
       "id": "add_to_cart_style",
       "label": "t:labels.add_to_cart_style",
       "options": [
-        { "value": "solid", "label": "t:options.add_to_cart_style.solid" },
-        { "value": "outline", "label": "t:options.add_to_cart_style.outline" }
+        {
+          "value": "solid",
+          "label": "t:options.add_to_cart_style.solid"
+        },
+        {
+          "value": "outline",
+          "label": "t:options.add_to_cart_style.outline"
+        }
       ],
       "default": "solid"
-    },
-    {
-      "type": "checkbox",
-      "id": "show_dynamic_checkout",
-      "label": "t:labels.show_dynamic_checkout",
-      "info": "t:labels.show_dynamic_checkout_info",
-      "default": true
-    },
-    {
-      "type": "checkbox",
-      "id": "show_installments",
-      "label": "t:labels.show_installments",
-      "info": "t:labels.show_installments_info",
-      "default": true
     },
     {
       "type": "header",
@@ -1295,6 +1856,29 @@
       "default": true
     },
     {
+      "type": "text",
+      "id": "option_images",
+      "label": "t:labels.buy_buttons_option_images",
+      "info": "t:labels.buy_buttons_option_images_info"
+    },
+    {
+      "type": "select",
+      "id": "unavailable_style",
+      "label": "t:labels.buy_buttons_unavailable_style",
+      "info": "t:labels.buy_buttons_unavailable_style_info",
+      "options": [
+        {
+          "value": "dim",
+          "label": "t:options.buy_buttons_unavailable_style.dim"
+        },
+        {
+          "value": "cross",
+          "label": "t:options.buy_buttons_unavailable_style.cross"
+        }
+      ],
+      "default": "dim"
+    },
+    {
       "type": "header",
       "content": "t:labels.purchase_options",
       "info": "t:labels.purchase_options_info"
@@ -1309,9 +1893,16 @@
       "type": "select",
       "id": "plan_default",
       "label": "t:labels.plan_default",
+      "info": "t:labels.buy_buttons_plans_info",
       "options": [
-        { "value": "subscription", "label": "t:options.plan_default.subscription" },
-        { "value": "one_time", "label": "t:options.plan_default.one_time" }
+        {
+          "value": "subscription",
+          "label": "t:options.plan_default.subscription"
+        },
+        {
+          "value": "one_time",
+          "label": "t:options.plan_default.one_time"
+        }
       ],
       "default": "subscription",
       "visible_if": "{{ block.settings.show_selling_plans }}"
@@ -1320,6 +1911,7 @@
       "type": "checkbox",
       "id": "show_recommended",
       "label": "t:labels.show_recommended",
+      "info": "t:labels.buy_buttons_plans_info",
       "default": true,
       "visible_if": "{{ block.settings.show_selling_plans }}"
     },
@@ -1327,13 +1919,14 @@
       "type": "text",
       "id": "recommended_label",
       "label": "t:labels.recommended_label",
-      "info": "t:labels.recommended_label_info",
+      "info": "t:labels.buy_buttons_recommended_label_info",
       "visible_if": "{{ block.settings.show_selling_plans and block.settings.show_recommended }}"
     },
     {
       "type": "checkbox",
       "id": "show_plan_perk",
       "label": "t:labels.show_plan_perk",
+      "info": "t:labels.buy_buttons_plans_info",
       "default": true,
       "visible_if": "{{ block.settings.show_selling_plans }}"
     },
@@ -1341,8 +1934,27 @@
       "type": "text",
       "id": "plan_perk",
       "label": "t:labels.plan_perk",
-      "info": "t:labels.plan_perk_info",
+      "info": "t:labels.buy_buttons_plan_perk_info",
       "visible_if": "{{ block.settings.show_selling_plans and block.settings.show_plan_perk }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.buy_buttons_checkout",
+      "info": "t:labels.buy_buttons_quantity_rules_info"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_dynamic_checkout",
+      "label": "t:labels.show_dynamic_checkout",
+      "info": "t:labels.show_dynamic_checkout_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_installments",
+      "label": "t:labels.show_installments",
+      "info": "t:labels.show_installments_info",
+      "default": true
     }
   ],
   "presets": [

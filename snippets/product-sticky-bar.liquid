@@ -186,6 +186,7 @@
   }
 
   .product-sticky-bar__inner {
+    position: relative;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto auto;
     align-items: center;
@@ -250,18 +251,78 @@
 
     /* Minimised: the round cart pops in; opened again: the bar rises back */
     .product-sticky-bar.is-minimized .product-sticky-bar__mini {
-      animation: sticky-bar-pop 0.35s var(--ease-out);
+      animation: sticky-bar-pop 0.45s var(--ease-out);
     }
 
     .product-sticky-bar.is-expanding .product-sticky-bar__inner {
       animation: sticky-bar-rise 0.35s var(--ease-out);
     }
+
+    /*
+      Minimise (the script closes the bar like a lens onto the minimise button): everything but that
+      button fades, so the last thing left is the round button
+    */
+    .product-sticky-bar.is-minimizing :is(.product-sticky-bar__product, .product-sticky-bar__price, .product-sticky-bar__buttons > :not(.product-sticky-bar__minimize)) {
+      opacity: 0;
+      transition: opacity 0.2s ease-out;
+    }
+
+    /* Landed in the corner: two rings pulse out of the round cart and its icon wiggles */
+    .product-sticky-bar.is-landed .product-sticky-bar__mini::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border: 2px solid var(--color-button);
+      border-radius: 50%;
+      pointer-events: none;
+      animation: sticky-bar-ripple 0.9s ease-out 2;
+    }
+
+    .product-sticky-bar.is-landed .product-sticky-bar__mini svg {
+      animation: sticky-bar-wiggle 0.6s ease-in-out 0.1s;
+    }
   }
 
-  @keyframes sticky-bar-pop {
+  @keyframes sticky-bar-ripple {
     from {
+      opacity: 0.7;
+      scale: 1;
+    }
+
+    to {
       opacity: 0;
-      scale: 0.6;
+      scale: 1.9;
+    }
+  }
+
+  @keyframes sticky-bar-wiggle {
+    25% {
+      rotate: -14deg;
+    }
+
+    50% {
+      rotate: 10deg;
+    }
+
+    75% {
+      rotate: -5deg;
+    }
+  }
+
+  /* The round cart rises from below the screen edge with a small bounce */
+  @keyframes sticky-bar-pop {
+    0% {
+      opacity: 0;
+      translate: 0 calc(100% + 2rem);
+    }
+
+    70% {
+      opacity: 1;
+      translate: 0 -0.375rem;
+    }
+
+    100% {
+      translate: 0 0;
     }
   }
 
@@ -274,6 +335,7 @@
 
   /* Minimised: only a round cart button in the bottom right corner; a click opens the bar again */
   .product-sticky-bar .product-sticky-bar__mini {
+    position: relative;
     display: none;
     place-items: center;
     inline-size: 3.5rem;
@@ -305,10 +367,6 @@
 
   .product-sticky-bar.is-minimized .product-sticky-bar__mini {
     display: grid;
-  }
-
-  .product-sticky-bar__inner {
-    position: relative;
   }
 
   .product-sticky-bar__product {
@@ -390,11 +448,49 @@
     white-space: nowrap;
   }
 
+  /* While Buy buttons adds: the label dims a little and a small spinning ring takes the place of the icon */
+  .product-sticky-bar__add.is-adding {
+    cursor: progress;
+  }
+
+  .product-sticky-bar__add.is-adding .product-sticky-bar__icon {
+    display: none;
+  }
+
+  .product-sticky-bar__add.is-adding [data-sticky-add-label] {
+    opacity: 0.7;
+  }
+
+  .product-sticky-bar__add.is-adding::before {
+    content: "";
+    flex: none;
+    inline-size: 1em;
+    block-size: 1em;
+    border: 2px solid color-mix(in srgb, currentcolor 25%, transparent);
+    border-block-start-color: currentcolor;
+    border-radius: 50%;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .product-sticky-bar__add.is-adding::before {
+      animation: sticky-bar-spin 0.7s linear infinite;
+    }
+  }
+
+  @keyframes sticky-bar-spin {
+    to {
+      rotate: 1turn;
+    }
+  }
+
+  /* The icons sit on the middle of the label line (block svg: no space under it for text descenders) */
   .product-sticky-bar__icon {
     display: inline-flex;
+    align-items: center;
   }
 
   .product-sticky-bar__icon svg {
+    display: block;
     inline-size: 1.25rem;
     block-size: 1.25rem;
   }
@@ -409,10 +505,6 @@
 
   .product-sticky-bar .product-sticky-bar__add:hover:not(:disabled) {
     background-color: color-mix(in srgb, var(--color-secondary-button-text) 8%, var(--color-secondary-button));
-  }
-
-  .product-sticky-bar__add.is-added [data-sticky-add-label]::after {
-    content: " ✓";
   }
 
   .product-sticky-bar button:disabled {
@@ -459,8 +551,22 @@
       font-size: var(--font-size-body-lg);
     }
 
-    .product-sticky-bar__buttons .button {
-      padding-inline: var(--space-sm);
+    /*
+      Phones: the two buttons share the row with the minimise button (Figma Variant96-1); smaller text so
+      the labels stay on one line and nothing goes past the screen edge
+    */
+    .product-sticky-bar__buttons > .button {
+      flex: 1 1 0;
+      min-inline-size: 0;
+      gap: 0.25rem;
+      padding-inline: 0.5rem;
+      font-size: 0.6875rem;
+      letter-spacing: 0.05em;
+    }
+
+    .product-sticky-bar__icon svg {
+      inline-size: 1rem;
+      block-size: 1rem;
     }
   }
 {% endstylesheet %}
@@ -472,6 +578,14 @@
    */
   class ProductStickyBar extends HTMLElement {
     connectedCallback() {
+      // One controller for every listener: the theme editor re-attaches a moved section and runs
+      // connectedCallback again (without it, one Buy now press ran twice)
+      this.controller?.abort();
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+      // A minimise that was running when the editor moved the bar: start clean (sessionStorage decides below)
+      this.classList.remove('is-minimizing', 'is-landed');
+
       this.scope = this.closest('.shopify-section') || document;
       this.form = this.scope.querySelector('buy-buttons form');
       const row = this.scope.querySelector('buy-buttons .buy-buttons__row');
@@ -486,6 +600,7 @@
       // Two conditions: the Add to cart row is above the screen, and the footer isn't on screen
       this.rowPassed = false;
       this.footerInView = false;
+      this.rowObserver?.disconnect();
       this.rowObserver = new IntersectionObserver(([entry]) => {
         this.rowPassed = !entry.isIntersecting && entry.boundingClientRect.top < 0;
         this.toggle();
@@ -493,6 +608,7 @@
       this.rowObserver.observe(row);
 
       const footer = document.querySelector('.shopify-section-group-footer-group, footer');
+      this.footerObserver?.disconnect();
       if (footer) {
         // "In view" = the footer has reached the top two thirds of the screen (rootMargin shrinks the
         // watched area by the bottom third), so a sliver of footer doesn't hide the bar on a short page
@@ -506,102 +622,223 @@
         this.footerObserver.observe(footer);
       }
 
-      this.querySelector('[data-sticky-add]').addEventListener('click', () => this.add(false));
-      this.querySelector('[data-sticky-buy]').addEventListener('click', () => this.buyNow());
+      this.querySelector('[data-sticky-add]').addEventListener('click', () => this.add(false), { signal });
+      this.querySelector('[data-sticky-buy]').addEventListener('click', () => this.buyNow(), { signal });
 
       // Minimise / open again; remembered for this browser session (sessionStorage can be blocked: try)
-      this.querySelector('[data-sticky-minimize]')?.addEventListener('click', () => this.minimize(true));
-      this.querySelector('[data-sticky-expand]')?.addEventListener('click', () => this.minimize(false));
+      this.querySelector('[data-sticky-minimize]')?.addEventListener('click', () => this.minimize(true), { signal });
+      this.querySelector('[data-sticky-expand]')?.addEventListener('click', () => this.minimize(false), { signal });
       try {
         if (sessionStorage.getItem('oroskin-sticky-bar') === 'min') this.minimize(true, false);
       } catch (error) {
         // No storage: the bar starts open
       }
 
-      // The Buy buttons block adds in the background and says so: show "Added ✓" here too for 2s
-      this.onAdded = () => {
-        const label = this.querySelector('[data-sticky-add-label]');
-        const add = this.querySelector('[data-sticky-add]');
-        label.textContent = this.dataset.labelAdded;
-        add.classList.add('is-added');
-        clearTimeout(this.addedTimer);
-        this.addedTimer = setTimeout(() => {
-          add.classList.remove('is-added');
-          if (!add.disabled) label.textContent = this.dataset.labelAdd;
-        }, 2000);
-      };
-      this.scope.addEventListener('product:added', this.onAdded);
+      // The Buy buttons block adds in the background and says so: the same fill while it adds, then
+      // "Added" here too for 2s
+      const addButton = this.querySelector('[data-sticky-add]');
+      this.scope.addEventListener('product:adding', () => addButton.classList.add('is-adding'), { signal });
+      this.scope.addEventListener('product:add-error', () => addButton.classList.remove('is-adding'), { signal });
+      this.scope.addEventListener(
+        'product:added',
+        () => {
+          const label = this.querySelector('[data-sticky-add-label]');
+          const add = addButton;
+          add.classList.remove('is-adding');
+          label.textContent = this.dataset.labelAdded;
+          add.classList.add('is-added');
+          clearTimeout(this.addedTimer);
+          this.addedTimer = setTimeout(() => {
+            add.classList.remove('is-added');
+            if (!add.disabled) label.textContent = this.dataset.labelAdd;
+          }, 2000);
+        },
+        { signal }
+      );
 
-      this.onVariantChange = (event) => this.showVariant(event.detail?.variantId);
-      this.scope.addEventListener('variant:change', this.onVariantChange);
+      this.scope.addEventListener('variant:change', (event) => this.showVariant(event.detail?.variantId), { signal });
       // Purchase options: a subscription plan's price is the price shown (Buy buttons, "plan:change")
-      this.scope.addEventListener('plan:change', (event) => {
-        this.plan = event.detail;
-        this.showPrice(event.detail.variantId);
-      });
+      this.scope.addEventListener(
+        'plan:change',
+        (event) => {
+          this.plan = event.detail;
+          this.showPrice(event.detail.variantId);
+        },
+        { signal }
+      );
 
       this.quantity = this.form.querySelector('input[name="quantity"]');
-      this.onQuantity = () => this.showQuantity();
-      this.quantity?.addEventListener('change', this.onQuantity);
-      this.quantity?.addEventListener('input', this.onQuantity);
+      this.quantity?.addEventListener('change', () => this.showQuantity(), { signal });
+      this.quantity?.addEventListener('input', () => this.showQuantity(), { signal });
+
+      // Back from checkout (page restored from the browser's cache): no Buy now field may stay in the form,
+      // or the page's own Add to cart would go to checkout too
+      window.addEventListener('pageshow', () => this.removeReturnTo(), { signal });
+      // A focused button in the bar keeps it on screen (hiding it would drop the focus to the page)
+      this.addEventListener('focusout', () => requestAnimationFrame(() => this.toggle()), { signal });
     }
 
     disconnectedCallback() {
+      this.controller?.abort();
       this.rowObserver?.disconnect();
       this.footerObserver?.disconnect();
-      this.scope?.removeEventListener('variant:change', this.onVariantChange);
-      this.scope?.removeEventListener('product:added', this.onAdded);
+      clearTimeout(this.addedTimer);
+      clearTimeout(this.landedTimer);
     }
 
-    /** Shrinks the bar to the round cart button (or opens it), moving focus to the button that's left */
+    /**
+     * Shrinks the bar to the round cart button (or opens it), moving focus to the button that's left.
+     * Minimise (morphToButton): the bar closes like a lens onto the minimise button, that circle becomes the
+     * round cart and jumps to the corner, lands with a bounce, two rings pulse and the icon wiggles, so the
+     * visitor sees where the bar went. Open again: the bar rises back in. No animation with reduced motion
+     * or on page load
+     */
     minimize(on, moveFocus = true) {
-      this.classList.toggle('is-minimized', on);
-      // Opened from the round cart: the bar rises back in (is-expanding plays the CSS animation once)
-      const animate = !on && moveFocus && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      this.classList.toggle('is-expanding', animate);
-      if (animate) this.querySelector('.product-sticky-bar__inner')?.addEventListener('animationend', () => this.classList.remove('is-expanding'), { once: true });
+      const inner = this.querySelector('.product-sticky-bar__inner');
+      const animate = moveFocus && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const finish = () => {
+        this.classList.remove('is-minimizing');
+        this.classList.toggle('is-minimized', on);
+        this.toggle(); // the round cart may stay over the footer, the full bar not
+        if (moveFocus) this.querySelector(on ? '[data-sticky-expand]' : '[data-sticky-minimize]')?.focus();
+      };
       try {
         sessionStorage.setItem('oroskin-sticky-bar', on ? 'min' : 'open');
       } catch (error) {
         // No storage: just this page
       }
-      if (moveFocus) this.querySelector(on ? '[data-sticky-expand]' : '[data-sticky-minimize]')?.focus();
+
+      // animationend can fail to come (a hidden tab pauses animations): a timer finishes the step anyway
+      const afterAnimation = (callback) => {
+        let done = false;
+        const run = () => {
+          if (done) return;
+          done = true;
+          callback();
+        };
+        inner.addEventListener('animationend', run, { once: true });
+        setTimeout(run, 600);
+      };
+
+      if (on && animate && inner) {
+        if (this.classList.contains('is-minimizing')) return; // a second press while it runs
+        this.morphToButton(inner, finish);
+        return;
+      }
+      if (!on) {
+        this.querySelector('[data-sticky-expand]')?.style.removeProperty('animation');
+        this.classList.remove('is-landed');
+      }
+      this.classList.toggle('is-expanding', !on && animate);
+      if (!on && animate && inner) afterAnimation(() => this.classList.remove('is-expanding'));
+      finish();
+    }
+
+    /** The minimise movement (see minimize). Each step also ends on a timer: a hidden tab pauses animations */
+    morphToButton(inner, finish) {
+      const button = this.querySelector('[data-sticky-minimize]');
+      const mini = this.querySelector('[data-sticky-expand]');
+      if (!button || !mini) {
+        finish();
+        return;
+      }
+      const ended = (animation, ms) =>
+        Promise.race([animation.finished.catch(() => {}), new Promise((resolve) => setTimeout(resolve, ms))]);
+      // Moved or removed while it runs (theme editor): the rest of the steps stop
+      const { signal } = this.controller;
+
+      // 1. The lens: a clip from the whole bar down to the minimise button's circle
+      const box = inner.getBoundingClientRect();
+      const target = button.getBoundingClientRect();
+      const radius = getComputedStyle(inner).borderRadius;
+      const to = `inset(${target.top - box.top}px ${box.right - target.right}px ${box.bottom - target.bottom}px ${target.left - box.left}px round 50%)`;
+      this.classList.add('is-minimizing');
+      const lens = inner.animate([{ clipPath: `inset(0 round ${radius})` }, { clipPath: to }], {
+        duration: 420,
+        easing: 'cubic-bezier(0.6, 0, 0.4, 1)',
+        fill: 'forwards',
+      });
+
+      ended(lens, 700).then(() => {
+        if (signal.aborted) return;
+        // 2. The circle becomes the round cart, which jumps from there to the corner
+        finish();
+        lens.cancel();
+        mini.style.animation = 'none'; // this movement replaces the CSS pop
+        const corner = mini.getBoundingClientRect();
+        const dx = target.left + target.width / 2 - (corner.left + corner.width / 2);
+        const dy = target.top + target.height / 2 - (corner.top + corner.height / 2);
+        const jump = mini.animate(
+          [
+            { transform: `translate(${dx}px, ${dy}px) scale(${target.width / corner.width})` },
+            { transform: `translate(${dx * 0.5}px, ${dy * 0.5 - 40}px) scale(1.1)`, offset: 0.5 },
+            { transform: 'translate(0, 0) scale(1)' },
+          ],
+          { duration: 520, easing: 'cubic-bezier(0.34, 1.4, 0.64, 1)' }
+        );
+        ended(jump, 800).then(() => {
+          if (signal.aborted) return;
+          // 3. Landed: rings and a wiggle (CSS), then back to rest. The pop stays off until the bar opens
+          // again (putting it back now would play it a second time)
+          this.classList.add('is-landed');
+          clearTimeout(this.landedTimer);
+          this.landedTimer = setTimeout(() => this.classList.remove('is-landed'), 1900);
+        });
+      });
     }
 
     toggle() {
-      const show = this.rowPassed && !this.footerInView;
+      // The round cart (minimised) is small: it stays over the footer too; the full bar makes room for it
+      const minimized = this.classList.contains('is-minimized');
+      const show =
+        (this.rowPassed && (!this.footerInView || minimized)) || this.contains(document.activeElement);
       this.classList.toggle('is-visible', show);
       // inert while hidden: its buttons can't be reached with Tab or read out when it isn't there
       this.inert = !show;
     }
 
+    removeReturnTo() {
+      this.form?.querySelector('input[name="return_to"][data-sticky]')?.remove();
+    }
+
     /**
      * Submit the Buy buttons form (the browser checks it first, e.g. a gift card email).
-     * toCheckout: Shopify sends the visitor to checkout instead of the cart (return_to); a plain Add to
-     * cart removes it again, in case an earlier Buy now didn't go through.
+     * toCheckout: Shopify sends the visitor to checkout instead of the cart (return_to). The field is only
+     * there while the form is sent, then removed again.
      */
     add(toCheckout) {
-      let returnTo = this.form.querySelector('input[name="return_to"][data-sticky]');
-      if (toCheckout && !returnTo) {
-        returnTo = Object.assign(document.createElement('input'), { type: 'hidden', name: 'return_to', value: '/checkout' });
-        returnTo.dataset.sticky = '';
-        this.form.append(returnTo);
-      } else if (!toCheckout) {
-        returnTo?.remove();
-      }
       const submit = this.form.querySelector('[data-submit]');
       if (!this.form.checkValidity()) {
         this.form.reportValidity();
-        this.form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        this.form.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'center' });
         return;
       }
+      this.removeReturnTo();
+      // Buy buttons flies the product photo from the button that was pressed: this one
+      if (!toCheckout) this.form.dataset.addSource = 'sticky';
+      if (toCheckout) {
+        const returnTo = Object.assign(document.createElement('input'), {
+          type: 'hidden',
+          name: 'return_to',
+          value: '/checkout',
+        });
+        returnTo.dataset.sticky = '';
+        this.form.append(returnTo);
+      }
       this.form.requestSubmit(submit || undefined);
+      // The form's data is read during requestSubmit: the field is no longer needed
+      this.removeReturnTo();
     }
 
-    /** Buy now: Shopify's own Buy it now button if it's there, else add + go straight to checkout */
+    /**
+     * Buy now: Shopify's plain "Buy it now" button if it's there. The branded buttons (Shop Pay, PayPal…)
+     * draw their real button inside their own frame, so a click on them from here does nothing: then
+     * add + go straight to checkout
+     */
     buyNow() {
-      const shopifyButton = this.form.querySelector('.shopify-payment-button__button--unbranded, .shopify-payment-button__button');
-      if (shopifyButton && !shopifyButton.closest('[hidden]')) {
+      const shopifyButton = this.form.querySelector('.shopify-payment-button__button--unbranded');
+      if (shopifyButton && !shopifyButton.closest('[hidden]') && !shopifyButton.disabled) {
         shopifyButton.click();
         return;
       }
@@ -633,8 +870,13 @@
       const name = this.querySelector('[data-sticky-variant]');
       if (name) name.textContent = variant.title;
       this.showPrice(variantId);
-      const image = this.querySelector('.product-sticky-bar__image');
-      if (image && variant.image) {
+      if (variant.image) {
+        // A product without a featured image has no <img> in the bar yet: make one
+        let image = this.querySelector('.product-sticky-bar__image');
+        if (!image) {
+          image = Object.assign(document.createElement('img'), { alt: '', className: 'product-sticky-bar__image' });
+          this.querySelector('.product-sticky-bar__media')?.append(image);
+        }
         image.removeAttribute('srcset');
         image.src = variant.image;
       }

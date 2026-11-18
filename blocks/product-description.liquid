@@ -1,6 +1,8 @@
 {% doc %}
   The product's description (formatted text from the product admin). The product comes from
-  closest.product. "Shorten to" keeps a teaser on the homepage; 0 shows the full description.
+  closest.product. "Shorten to" keeps a teaser (plain text); 0 shows the full description.
+  "Show a Read more button": under a shortened description, a button that opens the full text in place
+  (a <details>, so it works without JavaScript; the short text hides once it is open).
 
   Without a product: a sample sentence in the theme editor, nothing on the live store.
 
@@ -8,15 +10,38 @@
   {% content_for 'block', type: 'product-description', id: 'product-description' %}
 {% enddoc %}
 
-{%- assign description_product = closest.product -%}
+{%- liquid
+  assign description_product = closest.product
+  assign word_limit = block.settings.word_limit
+  assign text_size = block.settings.text_size | default: 'large'
+
+  # Shortened only when the text is really longer than the limit: truncatewords splits on every space and
+  # line break and gives the text back unchanged when it is short enough, so a different result = too long
+  assign is_short = false
+  if description_product != blank and word_limit > 0
+    assign plain_description = description_product.description | strip_html | strip
+    assign short_description = plain_description | truncatewords: word_limit
+    if short_description != plain_description
+      assign is_short = true
+    endif
+  endif
+-%}
 
 {%- if description_product != blank or request.design_mode -%}
-  <div class="product-description rte" {{ block.shopify_attributes }}>
+  <div class="product-description product-description--{{ text_size }} rte" {{ block.shopify_attributes }}>
     {%- if description_product == blank -%}
       <p>{{ 'products.description_placeholder' | t }}</p>
-    {%- elsif block.settings.word_limit > 0 -%}
+    {%- elsif is_short -%}
       {%- comment -%} A shortened description is plain text: cutting HTML mid-tag would break it {%- endcomment -%}
-      <p>{{ description_product.description | strip_html | truncatewords: block.settings.word_limit }}</p>
+      <p class="product-description__short">
+        {{- short_description -}}
+      </p>
+      {%- if block.settings.show_read_more -%}
+        <details class="product-description__more">
+          <summary class="product-description__toggle">{{ 'products.description_read_more' | t }}</summary>
+          {{ description_product.description }}
+        </details>
+      {%- endif -%}
     {%- else -%}
       {{ description_product.description }}
     {%- endif -%}
@@ -28,6 +53,39 @@
     color: color-mix(in srgb, var(--color-text) 80%, var(--color-background));
     font-size: var(--font-size-body-lg);
   }
+
+  .product-description--small {
+    font-size: var(--font-size-body-sm);
+  }
+
+  .product-description--body {
+    font-size: var(--font-size-body);
+  }
+
+  /* Read more: the full text replaces the short one; the button goes away */
+  .product-description:has(.product-description__more[open]) .product-description__short,
+  .product-description__more[open] > .product-description__toggle {
+    display: none;
+  }
+
+  .product-description__toggle {
+    display: inline-block;
+    margin-block-start: var(--space-xs);
+    color: var(--color-accent);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.25em;
+    text-transform: uppercase;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .product-description__toggle::-webkit-details-marker {
+    display: none;
+  }
 {% endstylesheet %}
 
 {% schema %}
@@ -36,14 +94,33 @@
   "tag": null,
   "settings": [
     {
+      "type": "select",
+      "id": "text_size",
+      "label": "t:labels.text_size",
+      "options": [
+        { "value": "small", "label": "t:options.product_description_size.small" },
+        { "value": "body", "label": "t:options.product_description_size.body" },
+        { "value": "large", "label": "t:options.product_description_size.large" }
+      ],
+      "default": "large"
+    },
+    {
       "type": "range",
       "id": "word_limit",
-      "label": "t:labels.word_limit",
-      "info": "t:labels.word_limit_info",
+      "label": "t:labels.product_description_word_limit",
+      "info": "t:labels.product_description_word_limit_info",
       "min": 0,
       "max": 100,
       "step": 5,
       "default": 0
+    },
+    {
+      "type": "checkbox",
+      "id": "show_read_more",
+      "label": "t:labels.product_description_read_more",
+      "info": "t:labels.product_description_read_more_info",
+      "default": true,
+      "visible_if": "{{ block.settings.word_limit > 0 }}"
     }
   ],
   "presets": [

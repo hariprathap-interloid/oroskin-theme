@@ -420,15 +420,15 @@
       "one_time_note": "No commitment • Standard price"
     },
     "lightbox": {
-      "label": "{{ title }}: image viewer",
-      "open": "Open image {{ index }} of {{ count }} in the viewer",
+      "label": "{{ title }}: media viewer",
+      "open": "Open item {{ index }} of {{ count }} in the viewer",
       "close": "Close the viewer",
       "zoom": "View full screen",
-      "previous": "Previous image",
-      "next": "Next image",
+      "previous": "Previous item",
+      "next": "Next item",
       "hint": "Click to view full screen",
       "hint_touch": "Tap to view full screen",
-      "status": "Image {{ index }} of {{ count }}"
+      "status": "Item {{ index }} of {{ count }}"
     },
     "offers": {
       "heading": "Bank offers",
@@ -446,7 +446,7 @@
       "heading": "Product short videos",
       "play": "Play video {{ index }} of {{ count }}",
       "close": "Close video",
-      "empty": "This product has no short videos. Add them in the product's \"Short videos\" metafield."
+      "empty": "This product has no short videos. Add uploaded videos, or YouTube and Vimeo videos (Add from URL), in the product’s “Short videos” metafield."
     },
     "payment": {
       "heading": "We accept",
@@ -503,6 +503,17 @@
     },
     "related": {
       "empty": "Shopify shows related products here once it has worked them out for this product. Add fallback products in the section settings to show some now."
+    },
+    "quantity_rules": {
+      "min": "Minimum {{ min }}",
+      "max": "Maximum {{ max }}",
+      "increment": "Increments of {{ step }}",
+      "volume_pricing": "Volume pricing",
+      "each": "{{ price }} each"
+    },
+    "description_read_more": "Read more",
+    "features": {
+      "empty": "Add a feature with a label. A feature with no label does not show in the store."
     }
   },
   "contact": {

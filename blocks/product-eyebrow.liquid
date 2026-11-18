@@ -19,7 +19,14 @@
     else
       assign eyebrow_label = eyebrow_product.type
   endcase
-  assign eyebrow_badge = eyebrow_product.metafields.custom.badges.value | first
+  # The first of the "Badges" field (custom.badges): snippets/product-badges reads the field, as on the cards
+  assign eyebrow_badge = blank
+  if block.settings.show_badge and eyebrow_product != blank
+    capture eyebrow_badge
+      render 'product-badges', field: eyebrow_product.metafields.custom.badges, limit: 1
+    endcapture
+    assign eyebrow_badge = eyebrow_badge | strip
+  endif
 -%}
 
 {%- if eyebrow_product != blank or request.design_mode -%}
@@ -30,8 +37,8 @@
       {%- elsif eyebrow_product == blank -%}
         <p class="product-eyebrow__label">{{ 'products.eyebrow_sample' | t }}</p>
       {%- endif -%}
-      {%- if block.settings.show_badge and eyebrow_badge != blank -%}
-        <span class="product-eyebrow__badge">{% render 'product-badge', badge: eyebrow_badge %}</span>
+      {%- if eyebrow_badge != blank -%}
+        <span class="product-eyebrow__badge">{{ eyebrow_badge }}</span>
       {%- endif -%}
     </div>
 
@@ -42,10 +49,13 @@
         data-share-url="{{ shop.url | append: eyebrow_product.url }}"
         data-share-title="{{ eyebrow_product.title | escape }}"
         data-copied="{{ 'blog.article.link_copied' | t | escape_once }}"
+        data-label="{{ 'products.share' | t | escape_once }}"
       >
         <span class="product-eyebrow__share-icon" aria-hidden="true">{{ 'icon-share-solid.svg' | inline_asset_content }}</span>
         <span data-share-label>{{ 'products.share' | t }}</span>
       </button>
+      {%- comment -%} Empty at page load, so screen readers announce the text when it is set {%- endcomment -%}
+      <span class="visually-hidden" role="status" data-share-status></span>
     {%- endif -%}
   </product-eyebrow>
 {%- endif -%}
@@ -78,9 +88,26 @@
     line-height: 1.1;
   }
 
-  .product-eyebrow__badge .product-badge,
-  .product-eyebrow__badge > * {
+  /*
+    The badge (snippets/product-badge.liquid gives a .product-card__badge). The product card's paint
+    rules need a .product-card parent, so the pill is painted here too. Two classes beat the scheme
+    class (color-scheme-N), so the text is the scheme's accent, as on the cards.
+  */
+  .product-eyebrow__badge .product-card__badge {
+    display: inline-block;
     position: static;
+    padding: 0.3em 0.75em;
+    border-radius: 0.75em;
+    color: var(--color-accent);
+    font-size: var(--font-size-caption);
+    line-height: 1.3;
+  }
+
+  /* A Badge entry with its own colours (Content > Metaobjects > Badges): a thin edge in its text colour */
+  .product-eyebrow__badge .product-card__badge--own-colors {
+    background-color: var(--badge-bg);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--badge-fg) 25%, transparent);
+    color: var(--badge-fg);
   }
 
   .product-eyebrow__share {
@@ -113,27 +140,56 @@
 {% endstylesheet %}
 
 {% javascript %}
-  /** Share: the phone's share sheet when there is one, else copy the link ("Link copied" for 2s) */
+  /**
+   * Share: the phone's share sheet when there is one, else copy the link ("Link copied" for 2s, also
+   * in a hidden status line for screen readers). The "Share" text comes from data-label (Liquid), so a
+   * second click within the 2s, or the editor moving the block, can never keep "Link copied".
+   */
   class ProductEyebrow extends HTMLElement {
     connectedCallback() {
+      this.controller?.abort();
+      this.controller = new AbortController();
+      const { signal } = this.controller;
       const button = this.querySelector('.product-eyebrow__share');
       if (!button) return;
-      button.addEventListener('click', async () => {
-        const { shareUrl: url, shareTitle: title, copied } = button.dataset;
-        if (navigator.share) {
-          try {
-            await navigator.share({ url, title });
-          } catch (error) {
-            // The visitor closed the share sheet: nothing to do
-          }
-          return;
+      button.addEventListener('click', () => this.share(button), { signal });
+    }
+
+    // The 2s timer keeps running: if the block is moved, it still puts "Share" back
+    disconnectedCallback() {
+      this.controller?.abort();
+    }
+
+    async share(button) {
+      const { shareUrl: url, shareTitle: title, copied } = button.dataset;
+      if (navigator.share) {
+        try {
+          await navigator.share({ url, title });
+        } catch (error) {
+          // The visitor closed the share sheet: nothing to do
         }
-        await navigator.clipboard?.writeText(url);
-        const label = button.querySelector('[data-share-label]');
-        const original = label.textContent;
-        label.textContent = copied;
-        setTimeout(() => (label.textContent = original), 2000);
-      });
+        return;
+      }
+      // No clipboard (an old browser or an insecure page) or the copy failed: don't say "Link copied"
+      if (!navigator.clipboard) return;
+      try {
+        await navigator.clipboard.writeText(url);
+      } catch (error) {
+        return;
+      }
+      const label = button.querySelector('[data-share-label]');
+      const status = this.querySelector('[data-share-status]');
+      label.textContent = copied;
+      // Empty first, then the text on the next frame, so a second copy is announced again
+      if (status) {
+        status.textContent = '';
+        requestAnimationFrame(() => (status.textContent = copied));
+      }
+      clearTimeout(this.timer);
+      this.timer = setTimeout(() => {
+        label.textContent = button.dataset.label;
+        if (status) status.textContent = '';
+      }, 2000);
     }
   }
 

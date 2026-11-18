@@ -2,9 +2,13 @@
   "PRODUCT SHORT VIDEOS" (Figma PDP second card): round video thumbnails with a play mark; a click
   plays the video in a pop-up player (a <dialog>: Escape or × closes it and stops the video).
   The videos are the product's own: the metafield custom.short_videos (Settings > Custom data >
-  Products: "Short videos", type File, list, videos only). Hidden when the product has none; in the
-  theme editor four placeholder circles show where they go (they don't play), with a short hint.
-  Each video is kept in a <template>, so nothing downloads until a thumbnail is clicked.
+  Products: "Short videos", type File, list). Two kinds of file work:
+  - an uploaded video (best: fast from Shopify, no ads, no third-party cookies);
+  - a YouTube or Vimeo video added in Content > Files with "Add from URL" (an external video). Its player
+    loads only on a click: YouTube from youtube-nocookie.com, Vimeo with "do not track".
+  Other files are skipped. Hidden when the product has none; in the theme editor four placeholder circles
+  show where they go (they don't play), with a short hint. Each video is kept in a <template>, so nothing
+  downloads until a thumbnail is clicked.
 
   @example
   {% content_for 'block', type: 'product-videos', id: 'product-videos' %}
@@ -15,7 +19,15 @@
   assign short_videos = videos_product.metafields.custom.short_videos.value
   assign heading_default = 'products.videos.heading' | t
   assign videos_heading = block.settings.heading | default: heading_default
-  assign videos_count = short_videos.size | default: 0
+
+  # Only videos count: uploaded (video) and YouTube / Vimeo (external_video); other files are skipped
+  assign videos_count = 0
+  for video in short_videos
+    if video.media_type == 'video' or video.media_type == 'external_video'
+      assign videos_count = videos_count | plus: 1
+    endif
+  endfor
+  assign video_number = 0
 -%}
 
 {%- if videos_count > 0 -%}
@@ -26,17 +38,24 @@
 
     <ul class="product-videos__list" role="list">
       {%- for video in short_videos -%}
-        {%- if video.media_type != 'video' -%}
-          {%- continue -%}
-        {%- endif -%}
+        {%- liquid
+          if video.media_type != 'video'
+            unless video.media_type == 'external_video'
+              continue
+            endunless
+          endif
+          # Counts the videos only, so the label says "Play video 2 of 2", not 3 of 2; it also names the template
+          assign video_number = video_number | plus: 1
+          assign frame_title = video.alt | default: videos_product.title
+        -%}
         <li>
           <button
             type="button"
             class="product-videos__thumb"
-            data-video="{{ forloop.index0 }}"
+            data-video="{{ video_number }}"
             data-ratio="{{ video.aspect_ratio | default: 1.7778 }}"
             aria-haspopup="dialog"
-            aria-label="{{ 'products.videos.play' | t: index: forloop.index, count: videos_count }}"
+            aria-label="{{ 'products.videos.play' | t: index: video_number, count: videos_count }}"
           >
             {%- if video.preview_image != blank -%}
               {{
@@ -52,8 +71,35 @@
             {%- endif -%}
             <span class="product-videos__play" aria-hidden="true">{{ 'icon-play.svg' | inline_asset_content }}</span>
           </button>
-          <template data-video-template="{{ forloop.index0 }}">
-            {{ video | video_tag: controls: true, playsinline: true, preload: 'auto', class: 'product-videos__video' }}
+          <template data-video-template="{{ video_number }}">
+            {%- if video.media_type == 'video' -%}
+              {%- comment -%} image_size: a sharp poster before it plays (the default is a tiny thumbnail) {%- endcomment -%}
+              {{
+                video
+                | video_tag:
+                  controls: true,
+                  playsinline: true,
+                  preload: 'auto',
+                  image_size: '1280x',
+                  class: 'product-videos__video'
+              }}
+            {%- elsif video.host == 'youtube' -%}
+              <iframe
+                class="product-videos__frame"
+                src="https://www.youtube-nocookie.com/embed/{{ video.external_id | url_encode }}?autoplay=1&playsinline=1&rel=0"
+                title="{{ frame_title | escape }}"
+                allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                allowfullscreen
+              ></iframe>
+            {%- else -%}
+              <iframe
+                class="product-videos__frame"
+                src="https://player.vimeo.com/video/{{ video.external_id | url_encode }}?autoplay=1&dnt=1"
+                title="{{ frame_title | escape }}"
+                allow="autoplay; fullscreen; picture-in-picture"
+                allowfullscreen
+              ></iframe>
+            {%- endif -%}
           </template>
         </li>
       {%- endfor -%}
@@ -184,8 +230,10 @@
     aspect-ratio: var(--video-ratio, 1.7778);
   }
 
-  .product-videos__video {
+  .product-videos__video,
+  .product-videos__frame {
     display: block;
+    border: 0;
     inline-size: 100%;
     block-size: 100%;
     object-fit: contain;
@@ -242,26 +290,42 @@
 
 {% javascript %}
   /**
-   * <product-videos>: a thumbnail click copies that video out of its <template> into the dialog and plays
-   * it (the click counts as the visitor's permission to play with sound). Closing empties the player,
+   * <product-videos>: a thumbnail click copies that video (an uploaded <video>, or a YouTube / Vimeo
+   * <iframe> that starts itself) out of its <template> into the dialog and plays it (the click counts as the visitor's permission to play with sound). Closing empties the player,
    * which stops the video, and returns focus to the thumbnail.
    */
   class ProductVideos extends HTMLElement {
     connectedCallback() {
+      this.controller?.abort();
+      this.controller = new AbortController();
+      const { signal } = this.controller;
       this.dialog = this.querySelector('dialog');
       this.player = this.querySelector('[data-video-player]');
       if (!this.dialog) return;
 
-      this.addEventListener('click', (event) => {
-        const thumb = event.target.closest('[data-video]');
-        if (thumb) this.play(thumb);
-        else if (event.target.closest('[data-video-close]') || event.target === this.dialog) this.dialog.close();
-      });
+      this.addEventListener(
+        'click',
+        (event) => {
+          const thumb = event.target.closest('[data-video]');
+          if (thumb) this.play(thumb);
+          else if (event.target.closest('[data-video-close]') || event.target === this.dialog) this.dialog.close();
+        },
+        { signal }
+      );
 
-      this.dialog.addEventListener('close', () => {
-        this.player.replaceChildren();
-        this.opener?.focus();
-      });
+      this.dialog.addEventListener(
+        'close',
+        () => {
+          this.player.replaceChildren();
+          this.opener?.focus();
+        },
+        { signal }
+      );
+    }
+
+    // The editor can move the block (connectedCallback runs again): the old listeners go first
+    disconnectedCallback() {
+      this.controller?.abort();
     }
 
     play(thumb) {

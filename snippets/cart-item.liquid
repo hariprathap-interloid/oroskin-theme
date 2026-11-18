@@ -400,7 +400,8 @@
     padding, 50px height and 100% width. Every property that rule sets is reset here.
   */
   .cart-item__quantity .cart-item__input {
-    inline-size: 2.5rem;
+    /* Room for 4 digits (2.5rem cut "2000" to "20(") */
+    inline-size: 4.25ch;
     min-block-size: 0;
     block-size: 100%;
     line-height: 1; /* the number sits on the same centre line as the - and + */

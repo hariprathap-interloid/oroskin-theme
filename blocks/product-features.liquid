@@ -7,13 +7,25 @@
   {% content_for 'block', type: 'product-features', id: 'product-features' %}
 {% enddoc %}
 
-{%- if block.blocks.size > 0 -%}
+{%- comment -%}
+  The features are rendered first and kept: on the store a feature without a label outputs nothing
+  (blocks/_product-feature.liquid), so empty output = no feature shows. (block.blocks can't read the
+  features' settings here.) Store: then nothing at all (no empty list, no heading). Editor: the list
+  is always output (the editor needs it to place new features), with a note when nothing shows yet.
+{%- endcomment -%}
+{%- capture features_items -%}{% content_for 'blocks' %}{%- endcapture -%}
+{%- assign features_items_check = features_items | strip -%}
+
+{%- if features_items_check != blank or request.design_mode -%}
   <div class="product-features" {{ block.shopify_attributes }}>
-    {%- if block.settings.heading != blank -%}
+    {%- if block.settings.heading != blank and features_items_check != blank -%}
       {% render 'product-block-heading', text: block.settings.heading %}
     {%- endif -%}
+    {%- if features_items_check == blank -%}
+      <p class="product-features__empty">{{ 'products.features.empty' | t }}</p>
+    {%- endif -%}
     <div class="product-features__list" role="list">
-      {% content_for 'blocks' %}
+      {{- features_items -}}
     </div>
   </div>
 {%- endif -%}
@@ -24,6 +36,13 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
     gap: var(--space-md);
+  }
+
+  /* Editor only: the note when no feature has a label */
+  .product-features__empty {
+    margin: 0 0 var(--space-sm);
+    color: color-mix(in srgb, var(--color-text) 65%, var(--color-background));
+    font-size: var(--font-size-small);
   }
 {% endstylesheet %}
 

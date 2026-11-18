@@ -31,9 +31,7 @@
             "title": {
               "type": "product-title",
               "settings": {
-                "size": "product-title--product",
-                "tag": "h1",
-                "link_to_product": false
+                "size": "product-title--product"
               },
               "blocks": {}
             },

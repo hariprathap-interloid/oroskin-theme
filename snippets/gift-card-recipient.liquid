@@ -102,7 +102,8 @@
     cursor: pointer;
   }
 
-  .gift-card-recipient__checkbox {
+  /* Two classes: the global input[type="checkbox"] rule in critical.css (1.25rem) must not win */
+  .gift-card-recipient .gift-card-recipient__checkbox {
     inline-size: 1.125rem;
     block-size: 1.125rem;
     accent-color: var(--color-accent);
@@ -145,10 +146,19 @@
    */
   class GiftCardRecipient extends HTMLElement {
     connectedCallback() {
+      this.controller?.abort();
+      this.controller = new AbortController();
+      const { signal } = this.controller;
       this.toggle = this.querySelector('[data-recipient-toggle]');
+      if (!this.toggle) return;
       this.classList.add('is-enhanced');
-      this.toggle.addEventListener('change', () => this.update());
+      this.toggle.addEventListener('change', () => this.update(), { signal });
       this.update();
+    }
+
+    // The editor can move the block (connectedCallback runs again): the old listener goes first
+    disconnectedCallback() {
+      this.controller?.abort();
     }
 
     update() {

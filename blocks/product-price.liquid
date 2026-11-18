@@ -157,6 +157,17 @@
   .product-price__note a {
     color: inherit;
   }
+
+  /* The chosen options match no variant ("Unavailable"): the last price stays, faded */
+  .product-price.is-unavailable [data-price-current] {
+    opacity: 0.4;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .product-price [data-price-current] {
+      transition: opacity var(--duration-fast) var(--ease-out);
+    }
+  }
 {% endstylesheet %}
 
 {% javascript %}
@@ -166,23 +177,37 @@
    */
   class ProductPrice extends HTMLElement {
     connectedCallback() {
-      this.scope = this.closest('.shopify-section') || document;
+      this.controller?.abort();
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+      const scope = this.closest('.shopify-section') || document;
       this.current = this.querySelector('[data-price-current]');
-      // A one-variant product has no templates: its own first content is the "template"
-      this.base = this.current?.innerHTML;
-      this.onVariantChange = (event) => this.show(event.detail.variantId);
+      // A one-variant product has no templates: its own first content is the "template".
+      // Read one time only: after an editor re-attach the content may be a swapped-in price
+      this.base ??= this.current?.innerHTML;
+      scope.addEventListener(
+        'variant:change',
+        (event) => {
+          const variantId = event.detail?.variantId;
+          // null = the chosen options match no variant ("Unavailable"): the last price stays, dimmed
+          this.classList.toggle('is-unavailable', variantId === null);
+          this.show(variantId);
+        },
+        { signal }
+      );
       // Purchase options (Buy buttons): a subscription plan's price replaces the price shown
-      this.onPlanChange = (event) => {
-        this.plan = event.detail;
-        this.show(event.detail.variantId);
-      };
-      this.scope.addEventListener('variant:change', this.onVariantChange);
-      this.scope.addEventListener('plan:change', this.onPlanChange);
+      scope.addEventListener(
+        'plan:change',
+        (event) => {
+          this.plan = event.detail;
+          this.show(event.detail?.variantId);
+        },
+        { signal }
+      );
     }
 
     disconnectedCallback() {
-      this.scope?.removeEventListener('variant:change', this.onVariantChange);
-      this.scope?.removeEventListener('plan:change', this.onPlanChange);
+      this.controller?.abort();
     }
 
     /** The variant's price (its template), then the chosen plan's price over it */

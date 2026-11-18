@@ -489,6 +489,23 @@
     backdrop-filter: blur(var(--glass-frost));
   }
 
+  /* After a background add, the flying product photo lands here: a short bump (Buy buttons adds the class) */
+  @media (prefers-reduced-motion: no-preference) {
+    .is-cart-bump {
+      animation: cart-bump 0.45s var(--ease-out);
+    }
+  }
+
+  @keyframes cart-bump {
+    35% {
+      scale: 1.2;
+    }
+
+    65% {
+      scale: 0.94;
+    }
+  }
+
   /* Keyboard focus looks like hover (filled glass, accent icon), plus the focus ring */
   .header__icon-button:is(:hover, :focus-visible) {
     background-color: var(--color-glass-strong);
