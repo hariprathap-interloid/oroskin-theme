@@ -360,8 +360,9 @@
     flex-direction: column;
     gap: var(--space-md);
     padding: max(var(--space-lg), calc(30 * var(--px, 0.0625rem))) max(var(--space-md), calc(20 * var(--px, 0.0625rem)));
-    border: 1px solid var(--color-card-border);
-    border-radius: max(1rem, calc(24 * var(--px, 0.0625rem)));
+    /* Figma: a white glass edge. --color-surface-raised = white on light schemes, a soft light mix on dark ones */
+    border: 1px solid var(--color-surface-raised);
+    border-radius: 1.84625rem; /* Figma 29.54px */
     background-color: color-mix(in srgb, var(--color-card, #ffffff) 70%, transparent);
     box-shadow: var(--shadow-card-soft);
     -webkit-backdrop-filter: blur(12px);
@@ -379,7 +380,7 @@
   .product-faq__card-heading {
     margin: 0;
     font-size: var(--font-size-h3);
-    font-weight: 400;
+    font-weight: 500;
   }
 
   /* Fields spaced with gap (no margins: Shopify may add an hCaptcha element inside the form) */
@@ -393,8 +394,10 @@
   /* Two classes: the global input[type] / textarea rules outweigh one */
   .product-faq .product-faq__input {
     margin: 0; /* the global :where(label) + input gap: here the label floats over the field */
-    border-radius: var(--radius-pill);
-    background-color: #ffffff; /* Figma: white pills (--color-card is a 20% cream, the fields looked see-through) */
+    border-color: var(--color-surface-raised); /* Figma: white edge (light schemes) */
+    border-radius: 3.0625rem; /* Figma 49px */
+    background-color: color-mix(in srgb, var(--color-surface-raised) 50%, transparent); /* Figma: 50% white */
+    font-weight: 500;
     padding-inline: max(var(--space-lg), calc(30 * var(--px, 0.0625rem)));
   }
 
@@ -418,7 +421,7 @@
     border-radius: var(--radius-pill);
     color: color-mix(in srgb, var(--color-text) 80%, var(--color-background)); /* 4.5:1 or more, as placeholders */
     font-size: var(--font-size-body-sm);
-    font-weight: 400;
+    font-weight: 500;
     line-height: 1.2;
     pointer-events: none; /* a click goes to the field under it */
     translate: 0 -50%;
@@ -440,7 +443,7 @@
   */
   .product-faq .product-faq__field:has(.product-faq__input:focus, .product-faq__input:not(:placeholder-shown)) .product-faq__field-label {
     inset-block-start: 0;
-    background-color: #ffffff; /* solid, like the field: the border line must not run through the label */
+    background-color: var(--color-surface-raised); /* solid: the border line must not run through the label */
     color: var(--color-accent);
     font-size: var(--font-size-small);
   }

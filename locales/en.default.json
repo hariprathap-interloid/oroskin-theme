@@ -482,7 +482,8 @@
     },
     "tabs": {
       "label": "Product sections",
-      "top": "Back to the top"
+      "top": "Back to the top",
+      "editor_empty": "No tab finds its section. Visitors do not see this bar. Make the Link name of a tab the same as the Link name of a section below this bar."
     },
     "clinical": {
       "compare": "Compare {{ before }} and {{ after }}"

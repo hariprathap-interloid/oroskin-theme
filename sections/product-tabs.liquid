@@ -2,9 +2,10 @@
   The product page's section tabs (M6.6, Figma PDP "Product details 5–7"): a white pill of links,
   OVERVIEW · HIGHLIGHTS · HOW TO USE · CLINICAL RESULTS · REVIEWS · FAQ, and ↑ (back to the top). It
   sticks under the header while the page scrolls; the tab of the section in view is filled red.
-  - Each Tab block links to a section by its Anchor (the same word in that section's "Anchor" setting,
-    e.g. overview → <div id="overview">). Tabs whose section isn't on the page hide themselves, so the
-    six default tabs can stay while some sections are still to come.
+  - Each Tab block links to a "panel" section by its Link name (the same word in that section's "Link
+    name" setting, e.g. overview → <div id="overview">). Tabs whose section isn't below the bar hide
+    themselves, so the six default tabs can stay while some sections are still to come. No section found
+    = no bar (the theme editor shows a note instead).
   - Layout (setting): "Tabbed" (default) shows one section at a time, switched by scrolling (the panels
     are pinned under the tabs while you scroll through them) and by clicking a tab;
     "Stacked" keeps every section on the page, a click scrolls to it and the filled tab follows the
@@ -16,38 +17,59 @@
 
 {%- liquid
   assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+
+  # A tab needs a text and a link name. No usable tab = no bar on the store (the editor shows a note)
+  assign tab_count = 0
+  for block in section.blocks
+    assign tab_anchor = block.settings.anchor | handleize
+    if block.settings.label != blank and tab_anchor != blank
+      assign tab_count = tab_count | plus: 1
+    endif
+  endfor
 -%}
 
-<product-tabs
-  data-layout="{{ section.settings.layout | default: 'tabbed' }}"
-  data-transition="{{ section.settings.transition | default: 'up' }}"
-  data-panel-scroll="{{ section.settings.panel_scroll | default: 50 }}"
-  class="product-tabs full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
-  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
->
-  <div class="product-tabs__inner">
-    <nav class="product-tabs__bar" aria-label="{{ 'products.tabs.label' | t | escape_once }}">
-      <ul class="product-tabs__list" role="list">
-        {%- for block in section.blocks -%}
-          {%- assign tab_anchor = block.settings.anchor | handleize -%}
-          {%- if block.settings.label != blank and tab_anchor != blank -%}
-            <li {{ block.shopify_attributes }}>
-              <a class="product-tabs__link" href="#{{ tab_anchor }}" data-tab-target="{{ tab_anchor }}">
-                {{- block.settings.label | escape -}}
-              </a>
-            </li>
-          {%- endif -%}
-        {%- endfor -%}
-      </ul>
-      {%- if section.settings.show_top -%}
-        <a class="product-tabs__top" href="#MainContent" data-tabs-top>
-          <span class="visually-hidden">{{ 'products.tabs.top' | t }}</span>
-          <span class="product-tabs__top-icon" aria-hidden="true">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
-        </a>
+{%- if tab_count > 0 or request.design_mode -%}
+  <product-tabs
+    data-layout="{{ section.settings.layout | default: 'tabbed' }}"
+    data-transition="{{ section.settings.transition | default: 'up' }}"
+    data-panel-scroll="{{ section.settings.panel_scroll | default: 50 }}"
+    class="product-tabs full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
+    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
+  >
+    <div class="product-tabs__inner">
+      <nav class="product-tabs__bar" aria-label="{{ 'products.tabs.label' | t | escape_once }}">
+        {%- comment -%}
+          The row scrolls sideways when the tabs don't fit (phones, tablets): the script sets data-overflow,
+          data-more-start / data-more-end (soft fade at a cut edge) and the size and place of the scroll line.
+        {%- endcomment -%}
+        <div class="product-tabs__row" data-tabs-row>
+          <ul class="product-tabs__list" role="list">
+            {%- for block in section.blocks -%}
+              {%- assign tab_anchor = block.settings.anchor | handleize -%}
+              {%- if block.settings.label != blank and tab_anchor != blank -%}
+                <li {{ block.shopify_attributes }}>
+                  <a class="product-tabs__link" href="#{{ tab_anchor }}" data-tab-target="{{ tab_anchor }}">
+                    {{- block.settings.label | escape -}}
+                  </a>
+                </li>
+              {%- endif -%}
+            {%- endfor -%}
+          </ul>
+          <span class="product-tabs__scroll-line" aria-hidden="true"></span>
+        </div>
+        {%- if section.settings.show_top -%}
+          <a class="product-tabs__top" href="#MainContent" data-tabs-top>
+            <span class="visually-hidden">{{ 'products.tabs.top' | t }}</span>
+            <span class="product-tabs__top-icon" aria-hidden="true">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+          </a>
+        {%- endif -%}
+      </nav>
+      {%- if request.design_mode -%}
+        <p class="product-tabs__note" data-tabs-note hidden>{{ 'products.tabs.editor_empty' | t }}</p>
       {%- endif -%}
-    </nav>
-  </div>
-</product-tabs>
+    </div>
+  </product-tabs>
+{%- endif -%}
 
 {% stylesheet %}
   /*
@@ -55,11 +77,30 @@
     apart; the active one a red pill (accent fill, white text); ↑ at the end. Stuck at y 112 (under the
     header pill).
   */
+  /*
+    Stuck 15px under the header pill. --header-space (header.liquid) is the header's height for each
+    width and for "Solid header background", so the bar never goes under the header or leaves a gap.
+  */
   .shopify-section:has(> product-tabs) {
     position: sticky;
-    inset-block-start: 7rem;
+    inset-block-start: calc(var(--header-space, 6.0625rem) + 0.9375rem);
     z-index: 19; /* under the header (20) */
     pointer-events: none; /* the wrapper spans the page width: only the bar takes clicks */
+  }
+
+  /* No tab finds its section (the script checks): no bar on the store */
+  .shopify-section.is-tabs-empty {
+    display: none;
+  }
+
+  /*
+    Only the script knows which tabs find their section: until it runs, the bar is not shown (no tabs
+    that link to nothing). Without JS the bar shows all tabs as plain page links.
+  */
+  @media (scripting: enabled) {
+    product-tabs:not(:defined) .product-tabs__bar {
+      visibility: hidden;
+    }
   }
 
   /*
@@ -80,10 +121,6 @@
     panel. The stage sticks under the tabs and holds every panel in the same grid cell; only the active
     one shows, the others fade out (and are inert: no clicks, no Tab stops).
   */
-  .product-tabs-track {
-    position: relative;
-  }
-
   .product-tabs-track__stage {
     position: sticky;
     inset-block-start: 0;
@@ -93,37 +130,28 @@
   }
 
   /*
-    Each panel fills the stage (the screen under the tabs), its content centred. The switch: the new
-    panel fades in and rises 2rem (translate), the old one fades out and lifts 2rem. A tall panel's
-    slide-up while pinned uses transform, a separate property, so the two never fight.
-  */
-  /*
     Transition (setting): where the new panel's text and image slide in from (the panel itself only
-    fades). --enter = their starting offset; --leave is kept for the panel going out (no movement).
+    fades). --enter = their starting offset.
   */
   .product-tabs-track {
+    position: relative;
     --enter: 0 3rem;
-    --leave: 0 -3rem;
   }
 
   .product-tabs-track[data-transition="fade"] {
     --enter: 0 0;
-    --leave: 0 0;
   }
 
   .product-tabs-track[data-transition="down"] {
     --enter: 0 -3rem;
-    --leave: 0 3rem;
   }
 
   .product-tabs-track[data-transition="left"] {
     --enter: 4rem 0;
-    --leave: -4rem 0;
   }
 
   .product-tabs-track[data-transition="right"] {
     --enter: -4rem 0;
-    --leave: 4rem 0;
   }
 
   /*
@@ -182,12 +210,13 @@
   }
 
   /* The sections the tabs link to stop under the header + tabs, not behind them */
-  html:has(product-tabs) {
-    scroll-padding-block-start: 11rem;
+  /* Header + 15px + the bar (~54px) + 16px. Not when the bar is hidden (no tab finds its section) */
+  html:has(.shopify-section:not(.is-tabs-empty) > product-tabs) {
+    scroll-padding-block-start: calc(var(--header-space, 6.0625rem) + 5.25rem);
   }
 
   @media (prefers-reduced-motion: no-preference) {
-    html:has(product-tabs) {
+    html:has(.shopify-section:not(.is-tabs-empty) > product-tabs) {
       scroll-behavior: smooth;
     }
   }
@@ -218,15 +247,48 @@
     pointer-events: auto;
   }
 
+  .product-tabs__row {
+    position: relative;
+    display: flex;
+    min-inline-size: 0;
+  }
+
+  /*
+    The row scrolls sideways when the tabs don't fit (Figma phone), without a scroll bar. overflow-x also
+    clips up and down: 5px of padding (taken back with a negative margin) keep the focus ring inside.
+    The mask fades a cut edge (data-more-start / -end); var() in the gradient's direction works for RTL.
+  */
   .product-tabs__list {
     position: relative; /* the script measures each tab from the row (offsetLeft) */
     display: flex;
+    flex: 1 1 auto;
     gap: var(--space-xs);
+    min-inline-size: 0;
     overflow-x: auto;
-    margin: 0;
-    padding: 0;
+    margin: -0.3125rem;
+    padding: 0.3125rem;
     list-style: none;
-    scrollbar-width: none; /* phones: the row scrolls sideways (Figma), without a bar */
+    scrollbar-width: none;
+    --fade-direction: to right;
+    mask-image: linear-gradient(
+      var(--fade-direction),
+      var(--fade-start, #000) 0,
+      #000 2.5rem,
+      #000 calc(100% - 2.5rem),
+      var(--fade-end, #000) 100%
+    );
+  }
+
+  .product-tabs__list:dir(rtl) {
+    --fade-direction: to left;
+  }
+
+  .product-tabs__row[data-more-start] .product-tabs__list {
+    --fade-start: #00000000;
+  }
+
+  .product-tabs__row[data-more-end] .product-tabs__list {
+    --fade-end: #00000000;
   }
 
   .product-tabs__list::-webkit-scrollbar {
@@ -235,6 +297,32 @@
 
   .product-tabs__list li[hidden] {
     display: none;
+  }
+
+  /* Figma phone: a thin pale accent line under the tabs shows how far the row is scrolled */
+  .product-tabs__scroll-line {
+    display: none;
+    position: absolute;
+    inset-block-end: -0.3125rem;
+    inset-inline-start: var(--line-start, 0);
+    inline-size: var(--line-size, 0);
+    block-size: 2px;
+    border-radius: 1px;
+    background-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
+    pointer-events: none;
+  }
+
+  .product-tabs__row[data-overflow] .product-tabs__scroll-line {
+    display: block;
+  }
+
+  .product-tabs__note {
+    margin: var(--space-xs) 0 0;
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm, 0.5rem);
+    background-color: var(--color-background);
+    font-size: var(--font-size-small);
+    pointer-events: auto;
   }
 
   .product-tabs__link,
@@ -253,6 +341,13 @@
     transition:
       background-color var(--duration-fast) var(--ease-out),
       color var(--duration-fast) var(--ease-out);
+  }
+
+  /* The ring follows the pill shape, 2px out (the row's padding has room for it) */
+  .product-tabs__link:focus-visible,
+  .product-tabs__top:focus-visible {
+    border-radius: var(--radius-pill);
+    outline-offset: 2px;
   }
 
   .product-tabs__link:hover {
@@ -286,24 +381,21 @@
     block-size: auto;
   }
 
+  /* Phones (Figma Variant96-2): the bar is full width and ↑ comes first */
   @media (max-width: 749px) {
-    .shopify-section:has(> product-tabs) {
-      inset-block-start: 5.5rem;
-    }
-
-    html:has(product-tabs) {
-      scroll-padding-block-start: 9rem;
-    }
-
     .product-tabs__bar {
       display: flex;
+    }
+
+    .product-tabs__top {
+      order: -1;
     }
   }
 {% endstylesheet %}
 
 {% javascript %}
   /**
-   * <product-tabs>: the tabs bar of the product page's detail sections (data-layout):
+   * <product-tabs>: the tabs bar of the product page's detail ("panel") sections (data-layout):
    * - "tabbed": one section at a time.
    *   - Scroll: the panels are pinned under the tabs and scrolling moves from one to the next (a "track"
    *     one screen per panel, with a sticky stage holding the panels in the same place). After the last
@@ -311,55 +403,244 @@
    *   - Click: a tab scrolls to its panel's part of the track.
    *   - Each panel fills the screen under the tabs; a taller one slides up while pinned until its bottom
    *     shows. Pinning needs a screen at least 990px wide, motion allowed and the storefront (not the
-   *     theme editor, where moving sections around could confuse it). Otherwise a click swaps the panel in place and the others are
-   *     hidden (.is-tab-hidden, still in the HTML).
+   *     theme editor, where moving sections around could confuse it). Otherwise a click swaps the panel
+   *     in place and the others are hidden (.is-tab-hidden, still in the HTML).
    *   The URL hash follows (#highlights) and a link to /products/x#highlights opens that tab.
    * - "stacked": all sections on the page; a click scrolls to one and the tab of the section crossing a
    *   band 40% down the screen is filled as you scroll.
-   * Tabs whose section isn't on the page hide themselves. ↑ goes back to the top.
+   * Only sections below the bar count; tabs whose section isn't there hide themselves, and with none
+   * the bar hides (editor: a note). ↑ goes back to the top. Every listener is on one AbortController
+   * (the editor attaches a moved section again: connectedCallback runs again).
    */
   class ProductTabs extends HTMLElement {
     connectedCallback() {
+      this.controller = new AbortController();
+      const { signal } = this.controller;
       this.layout = this.dataset.layout || 'tabbed';
+      this.section = this.closest('.shopify-section') || this;
       this.links = [...this.querySelectorAll('[data-tab-target]')];
-      this.targets = new Map();
-      this.links.forEach((link) => {
-        const target = document.getElementById(link.dataset.tabTarget);
-        link.closest('li').hidden = !target;
-        if (target) this.targets.set(link.dataset.tabTarget, target);
-      });
-      this.ids = [...this.targets.keys()];
+      this.list = this.querySelector('.product-tabs__list');
+      this.row = this.querySelector('[data-tabs-row]');
 
-      this.overlap();
-      this.onOverlapResize = () => this.overlap();
-      window.addEventListener('resize', this.onOverlapResize);
-      this.onEndScroll = () => {
-        if (this.endTicking) return;
-        this.endTicking = true;
-        requestAnimationFrame(() => {
-          this.endTicking = false;
-          this.followEnd();
+      window.addEventListener('resize', () => this.onResize(), { signal });
+      window.addEventListener('scroll', () => this.queueEnd(), { passive: true, signal });
+      window
+        .matchMedia('(prefers-reduced-motion: reduce)')
+        .addEventListener('change', () => this.restart(), { signal });
+
+      // The scroll line and the faded edges of a row that scrolls sideways (fonts change the widths too)
+      this.list?.addEventListener('scroll', () => this.updateRow(), { passive: true, signal });
+      if (this.list) {
+        this.rowObserver = new ResizeObserver(() => this.updateRow());
+        [this.list, ...this.links].forEach((element) => this.rowObserver.observe(element));
+      }
+
+      this.querySelector('[data-tabs-top]')?.addEventListener(
+        'click',
+        (event) => {
+          event.preventDefault();
+          window.scrollTo({ top: 0, behavior: this.reducedMotion() ? 'auto' : 'smooth' });
+          // Keyboard: the next Tab starts at the top of the page, not back in the panels
+          document.getElementById('MainContent')?.focus({ preventScroll: true });
+        },
+        { signal }
+      );
+
+      this.addEventListener(
+        'click',
+        (event) => {
+          const link = event.target.closest('[data-tab-target]');
+          if (!link || this.layout !== 'tabbed' || !this.targets.has(link.dataset.tabTarget)) return;
+          event.preventDefault();
+          this.select(link.dataset.tabTarget, true);
+        },
+        { signal }
+      );
+
+      if (window.Shopify?.designMode) {
+        // Selecting a hidden section in the sidebar opens its tab
+        document.addEventListener('shopify:section:select', (event) => this.onEditorSelect(event), { signal });
+        // A section changed, added, removed or moved: check the panels again (after 50ms: an unloaded
+        // section is gone by then)
+        ['shopify:section:load', 'shopify:section:unload', 'shopify:section:reorder'].forEach((type) => {
+          document.addEventListener(
+            type,
+            (event) => {
+              if (this.section.id === `shopify-section-${event.detail?.sectionId}`) return;
+              clearTimeout(this.restartTimer);
+              this.restartTimer = setTimeout(() => this.onEditorChange(), 50);
+            },
+            { signal }
+          );
         });
-      };
-      window.addEventListener('scroll', this.onEndScroll, { passive: true });
+      }
 
-      this.querySelector('[data-tabs-top]')?.addEventListener('click', (event) => {
-        event.preventDefault();
-        window.scrollTo({ top: 0, behavior: this.reducedMotion() ? 'auto' : 'smooth' });
-      });
-
-      if (!this.targets.size) return;
-      if (this.layout === 'tabbed') this.setUpTabbed();
-      else this.setUpStacked();
+      this.start(true);
     }
 
     disconnectedCallback() {
-      window.removeEventListener('resize', this.onOverlapResize);
-      window.removeEventListener('scroll', this.onEndScroll);
+      this.controller?.abort();
+      this.rowObserver?.disconnect();
+      [this.resizeTimer, this.restartTimer, this.measureTimer, this.jumpTimer].forEach(clearTimeout);
+      this.stop();
+    }
+
+    /** Finds the sections, then sets up the chosen layout */
+    start(initial) {
+      this.collect();
+      this.updateRow();
+      const empty = !this.targets.size;
+      const designMode = Boolean(window.Shopify?.designMode);
+      this.section.classList.toggle('is-tabs-empty', empty && !designMode);
+      const note = this.querySelector('[data-tabs-note]');
+      if (note) note.hidden = !empty;
+      this.measureBar();
+      this.overlap();
+      if (!empty) {
+        if (this.layout === 'tabbed') this.setUpTabbed(initial);
+        else this.setUpStacked();
+      }
+      this.followEnd();
+    }
+
+    /** Puts every panel back as it was (shown, in its place in the page) */
+    stop() {
+      cancelAnimationFrame(this.pinFrame);
+      clearTimeout(this.jumpTimer);
+      window.removeEventListener('scrollend', this.finishJump);
+      this.jumpTo = null;
       this.observer?.disconnect();
+      this.observer = null;
       this.unpin();
-      document.removeEventListener('shopify:section:select', this.onEditorSelect);
-      this.targets?.forEach((target) => this.wrapper(target)?.classList.remove('is-tab-hidden'));
+      document
+        .querySelectorAll('.is-tab-hidden, .is-tab-faded')
+        .forEach((wrapper) => wrapper.classList.remove('is-tab-hidden', 'is-tab-faded'));
+      this.activeId = null;
+      this.links.forEach((link) => link.removeAttribute('aria-current'));
+    }
+
+    /** Builds everything again, on the same tab (editor changes, a new width, reduced motion changed) */
+    restart() {
+      if (!this.isConnected) return;
+      this.keepId = this.activeId;
+      this.stop();
+      this.start(false);
+    }
+
+    /**
+     * The tab targets: elements with the tab's id that sit BELOW the bar (a section above it would be
+     * pulled into the pinned track under the bar). The others' tabs hide.
+     */
+    collect() {
+      this.targets = this.findTargets();
+      this.links.forEach((link) => {
+        link.closest('li').hidden = !this.targets.has(link.dataset.tabTarget);
+      });
+      this.ids = [...this.targets.keys()];
+    }
+
+    /** tab id → its target element (only targets below the bar), in tab order */
+    findTargets() {
+      const targets = new Map();
+      this.links.forEach((link) => {
+        const id = link.dataset.tabTarget;
+        const target = document.getElementById(id);
+        const below =
+          Boolean(target) &&
+          !this.section.contains(target) &&
+          Boolean(this.section.compareDocumentPosition(target) & Node.DOCUMENT_POSITION_FOLLOWING);
+        if (below && !targets.has(id)) targets.set(id, target);
+      });
+      return targets;
+    }
+
+    /**
+     * Editor: a section was loaded, removed or moved. Build the tabs again only when the panels changed
+     * (another element, one more or less, one moved above the bar). Any other section (the header too:
+     * "Solid header background" changes --header-space) only needs the bar measured again.
+     */
+    onEditorChange() {
+      if (!this.isConnected) return;
+      const next = this.findTargets();
+      const keys = [...next.keys()];
+      const same =
+        keys.length === this.ids.length && keys.every((id, i) => id === this.ids[i] && next.get(id) === this.targets.get(id));
+      if (!same) {
+        this.restart();
+        return;
+      }
+      this.measureBar();
+      this.overlap();
+      this.followEnd();
+    }
+
+    onResize() {
+      this.measureBar();
+      this.overlap();
+      this.followEnd();
+      if (this.layout !== 'tabbed' || !this.targets?.size) return;
+      // Inside the track: remember the panel and how far into its part the visitor is, at the FIRST
+      // resize event (before the panels' ResizeObserver measures the new heights), so the new heights
+      // don't move them to another panel
+      if (this.track && !this.place) this.place = this.trackPlace();
+      clearTimeout(this.resizeTimer);
+      this.resizeTimer = setTimeout(() => {
+        const place = this.place;
+        this.place = null;
+        // Build the track again only when pinning starts or stops (e.g. across 990px): rebuilding takes
+        // the track out of the page and the visitor loses their place. Otherwise a pinned track only
+        // gets the new stage size (a new width, or a phone address bar showing / hiding).
+        if (this.canPin() !== Boolean(this.track)) {
+          this.restart();
+        } else if (this.track) {
+          this.room = Math.max(320, window.innerHeight);
+          this.stageOffset = this.barTop + this.section.offsetHeight;
+          this.track.style.setProperty('--stage-height', `${this.room}px`);
+          this.track.style.setProperty('--stage-offset', `${this.stageOffset}px`);
+          this.remeasure(place);
+        }
+      }, 200);
+    }
+
+    /** The panel the scroll is in and how far into its part of the track (null: not inside the track) */
+    trackPlace() {
+      if (!this.track || this.jumpTo) return null;
+      const passed = -this.track.getBoundingClientRect().top;
+      if (passed < 0 || passed >= this.track.offsetHeight - this.room) return null;
+      let index = this.starts.length - 1;
+      while (index > 0 && passed < this.starts[index]) index -= 1;
+      return { index, into: passed - this.starts[index] };
+    }
+
+    /**
+     * Measures the track again (new panel heights) and keeps the visitor at the same place in the same
+     * panel. Not during a tab click's jump (place = null): the jump has its own target.
+     */
+    remeasure(place = this.trackPlace()) {
+      if (!this.track) return;
+      this.measure();
+      if (place && !this.jumpTo) {
+        const { index, into } = place;
+        const end = (this.starts[index + 1] ?? this.track.offsetHeight - this.room) - this.starts[index];
+        const top = this.track.getBoundingClientRect().top + window.scrollY + this.starts[index];
+        window.scrollTo({ top: top + Math.min(into, end - 1), behavior: 'instant' });
+      }
+      this.onScroll?.();
+    }
+
+    /** Pinning needs a desktop-sized screen, the storefront (not the editor), motion and 2+ panels */
+    canPin() {
+      return (
+        window.matchMedia('(min-width: 990px)').matches &&
+        !window.Shopify?.designMode &&
+        !this.reducedMotion() &&
+        this.ids.length > 1
+      );
+    }
+
+    /** The bar's sticky top (px), read once per size instead of on every scroll frame */
+    measureBar() {
+      this.barTop = parseFloat(getComputedStyle(this.section).top) || 0;
     }
 
     /**
@@ -368,8 +649,17 @@
      * the page's colour (the first colour scheme, set on <body>).
      */
     overlap() {
-      const wrapper = this.closest('.shopify-section');
-      if (wrapper) wrapper.style.marginBlockEnd = `${-wrapper.offsetHeight}px`;
+      if (this.section === this) return;
+      this.section.style.marginBlockEnd = `${-this.section.offsetHeight}px`;
+    }
+
+    queueEnd() {
+      if (this.endTicking) return;
+      this.endTicking = true;
+      requestAnimationFrame(() => {
+        this.endTicking = false;
+        this.followEnd();
+      });
     }
 
     /**
@@ -379,13 +669,32 @@
      * bottom, the bar is pushed up by the difference
      */
     followEnd() {
-      const bar = this.closest('.shopify-section');
-      if (!bar || !this.targets.size) return;
+      if (this.section === this || !this.targets?.size) return;
       const ends = this.track ? [this.track] : [...this.targets.values()].map((target) => this.wrapper(target));
       const bottom = Math.max(...ends.map((element) => element.getBoundingClientRect().bottom));
-      const barBottom = (parseFloat(getComputedStyle(bar).top) || 0) + bar.offsetHeight;
-      const push = Math.min(0, bottom - barBottom);
-      bar.style.translate = push ? `0 ${push}px` : '';
+      const push = Math.min(0, bottom - (this.barTop + this.section.offsetHeight));
+      this.section.style.translate = push ? `0 ${push}px` : '';
+    }
+
+    /**
+     * A row that scrolls sideways: data-overflow shows the scroll line (its length = the part you see,
+     * its place = how far the row is scrolled), data-more-start / -end fade a cut edge.
+     */
+    updateRow() {
+      if (!this.list || !this.row) return;
+      const total = this.list.scrollWidth;
+      const view = this.list.clientWidth;
+      const overflow = total > view + 1;
+      const scrolled = Math.abs(this.list.scrollLeft); // RTL scrollLeft is negative
+      this.row.toggleAttribute('data-overflow', overflow);
+      this.row.toggleAttribute('data-more-start', overflow && scrolled > 1);
+      this.row.toggleAttribute('data-more-end', overflow && scrolled < total - view - 1);
+      if (!overflow) return;
+      // The line sits in the row, which is 10px narrower than the list (its 5px focus-ring padding and
+      // negative margin): scale to the row's width, so the line ends at the row's end edge
+      const width = this.row.clientWidth;
+      this.row.style.setProperty('--line-size', `${(view / total) * width}px`);
+      this.row.style.setProperty('--line-start', `${(scrolled / total) * width}px`);
     }
 
     reducedMotion() {
@@ -399,44 +708,26 @@
 
     /* ---------- Tabbed ---------- */
 
-    setUpTabbed() {
-      this.classList.add('is-tabbed');
+    setUpTabbed(initial) {
       // A link to a tab (#highlights) or to something inside one (the FAQ form after sending reloads at
-      // #ProductFaqForm-…) opens that tab and brings it into view
-      const hashTarget = this.hashTarget();
-      const first = hashTarget ? this.tabOf(hashTarget) : this.ids[0];
-
-      this.addEventListener('click', (event) => {
-        const link = event.target.closest('[data-tab-target]');
-        if (!link) return;
-        event.preventDefault();
-        this.select(link.dataset.tabTarget, true);
-      });
-
-      // Theme editor: selecting a hidden section in the sidebar opens its tab
-      this.onEditorSelect = (event) => {
-        for (const [id, target] of this.targets) {
-          if (this.wrapper(target).id === `shopify-section-${event.detail.sectionId}`) this.select(id, false);
-        }
-      };
-      document.addEventListener('shopify:section:select', this.onEditorSelect);
+      // #ProductFaqForm-…) opens that tab and brings it into view. After a restart: the same tab.
+      const hashTarget = initial ? this.hashTarget() : null;
+      let first = this.targets.has(this.keepId) ? this.keepId : this.ids[0];
+      if (hashTarget) first = this.tabOf(hashTarget);
 
       this.show(first);
-      // Measure after fonts and images have settled, then pin if everything fits
-      requestAnimationFrame(() => {
+      // Measure after the browser has laid the page out, then pin if everything fits
+      this.pinFrame = requestAnimationFrame(() => {
         this.tryPin(first);
         if (hashTarget) this.reveal(hashTarget);
       });
-      this.onResize = () => {
-        clearTimeout(this.resizeTimer);
-        this.resizeTimer = setTimeout(() => {
-          const current = this.activeId;
-          this.unpin();
-          this.show(current);
-          this.tryPin(current);
-        }, 200);
-      };
-      window.addEventListener('resize', this.onResize);
+    }
+
+    onEditorSelect(event) {
+      if (this.layout !== 'tabbed' || !this.targets?.size) return;
+      for (const [id, target] of this.targets) {
+        if (this.wrapper(target).id === `shopify-section-${event.detail.sectionId}`) this.select(id, false);
+      }
     }
 
     /** A tab was chosen (click or editor): scroll to the start of its part of the track, or swap it in place */
@@ -466,7 +757,7 @@
 
     /** The tab whose panel holds the element (a panel holds itself) */
     tabOf(element) {
-      for (const [id, target] of this.targets) {
+      for (const [id, target] of this.targets || []) {
         if (target.contains(element)) return id;
       }
       return null;
@@ -508,18 +799,19 @@
      */
     endJump(top) {
       clearTimeout(this.jumpTimer);
+      window.removeEventListener('scrollend', this.finishJump);
       const finish = () => {
         clearTimeout(this.jumpTimer);
         window.removeEventListener('scrollend', finish);
         this.jumpTo = null;
         this.onScroll?.();
       };
+      this.finishJump = finish; // removed by the next jump or by stop()
       window.addEventListener('scrollend', finish, { once: true });
-      const check = () => {
-        if (Math.abs(window.scrollY - top) < 2) finish();
-      };
       this.jumpTimer = setTimeout(finish, 1500);
-      requestAnimationFrame(check);
+      requestAnimationFrame(() => {
+        if (Math.abs(window.scrollY - top) < 2) finish();
+      });
     }
 
     /** Shows one panel, hides (or, pinned, fades out) the others, fills its tab */
@@ -545,16 +837,26 @@
      * Each panel fills the stage (the screen under the tabs). Its part of the track is one stage height
      * (time to read it) plus, for a panel taller than the stage, its extra height: over that extra
      * scroll the panel slides up inside the stage until its bottom shows, then the next panel comes in.
+     * A comment marks each panel's place, so unpin() puts every panel back exactly there (a section
+     * between two panels stays in the page, after the track while pinned).
      */
     tryPin(current) {
-      // Pinning needs a desktop-sized screen; smaller screens switch panels by tapping the tabs
-      const wide = window.matchMedia('(min-width: 990px)').matches;
-      if (!wide || window.Shopify?.designMode || this.reducedMotion() || this.ids.length < 2) return;
-      const bar = this.closest('.shopify-section') || this;
-      const barBottom = parseFloat(getComputedStyle(bar).top || 0) + bar.offsetHeight;
+      // Smaller screens (and the editor, reduced motion) switch panels by tapping the tabs
+      if (!this.canPin()) return;
+      const barBottom = this.barTop + this.section.offsetHeight;
       // The stage is the whole screen; the content starts below the tabs (barBottom)
       const room = Math.max(320, window.innerHeight);
       const wrappers = this.ids.map((id) => this.wrapper(this.targets.get(id)));
+
+      this.markers = wrappers.map((wrapper) => {
+        const marker = document.createComment('product-tabs panel');
+        wrapper.before(marker);
+        return marker;
+      });
+      // The track goes where the first panel in the page was (tab order and page order can differ)
+      const firstMarker = this.markers.reduce((first, marker) =>
+        first.compareDocumentPosition(marker) & Node.DOCUMENT_POSITION_PRECEDING ? marker : first
+      );
 
       this.track = document.createElement('div');
       this.track.className = 'product-tabs-track';
@@ -564,7 +866,7 @@
       const stage = document.createElement('div');
       stage.className = 'product-tabs-track__stage';
       this.track.append(stage);
-      wrappers[0].before(this.track);
+      firstMarker.before(this.track);
       wrappers.forEach((wrapper) => wrapper.classList.remove('is-tab-hidden'));
       stage.append(...wrappers);
 
@@ -572,22 +874,26 @@
       this.stageOffset = barBottom;
       this.wrappers = wrappers;
       this.measure();
-      // Images load later and change a panel's height: measure again (without rebuilding the track)
+      // Images load later and change a panel's height: measure again (without rebuilding the track),
+      // keeping the visitor's place (taken at the first change, before anything is measured again)
       this.resizeObserver = new ResizeObserver(() => {
+        if (!this.measurePlace) this.measurePlace = this.trackPlace();
         clearTimeout(this.measureTimer);
         this.measureTimer = setTimeout(() => {
-          this.measure();
-          this.onScroll?.();
+          const place = this.measurePlace;
+          this.measurePlace = null;
+          this.remeasure(place);
         }, 100);
       });
       wrappers.forEach((wrapper) => this.resizeObserver.observe(wrapper));
 
       this.show(current);
       this.onScroll = () => {
-        if (this.ticking) return;
+        if (this.ticking || !this.track) return;
         this.ticking = true;
         requestAnimationFrame(() => {
           this.ticking = false;
+          if (!this.track) return;
           const passed = Math.max(0, -this.track.getBoundingClientRect().top);
           let index = this.starts.length - 1;
           while (index > 0 && passed < this.starts[index]) index -= 1;
@@ -608,7 +914,7 @@
           if (this.ids[index] !== this.activeId) this.show(this.ids[index]);
         });
       };
-      window.addEventListener('scroll', this.onScroll, { passive: true });
+      window.addEventListener('scroll', this.onScroll, { passive: true }); // removed in unpin()
       this.onScroll();
     }
 
@@ -622,8 +928,8 @@
     measure() {
       if (!this.track) return;
       // Reading time: a hold at the start (the panel stays still: read the beginning), the slide-up of a
-      // taller panel, a hold at the end before the next panel comes in. "Scroll per panel" (setting, % of
-      // a screen, default 50) is shared half and half between the two holds
+      // taller panel, a hold at the end before the next panel comes in. "Scroll for each section"
+      // (setting, % of a screen, default 50) is shared half and half between the two holds
       const hold = (Number(this.dataset.panelScroll) || 50) / 100 / 2;
       this.holdStart = Math.round(this.room * hold);
       this.holdEnd = Math.round(this.room * hold);
@@ -638,29 +944,41 @@
       this.track.style.blockSize = `${total + this.room}px`;
     }
 
-    /** Puts the panels back in the page where they were and removes the track */
+    /** Puts each panel back at its marker (its old place in the page) and removes the track */
     unpin() {
       if (!this.track) return;
       this.resizeObserver?.disconnect();
       window.removeEventListener('scroll', this.onScroll);
-      const stage = this.track.firstElementChild;
-      [...stage.children].forEach((wrapper) => {
+      clearTimeout(this.measureTimer);
+      this.measurePlace = null;
+      this.place = null;
+      this.wrappers.forEach((wrapper, i) => {
         wrapper.classList.remove('is-tab-faded');
         wrapper.style.transform = '';
         wrapper.inert = false;
+        const marker = this.markers[i];
+        if (marker.isConnected) marker.replaceWith(wrapper);
+        else this.track.before(wrapper);
       });
-      this.track.replaceWith(...stage.children);
+      this.track.remove();
       this.track = null;
+      this.onScroll = null;
     }
 
-    /** Click-only mode: the new panel starts just under the bar (scroll up only if you were past it) */
+    /**
+     * Click-only mode: scroll up only if you were past the start of the new panel. The panel's top goes to
+     * the bar's stuck top (barTop), as in the page: the bar takes no room, so the panel always starts
+     * under the pill and its own top padding clears it. (Comparing with the bar's current bottom moved the
+     * page one bar height on every click while the bar was not stuck yet.)
+     */
     bringIntoView() {
-      const section = this.closest('.shopify-section') || this;
-      const barBottom = section.getBoundingClientRect().bottom;
       const panel = [...this.targets.values()].map((t) => this.wrapper(t)).find((w) => !w.classList.contains('is-tab-hidden'));
       if (!panel) return;
+      this.measureBar(); // --header-space can change without a resize (editor: "Solid header background")
       const top = panel.getBoundingClientRect().top;
-      if (top < barBottom) window.scrollBy({ top: top - barBottom, behavior: this.reducedMotion() ? 'auto' : 'smooth' });
+      if (top < this.barTop - 1) {
+        window.scrollBy({ top: top - this.barTop, behavior: this.reducedMotion() ? 'auto' : 'smooth' });
+      }
     }
 
     /* ---------- Stacked ---------- */
@@ -679,22 +997,23 @@
     }
 
     /**
-     * Fills the tab, and on phones scrolls the tabs row sideways so it's visible. Only the row scrolls:
-     * scrollIntoView() would also move the page, which made the scroll jerk at each tab change.
+     * Fills the tab, and when the row scrolls sideways brings the tab to the middle of the row. Only the
+     * row scrolls: scrollIntoView() would also move the page, which made the scroll jerk at each change.
      */
     setActive(id) {
       if (id === this.activeId) return;
       this.activeId = id;
-      const list = this.querySelector('.product-tabs__list');
       this.links.forEach((link) => {
         if (link.dataset.tabTarget !== id) {
           link.removeAttribute('aria-current');
           return;
         }
         link.setAttribute('aria-current', 'true');
+        const list = this.list;
         if (list && list.scrollWidth > list.clientWidth) {
+          // No clamp here: the browser keeps the value in range (0 and up; on RTL pages 0 and down)
           const left = link.offsetLeft - (list.clientWidth - link.offsetWidth) / 2;
-          list.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
+          list.scrollTo({ left, behavior: this.reducedMotion() ? 'auto' : 'smooth' });
         }
       });
     }
@@ -707,8 +1026,11 @@
 {
   "name": "t:general.product_tabs",
   "tag": "section",
-  "class": "product-tabs-section",
-  "enabled_on": { "templates": ["product"] },
+  "enabled_on": {
+    "templates": [
+      "product"
+    ]
+  },
   "max_blocks": 8,
   "blocks": [
     {
@@ -718,14 +1040,14 @@
         {
           "type": "text",
           "id": "label",
-          "label": "t:labels.label",
+          "label": "t:labels.product_tabs_label",
           "default": "Overview"
         },
         {
           "type": "text",
           "id": "anchor",
-          "label": "t:labels.product_tabs_anchor",
-          "info": "t:labels.product_tabs_anchor_info",
+          "label": "t:labels.product_tabs_link_name",
+          "info": "t:labels.product_tabs_link_name_info",
           "default": "overview"
         }
       ]
@@ -733,15 +1055,59 @@
   ],
   "settings": [
     {
+      "type": "header",
+      "content": "t:labels.content"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_top",
+      "label": "t:labels.product_tabs_top",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.layout"
+    },
+    {
       "type": "select",
       "id": "layout",
       "label": "t:labels.product_tabs_layout",
       "info": "t:labels.product_tabs_layout_info",
       "options": [
-        { "value": "tabbed", "label": "t:options.product_tabs_layout.tabbed" },
-        { "value": "stacked", "label": "t:options.product_tabs_layout.stacked" }
+        {
+          "value": "tabbed",
+          "label": "t:options.product_tabs_layout.tabbed"
+        },
+        {
+          "value": "stacked",
+          "label": "t:options.product_tabs_layout.stacked"
+        }
       ],
       "default": "tabbed"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "options": [
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.animation"
     },
     {
       "type": "select",
@@ -749,11 +1115,26 @@
       "label": "t:labels.product_tabs_transition",
       "info": "t:labels.product_tabs_transition_info",
       "options": [
-        { "value": "up", "label": "t:options.product_tabs_transition.up" },
-        { "value": "down", "label": "t:options.product_tabs_transition.down" },
-        { "value": "left", "label": "t:options.product_tabs_transition.left" },
-        { "value": "right", "label": "t:options.product_tabs_transition.right" },
-        { "value": "fade", "label": "t:options.product_tabs_transition.fade" }
+        {
+          "value": "up",
+          "label": "t:options.product_tabs_transition.up"
+        },
+        {
+          "value": "down",
+          "label": "t:options.product_tabs_transition.down"
+        },
+        {
+          "value": "left",
+          "label": "t:options.product_tabs_transition.left"
+        },
+        {
+          "value": "right",
+          "label": "t:options.product_tabs_transition.right"
+        },
+        {
+          "value": "fade",
+          "label": "t:options.product_tabs_transition.fade"
+        }
       ],
       "default": "up",
       "visible_if": "{{ section.settings.layout == 'tabbed' }}"
@@ -771,31 +1152,8 @@
       "visible_if": "{{ section.settings.layout == 'tabbed' }}"
     },
     {
-      "type": "checkbox",
-      "id": "show_top",
-      "label": "t:labels.product_tabs_top",
-      "default": true
-    },
-    {
       "type": "header",
-      "content": "t:labels.style"
-    },
-    {
-      "type": "select",
-      "id": "section_width",
-      "label": "t:labels.section_width",
-      "options": [
-        { "value": "wide", "label": "t:options.section_width.wide" },
-        { "value": "widest", "label": "t:options.section_width.widest" },
-        { "value": "full", "label": "t:options.section_width.full" }
-      ],
-      "default": "widest"
-    },
-    {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -816,18 +1174,64 @@
       "step": 4,
       "unit": "px",
       "default": 8
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ],
   "presets": [
     {
       "name": "t:general.product_tabs",
       "blocks": [
-        { "type": "tab", "settings": { "label": "Overview", "anchor": "overview" } },
-        { "type": "tab", "settings": { "label": "Highlights", "anchor": "highlights" } },
-        { "type": "tab", "settings": { "label": "How to use", "anchor": "how-to-use" } },
-        { "type": "tab", "settings": { "label": "Clinical results", "anchor": "clinical-results" } },
-        { "type": "tab", "settings": { "label": "Reviews", "anchor": "reviews" } },
-        { "type": "tab", "settings": { "label": "FAQ", "anchor": "faq" } }
+        {
+          "type": "tab",
+          "settings": {
+            "label": "Overview",
+            "anchor": "overview"
+          }
+        },
+        {
+          "type": "tab",
+          "settings": {
+            "label": "Highlights",
+            "anchor": "highlights"
+          }
+        },
+        {
+          "type": "tab",
+          "settings": {
+            "label": "How to use",
+            "anchor": "how-to-use"
+          }
+        },
+        {
+          "type": "tab",
+          "settings": {
+            "label": "Clinical results",
+            "anchor": "clinical-results"
+          }
+        },
+        {
+          "type": "tab",
+          "settings": {
+            "label": "Reviews",
+            "anchor": "reviews"
+          }
+        },
+        {
+          "type": "tab",
+          "settings": {
+            "label": "FAQ",
+            "anchor": "faq"
+          }
+        }
       ]
     }
   ]

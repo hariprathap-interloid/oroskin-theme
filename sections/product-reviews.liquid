@@ -571,7 +571,8 @@
     block-size: auto;
   }
 
-  @media (max-width: 989px) {
+  /* Below 1200px the cards use the full width (tablet rule below): no gutter for the image */
+  @media (max-width: 1199px) {
     .product-reviews__float {
       display: none;
     }
@@ -614,7 +615,24 @@
     text-align: center;
   }
 
-  /* Phones and tablets: cards full width, no stagger */
+  /*
+    Tablets (750–1199px): the desktop column (1190 of 1920, scaled down) left ~260px cards at 768px.
+    The column takes the full content width and each card 80% of it (at most 40rem), still left / right.
+  */
+  @media (min-width: 750px) and (max-width: 1199px) {
+    .product-reviews__viewport {
+      max-inline-size: none;
+      padding-inline: 2.75rem; /* half an avatar over each side */
+    }
+
+    /* 4.5rem each side: the text clears the quote marks in the top corners */
+    .review-card {
+      inline-size: min(80%, 40rem);
+      padding-inline: 4.5rem;
+    }
+  }
+
+  /* Phones: cards full width, no stagger */
   @media (max-width: 749px) {
     .review-card {
       inline-size: 100%;
