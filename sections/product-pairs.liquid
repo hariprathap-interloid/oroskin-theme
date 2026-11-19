@@ -1,17 +1,27 @@
 {%- comment -%}
-  "Pairs well with" (M6.5, Figma PDP "Product details 5", phone "Variant97"): an eyebrow ("BOUGHT
-  TOGETHER"), a heading with an accent part, this product + up to 3 that go with it as cards with a
-  tick, and a summary card: "YOUR PRODUCTS" (the ticked ones and their prices), the bundle total and
-  ADD ALL TO CART (one Cart AJAX request for all the ticked products; the visitor stays on the page).
+  Product bundle (M6.5, Figma PDP "Product details 5", phone "Variant97"; file name product-pairs): an
+  eyebrow ("BOUGHT TOGETHER"), a heading with an accent part, this product + up to 3 that go with it as
+  cards with a tick, and a summary card: "YOUR PRODUCTS" (the ticked ones and their prices), the bundle
+  total and ADD ALL TO CART.
 
-  Which products: Shopify's complementary recommendations, set per product in the Search & Discovery
-  app (Product recommendations > Complementary products). They're only available from Shopify's
-  recommendations URL, so the page first shows the merchant's fallback products (section setting),
-  then the script asks /recommendations/products?intent=complementary for this same section and swaps
-  in the complementary ones when the product has some. In that response recommendations.performed? is
-  true and only the product cards matter. No complementary and no fallback products: the section hides.
+  Which products: Shopify's complementary products, set per product in the Search & Discovery app
+  (Recommendations > the product > Edit complementary products). They are only available from Shopify's
+  recommendations URL, so the page first shows the merchant's fallback products (section setting), then
+  the script asks /recommendations/products?intent=complementary for this same section and swaps in the
+  complementary ones when the product has some. In that response recommendations.performed? is true
+  and only the product cards matter. No complementary and no fallback products: the section hides (the
+  theme editor shows a note).
 
-  This product's card follows the variant chosen in the main section ("variant:change").
+  The cards and the summary are one <form> to /cart/add: each card's checkbox is an "items[][id]" field,
+  so the bundle adds without JavaScript too. With JavaScript: one Cart AJAX request, the visitor stays
+  on the page, a spinner in the button, then the ticked photos fly to the header cart one after another.
+
+  This product's card follows the variant chosen in the Product section ("variant:change" from inside
+  <product-page>); a sold-out or unavailable choice unticks it and locks it.
+
+  Layout: from 1200px the cards in a row of 4 (2nd and 4th lower) and the summary on the right. Below
+  1200px (phones and tablets, Variant97): 3 cards a row (the middle one lower); the summary sits next to
+  the last card when it is alone in its row, otherwise in its own row.
 {%- endcomment -%}
 
 {%- liquid
@@ -21,45 +31,117 @@
   if recommendations.performed?
     assign pair_items = recommendations.products
     assign pair_source = 'complementary'
+    assign pair_loading = 'lazy'
   else
     assign pair_items = section.settings.products
     assign pair_source = 'fallback'
+    # Normally under the tall Product section: lazy; eager only as the page's first section
+    if section.index == 1
+      assign pair_loading = 'eager'
+    else
+      assign pair_loading = 'lazy'
+    endif
   endif
+
+  # Card width: from 1200px a quarter of the cards' column (~1180 / 1732 of the inner width), so ~17% of
+  # the screen, at most ~21rem with the "Wide" width; below 1200px a third of the screen
+  if section.settings.section_width == 'wide'
+    assign pair_sizes = '(min-width: 1200px) min(17vw, 21rem), 31vw'
+  else
+    assign pair_sizes = '(min-width: 1200px) 17vw, 31vw'
+  endif
+
+  assign pair_count = 0
+  assign pair_total = 0
+  assign pair_lines = ''
+  assign pair_line_count = 0
 -%}
+
+{%- comment -%}
+  The other products: the ones in stock, never this product, never one that can only be bought with a
+  subscription (the bundle sends no selling plan), at most "Number of other products". The loop runs
+  over all of them (not "limit:"), so a skipped product doesn't take a place. With "Select the other
+  products at the start", the same pass builds their summary lines and the total (correct without
+  JavaScript), so the cards and the summary can't follow different rules.
+{%- endcomment -%}
+{%- capture pair_cards -%}
+  {%- for item in pair_items -%}
+    {%- if pair_count >= pairs_limit -%}
+      {%- break -%}
+    {%- endif -%}
+    {%- if item.available and item.id != product.id -%}
+      {%- unless item.requires_selling_plan -%}
+        {%- assign pair_count = pair_count | plus: 1 -%}
+        {%- assign item_id = 'Pair-' | append: section.id | append: '-' | append: item.id -%}
+        {% render 'pair-card',
+          product: item,
+          id: item_id,
+          sizes: pair_sizes,
+          loading: pair_loading,
+          checked: section.settings.preselect
+        %}
+        {%- if section.settings.preselect -%}
+          {%- liquid
+            assign item_variant = item.selected_or_first_available_variant
+            assign item_quantity = item_variant.quantity_rule.min | default: 1
+            assign item_price = item_variant.price | times: item_quantity
+            assign pair_total = pair_total | plus: item_price
+            assign pair_line_count = pair_line_count | plus: 1
+          -%}
+          {%- capture item_line -%}
+            <li class="product-pairs__line">
+              <span>
+                {%- if item.has_only_default_variant -%}
+                  {{ item.title | escape }}
+                {%- else -%}
+                  {{ 'products.pairs.line_variant' | t: title: item.title, variant: item_variant.title | escape }}
+                {%- endif -%}
+              </span>
+              <span>{{ item_price | money }}</span>
+            </li>
+          {%- endcapture -%}
+          {%- assign pair_lines = pair_lines | append: item_line -%}
+        {%- endif -%}
+      {%- endunless -%}
+    {%- endif -%}
+  {%- endfor -%}
+{%- endcapture -%}
 
 {%- if recommendations.performed? -%}
   {%- comment -%} The recommendations response: only the cards, read by the script {%- endcomment -%}
-  <div data-pairs-response data-pairs-source="{{ pair_source }}">
-    {%- for item in pair_items limit: pairs_limit -%}
-      {%- if item.available -%}
-        {%- assign item_id = 'Pair-' | append: section.id | append: '-' | append: item.id -%}
-        {% render 'pair-card', product: item, id: item_id, checked: section.settings.preselect %}
-      {%- endif -%}
-    {%- endfor -%}
-  </div>
+  <div data-pairs-response data-pairs-source="{{ pair_source }}">{{ pair_cards }}</div>
 {%- elsif product != blank -%}
+  {%- comment -%}
+    A product that can only be bought with a subscription can't be in a bundle (the bundle sends no
+    selling plan): no section on its page
+  {%- endcomment -%}
+  {%- unless product.requires_selling_plan -%}
   {%- liquid
-    assign recommendations_url = routes.product_recommendations_url | append: '?product_id=' | append: product.id | append: '&section_id=' | append: section.id | append: '&limit=' | append: pairs_limit | append: '&intent=complementary'
+    # Shopify gives at most 10; more than the limit, so sold-out ones can be skipped
+    assign recommendations_url = routes.product_recommendations_url | append: '?product_id=' | append: product.id | append: '&section_id=' | append: section.id | append: '&limit=10&intent=complementary'
     assign current_id = 'Pair-' | append: section.id | append: '-current'
-    assign fallback_count = 0
-    for item in pair_items limit: pairs_limit
-      if item.available and item.id != product.id
-        assign fallback_count = fallback_count | plus: 1
-      endif
-    endfor
+    assign current_variant = product.selected_or_first_available_variant
+    assign line_template = 'products.pairs.line_variant' | t: title: '[title]', variant: '[variant]'
   -%}
 
   <product-pairs
     class="product-pairs full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
     style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
     data-url="{{ recommendations_url }}"
+    data-limit="{{ pairs_limit }}"
     data-money-format="{{ shop.money_format | strip_html | escape }}"
-    data-label-add="{{ 'products.pairs.add_all' | t | escape_once }}"
-    data-label-added="{{ 'products.added' | t | escape_once }}"
-    data-label-status="{{ 'products.pairs.added' | t | escape_once }}"
-    data-label-error="{{ 'products.quick_add.error' | t | escape_once }}"
-    {% if fallback_count == 0 %}
+    data-label-add="{{ 'products.pairs.add_all' | t | escape }}"
+    data-label-added="{{ 'products.added' | t | escape }}"
+    data-label-status="{{ 'products.pairs.added' | t | escape }}"
+    data-label-error="{{ 'products.quick_add.error' | t | escape }}"
+    data-label-line="{{ line_template | escape }}"
+    data-label-sold-out="{{ 'products.sold_out' | t | escape }}"
+    data-label-unavailable="{{ 'products.unavailable' | t | escape }}"
+    {% if pair_count == 0 %}
       data-empty
+    {% endif %}
+    {% if request.design_mode %}
+      data-editor
     {% endif %}
   >
     <div class="product-pairs__inner">
@@ -72,43 +154,75 @@
         {%- endif -%}
       </div>
 
-      <div class="product-pairs__layout">
-        <div class="product-pairs__list" role="list" data-pairs-list>
-          {% render 'pair-card', product: product, id: current_id, checked: true, current: true %}
-          {%- for item in pair_items limit: pairs_limit -%}
-            {%- if item.available and item.id != product.id -%}
-              {%- assign item_id = 'Pair-' | append: section.id | append: '-' | append: item.id -%}
-              {% render 'pair-card', product: item, id: item_id, checked: section.settings.preselect %}
-            {%- endif -%}
-          {%- endfor -%}
+      {%- if request.design_mode -%}
+        <p class="product-pairs__editor-note" data-pairs-editor-note>{{ 'products.pairs.editor_empty' | t }}</p>
+      {%- endif -%}
+
+      <form action="{{ routes.cart_add_url }}" method="post" class="product-pairs__layout" data-pairs-form>
+        <div class="product-pairs__list" data-pairs-list>
+          {% render 'pair-card',
+            product: product,
+            id: current_id,
+            sizes: pair_sizes,
+            loading: pair_loading,
+            checked: true,
+            current: true
+          %}
+          {{- pair_cards -}}
         </div>
 
-        {%- comment -%} The summary: filled by the script from the ticked cards (this product at first) {%- endcomment -%}
+        {%- comment -%}
+          The summary: built here for the cards ticked at the start (correct without JavaScript); the
+          script builds it again after each tick
+        {%- endcomment -%}
         <div class="product-pairs__summary">
           <p class="product-pairs__label">{{ 'products.pairs.your_products' | t }}</p>
           <ul class="product-pairs__lines" role="list" data-pairs-lines>
-            <li class="product-pairs__line">
-              <span>{{ product.title | escape }}</span>
-              <span>{{ product.selected_or_first_available_variant.price | money }}</span>
-            </li>
+            {%- if current_variant.available -%}
+              {%- liquid
+                assign current_quantity = current_variant.quantity_rule.min | default: 1
+                assign current_price = current_variant.price | times: current_quantity
+                assign pair_total = pair_total | plus: current_price
+                assign pair_line_count = pair_line_count | plus: 1
+              -%}
+              <li class="product-pairs__line">
+                <span>
+                  {%- if product.has_only_default_variant -%}
+                    {{ product.title | escape }}
+                  {%- else -%}
+                    {{ 'products.pairs.line_variant' | t: title: product.title, variant: current_variant.title | escape }}
+                  {%- endif -%}
+                </span>
+                <span>{{ current_price | money }}</span>
+              </li>
+            {%- endif -%}
+            {{- pair_lines -}}
           </ul>
-          <p class="product-pairs__none" hidden data-pairs-none>{{ 'products.pairs.none' | t }}</p>
+          <p class="product-pairs__none" data-pairs-none {% if pair_line_count > 0 %}hidden{% endif %}>
+            {{- 'products.pairs.none' | t -}}
+          </p>
           <div class="product-pairs__total">
             <p class="product-pairs__total-label">{{ 'products.pairs.total' | t }}</p>
-            <p class="product-pairs__total-price" data-pairs-total>
-              {{- product.selected_or_first_available_variant.price | money -}}
-            </p>
+            <p class="product-pairs__total-price" data-pairs-total>{{ pair_total | money }}</p>
           </div>
-          <button type="button" class="button product-pairs__add" data-pairs-add>
+          <button
+            type="submit"
+            class="button product-pairs__add"
+            data-pairs-add
+            {% if pair_line_count == 0 %}
+              disabled
+            {% endif %}
+          >
             <span class="product-pairs__add-icon" aria-hidden="true">{{ 'icon-cart.svg' | inline_asset_content }}</span>
             <span data-pairs-add-label>{{ 'products.pairs.add_all' | t }}</span>
           </button>
           <p class="product-pairs__message" role="alert" hidden data-pairs-message></p>
           <span class="visually-hidden" aria-live="polite" data-pairs-status></span>
         </div>
-      </div>
+      </form>
     </div>
   </product-pairs>
+  {%- endunless -%}
 {%- endif -%}
 
 {% stylesheet %}
@@ -118,6 +232,9 @@
     lower); the summary card x 1305–1857 (552 wide), white, pale border, radius ~16, padding ~32:
     "YOUR PRODUCTS" grey caps, one line per product (name left, price right), a hairline, "Bundle Total",
     the total ~28px, ADD ALL TO CART full-width red pill.
+    Phone 375 ("Variant97"): 3 cards a row (~98 wide, ~20px apart, the middle one ~20px lower); the 4th
+    card with the summary next to it over 2 columns; summary padding ~12, small text (label 9px, lines
+    12px, total 13px), a small button.
   */
   .product-pairs {
     display: block;
@@ -125,9 +242,22 @@
     background-color: var(--color-background);
   }
 
-  /* No products to pair with (no complementary ones and no fallback): nothing to show */
-  .product-pairs[data-empty] {
+  /* No products to pair with (no complementary ones and no fallback): nothing to show on the store */
+  .product-pairs[data-empty]:not([data-editor]) {
     display: none;
+  }
+
+  /* Theme editor: the note shows only while there is nothing to pair; the empty form stays hidden */
+  .product-pairs:not([data-empty]) .product-pairs__editor-note,
+  .product-pairs[data-empty] .product-pairs__layout {
+    display: none;
+  }
+
+  .product-pairs__editor-note {
+    margin: 0;
+    padding: var(--space-lg);
+    border: 1px dashed var(--color-card-border);
+    border-radius: 0.75rem;
   }
 
   .product-pairs__inner {
@@ -159,6 +289,7 @@
   }
 
   .product-pairs__layout {
+    --pairs-gap: max(var(--space-md), calc(40 * var(--px, 0.0625rem)));
     display: grid;
     grid-template-columns: minmax(0, 1180fr) minmax(18rem, 552fr);
     align-items: start;
@@ -169,7 +300,7 @@
   .product-pairs__list {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: max(var(--space-md), calc(40 * var(--px, 0.0625rem)));
+    gap: var(--pairs-gap);
   }
 
   .product-pairs__list > :nth-child(even) {
@@ -179,6 +310,7 @@
   .product-pairs__summary {
     display: flex;
     flex-direction: column;
+    min-inline-size: 0;
     padding: max(var(--space-lg), calc(32 * var(--px, 0.0625rem)));
     border: 1px solid var(--color-card-border);
     border-radius: max(0.75rem, calc(16 * var(--px, 0.0625rem)));
@@ -186,22 +318,35 @@
     box-shadow: 0 4px 30px #0000000d;
   }
 
-  .product-pairs__label {
-    margin: 0 0 var(--space-md);
+  .product-pairs__label,
+  .product-pairs__none {
     color: color-mix(in srgb, var(--color-text) 60%, var(--color-background));
     font-size: var(--font-size-small);
+  }
+
+  .product-pairs__label {
+    margin: 0 0 var(--space-md);
     letter-spacing: var(--letter-spacing-label);
     text-transform: uppercase;
+  }
+
+  .product-pairs__lines,
+  .product-pairs__none {
+    margin: 0;
+    padding: 0 0 var(--space-lg);
+    border-block-end: 1px solid var(--color-card-border);
   }
 
   .product-pairs__lines {
     display: flex;
     flex-direction: column;
     gap: var(--space-sm);
-    margin: 0;
-    padding: 0 0 var(--space-lg);
-    border-block-end: 1px solid var(--color-card-border);
     list-style: none;
+  }
+
+  .product-pairs__lines:empty,
+  .product-pairs__none[hidden] {
+    display: none;
   }
 
   .product-pairs__line {
@@ -211,12 +356,10 @@
     font-size: var(--font-size-body-sm);
   }
 
-  .product-pairs__none {
-    margin: 0;
-    padding-block-end: var(--space-lg);
-    border-block-end: 1px solid var(--color-card-border);
-    color: color-mix(in srgb, var(--color-text) 60%, var(--color-background));
-    font-size: var(--font-size-small);
+  /* The price never breaks onto two lines; a long name wraps instead */
+  .product-pairs__line > :last-child {
+    flex: none;
+    white-space: nowrap;
   }
 
   .product-pairs__total {
@@ -252,13 +395,39 @@
     block-size: 1.125rem;
   }
 
-  .product-pairs__add.is-added [data-pairs-add-label]::after {
-    content: " ✓";
-  }
-
+  /* While it adds: a small spinning ring in place of the cart icon (as the Product section's Add to cart) */
   .product-pairs__add.is-adding {
     cursor: progress;
-    opacity: 0.75;
+  }
+
+  .product-pairs__add.is-adding .product-pairs__add-icon {
+    display: none;
+  }
+
+  .product-pairs__add.is-adding [data-pairs-add-label] {
+    opacity: 0.7;
+  }
+
+  .product-pairs__add.is-adding::before {
+    content: "";
+    flex: none;
+    inline-size: 1em;
+    block-size: 1em;
+    border: 2px solid color-mix(in srgb, currentcolor 25%, transparent);
+    border-block-start-color: currentcolor;
+    border-radius: 50%;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .product-pairs__add.is-adding::before {
+      animation: product-pairs-spin 0.7s linear infinite;
+    }
+  }
+
+  @keyframes product-pairs-spin {
+    to {
+      rotate: 1turn;
+    }
   }
 
   .product-pairs__add:disabled {
@@ -272,21 +441,93 @@
     font-size: var(--font-size-small);
   }
 
-  /* Tablets: the summary under the cards */
-  @media (max-width: 989px) {
+  /*
+    Phones and tablets (Variant97): one grid of 3 columns for the cards AND the summary (the list's box
+    goes away with display: contents; it has no list role, which older WebKit drops with display: contents). The middle card of each row is lower.
+    The summary takes its own row, or the 2 free places next to a last card that is alone in its row.
+  */
+  @media (max-width: 1199px) {
     .product-pairs__layout {
-      grid-template-columns: minmax(0, 1fr);
+      --pairs-gap: clamp(1rem, 0.6rem + 1.8vw, 2rem);
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--pairs-gap);
     }
-  }
 
-  /* Phones (Variant97): 2 cards a row */
-  @media (max-width: 749px) {
     .product-pairs__list {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      display: contents;
     }
 
     .product-pairs__list > :nth-child(even) {
-      margin-block-start: var(--space-lg);
+      margin-block-start: 0;
+    }
+
+    .product-pairs__list > :nth-child(3n + 2) {
+      margin-block-start: var(--pairs-gap);
+    }
+
+    .product-pairs__summary {
+      grid-column: 1 / -1;
+    }
+
+    .product-pairs__layout:has(.pair-card:last-child:nth-child(3n + 1)) .product-pairs__summary {
+      grid-column: span 2;
+    }
+  }
+
+  /* Phones: the small summary card of Variant97 */
+  @media (max-width: 749px) {
+    .product-pairs__header {
+      margin-block-end: var(--space-lg);
+    }
+
+    .product-pairs__heading {
+      font-size: var(--font-size-h2);
+    }
+
+    .product-pairs__summary {
+      padding: 0.75rem;
+      border-radius: 0.625rem;
+    }
+
+    .product-pairs__label {
+      margin-block-end: var(--space-sm);
+      font-size: 0.5625rem;
+    }
+
+    .product-pairs__lines,
+    .product-pairs__none {
+      gap: var(--space-xs);
+      padding-block-end: var(--space-md);
+      font-size: 0.75rem;
+    }
+
+    .product-pairs__line {
+      gap: var(--space-sm);
+      font-size: 0.75rem;
+    }
+
+    .product-pairs__total {
+      margin-block: var(--space-md);
+    }
+
+    .product-pairs__total-label {
+      font-size: 0.6875rem;
+    }
+
+    .product-pairs__total-price {
+      font-size: 0.8125rem;
+      font-weight: 700;
+    }
+
+    .product-pairs .product-pairs__add {
+      min-block-size: 2.25rem;
+      padding-inline: var(--space-sm);
+      font-size: 0.625rem;
+    }
+
+    .product-pairs__add-icon svg {
+      inline-size: 0.75rem;
+      block-size: 0.75rem;
     }
   }
 {% endstylesheet %}
@@ -294,27 +535,60 @@
 {% javascript %}
   /**
    * <product-pairs>: swaps in Shopify's complementary products (when the product has some), keeps the
-   * summary in step with the ticked cards, and adds all the ticked ones to the cart in one request.
+   * summary in step with the ticked cards, follows the variant chosen in the Product section, and adds
+   * all the ticked products to the cart in one request (the form also works without JavaScript).
    */
   class ProductPairs extends HTMLElement {
     connectedCallback() {
+      // The theme editor can attach the section again: one controller, so no listener runs twice
+      this.controller?.abort();
+      this.controller = new AbortController();
+      const { signal } = this.controller;
       this.list = this.querySelector('[data-pairs-list]');
+      this.form = this.querySelector('[data-pairs-form]');
       this.button = this.querySelector('[data-pairs-add]');
-      this.addEventListener('change', (event) => {
-        if (event.target.matches('[data-pair-toggle]')) this.update();
-      });
-      this.button?.addEventListener('click', () => this.addAll());
+      if (!this.list || !this.form) return;
 
-      // This product's card follows the variant chosen in the main section (any section on the page)
-      this.onVariantChange = (event) => this.followVariant(event.detail?.variantId);
-      document.addEventListener('variant:change', this.onVariantChange);
+      this.addEventListener(
+        'change',
+        (event) => {
+          if (event.target.matches('[data-pair-toggle]')) this.update();
+        },
+        { signal }
+      );
+      this.form.addEventListener(
+        'submit',
+        (event) => {
+          event.preventDefault();
+          this.addAll();
+        },
+        { signal }
+      );
 
-      this.loadComplementary();
+      // This product's card follows the variant chosen in the Product section only (a Featured product
+      // section with the same product sends the same event)
+      document.addEventListener(
+        'variant:change',
+        (event) => {
+          if (event.target instanceof Element && event.target.closest('product-page')) {
+            this.followVariant(event.detail?.variantId);
+          }
+        },
+        { signal }
+      );
+
+      // One request per page, not per attach: a second swap would drop the visitor's ticks
+      if (!this.requested) {
+        this.requested = true;
+        this.loadComplementary();
+      }
       this.update();
     }
 
     disconnectedCallback() {
-      document.removeEventListener('variant:change', this.onVariantChange);
+      this.controller?.abort();
+      clearTimeout(this.addedTimer);
+      this.resetLabel();
     }
 
     /** Asks Shopify for this section with the complementary products; uses them if there are any */
@@ -323,7 +597,8 @@
       try {
         const html = await fetch(this.dataset.url).then((response) => response.text());
         const doc = new DOMParser().parseFromString(html, 'text/html');
-        const cards = doc.querySelectorAll('[data-pairs-source="complementary"] [data-pair-card]');
+        const limit = Number(this.dataset.limit) || 3;
+        const cards = [...doc.querySelectorAll('[data-pairs-source="complementary"] [data-pair-card]')].slice(0, limit);
         if (!cards.length) return;
         this.list.querySelectorAll('[data-pair-card]:not([data-pair-current])').forEach((card) => card.remove());
         this.list.append(...cards);
@@ -334,24 +609,106 @@
       }
     }
 
-    followVariant(variantId) {
+    /**
+     * The current product's card takes the chosen variant (price, name, photo for the flight). A sold-out
+     * variant, or a combination that is not a variant (variantId null), unticks the card and locks it;
+     * when the visitor picks one in stock again, the card gets its tick back as it was.
+     */
+    async followVariant(variantId) {
       const card = this.list.querySelector('[data-pair-current]');
-      if (!card || !variantId) return;
-      let prices = {};
-      try {
-        prices = JSON.parse(card.querySelector('[data-pair-variants]')?.textContent || '{}');
-      } catch (error) {
-        return;
+      const input = card?.querySelector('[data-pair-toggle]');
+      if (!input) return;
+      this.variantRequest = variantId;
+      let variant = null;
+      if (variantId) {
+        variant = this.variants(card)[variantId] || (await this.loadVariant(card, variantId));
+        // A newer choice came while this one loaded: that one wins
+        if (this.variantRequest !== variantId) return;
       }
-      if (!(variantId in prices)) return;
-      card.dataset.variantId = variantId;
-      card.dataset.price = prices[variantId];
-      card.querySelector('[data-pair-price]').textContent = this.money(prices[variantId]);
+
+      if (variant) {
+        card.dataset.variantId = variantId;
+        card.dataset.price = variant.price;
+        card.dataset.quantity = variant.quantity || 1;
+        card.dataset.variant = variant.title || '';
+        if (variant.image) card.dataset.image = variant.image;
+        input.value = variantId;
+        card.querySelector('[data-pair-price]').textContent = this.money(variant.price);
+      }
+
+      const available = Boolean(variant?.available);
+      if (!available && !input.disabled) {
+        card.dataset.wasChecked = String(input.checked);
+        input.checked = false;
+        input.disabled = true;
+      } else if (available && input.disabled) {
+        input.disabled = false;
+        input.checked = card.dataset.wasChecked !== 'false';
+      }
+      const note = card.querySelector('[data-pair-note]');
+      if (note) {
+        note.textContent = variant ? this.dataset.labelSoldOut : this.dataset.labelUnavailable;
+        note.hidden = available;
+      }
       this.update();
     }
 
+    /** The current card's variants, read one time from its JSON (the variants Liquid's loop gives) */
+    variants(card) {
+      if (!this.variantData) {
+        try {
+          this.variantData = JSON.parse(card.querySelector('[data-pair-variants]')?.textContent || '{}');
+        } catch (error) {
+          this.variantData = {};
+        }
+      }
+      return this.variantData;
+    }
+
+    /**
+     * A variant that is not in the JSON (a product with more variants than the Liquid loop gives): read from the product's
+     * .js (Shopify's Ajax product data); null when it fails, so the card locks as "Unavailable"
+     */
+    async loadVariant(card, variantId) {
+      try {
+        const root = window.Shopify?.routes?.root || '/';
+        const data = await fetch(`${root}products/${card.dataset.handle}.js`).then((response) => response.json());
+        const found = data.variants?.find((item) => String(item.id) === String(variantId));
+        if (!found) return null;
+        const variant = {
+          price: found.price,
+          available: found.available,
+          title: data.variants.length > 1 ? found.title : '',
+          image: null,
+          quantity: found.quantity_rule?.min || 1,
+        };
+        this.variants(card)[variantId] = variant;
+        return variant;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    /** The quantity a card adds: 1, or the variant's minimum (B2B quantity rule) */
+    quantity(card) {
+      return Number(card.dataset.quantity) || 1;
+    }
+
     ticked() {
-      return [...this.list.querySelectorAll('[data-pair-card]')].filter((card) => card.querySelector('[data-pair-toggle]')?.checked);
+      return [...this.list.querySelectorAll('[data-pair-card]')].filter((card) => {
+        const input = card.querySelector('[data-pair-toggle]');
+        return input?.checked && !input.disabled;
+      });
+    }
+
+    /** "Product · 30 ml" for a product with options, else the title */
+    lineName(card) {
+      const { title = '', variant = '' } = card.dataset;
+      if (!variant) return title;
+      // Functions as replacements: a "      return (this.dataset.labelLine || '[title] · [variant]').replace('[title]', title).replace('[variant]', variant);" or "[variant]" in a title stays as it is
+      return (this.dataset.labelLine || '[title] · [variant]')
+        .replace('[variant]', () => variant)
+        .replace('[title]', () => title);
     }
 
     /** "Your products": one line per ticked card, the total, and the button (off when nothing is ticked) */
@@ -363,21 +720,30 @@
           const line = document.createElement('li');
           line.className = 'product-pairs__line';
           const name = document.createElement('span');
-          name.textContent = card.dataset.title;
+          name.textContent = this.lineName(card);
           const price = document.createElement('span');
-          price.textContent = this.money(Number(card.dataset.price));
+          price.textContent = this.money(Number(card.dataset.price) * this.quantity(card));
           line.append(name, price);
           return line;
         })
       );
-      lines.hidden = ticked.length === 0;
       this.querySelector('[data-pairs-none]').hidden = ticked.length > 0;
-      const total = ticked.reduce((sum, card) => sum + Number(card.dataset.price), 0);
+      const total = ticked.reduce((sum, card) => sum + Number(card.dataset.price) * this.quantity(card), 0);
       this.querySelector('[data-pairs-total]').textContent = this.money(total);
       if (this.button) this.button.disabled = ticked.length === 0;
     }
 
-    /** All the ticked products in one Cart AJAX request; then "Added ✓", the header count, a live message */
+    resetLabel() {
+      this.button?.classList.remove('is-added');
+      const label = this.querySelector('[data-pairs-add-label]');
+      if (label && this.dataset.labelAdd) label.textContent = this.dataset.labelAdd;
+    }
+
+    /**
+     * All the ticked products in one Cart AJAX request. While it adds: a spinner in the button. Then
+     * "Added" for 2s, the ticked photos fly to the header cart one after another (the Buy buttons'
+     * flight, when that block is on the page), the header count, a live message
+     */
     async addAll() {
       const ticked = this.ticked();
       if (!ticked.length || this.busy) return;
@@ -392,21 +758,20 @@
         const response = await fetch(`${root}cart/add.js`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({ items: ticked.map((card) => ({ id: Number(card.dataset.variantId), quantity: 1 })) }),
+          body: JSON.stringify({ items: ticked.map((card) => ({ id: Number(card.dataset.variantId), quantity: this.quantity(card) })) }),
         });
         const data = await response.json().catch(() => ({}));
+        // Shopify explains a refused add (e.g. not enough stock) in "description" or "message"
         if (!response.ok) throw new Error(data.description || data.message || '');
 
         label.textContent = this.dataset.labelAdded;
         this.button.classList.add('is-added');
         clearTimeout(this.addedTimer);
-        this.addedTimer = setTimeout(() => {
-          this.button.classList.remove('is-added');
-          label.textContent = this.dataset.labelAdd;
-        }, 2000);
+        this.addedTimer = setTimeout(() => this.resetLabel(), 2000);
         const status = this.querySelector('[data-pairs-status]');
         status.textContent = '';
         requestAnimationFrame(() => (status.textContent = this.dataset.labelStatus));
+        this.fly(ticked);
         // The header's <cart-count> refreshes the count (and tells the cart page)
         document.dispatchEvent(new CustomEvent('cart:changed'));
       } catch (error) {
@@ -418,6 +783,18 @@
       }
     }
 
+    /** One photo per ticked card, 150ms apart, from the card's image; reduced motion: one bump only */
+    fly(cards) {
+      const BuyButtons = customElements.get('buy-buttons');
+      if (typeof BuyButtons?.flyToCart !== 'function') return;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        BuyButtons.flyToCart(null, null);
+        return;
+      }
+      cards.forEach((card, index) => {
+        setTimeout(() => BuyButtons.flyToCart(card.querySelector('.pair-card__media'), card.dataset.image), index * 150);
+      });
+    }
 
     /**
      * Cents → the store's money format (Settings > General > Store currency, passed in data-money-format),
@@ -458,17 +835,26 @@
   "enabled_on": { "templates": ["product"] },
   "settings": [
     {
+      "type": "header",
+      "content": "t:labels.content"
+    },
+    {
       "type": "text",
       "id": "eyebrow",
-      "label": "t:labels.eyebrow",
+      "label": "t:labels.product_pairs_eyebrow",
+      "info": "t:labels.product_pairs_eyebrow_info",
       "default": "Bought together"
     },
     {
       "type": "inline_richtext",
       "id": "heading",
       "label": "t:labels.heading",
-      "info": "t:labels.accent_heading_info",
+      "info": "t:labels.product_pairs_heading_info",
       "default": "Pairs <em>well with</em>"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.products"
     },
     {
       "type": "paragraph",
@@ -485,6 +871,7 @@
       "type": "range",
       "id": "limit",
       "label": "t:labels.product_pairs_limit",
+      "info": "t:labels.product_pairs_limit_info",
       "min": 1,
       "max": 3,
       "step": 1,
@@ -499,7 +886,7 @@
     },
     {
       "type": "header",
-      "content": "t:labels.style"
+      "content": "t:labels.layout"
     },
     {
       "type": "select",
@@ -513,10 +900,8 @@
       "default": "widest"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -537,6 +922,16 @@
       "step": 8,
       "unit": "px",
       "default": 64
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ],
   "presets": [

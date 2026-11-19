@@ -476,7 +476,9 @@
       "none": "Tick the products you want in the bundle.",
       "total": "Bundle total",
       "add_all": "Add all to cart",
-      "added": "The bundle was added to your cart"
+      "added": "The bundle was added to your cart",
+      "line_variant": "{{ title }} · {{ variant }}",
+      "editor_empty": "No products to show for this product. Add fallback products in the section settings, or set complementary products in the Search & Discovery app. Visitors do not see this section until then."
     },
     "tabs": {
       "label": "Product sections",

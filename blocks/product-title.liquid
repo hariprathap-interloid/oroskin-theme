@@ -3,9 +3,10 @@
   product setting (e.g. Featured product), or the product page itself (M6), so this block works in
   both without its own product picker.
 
-  The heading level and the link follow the place: the product of the product page is the page's h1,
-  with no link; anywhere else (Featured product) it is an h2 that links to the product. "Heading level:
-  Always H2" turns this off, for a second title of the same product on its page (one h1 per page).
+  The heading level and the link follow the place, with no setting: the product of the product page,
+  in a section without a product picker (the Product section), is the page's h1, with no link.
+  Anywhere else it is an h2 that links to the product. A section with a product picker (Featured
+  product) is always h2, also when it shows the page's own product (one h1 per page).
 
   Without a product: a placeholder title in the theme editor, nothing on the live store.
 
@@ -18,9 +19,10 @@
   assign title_tag = 'h2'
   assign title_link = true
   if template.name == 'product' and title_product.id == product.id
-    # The page's own product: no link to the page it is on; h1 unless the merchant chose Always H2
+    # The page's own product: no link to the page it is on
     assign title_link = false
-    if block.settings.heading_level != 'h2'
+    # h1 only where the product comes from the page, not from a section's product picker
+    if section.settings.product == blank
       assign title_tag = 'h1'
     endif
   endif
@@ -84,17 +86,6 @@
         { "value": "h3", "label": "t:options.heading_size.h3" }
       ],
       "default": "h1"
-    },
-    {
-      "type": "select",
-      "id": "heading_level",
-      "label": "t:labels.product_title_heading_level",
-      "info": "t:labels.product_title_heading_level_info",
-      "options": [
-        { "value": "auto", "label": "t:options.product_title_heading_level.auto" },
-        { "value": "h2", "label": "t:options.product_title_heading_level.h2" }
-      ],
-      "default": "auto"
     }
   ],
   "presets": [

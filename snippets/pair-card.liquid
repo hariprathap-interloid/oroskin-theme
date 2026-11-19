@@ -1,36 +1,62 @@
 {% doc %}
-  One product in "Pairs well with" (Figma PDP "Product details 5"): the image (4:5, radius ~16) with a
-  round tick at its top right, the title (heading font) and the price. Ticked = in the bundle (full
-  strength); unticked = faded.
-  Clicking the image (or its tick) ticks / unticks the card: the image is the <label> of a real
-  checkbox, so it also works with the keyboard (Tab, then Space) and a screen reader reads "Add Serum to
-  the bundle, checked". The title is the link to the product page.
-  It carries what the script needs: the variant to add (the first one in stock), its price in cents and
-  the title. The current product's card also lists every variant's price, so it can follow the variant
-  chosen above (the "variant:change" event).
+  One product in the Product bundle section (Figma PDP "Product details 5", phone "Variant97"): the
+  image (4:5, radius ~16) with a round tick at its top right, the title (heading font) and the price.
+  Ticked = in the bundle (full strength); unticked = faded.
+
+  The image is the <label> of a real checkbox, so a click on the image (or its tick) ticks / unticks
+  the card, also with the keyboard (Tab, then Space). A screen reader reads "Add Serum to the bundle,
+  checked". The title is the link to the product page.
+
+  The checkbox is also the form field: name "items[][id]", value = the variant. So the section's form
+  adds the ticked products to the cart without JavaScript too (Shopify's /cart/add, quantity 1 each).
+
+  It carries what the script needs: the variant to add (the first one in stock), its price in cents, the
+  quantity to add (1, or the variant's B2B minimum; without JavaScript the form sends no quantity = 1),
+  the title, the variant name (only when the product has options) and a small photo for the flight to
+  the cart. The current product's card also lists every variant (price, stock, name, photo), so it can
+  follow the variant chosen above (the "variant:change" event); for a product with more variants than
+  the loop gives, the script reads the missing ones from the product's .js. A sold-out variant can't
+  be ticked.
 
   @param {product} product - The product
   @param {string} id - A unique id for the checkbox
+  @param {string} sizes - The image's sizes attribute (from the section's layout)
+  @param {string} [loading] - 'eager' or 'lazy' (default 'lazy')
   @param {boolean} [checked] - Ticked at first
   @param {boolean} [current] - The product of this page (follows the chosen variant)
 
   @example
-  {% render 'pair-card', product: product, id: 'Pair-1', checked: true, current: true %}
+  {% render 'pair-card', product: product, id: 'Pair-1', sizes: '31vw', checked: true, current: true %}
 {% enddoc %}
 
 {%- liquid
   assign pair_variant = product.selected_or_first_available_variant
   assign pair_image = pair_variant.featured_image | default: product.featured_image
   assign toggle_label = 'products.pairs.toggle' | t: title: product.title
+  assign pair_loading = loading | default: 'lazy'
+  assign pair_variant_title = ''
+  unless product.has_only_default_variant
+    assign pair_variant_title = pair_variant.title
+  endunless
+  assign pair_quantity = pair_variant.quantity_rule.min | default: 1
+  assign pair_checked = false
+  if checked and pair_variant.available
+    assign pair_checked = true
+  endif
 -%}
 
 <div
   class="pair-card"
-  role="listitem"
   data-pair-card
   data-variant-id="{{ pair_variant.id }}"
   data-price="{{ pair_variant.price }}"
+  data-quantity="{{ pair_quantity }}"
+  data-handle="{{ product.handle }}"
   data-title="{{ product.title | escape }}"
+  data-variant="{{ pair_variant_title | escape }}"
+  {% if pair_image != blank %}
+    data-image="{{ pair_image | image_url: width: 160 }}"
+  {% endif %}
   {% if current %}
     data-pair-current
   {% endif %}
@@ -40,11 +66,16 @@
       type="checkbox"
       class="pair-card__input"
       id="{{ id }}"
+      name="items[][id]"
+      value="{{ pair_variant.id }}"
       aria-label="{{ toggle_label | escape }}"
       data-pair-toggle
-      {% if checked %}
+      {% if pair_checked %}
         checked
       {% endif %}
+      {% unless pair_variant.available %}
+        disabled
+      {% endunless %}
     >
     <label class="pair-card__toggle" for="{{ id }}">
       {%- if pair_image != blank -%}
@@ -52,9 +83,9 @@
           pair_image
           | image_url: width: 600
           | image_tag:
-            loading: 'lazy',
-            widths: '300, 450, 600',
-            sizes: '(min-width: 990px) 14vw, 45vw',
+            loading: pair_loading,
+            widths: '240, 360, 480, 600',
+            sizes: sizes,
             alt: '',
             class: 'pair-card__image'
         }}
@@ -68,12 +99,28 @@
   </div>
   <a href="{{ product.url }}" class="pair-card__title">{{ product.title | escape }}</a>
   <p class="pair-card__price" data-pair-price>{{ pair_variant.price | money }}</p>
+  <p class="pair-card__note" data-pair-note {% if pair_variant.available %}hidden{% endif %}>
+    {{- 'products.sold_out' | t -}}
+  </p>
 
   {%- if current -%}
     <script type="application/json" data-pair-variants>
       {
-        {%- for variant in product.variants -%}
-          "{{ variant.id }}": {{ variant.price | json }}{% unless forloop.last %},{% endunless %}
+        {%- for variant in product.variants limit: 250 -%}
+          {%- liquid
+            assign variant_image = variant.featured_image | default: product.featured_image
+            assign variant_title = ''
+            unless product.has_only_default_variant
+              assign variant_title = variant.title
+            endunless
+          -%}
+          "{{ variant.id }}": {
+            "price": {{ variant.price | json }},
+            "available": {{ variant.available | json }},
+            "title": {{ variant_title | json }},
+            "image": {% if variant_image != blank %}{{ variant_image | image_url: width: 160 | json }}{% else %}null{% endif %},
+            "quantity": {{ variant.quantity_rule.min | default: 1 | json }}
+          }{% unless forloop.last %},{% endunless %}
         {%- endfor -%}
       }
     </script>
@@ -84,7 +131,8 @@
   /*
     Figma: cards ~254 wide, images 254 x 318 (4:5), radius ~16; a 40px white circle with an accent tick
     at the top right (empty white circle when unticked); title heading font ~22px; price ~22px medium.
-    Unticked cards fade to ~45%.
+    Unticked cards fade to ~45%. Phones (Variant97): cards ~98 wide, radius ~10, a 16px circle, title
+    ~13px, price ~12px.
   */
   .pair-card {
     display: flex;
@@ -111,7 +159,7 @@
     overflow: hidden;
     aspect-ratio: 4 / 5;
     margin-block-end: var(--space-sm);
-    border-radius: max(0.75rem, calc(16 * var(--px, 0.0625rem)));
+    border-radius: var(--pair-card-radius, max(0.75rem, calc(16 * var(--px, 0.0625rem))));
     background-color: var(--color-tint, color-mix(in srgb, var(--color-text) 5%, var(--color-background)));
   }
 
@@ -128,11 +176,7 @@
     pointer-events: none;
   }
 
-  /*
-    The whole image is the checkbox's label: a click anywhere on it ticks / unticks the card.
-    margin 0: the global form rule (input + label: margin-block-start) pushed the image 12px down, and
-    the card's pale background showed as a strip at the top.
-  */
+  /* The whole image is the checkbox's label: a click anywhere on it ticks / unticks the card */
   .pair-card__toggle {
     position: relative;
     display: block;
@@ -140,6 +184,10 @@
     inline-size: 100%;
     block-size: 100%;
     cursor: pointer;
+  }
+
+  .pair-card__input:disabled + .pair-card__toggle {
+    cursor: not-allowed;
   }
 
   .pair-card__image {
@@ -155,11 +203,11 @@
 
   .pair-card__tick {
     position: absolute;
-    inset-block-start: max(0.5rem, calc(10 * var(--px, 0.0625rem)));
-    inset-inline-end: max(0.5rem, calc(10 * var(--px, 0.0625rem)));
+    inset-block-start: var(--pair-tick-inset, max(0.5rem, calc(10 * var(--px, 0.0625rem))));
+    inset-inline-end: var(--pair-tick-inset, max(0.5rem, calc(10 * var(--px, 0.0625rem))));
     display: grid;
     place-items: center;
-    inline-size: max(2.5rem, calc(40 * var(--px, 0.0625rem)));
+    inline-size: var(--pair-tick-size, max(2.5rem, calc(40 * var(--px, 0.0625rem))));
     aspect-ratio: 1;
     border-radius: 50%;
     background-color: var(--color-background);
@@ -169,7 +217,7 @@
   }
 
   .pair-card__tick svg {
-    inline-size: 0.9rem;
+    inline-size: 45%;
     block-size: auto;
   }
 
@@ -185,7 +233,7 @@
   .pair-card__title {
     color: inherit;
     font-family: var(--font-heading--family);
-    font-size: var(--font-size-body-lg);
+    font-size: var(--pair-card-text, var(--font-size-body-lg));
     line-height: 1.3;
     text-decoration: none;
   }
@@ -195,10 +243,44 @@
     text-underline-offset: 0.2em;
   }
 
-  .pair-card__price {
+  .pair-card__price,
+  .pair-card__note {
     margin: 0;
-    font-size: var(--font-size-body-lg);
+  }
+
+  .pair-card__price {
+    font-size: var(--pair-card-text, var(--font-size-body-lg));
     font-weight: var(--font-weight-medium);
+  }
+
+  .pair-card__note {
+    font-size: var(--font-size-small);
+  }
+
+  .pair-card__note[hidden] {
+    display: none;
+  }
+
+  /* Phones (Variant97): small cards, 3 in a row */
+  @media (max-width: 749px) {
+    .pair-card {
+      --pair-card-radius: 0.625rem;
+      --pair-card-text: 0.8125rem;
+      --pair-tick-size: 1.25rem;
+      --pair-tick-inset: 0.375rem;
+    }
+
+    .pair-card__media {
+      margin-block-end: var(--space-xs);
+    }
+
+    .pair-card__title {
+      line-height: 1.25;
+    }
+
+    .pair-card__note {
+      font-size: 0.75rem;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
