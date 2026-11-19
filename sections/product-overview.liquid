@@ -7,8 +7,12 @@
     metafield in the theme editor ("Connect dynamic source"), so each product shows its own words;
     an empty field hides its part.
   - Hotspots: red dots at a position on the image (x / y in %). Hover, keyboard focus or a tap shows a
-    small frosted card with a title in the accent colour and a short text (the brief, answer 14).
-  - The tabs link here with the Anchor setting (#overview).
+    small frosted card with a title in the accent colour and a short text (the brief, answer 14). The
+    script puts the card on the side of the dot with more room, inside the image (below or above the
+    dot when neither side has room, e.g. on phones). No image on the store = no image column, no dots.
+  - The tabs link here with the Link name setting (#overview).
+  - Figma sizes use --px (one Figma pixel: the screen width / 1920, at most 1px), so they get smaller
+    with the screen; most have a minimum (max(…)).
   The blocks are the section's own (spec row, hotspot, figure), drawn where they belong by their type.
 {%- endcomment -%}
 
@@ -18,51 +22,130 @@
   assign specs = section.blocks | where: 'type', 'spec'
   assign hotspots = section.blocks | where: 'type', 'hotspot'
   assign figures = section.blocks | where: 'type', 'figure'
+
+  # Only parts with content are drawn (an empty part must not keep an empty column)
+  assign spec_count = 0
+  for block in specs
+    if block.settings.label != blank and block.settings.value != blank
+      assign spec_count = spec_count | plus: 1
+    endif
+  endfor
+  assign figure_count = 0
+  for block in figures
+    if block.settings.value != blank
+      assign figure_count = figure_count | plus: 1
+    endif
+  endfor
+
+  assign has_intro = false
+  if section.settings.eyebrow != blank or section.settings.heading != blank
+    assign has_intro = true
+  endif
+  assign has_body = false
+  if section.settings.text != blank or spec_count > 0
+    assign has_body = true
+  endif
+  # No image: no image column on the store (the dots need the image); the editor shows a placeholder
+  assign has_media = false
+  if section.settings.image != blank or request.design_mode
+    assign has_media = true
+  endif
+
+  # Desktop columns (Figma 680 : 528 : 611) for the parts that are there; tablets: heading + text
+  # side by side, the image full width under them
+  assign top_columns = ''
+  assign text_parts = 0
+  if has_intro
+    assign top_columns = top_columns | append: ' minmax(0, 680fr)'
+    assign text_parts = text_parts | plus: 1
+  endif
+  if has_body
+    assign top_columns = top_columns | append: ' minmax(0, 528fr)'
+    assign text_parts = text_parts | plus: 1
+  endif
+  if has_media
+    assign top_columns = top_columns | append: ' minmax(0, 611fr)'
+  endif
+  assign top_columns = top_columns | strip
+
+  # The image from 1200px: its fr share of the content width (widest ~92vw, full ~96vw, wide = at most
+  # the 1650px page width); +1 rounds up. Below 1200px: the full content width
+  assign fr_total = 611
+  if has_intro
+    assign fr_total = fr_total | plus: 680
+  endif
+  if has_body
+    assign fr_total = fr_total | plus: 528
+  endif
+  assign section_vw = 92
+  if section.settings.section_width == 'full'
+    assign section_vw = 96
+  endif
+  assign media_vw = section_vw | times: 611 | divided_by: fr_total | plus: 1
+  if section.settings.section_width == 'wide'
+    assign media_px = 1650 | times: 611 | divided_by: fr_total | plus: 1
+    assign media_sizes = '(min-width: 1200px) min(' | append: media_vw | append: 'vw, ' | append: media_px | append: 'px), 94vw'
+  else
+    assign media_sizes = '(min-width: 1200px) ' | append: media_vw | append: 'vw, 94vw'
+  endif
 -%}
 
+{%- capture image_loading -%}{% render 'section-loading' %}{%- endcapture -%}
+{%- assign image_loading = image_loading | strip -%}
+
+{%- if top_columns != blank or section.settings.quote != blank or figure_count > 0 -%}
 <product-overview
   id="{{ anchor }}"
   class="product-overview full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
   style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
 >
   <div class="product-overview__inner">
-    <div class="product-overview__top">
-      <div class="product-overview__intro" data-tab-item>
-        {%- if section.settings.eyebrow != blank -%}
-          <p class="eyebrow product-overview__eyebrow">{{ section.settings.eyebrow | escape }}</p>
-        {%- endif -%}
-        {%- if section.settings.heading != blank -%}
-          <h2 class="product-overview__heading">{{ section.settings.heading }}</h2>
-        {%- endif -%}
-      </div>
+    {%- if top_columns != blank -%}
+    <div
+      class="product-overview__top"
+      style="--top-columns: {{ top_columns }}; --top-columns-tablet: repeat({{ text_parts | at_least: 1 }}, minmax(0, 1fr));"
+    >
+      {%- if has_intro -%}
+        <div class="product-overview__intro" data-tab-item>
+          {%- if section.settings.eyebrow != blank -%}
+            <p class="eyebrow product-overview__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+          {%- endif -%}
+          {%- if section.settings.heading != blank -%}
+            <h2 class="product-overview__heading">{{ section.settings.heading }}</h2>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
 
-      <div class="product-overview__body" data-tab-item>
-        {%- if section.settings.text != blank -%}
-          <div class="product-overview__text rte">{{ section.settings.text }}</div>
-        {%- endif -%}
-        {%- if specs.size > 0 -%}
-          <dl class="product-overview__specs">
-            {%- for block in specs -%}
-              {%- if block.settings.label != blank and block.settings.value != blank -%}
-                <div class="product-overview__spec" {{ block.shopify_attributes }}>
-                  <dt>{{ block.settings.label | escape }}</dt>
-                  <dd>{{ block.settings.value | escape }}</dd>
-                </div>
-              {%- endif -%}
-            {%- endfor -%}
-          </dl>
-        {%- endif -%}
-      </div>
+      {%- if has_body -%}
+        <div class="product-overview__body" data-tab-item>
+          {%- if section.settings.text != blank -%}
+            <div class="product-overview__text rte">{{ section.settings.text }}</div>
+          {%- endif -%}
+          {%- if spec_count > 0 -%}
+            <dl class="product-overview__specs">
+              {%- for block in specs -%}
+                {%- if block.settings.label != blank and block.settings.value != blank -%}
+                  <div class="product-overview__spec" {{ block.shopify_attributes }}>
+                    <dt>{{ block.settings.label | escape }}</dt>
+                    <dd>{{ block.settings.value | escape }}</dd>
+                  </div>
+                {%- endif -%}
+              {%- endfor -%}
+            </dl>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
 
+      {%- if has_media -%}
       <div class="product-overview__media" data-tab-item>
         {%- if section.settings.image != blank -%}
           {{
             section.settings.image
-            | image_url: width: 1400
+            | image_url: width: 1800
             | image_tag:
-              loading: 'lazy',
-              widths: '500, 800, 1100, 1400',
-              sizes: '(min-width: 990px) 32vw, 100vw',
+              loading: image_loading,
+              widths: '500, 800, 1100, 1400, 1800',
+              sizes: media_sizes,
               class: 'product-overview__image'
           }}
         {%- else -%}
@@ -71,9 +154,20 @@
 
         {%- for block in hotspots -%}
           {%- liquid
+            # An empty hotspot: nothing on the store; in the editor a dot with a note, so the block can be found
+            assign spot_empty = false
+            if block.settings.title == blank and block.settings.text == blank
+              assign spot_empty = true
+              unless request.design_mode
+                continue
+              endunless
+            endif
+          -%}
+          {%- liquid
             assign spot_id = 'Hotspot-' | append: block.id
+            # Without JS (or before it runs): the card goes on the side away from the nearer edge
             assign spot_side = 'right'
-            if block.settings.x > 60
+            if block.settings.x > 50
               assign spot_side = 'left'
             endif
           -%}
@@ -91,7 +185,10 @@
             >
               <span class="visually-hidden">{{ block.settings.title | default: block.settings.text | escape }}</span>
             </button>
-            <div class="product-overview__card" id="{{ spot_id }}" role="tooltip">
+            <div class="product-overview__card" id="{{ spot_id }}">
+              {%- if spot_empty -%}
+                <p class="product-overview__card-text">{{ 'products.overview.hotspot_empty' | t }}</p>
+              {%- endif -%}
               {%- if block.settings.title != blank -%}
                 <p class="product-overview__card-title">{{ block.settings.title | escape }}</p>
               {%- endif -%}
@@ -102,9 +199,11 @@
           </div>
         {%- endfor -%}
       </div>
+      {%- endif -%}
     </div>
+    {%- endif -%}
 
-    {%- if section.settings.quote != blank or figures.size > 0 -%}
+    {%- if section.settings.quote != blank or figure_count > 0 -%}
       {%- comment -%} <animate-on-scroll> reveals the [data-animate] quote (without it the quote would stay hidden) {%- endcomment -%}
       <animate-on-scroll class="product-overview__bottom">
         {%- if section.settings.quote != blank -%}
@@ -112,7 +211,7 @@
             <p>{{ section.settings.quote }}</p>
           </blockquote>
         {%- endif -%}
-        {%- if figures.size > 0 -%}
+        {%- if figure_count > 0 -%}
           <dl class="product-overview__figures" data-tab-item>
             {%- for block in figures -%}
               {%- if block.settings.value != blank -%}
@@ -128,6 +227,7 @@
     {%- endif -%}
   </div>
 </product-overview>
+{%- endif -%}
 
 {% stylesheet %}
   /*
@@ -138,6 +238,8 @@
     value ~24px medium, label caps ~15px, a hairline under the first row.
   */
   .product-overview {
+    /* One Figma pixel: the screen width / 1920, never more than 1px (the Figma sizes are the largest) */
+    --px: min(calc(100vw / 1920), 0.0625rem);
     display: block;
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
     background-color: var(--color-background);
@@ -153,7 +255,8 @@
 
   .product-overview__top {
     display: grid;
-    grid-template-columns: minmax(0, 680fr) minmax(0, 528fr) minmax(0, 611fr);
+    /* Built in Liquid from the parts that are there (Figma 680 : 528 : 611) */
+    grid-template-columns: var(--top-columns);
     align-items: start;
     gap: max(var(--space-lg), calc(50 * var(--px, 0.0625rem)));
   }
@@ -227,10 +330,11 @@
   }
 
   /* Hotspots: a red dot with a white ring; a pulse ring draws the eye (not with reduced motion) */
+  /* Physical left / top: the image is not mirrored in RTL, so x = 0% is always its left edge */
   .product-overview__hotspot {
     position: absolute;
-    inset-block-start: var(--spot-y);
-    inset-inline-start: var(--spot-x);
+    top: var(--spot-y);
+    left: var(--spot-x);
     translate: -50% -50%;
   }
 
@@ -316,11 +420,34 @@
   }
 
   .product-overview__hotspot--right .product-overview__card {
-    inset-inline-start: calc(100% + 0.25rem);
+    left: calc(100% + 0.25rem);
   }
 
   .product-overview__hotspot--left .product-overview__card {
-    inset-inline-end: calc(100% + 0.25rem);
+    right: calc(100% + 0.25rem);
+  }
+
+  /* Each hotspot is its own layer (translate): the one with an open card comes to the front, so the
+     other dots don't show over its card */
+  .product-overview__hotspot:hover,
+  .product-overview__hotspot:focus-within {
+    z-index: 3;
+  }
+
+  .product-overview__hotspot:has([aria-expanded="true"]) {
+    z-index: 3;
+  }
+
+  /*
+    Placed by the script (data-placed): left / top from the hotspot's box, so the card stays inside the
+    image. Physical left / top: the script measures the screen, which is the same in RTL.
+  */
+  .product-overview__hotspot[data-placed] .product-overview__card {
+    inset: auto;
+    left: var(--card-left);
+    top: var(--card-top);
+    max-inline-size: var(--card-max, none);
+    translate: none;
   }
 
   .product-overview__hotspot:hover .product-overview__card,
@@ -331,6 +458,12 @@
     transition:
       opacity var(--duration-fast) var(--ease-out),
       visibility 0s;
+  }
+
+  /* Escape closes a card shown by hover or focus too (WCAG 1.4.13), until the pointer or focus leaves */
+  .product-overview__hotspot[data-dismissed] .product-overview__card {
+    opacity: 0;
+    visibility: hidden;
   }
 
   .product-overview__card p {
@@ -403,7 +536,8 @@
     padding-block: var(--space-md);
   }
 
-  .product-overview__figure:nth-child(-n + 2) {
+  /* A hairline under the first row, only when there is a second row (3+ figures) */
+  .product-overview__figures:has(> :nth-child(3)) > .product-overview__figure:nth-child(-n + 2) {
     border-block-end: 1px solid var(--color-card-border);
   }
 
@@ -422,7 +556,7 @@
   /* Tablets: heading + text side by side, the image full width under them, then quote and figures */
   @media (max-width: 1199px) {
     .product-overview__top {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: var(--top-columns-tablet);
     }
 
     .product-overview__media {
@@ -453,7 +587,9 @@
 {% javascript %}
   /**
    * <product-overview>: a tap or Enter on a hotspot opens its card (hover and focus open it with CSS);
-   * another tap, Escape or a click elsewhere closes it. One card open at a time.
+   * another tap, Escape or a click elsewhere closes it. One card open at a time. Before a card shows,
+   * place() puts it beside the dot, on the side with more room, inside the image (below or above the
+   * dot when neither side has room).
    */
   class ProductOverview extends HTMLElement {
     connectedCallback() {
@@ -461,6 +597,8 @@
       // track moves it, which runs connectedCallback again: without this a tap opened and closed a card)
       this.controller = new AbortController();
       const { signal } = this.controller;
+      this.media = this.querySelector('.product-overview__media');
+
       this.addEventListener(
         'click',
         (event) => {
@@ -468,10 +606,37 @@
           if (!dot) return;
           const open = dot.getAttribute('aria-expanded') === 'true';
           this.closeAll();
+          dot.parentElement.removeAttribute('data-dismissed'); // a click after Escape opens the card again
+          if (!open) this.place(dot.parentElement);
           dot.setAttribute('aria-expanded', String(!open));
         },
         { signal }
       );
+      // Hover (mouse and pen: a touch tap is the click above) and keyboard focus show a card too
+      this.addEventListener(
+        'pointerover',
+        (event) => {
+          const hotspot = event.target.closest('.product-overview__hotspot');
+          if (!hotspot || event.pointerType === 'touch' || hotspot.contains(event.relatedTarget)) return;
+          if (!hotspot.querySelector('[aria-expanded="true"]')) this.closeAll(); // one card at a time
+          this.place(hotspot);
+        },
+        { signal }
+      );
+      this.addEventListener('focusin', (event) => this.place(event.target.closest('.product-overview__hotspot')), {
+        signal,
+      });
+      // A card closed with Escape stays closed until the pointer or focus leaves its hotspot
+      ['pointerout', 'focusout'].forEach((type) => {
+        this.addEventListener(
+          type,
+          (event) => {
+            const hotspot = event.target.closest('.product-overview__hotspot');
+            if (hotspot && !hotspot.contains(event.relatedTarget)) hotspot.removeAttribute('data-dismissed');
+          },
+          { signal }
+        );
+      });
       document.addEventListener(
         'click',
         (event) => {
@@ -479,21 +644,79 @@
         },
         { signal }
       );
-      this.addEventListener(
+      // On the document: a hover card must close with Escape also when the focus is somewhere else. An
+      // Escape for another dialog (lightbox, search, drawer) or with no card shown does nothing here
+      document.addEventListener(
         'keydown',
         (event) => {
-          if (event.key === 'Escape') this.closeAll();
+          if (event.key !== 'Escape' || event.defaultPrevented) return;
+          if (!this.contains(event.target) && event.target.closest?.('dialog, [aria-modal="true"]')) return;
+          const shown = this.shownHotspots();
+          if (!shown.length) return;
+          this.closeAll();
+          shown.forEach((hotspot) => {
+            if (hotspot.matches(':hover') || hotspot.querySelector(':focus-visible')) hotspot.setAttribute('data-dismissed', '');
+          });
         },
         { signal }
       );
+      // A resize or a turned phone changes the image: place the shown cards again
+      if (this.media) {
+        this.resizeObserver = new ResizeObserver(() => this.shownHotspots().forEach((hotspot) => this.place(hotspot)));
+        this.resizeObserver.observe(this.media);
+      }
     }
 
     disconnectedCallback() {
       this.controller?.abort();
+      this.resizeObserver?.disconnect();
+    }
+
+    /** The hotspots with a card on screen: opened with a tap or Enter, or shown by hover or focus */
+    shownHotspots() {
+      return [...this.querySelectorAll('.product-overview__hotspot')].filter(
+        (hotspot) =>
+          !hotspot.hasAttribute('data-dismissed') &&
+          (hotspot.matches(':hover') || hotspot.querySelector(':focus-visible, [aria-expanded="true"]'))
+      );
     }
 
     closeAll() {
       this.querySelectorAll('[data-hotspot][aria-expanded="true"]').forEach((dot) => dot.setAttribute('aria-expanded', 'false'));
+    }
+
+    /**
+     * Puts the card beside the dot on the side with more room; when the card doesn't fit beside it, under
+     * the dot (over it near the bottom), centred and kept inside the image, never wider than the image.
+     */
+    place(hotspot) {
+      if (!hotspot || !this.media) return;
+      const card = hotspot.querySelector('.product-overview__card');
+      const area = this.media.getBoundingClientRect();
+      const spot = hotspot.getBoundingClientRect();
+      const edge = 8; // room kept to the image's edge
+      const gap = 4;
+      hotspot.style.setProperty('--card-max', `${Math.max(0, area.width - edge * 2)}px`);
+      hotspot.setAttribute('data-placed', ''); // first: the max width applies before the card is measured
+      const width = card.offsetWidth;
+      const height = card.offsetHeight;
+      const roomLeft = spot.left - area.left - gap;
+      const roomRight = area.right - spot.right - gap;
+      let x;
+      let y;
+      if (Math.max(roomLeft, roomRight) >= width + edge) {
+        x = roomRight >= roomLeft ? spot.right + gap : spot.left - gap - width;
+        y = spot.top + spot.height / 2 - height / 2;
+      } else {
+        x = spot.left + spot.width / 2 - width / 2;
+        const below = area.bottom - spot.bottom;
+        const above = spot.top - area.top;
+        y = below >= height + edge || below >= above ? spot.bottom : spot.top - height;
+      }
+      x = Math.min(Math.max(x, area.left + edge), area.right - edge - width);
+      y = Math.max(Math.min(y, area.bottom - edge - height), area.top + edge);
+      hotspot.style.setProperty('--card-left', `${Math.round(x - spot.left)}px`);
+      hotspot.style.setProperty('--card-top', `${Math.round(y - spot.top)}px`);
     }
   }
 
@@ -504,7 +727,6 @@
 {
   "name": "t:general.product_overview",
   "tag": "section",
-  "class": "product-overview-section",
   "enabled_on": { "templates": ["product"] },
   "blocks": [
     {
@@ -519,10 +741,12 @@
       "type": "hotspot",
       "name": "t:general.product_hotspot",
       "settings": [
-        { "type": "range", "id": "x", "label": "t:labels.product_hotspot_x", "min": 0, "max": 100, "step": 1, "unit": "%", "default": 50 },
-        { "type": "range", "id": "y", "label": "t:labels.product_hotspot_y", "min": 0, "max": 100, "step": 1, "unit": "%", "default": 50 },
+        { "type": "header", "content": "t:labels.content", "info": "t:labels.product_overview_hotspot_content_info" },
         { "type": "text", "id": "title", "label": "t:labels.heading", "default": "Dew, not shine" },
-        { "type": "text", "id": "text", "label": "t:labels.text", "default": "A satin glow that settles in seconds." }
+        { "type": "text", "id": "text", "label": "t:labels.text", "default": "A satin glow that settles in seconds." },
+        { "type": "header", "content": "t:labels.product_overview_hotspot_position" },
+        { "type": "range", "id": "x", "label": "t:labels.product_hotspot_x", "info": "t:labels.product_overview_hotspot_x_info", "min": 0, "max": 100, "step": 1, "unit": "%", "default": 50 },
+        { "type": "range", "id": "y", "label": "t:labels.product_hotspot_y", "info": "t:labels.product_overview_hotspot_y_info", "min": 0, "max": 100, "step": 1, "unit": "%", "default": 50 }
       ]
     },
     {
@@ -535,6 +759,10 @@
     }
   ],
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
     {
       "type": "paragraph",
       "content": "t:labels.product_content_dynamic"
@@ -575,12 +803,12 @@
       "type": "inline_richtext",
       "id": "quote",
       "label": "t:labels.product_overview_quote",
-      "info": "t:labels.accent_heading_info",
+      "info": "t:labels.product_overview_quote_info",
       "default": "It behaves less like a treatment and more like <em>a change of light</em>"
     },
     {
       "type": "header",
-      "content": "t:labels.style"
+      "content": "t:labels.layout"
     },
     {
       "type": "select",
@@ -594,10 +822,8 @@
       "default": "widest"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -618,6 +844,16 @@
       "step": 8,
       "unit": "px",
       "default": 64
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ],
   "presets": [
