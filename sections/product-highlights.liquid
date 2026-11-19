@@ -1,13 +1,14 @@
 {%- comment -%}
-  Highlights (M6.6, Figma PDP "Product details 7"): eyebrow, heading with an accent part and a
-  paragraph (left); a 3 x 2 grid of benefits (line icon, title, text) with hairline dividers (right);
-  under it a two-column spec table (SKIN TYPE · KEY ACTIVES · TEXTURE · FINISH · FREE FROM ·
-  CERTIFICATION).
+  Product highlights (M6.6, Figma PDP "Product details 7", phones Variant96-3 / 96-4): eyebrow, heading
+  with an accent part and a paragraph (left); a grid of benefits (line icon, title, text) with hairlines
+  between the cells (right); under it a two-column spec table.
   - Content: the Figma text is the demo; every field can be connected to a product metafield in the
-    theme editor ("Connect dynamic source"). An empty field hides its part.
-  - Icons: one of the theme's line icons (assets/icon-drop, -flask, -sparkles, -hours, -leaf, -shield-check: the Figma ones, in the text colour) or the
-    merchant's own image.
-  - The tabs link here with the Anchor setting (#highlights).
+    theme editor ("Connect dynamic source"). An empty field hides its part; no content = no section.
+  - Icons: one of the theme's line icons (assets/icon-drop, -flask, -sparkles, -hours, -leaf,
+    -shield-check: the Figma ones, in the accent colour) or the merchant's own image.
+  - The tabs link here with the Link name setting (#highlights).
+  - Columns: 3 benefits per row from 750px, 2 on phones. The spec table fills column by column (the
+    Figma phone order), so the block order is the reading order on every screen.
   The blocks are the section's own (benefit, spec row), drawn in their place by their type.
 {%- endcomment -%}
 
@@ -16,46 +17,134 @@
   assign anchor = section.settings.anchor | handleize | default: 'highlights'
   assign benefits = section.blocks | where: 'type', 'benefit'
   assign specs = section.blocks | where: 'type', 'spec'
+
+  # Only the parts with content count (an empty block shows nothing on the store)
+  assign benefit_count = 0
+  for block in benefits
+    if block.settings.title != blank or block.settings.text != blank or block.settings.icon_image != blank or block.settings.icon != 'none'
+      assign benefit_count = benefit_count | plus: 1
+    endif
+  endfor
+  assign spec_count = 0
+  for block in specs
+    if block.settings.label != blank and block.settings.value != blank
+      assign spec_count = spec_count | plus: 1
+    endif
+  endfor
+  # The spec table fills column by column: the left column gets the extra row
+  assign spec_rows = spec_count | plus: 1 | divided_by: 2
+
+  assign has_intro = false
+  if section.settings.eyebrow != blank or section.settings.heading != blank or section.settings.text != blank
+    assign has_intro = true
+  endif
+  # The editor also shows empty benefits (with a note), so the blocks can be found
+  assign show_grid = false
+  if benefit_count > 0
+    assign show_grid = true
+  elsif request.design_mode
+    if benefits.size > 0
+      assign show_grid = true
+    endif
+  endif
+  assign has_main = false
+  if show_grid or spec_count > 0
+    assign has_main = true
+  endif
+  # The benefit titles are h3: with no visible heading, a hidden h2 (the eyebrow, else a fixed name) goes above them
+  assign hidden_heading = section.settings.eyebrow | escape
+  if hidden_heading == blank
+    assign hidden_heading = 'products.highlights.heading' | t
+  endif
+
+  assign animation = section.settings.animation | default: 'none'
+  if section.index == 1
+    assign animation = 'none'
+  endif
 -%}
 
+{%- capture image_loading -%}{% render 'section-loading' %}{%- endcapture -%}
+{%- assign image_loading = image_loading | strip -%}
+
+{%- if has_intro or has_main -%}
+{%- elsif request.design_mode -%}
+  {%- comment -%} No content: nothing on the store; in the editor a note, so the section can be found {%- endcomment -%}
+  <div class="product-highlights-empty color-{{ scheme_id }}">
+    <p>{{ 'products.highlights.editor_empty' | t }}</p>
+  </div>
+{%- endif -%}
+
+{%- if has_intro or has_main -%}
 <div
   id="{{ anchor }}"
   class="product-highlights full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
   style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
 >
-  <div class="product-highlights__inner">
-    <div class="product-highlights__intro" data-tab-item>
-      {%- if section.settings.eyebrow != blank -%}
-        <p class="eyebrow product-highlights__eyebrow">{{ section.settings.eyebrow | escape }}</p>
-      {%- endif -%}
-      {%- if section.settings.heading != blank -%}
-        <h2 class="product-highlights__heading">{{ section.settings.heading }}</h2>
-      {%- endif -%}
-      {%- if section.settings.text != blank -%}
-        <div class="product-highlights__text rte">{{ section.settings.text }}</div>
-      {%- endif -%}
-    </div>
+  <div class="product-highlights__inner{% if has_intro and has_main %} product-highlights__inner--split{% endif %}">
+    {%- if has_intro -%}
+      <div class="product-highlights__intro" data-tab-item>
+        {%- if section.settings.eyebrow != blank -%}
+          <p class="eyebrow product-highlights__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+        {%- endif -%}
+        {%- if section.settings.heading != blank -%}
+          <h2 class="product-highlights__heading">{{ section.settings.heading }}</h2>
+        {%- elsif show_grid -%}
+          <h2 class="visually-hidden">{{ hidden_heading }}</h2>
+        {%- endif -%}
+        {%- if section.settings.text != blank -%}
+          <div class="product-highlights__text rte">{{ section.settings.text }}</div>
+        {%- endif -%}
+      </div>
+    {%- elsif show_grid -%}
+      <h2 class="visually-hidden">{{ hidden_heading }}</h2>
+    {%- endif -%}
 
+    {%- if has_main -%}
     <div class="product-highlights__main">
-      {%- if benefits.size > 0 -%}
+      {%- if show_grid -%}
         {%- comment -%} <animate-on-scroll> reveals the [data-animate] benefits (without it they would stay hidden) {%- endcomment -%}
         <animate-on-scroll>
         <ul class="product-highlights__grid" role="list" data-tab-item>
           {%- for block in benefits -%}
-            <li class="product-highlights__item" data-animate="fade-up" {{ block.shopify_attributes }}>
-              <span class="product-highlights__icon" aria-hidden="true">
-                {%- if block.settings.icon_image != blank -%}
-                  {{ block.settings.icon_image | image_url: width: 96 | image_tag: alt: '', loading: 'lazy', class: 'product-highlights__icon-image' }}
-                {%- elsif block.settings.icon != 'none' -%}
-                  {%- assign icon_file = 'icon-' | append: block.settings.icon | append: '.svg' -%}
-                  {{ icon_file | inline_asset_content }}
-                {%- endif -%}
-              </span>
+            {%- liquid
+              assign has_icon = false
+              if block.settings.icon_image != blank or block.settings.icon != 'none'
+                assign has_icon = true
+              endif
+              # An empty benefit: nothing on the store; in the editor a cell with a note, so the block can be found
+              assign benefit_empty = false
+              if has_icon == false and block.settings.title == blank and block.settings.text == blank
+                assign benefit_empty = true
+                unless request.design_mode
+                  continue
+                endunless
+              endif
+            -%}
+            <li
+              class="product-highlights__item"
+              {% if animation != 'none' %}
+                data-animate="{{ animation }}"
+              {% endif %}
+              {{ block.shopify_attributes }}
+            >
+              {%- if has_icon -%}
+                <span class="product-highlights__icon" aria-hidden="true">
+                  {%- if block.settings.icon_image != blank -%}
+                    {{ block.settings.icon_image | image_url: width: 96 | image_tag: alt: '', loading: image_loading, class: 'product-highlights__icon-image' }}
+                  {%- else -%}
+                    {%- assign icon_file = 'icon-' | append: block.settings.icon | append: '.svg' -%}
+                    {{ icon_file | inline_asset_content }}
+                  {%- endif -%}
+                </span>
+              {%- endif -%}
               {%- if block.settings.title != blank -%}
                 <h3 class="product-highlights__title">{{ block.settings.title | escape }}</h3>
               {%- endif -%}
               {%- if block.settings.text != blank -%}
                 <p class="product-highlights__item-text">{{ block.settings.text | escape }}</p>
+              {%- endif -%}
+              {%- if benefit_empty -%}
+                <p class="product-highlights__item-text">{{ 'products.highlights.benefit_empty' | t }}</p>
               {%- endif -%}
             </li>
           {%- endfor -%}
@@ -63,8 +152,8 @@
         </animate-on-scroll>
       {%- endif -%}
 
-      {%- if specs.size > 0 -%}
-        <dl class="product-highlights__specs" data-tab-item>
+      {%- if spec_count > 0 -%}
+        <dl class="product-highlights__specs" style="--spec-rows: {{ spec_rows }};" data-tab-item>
           {%- for block in specs -%}
             {%- if block.settings.label != blank and block.settings.value != blank -%}
               <div class="product-highlights__spec" {{ block.shopify_attributes }}>
@@ -76,27 +165,38 @@
         </dl>
       {%- endif -%}
     </div>
+    {%- endif -%}
   </div>
 </div>
+{%- endif -%}
 
 {% stylesheet %}
   /*
     Figma 1920 ("Product details 7"): intro x 50–500 (eyebrow y 212, heading ~70px 2 lines, the first
-    words accent, text ~22px); grid x 640–1870 in 3 columns (~410 each), 2 rows, 1px pale lines between
-    the columns and under the first row, cells padded ~32; icon ~28px accent; title ~22px; text ~17px
-    grey. Spec table x 645–1750, 2 columns of label caps ~15px + value ~18px, a hairline under each row.
+    words accent, text ~22px); grid x 640–1870 in 3 columns (~410 each), 1px pale lines between the
+    columns and between the rows, cells padded ~32; icon ~28px accent; title ~22px; text ~17px grey.
+    Spec table x 645–1750, 2 columns of label caps ~15px + value ~18px, a hairline (faded at both ends)
+    under each row. --px = one Figma pixel: the 1920px sizes get smaller on smaller screens.
   */
   .product-highlights {
+    --px: min(calc(100vw / 1920), 0.0625rem);
+    --highlights-line: var(--color-card-border);
     display: block;
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
     background-color: var(--color-background);
   }
 
+  .product-highlights-empty {
+    padding: var(--space-2xl) var(--page-margin);
+    background-color: var(--color-background);
+    text-align: center;
+  }
+
   .product-highlights__inner {
     display: grid;
-    grid-template-columns: minmax(0, 450fr) minmax(0, 1230fr);
+    grid-template-columns: minmax(0, 1fr);
     align-items: start;
-    gap: max(var(--space-xl), calc(140 * var(--px, 0.0625rem)));
+    gap: var(--space-xl);
     inline-size: min(
       calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
       calc(100% - var(--page-margin) * 2)
@@ -121,15 +221,16 @@
   }
 
   .product-highlights__text {
-    margin-block-start: max(var(--space-lg), calc(70 * var(--px, 0.0625rem)));
+    margin-block-start: max(var(--space-lg), calc(70 * var(--px)));
     font-size: var(--font-size-body-lg);
     line-height: 1.65;
   }
 
-  /* The grid: lines between the columns and under the first row, none on the outside edges */
+  /* The grid: lines between the columns and between the rows, none on the outside edges */
   .product-highlights__grid {
+    --columns: 3;
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
     margin: 0;
     padding: 0;
     list-style: none;
@@ -139,15 +240,10 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-sm);
-    padding: max(var(--space-lg), calc(32 * var(--px, 0.0625rem)));
-  }
-
-  .product-highlights__item:not(:nth-child(3n + 1)) {
-    border-inline-start: 1px solid var(--color-card-border);
-  }
-
-  .product-highlights__item:nth-child(-n + 3) {
-    border-block-end: 1px solid var(--color-card-border);
+    padding: max(var(--space-lg), calc(32 * var(--px)));
+    border-block-end: 1px solid var(--highlights-line);
+    /* One by one across a row: --col = the cell's column (0 = first) */
+    --animate-delay: calc(var(--col, 0) * 100ms);
   }
 
   .product-highlights__icon {
@@ -158,8 +254,8 @@
 
   .product-highlights__icon svg,
   .product-highlights__icon-image {
-    inline-size: max(1.5rem, calc(28 * var(--px, 0.0625rem)));
-    block-size: max(1.5rem, calc(28 * var(--px, 0.0625rem)));
+    inline-size: max(1.5rem, calc(28 * var(--px)));
+    block-size: max(1.5rem, calc(28 * var(--px)));
     object-fit: contain;
   }
 
@@ -178,21 +274,37 @@
     line-height: 1.6;
   }
 
+  /* The spec table fills column by column (--spec-rows from Liquid) */
   .product-highlights__specs {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0 max(var(--space-lg), calc(70 * var(--px, 0.0625rem)));
-    margin: max(var(--space-xl), calc(60 * var(--px, 0.0625rem))) 0 0;
-    padding-inline-start: max(var(--space-sm), calc(5 * var(--px, 0.0625rem)));
+    grid-template-rows: repeat(var(--spec-rows, 1), auto);
+    grid-auto-flow: column;
+    gap: 0 max(var(--space-lg), calc(70 * var(--px)));
+    margin: max(var(--space-xl), calc(60 * var(--px))) 0 0;
+    padding-inline-start: max(var(--space-sm), calc(5 * var(--px)));
   }
 
+  .product-highlights__main > .product-highlights__specs:first-child {
+    margin-block-start: 0;
+  }
+
+  /* The row hairline fades at both ends (border-image: only the bottom border has a width) */
   .product-highlights__spec {
     display: grid;
     grid-template-columns: minmax(7rem, 200fr) minmax(0, 330fr);
     align-items: baseline;
     gap: var(--space-md);
     padding-block: var(--space-md);
-    border-block-end: 1px solid var(--color-card-border);
+    border-block-end: 1px solid var(--highlights-line);
+    border-image: linear-gradient(
+        90deg,
+        #00000000,
+        var(--highlights-line) 12%,
+        var(--highlights-line) 88%,
+        #00000000
+      )
+      1;
   }
 
   .product-highlights__spec dt {
@@ -206,27 +318,110 @@
     font-size: var(--font-size-body-sm);
   }
 
-  /* Tablets: the intro above the grid */
-  @media (max-width: 1199px) {
-    .product-highlights__inner {
-      grid-template-columns: minmax(0, 1fr);
+  /* Tablets and up: 3 columns; a line before each cell that does not start a row; no line under the last row */
+  @media (min-width: 750px) {
+    .product-highlights__item:not(:nth-child(3n + 1)) {
+      border-inline-start: 1px solid var(--highlights-line);
+    }
+
+    .product-highlights__item:nth-child(3n + 1):nth-last-child(-n + 3),
+    .product-highlights__item:nth-child(3n + 1):nth-last-child(-n + 3) ~ .product-highlights__item {
+      border-block-end: 0;
+    }
+
+    .product-highlights__item:nth-child(3n + 2) {
+      --col: 1;
+    }
+
+    .product-highlights__item:nth-child(3n + 3) {
+      --col: 2;
     }
   }
 
-  /* Phones (brief): 2 columns of benefits, a 1-column spec table */
+  /* Desktop: the intro beside the benefits (Figma 450 : 1230) */
+  @media (min-width: 1200px) {
+    .product-highlights__inner--split {
+      grid-template-columns: minmax(0, 450fr) minmax(0, 1230fr);
+      column-gap: max(var(--space-xl), calc(140 * var(--px)));
+    }
+  }
+
+  /* Phones (Variant96-3 / 96-4): 2 columns of benefits, a 1-column spec table, smaller text, half the padding */
   @media (max-width: 749px) {
+    .product-highlights {
+      padding-block: calc(var(--section-padding-top) / 2) calc(var(--section-padding-bottom) / 2);
+    }
+
+    .product-highlights__inner {
+      gap: var(--space-lg);
+    }
+
+    .product-highlights__eyebrow {
+      margin-block-end: var(--space-md);
+    }
+
+    .product-highlights__heading {
+      font-size: 1.625rem;
+      line-height: 1.2;
+    }
+
+    .product-highlights__text {
+      margin-block-start: var(--space-md);
+      font-size: 0.8125rem;
+    }
+
     .product-highlights__grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      --columns: 2;
     }
 
     .product-highlights__item {
+      gap: var(--space-xs);
       padding: var(--space-md) var(--space-sm);
-      border: 0 !important; /* the 3-column lines don't fit a 2-column grid */
-      border-block-end: 1px solid var(--color-card-border) !important;
+    }
+
+    .product-highlights__item:nth-child(2n) {
+      border-inline-start: 1px solid var(--highlights-line);
+      --col: 1;
+    }
+
+    .product-highlights__item:nth-child(2n + 1):nth-last-child(-n + 2),
+    .product-highlights__item:nth-child(2n + 1):nth-last-child(-n + 2) ~ .product-highlights__item {
+      border-block-end: 0;
+    }
+
+    .product-highlights__icon {
+      margin-block-end: var(--space-2xs, 0.25rem);
+    }
+
+    .product-highlights__icon svg,
+    .product-highlights__icon-image {
+      inline-size: 1.125rem;
+      block-size: 1.125rem;
+    }
+
+    .product-highlights__title {
+      font-size: 0.9375rem;
+    }
+
+    .product-highlights__item-text {
+      font-size: 0.75rem;
+      line-height: 1.5;
     }
 
     .product-highlights__specs {
       grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: none;
+      grid-auto-flow: row;
+      margin-block-start: var(--space-lg);
+      padding-inline-start: var(--space-sm);
+    }
+
+    .product-highlights__spec dt {
+      font-size: 0.6875rem;
+    }
+
+    .product-highlights__spec dd {
+      font-size: 0.75rem;
     }
   }
 {% endstylesheet %}
@@ -235,17 +430,28 @@
 {
   "name": "t:general.product_highlights",
   "tag": "section",
-  "class": "product-highlights-section",
   "enabled_on": { "templates": ["product"] },
   "blocks": [
     {
       "type": "benefit",
       "name": "t:general.product_benefit",
       "settings": [
+        { "type": "header", "content": "t:labels.content", "info": "t:labels.product_highlights_benefit_info" },
+        { "type": "text", "id": "title", "label": "t:labels.heading", "default": "72-hour hydration" },
+        { "type": "textarea", "id": "text", "label": "t:labels.text", "default": "A lipid-mimicking veil of ceramide NP, squalane and glacial water holds moisture through three full days." },
+        { "type": "header", "content": "t:labels.icon" },
+        {
+          "type": "image_picker",
+          "id": "icon_image",
+          "label": "t:labels.product_benefit_icon_image",
+          "info": "t:labels.product_highlights_icon_image_info"
+        },
         {
           "type": "select",
           "id": "icon",
           "label": "t:labels.icon",
+          "info": "t:labels.product_highlights_icon_info",
+          "visible_if": "{{ block.settings.icon_image == blank }}",
           "options": [
             { "value": "drop", "label": "t:options.product_benefit_icon.drop" },
             { "value": "flask", "label": "t:options.product_benefit_icon.flask" },
@@ -256,27 +462,24 @@
             { "value": "none", "label": "t:options.product_benefit_icon.none" }
           ],
           "default": "drop"
-        },
-        {
-          "type": "image_picker",
-          "id": "icon_image",
-          "label": "t:labels.product_benefit_icon_image",
-          "info": "t:labels.product_benefit_icon_image_info"
-        },
-        { "type": "text", "id": "title", "label": "t:labels.heading", "default": "72-hour hydration" },
-        { "type": "textarea", "id": "text", "label": "t:labels.text", "default": "A lipid-mimicking veil of ceramide NP, squalane and glacial water holds moisture through three full days." }
+        }
       ]
     },
     {
       "type": "spec",
       "name": "t:general.product_spec_row",
       "settings": [
+        { "type": "paragraph", "content": "t:labels.product_highlights_spec_info" },
         { "type": "text", "id": "label", "label": "t:labels.label", "default": "Skin type" },
         { "type": "text", "id": "value", "label": "t:labels.product_spec_value", "default": "All types, including reactive" }
       ]
     }
   ],
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
     {
       "type": "paragraph",
       "content": "t:labels.product_content_dynamic"
@@ -309,12 +512,13 @@
     },
     {
       "type": "header",
-      "content": "t:labels.style"
+      "content": "t:labels.layout"
     },
     {
       "type": "select",
       "id": "section_width",
       "label": "t:labels.section_width",
+      "info": "t:labels.product_highlights_layout_info",
       "options": [
         { "value": "wide", "label": "t:options.section_width.wide" },
         { "value": "widest", "label": "t:options.section_width.widest" },
@@ -323,10 +527,28 @@
       "default": "widest"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
+      "type": "header",
+      "content": "t:labels.animation_header"
+    },
+    {
+      "type": "select",
+      "id": "animation",
+      "label": "t:labels.animation",
+      "info": "t:labels.product_highlights_animation_info",
+      "options": [
+        { "value": "none", "label": "t:options.animation.none" },
+        { "value": "fade-up", "label": "t:options.animation.fade_up" },
+        { "value": "zoom-in", "label": "t:options.animation.zoom_in" },
+        { "value": "slide-top", "label": "t:options.animation.slide_top" },
+        { "value": "slide-bottom", "label": "t:options.animation.slide_bottom" },
+        { "value": "slide-left", "label": "t:options.animation.slide_left" },
+        { "value": "slide-right", "label": "t:options.animation.slide_right" }
+      ],
+      "default": "fade-up"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -342,11 +564,22 @@
       "type": "range",
       "id": "padding_bottom",
       "label": "t:labels.padding_bottom",
+      "info": "t:labels.product_highlights_padding_info",
       "min": 0,
       "max": 160,
       "step": 8,
       "unit": "px",
       "default": 64
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ],
   "presets": [
@@ -360,10 +593,10 @@
         { "type": "benefit", "settings": { "icon": "leaf", "title": "Clean by omission", "text": "No silicones, sulphates, parabens or mineral oil. Vegan, cruelty-free, Leaping Bunny certified." } },
         { "type": "benefit", "settings": { "icon": "shield-check", "title": "Barrier-first formula", "text": "Dermatologist tested on sensitive skin. Non-comedogenic, fragrance-optional, pH balanced at 5.5." } },
         { "type": "spec", "settings": { "label": "Skin type", "value": "All types, including reactive" } },
-        { "type": "spec", "settings": { "label": "Key actives", "value": "Niacinamide 5%, Ceramide NP, Squalane" } },
         { "type": "spec", "settings": { "label": "Texture", "value": "Weightless fluid-to-silk" } },
-        { "type": "spec", "settings": { "label": "Finish", "value": "Satin, buildable" } },
         { "type": "spec", "settings": { "label": "Free from", "value": "Silicones • Sulphates • Parabens" } },
+        { "type": "spec", "settings": { "label": "Key actives", "value": "Niacinamide 5%, Ceramide NP, Squalane" } },
+        { "type": "spec", "settings": { "label": "Finish", "value": "Satin, buildable" } },
         { "type": "spec", "settings": { "label": "Certification", "value": "Vegan • Leaping Bunny • Dermatologist tested" } }
       ]
     }

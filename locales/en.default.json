@@ -485,6 +485,11 @@
       "top": "Back to the top",
       "editor_empty": "No tab finds its section. Visitors do not see this bar. Make the Link name of a tab the same as the Link name of a section below this bar."
     },
+    "highlights": {
+      "heading": "Product highlights",
+      "benefit_empty": "This benefit has no icon, no heading and no text. Visitors do not see it.",
+      "editor_empty": "This section has no content. Visitors do not see it. Add a heading, a benefit or a spec row with a label and a value."
+    },
     "overview": {
       "hotspot_empty": "This hotspot has no heading and no text. Visitors do not see it."
     },
