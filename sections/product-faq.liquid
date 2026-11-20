@@ -27,8 +27,43 @@
   # Field names = the headings in the merchant's email (assigned first: no filters inside attributes)
   assign name_name = 'products.faq.form_name' | t
   assign name_product = 'products.faq.form_product' | t
+
+  # The questions that show: a question needs its question and its answer (the editor also shows the
+  # empty ones, with a note, so the blocks can be found). The first one that shows starts open
+  assign question_count = 0
+  for block in questions
+    if block.settings.question != blank and block.settings.answer != blank
+      assign question_count = question_count | plus: 1
+    endif
+  endfor
+
+  assign has_content = false
+  if question_count > 0 or section.settings.show_form
+    assign has_content = true
+  endif
+
+  # The chat: on the store only with a question that shows (an empty FAQPage would be wrong data and an
+  # empty column); the editor always shows it (notes for incomplete blocks)
+  assign show_chat = false
+  if question_count > 0 or request.design_mode
+    assign show_chat = true
+  endif
+  assign layout_class = ''
+  unless section.settings.show_form
+    assign layout_class = ' product-faq__layout--chat-only'
+  endunless
+  unless show_chat
+    assign layout_class = ' product-faq__layout--form-only'
+  endunless
 -%}
 
+{%- if has_content == false -%}
+  {%- if request.design_mode -%}
+    <div class="product-faq-empty color-{{ scheme_id }}">
+      <p>{{ 'products.faq.editor_empty' | t }}</p>
+    </div>
+  {%- endif -%}
+{%- else -%}
 <product-faq
   id="{{ anchor }}"
   class="product-faq full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.tint %} product-faq--tint{% endif %}"
@@ -56,28 +91,47 @@
     {%- endif -%}
 
     <div class="product-faq__intro" data-tab-item>
+      {%- comment -%}
+        The card heading is an h3, so the section needs an h2: the heading; with no heading the eyebrow
+        itself is the h2 (no hidden copy: it would be read two times); with neither, a hidden h2
+      {%- endcomment -%}
       {%- if section.settings.eyebrow != blank -%}
-        <p class="eyebrow eyebrow--center">{{ section.settings.eyebrow | escape }}</p>
+        {%- if section.settings.heading != blank -%}
+          <p class="eyebrow eyebrow--center">{{ section.settings.eyebrow | escape }}</p>
+        {%- else -%}
+          <h2 class="eyebrow eyebrow--center product-faq__eyebrow-heading">{{ section.settings.eyebrow | escape }}</h2>
+        {%- endif -%}
       {%- endif -%}
       {%- if section.settings.heading != blank -%}
         <h2 class="product-faq__heading">{{ section.settings.heading }}</h2>
+      {%- elsif section.settings.eyebrow == blank -%}
+        <h2 class="visually-hidden">{{ 'products.faq.heading' | t }}</h2>
       {%- endif -%}
     </div>
 
-    <div class="product-faq__layout{% unless section.settings.show_form %} product-faq__layout--chat-only{% endunless %}">
+    <div class="product-faq__layout{{ layout_class }}">
+      {%- if show_chat -%}
       {%- comment -%} The chat: first in the page order (the main content); on desktop it sits on the right {%- endcomment -%}
-      <div class="product-faq__chat" itemscope itemtype="https://schema.org/FAQPage" data-tab-item>
+      <div
+        class="product-faq__chat"
+        {% if question_count > 0 %}
+          itemscope
+          itemtype="https://schema.org/FAQPage"
+        {% endif %}
+        data-tab-item
+      >
+        {%- assign opened = false -%}
         {%- for block in questions -%}
-          {%- if block.settings.question != blank -%}
+          {%- if block.settings.question != blank and block.settings.answer != blank -%}
             <details
               class="product-faq__item"
               name="{{ group_name }}"
               itemscope
               itemprop="mainEntity"
               itemtype="https://schema.org/Question"
-              {% if forloop.first %}
+              {% unless opened %}
                 open
-              {% endif %}
+              {% endunless %}
               {{ block.shopify_attributes }}
             >
               <summary class="product-faq__question">
@@ -87,13 +141,19 @@
                 <div class="product-faq__answer-text" itemprop="text">{{ block.settings.answer }}</div>
               </div>
             </details>
-          {%- endif -%}
-        {%- else -%}
-          {%- if request.design_mode -%}
-            <p class="product-faq__empty">{{ 'products.faq.empty' | t }}</p>
+            {%- assign opened = true -%}
+          {%- elsif request.design_mode -%}
+            {%- comment -%} No question or no answer: nothing on the store; in the editor a note bubble {%- endcomment -%}
+            <p class="product-faq__answer product-faq__answer--note" {{ block.shopify_attributes }}>
+              {{- 'products.faq.question_empty' | t -}}
+            </p>
           {%- endif -%}
         {%- endfor -%}
+        {%- if questions.size == 0 and request.design_mode -%}
+          <p class="product-faq__empty">{{ 'products.faq.empty' | t }}</p>
+        {%- endif -%}
       </div>
+      {%- endif -%}
 
       {%- if section.settings.show_form -%}
         <div class="product-faq__card" data-tab-item>
@@ -126,6 +186,8 @@
               focus or once filled it moves up onto the border, so it never disappears while typing (a
               placeholder alone would). placeholder=" " only lets CSS tell an empty field (:placeholder-shown)
             {%- endcomment -%}
+            {%- comment -%} Name + Email: side by side below 1200px (Figma phone), one under the other on desktop {%- endcomment -%}
+            <div class="product-faq__pair">
             <div class="product-faq__field">
               <label class="product-faq__field-label" for="{{ form_id }}-name">{{ 'products.faq.form_name' | t }}</label>
               <input
@@ -158,6 +220,7 @@
                 {% endif %}
               >
             </div>
+            </div>
 
             <div class="product-faq__field product-faq__field--message">
               <label class="product-faq__field-label" for="{{ form_id }}-message">{{ 'products.faq.form_message' | t }}</label>
@@ -181,6 +244,7 @@
     </div>
   </div>
 </product-faq>
+{%- endif -%}
 
 {% stylesheet %}
   /*
@@ -194,11 +258,19 @@
     behind the chat (left), two pale filled "?" in the middle, a white "?" bottom right.
   */
   .product-faq {
+    /* One Figma pixel: the 1920px sizes get smaller on smaller screens */
+    --px: min(calc(100vw / 1920), 0.0625rem);
     position: relative;
     display: block;
     overflow: clip; /* the doodles never widen the page */
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
     background-color: var(--color-background);
+  }
+
+  .product-faq-empty {
+    padding: var(--space-2xl) var(--page-margin);
+    background-color: var(--color-background);
+    text-align: center;
   }
 
   /* Figma: a pale pink fill, mixed from the scheme's accent so it follows the scheme */
@@ -228,6 +300,11 @@
     margin: 0;
   }
 
+  /* The eyebrow as the section's h2 (no heading): the eyebrow look, not the heading font */
+  .product-faq__eyebrow-heading {
+    font-family: var(--font-body--family);
+  }
+
   .product-faq__heading {
     margin: 0;
     font-size: var(--font-size-h1);
@@ -240,16 +317,38 @@
     font-style: normal;
   }
 
-  /* Phones and tablets: the chat, then the form. Desktop: form left (420 of 1820), chat right */
+  /*
+    Phones and tablets (agreed, Figma phone Variant98): the chat, then the form card centred (at most
+    40rem). Desktop: form left (420 of 1820), chat right
+  */
   .product-faq__layout {
     display: grid;
     gap: var(--space-2xl);
     margin-block-start: max(var(--space-xl), calc(40 * var(--px, 0.0625rem)));
   }
 
-  @media (min-width: 990px) {
+  @media (max-width: 1199px) {
+    .product-faq__card {
+      justify-self: center;
+      inline-size: min(100%, 40rem);
+    }
+
+    /* Name + Email side by side */
+    .product-faq__pair {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-sm);
+    }
+  }
+
+  @media (min-width: 1200px) {
+    .product-faq__pair {
+      display: contents;
+    }
+
     .product-faq__layout {
-      grid-template-columns: minmax(18rem, 420fr) minmax(0, 1347fr);
+      /* The form at least 24rem: on small laptops (~1264px) the Figma share left a 288px card */
+      grid-template-columns: minmax(24rem, 420fr) minmax(0, 1347fr);
       align-items: start;
       gap: calc(53 * var(--px, 0.0625rem));
     }
@@ -270,6 +369,16 @@
 
     .product-faq__layout--chat-only .product-faq__chat {
       grid-column: 1;
+    }
+
+    /* No question shows: the card alone, centred */
+    .product-faq__layout--form-only {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .product-faq__layout--form-only .product-faq__card {
+      justify-self: center;
+      inline-size: min(100%, 40rem);
     }
   }
 
@@ -321,7 +430,8 @@
     padding: max(0.75rem, calc(14 * var(--px, 0.0625rem))) max(1rem, calc(16 * var(--px, 0.0625rem)));
     /* Figma "Frame 1984077925": white, a soft grey shadow, square bottom-left corner (the bubble's tail) */
     border-radius: 20px 20px 20px 0;
-    background-color: #ffffff;
+    /* White on light schemes, a raised colour on dark ones (white with light text could not be read) */
+    background-color: var(--color-surface-raised);
     box-shadow: 0 2px 10px #c2c2c240;
     font-size: var(--font-size-body);
     line-height: 1.5;
@@ -352,6 +462,12 @@
 
   .product-faq__empty {
     margin: 0;
+  }
+
+  /* Editor only: a question with no question or no answer */
+  .product-faq__answer.product-faq__answer--note {
+    margin-block-start: 0;
+    font-style: italic;
   }
 
   /* The form card */
@@ -551,11 +667,96 @@
     rotate: 14deg;
   }
 
-  @media (max-width: 989px) {
+  @media (max-width: 1199px) {
     .product-faq__doodle--questions,
     .product-faq__doodle--chat,
     .product-faq__doodle--pale-small {
       display: none;
+    }
+  }
+  /* Phones (Figma Variant98): 24px heading, small bubbles, a compact form card */
+  @media (max-width: 749px) {
+    .product-faq__intro {
+      gap: var(--space-sm);
+    }
+
+    .product-faq__heading {
+      font-size: 1.5rem;
+      line-height: 1.2;
+    }
+
+    .product-faq__layout {
+      gap: var(--space-lg);
+      margin-block-start: var(--space-lg);
+    }
+
+    .product-faq__chat {
+      gap: var(--space-sm);
+    }
+
+    .product-faq__question,
+    .product-faq__answer {
+      padding: 0.4rem 0.6rem;
+      font-size: 0.75rem;
+      line-height: 1.45;
+    }
+
+    .product-faq__question {
+      max-inline-size: 85%;
+      border-radius: 0.5rem 0.5rem 0.125rem 0.5rem;
+    }
+
+    .product-faq__answer {
+      max-inline-size: 85%;
+      margin-block-start: var(--space-sm);
+      border-radius: 0.625rem 0.625rem 0.625rem 0;
+    }
+
+    .product-faq__card {
+      gap: var(--space-xs);
+      padding: var(--space-md) var(--space-sm);
+      border-radius: 1rem;
+    }
+
+    .product-faq__label {
+      font-size: 0.625rem;
+    }
+
+    .product-faq__card-heading {
+      font-size: 0.875rem;
+    }
+
+    .product-faq__form {
+      gap: var(--space-sm);
+      margin-block-start: var(--space-xs);
+    }
+
+    .product-faq .product-faq__input {
+      min-block-size: 2.25rem;
+      padding-block: 0.4rem;
+      padding-inline: var(--space-md);
+      font-size: 0.75rem;
+    }
+
+    .product-faq .product-faq__textarea {
+      min-block-size: 3.5rem;
+    }
+
+    .product-faq .product-faq__field-label {
+      inset-inline-start: var(--space-md);
+      font-size: 0.75rem;
+    }
+
+    .product-faq .product-faq__field--message .product-faq__field-label {
+      inset-block-start: 1.1rem;
+    }
+
+    .product-faq .product-faq__field:has(.product-faq__input:focus, .product-faq__input:not(:placeholder-shown)) .product-faq__field-label {
+      font-size: 0.625rem;
+    }
+
+    .product-faq .product-faq__submit {
+      margin-block-start: 0;
     }
   }
 {% endstylesheet %}
@@ -602,7 +803,6 @@
 {
   "name": "t:general.product_faq",
   "tag": "section",
-  "class": "product-faq-section",
   "enabled_on": { "templates": ["product"] },
   "max_blocks": 12,
   "blocks": [
@@ -610,7 +810,7 @@
       "type": "question",
       "name": "t:general.product_faq_question",
       "settings": [
-        { "type": "text", "id": "question", "label": "t:labels.faq_question", "default": "Can I use this with retinol?" },
+        { "type": "text", "id": "question", "label": "t:labels.faq_question", "info": "t:labels.product_faq_question_info", "default": "Can I use this with retinol?" },
         {
           "type": "richtext",
           "id": "answer",
@@ -621,6 +821,14 @@
     }
   ],
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
+    {
+      "type": "paragraph",
+      "content": "t:labels.product_content_dynamic"
+    },
     {
       "type": "text",
       "id": "anchor",
@@ -668,20 +876,11 @@
     },
     {
       "type": "header",
-      "content": "t:labels.style"
+      "content": "t:labels.layout"
     },
     {
-      "type": "checkbox",
-      "id": "tint",
-      "label": "t:labels.product_faq_tint",
-      "info": "t:labels.product_faq_tint_info",
-      "default": true
-    },
-    {
-      "type": "checkbox",
-      "id": "decorations",
-      "label": "t:labels.product_faq_decorations",
-      "default": true
+      "type": "paragraph",
+      "content": "t:labels.product_faq_layout_info"
     },
     {
       "type": "select",
@@ -695,10 +894,26 @@
       "default": "widest"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
+      "type": "header",
+      "content": "t:labels.product_reviews_decoration"
+    },
+    {
+      "type": "checkbox",
+      "id": "tint",
+      "label": "t:labels.product_faq_tint",
+      "info": "t:labels.product_faq_tint_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "decorations",
+      "label": "t:labels.product_faq_decorations",
+      "info": "t:labels.product_faq_decorations_info",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -719,6 +934,16 @@
       "step": 8,
       "unit": "px",
       "default": 64
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ],
   "presets": [

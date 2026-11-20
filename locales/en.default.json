@@ -517,6 +517,9 @@
       "review_empty": "This review has no text. Visitors do not see it."
     },
     "faq": {
+      "heading": "Questions and answers",
+      "question_empty": "This question has no question or no answer. Visitors do not see it.",
+      "editor_empty": "This section has no content. Visitors do not see it. Add a question with an answer, or show the contact form.",
       "form_name": "Name",
       "form_email": "Email",
       "form_message": "Message",
