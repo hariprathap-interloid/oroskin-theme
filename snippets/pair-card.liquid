@@ -133,24 +133,27 @@
     at the top right (empty white circle when unticked); title heading font ~22px; price ~22px medium.
     Unticked cards fade to ~45%. Phones (Variant97): cards ~98 wide, radius ~10, a 16px circle, title
     ~13px, price ~12px.
+    Only the photo fades: a faded title and price failed contrast (2.81:1, Lighthouse)
   */
   .pair-card {
     display: flex;
     flex-direction: column;
     gap: var(--space-xs);
     min-inline-size: 0;
+  }
+
+  .pair-card .pair-card__image {
     opacity: 0.45;
     transition: opacity var(--duration-fast) var(--ease-out);
   }
 
   /* Hover or keyboard focus brings an unticked card up a little, so it reads as clickable */
-  .pair-card:hover,
-  .pair-card:focus-within {
+  .pair-card:is(:hover, :focus-within) .pair-card__image {
     opacity: 0.75;
   }
 
   /* Ticked: full strength (same weight as the hover rule, and after it, so it wins) */
-  .pair-card:has(.pair-card__input:checked) {
+  .pair-card:has(.pair-card__input:checked) .pair-card__image {
     opacity: 1;
   }
 

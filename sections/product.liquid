@@ -94,13 +94,14 @@
                   endif
                   # Loading: only the lead image (the LCP) gets high priority. The image snippet would give
                   # every image of the page's first section high priority, so the others say it themselves:
-                  # the first two rows (in view at first) eager, the rest lazy
+                  # the first three rows eager (on phones the small gallery shows three rows in the first
+                  # screen; a lazy 3rd-row image was the LCP in Lighthouse mobile), the rest lazy
                   assign is_first = false
                   if place == 0
                     assign is_first = true
                   endif
                   assign media_loading = 'lazy'
-                  if place < 6
+                  if place < 9
                     assign media_loading = 'eager'
                   endif
                 -%}
