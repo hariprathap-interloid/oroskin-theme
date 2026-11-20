@@ -133,25 +133,31 @@
     Transition (setting): where the new panel's text and image slide in from (the panel itself only
     fades). --enter = their starting offset.
   */
+  /* --enter-back: the opposite side, for a panel that comes back (an earlier tab, or scrolling up) */
   .product-tabs-track {
     position: relative;
     --enter: 0 3rem;
+    --enter-back: 0 -3rem;
   }
 
   .product-tabs-track[data-transition="fade"] {
     --enter: 0 0;
+    --enter-back: 0 0;
   }
 
   .product-tabs-track[data-transition="down"] {
     --enter: 0 -3rem;
+    --enter-back: 0 3rem;
   }
 
   .product-tabs-track[data-transition="left"] {
     --enter: 4rem 0;
+    --enter-back: -4rem 0;
   }
 
   .product-tabs-track[data-transition="right"] {
     --enter: -4rem 0;
+    --enter-back: 4rem 0;
   }
 
   /*
@@ -209,10 +215,25 @@
     transition: none;
   }
 
+  .product-tabs-track__stage > .is-tab-entering.is-tab-back [data-tab-item] {
+    translate: var(--enter-back);
+  }
+
   /* The sections the tabs link to stop under the header + tabs, not behind them */
   /* Header + 15px + the bar (~54px) + 16px. Not when the bar is hidden (no tab finds its section) */
   html:has(.shopify-section:not(.is-tabs-empty) > product-tabs) {
     scroll-padding-block-start: calc(var(--header-space, 6.0625rem) + 5.25rem);
+  }
+
+  /*
+    The stuck bar sits inside that padding area. When the Tab key focuses a tab, the browser took it as
+    covered and scrolled the page up to the bar's place in the page (an earlier panel then showed). A
+    negative scroll margin of the same size makes the tab count as visible where it is stuck. Only while
+    it is stuck (is-tabs-stuck, set on scroll): off the screen, the margin put a focused tab under the
+    header
+  */
+  .is-tabs-stuck .product-tabs__bar :is(a, button) {
+    scroll-margin-block-start: calc(-1 * (var(--header-space, 6.0625rem) + 5.25rem));
   }
 
   @media (prefers-reduced-motion: no-preference) {
@@ -674,6 +695,9 @@
       const bottom = Math.max(...ends.map((element) => element.getBoundingClientRect().bottom));
       const push = Math.min(0, bottom - (this.barTop + this.section.offsetHeight));
       this.section.style.translate = push ? `0 ${push}px` : '';
+      // Stuck = at its sticky place and not pushed up (the tabs' negative scroll margin needs it)
+      const top = this.section.getBoundingClientRect().top;
+      this.section.classList.toggle('is-tabs-stuck', !push && Math.abs(top - this.barTop) < 2);
     }
 
     /**
@@ -816,6 +840,8 @@
 
     /** Shows one panel, hides (or, pinned, fades out) the others, fills its tab */
     show(id) {
+      // Back = the new panel is before the one shown now: its parts come from the opposite side
+      const back = this.activeId != null && this.ids.indexOf(id) < this.ids.indexOf(this.activeId);
       this.targets.forEach((target, key) => {
         const wrapper = this.wrapper(target);
         const coming = this.track && key === id && wrapper.classList.contains('is-tab-faded');
@@ -825,6 +851,7 @@
         // The new panel: its parts start at the chosen side for one frame, then slide in one by one
         if (coming) {
           wrapper.querySelectorAll('[data-tab-item]').forEach((item, i) => item.style.setProperty('--tab-item', i));
+          wrapper.classList.toggle('is-tab-back', back);
           wrapper.classList.add('is-tab-entering');
           requestAnimationFrame(() => requestAnimationFrame(() => wrapper.classList.remove('is-tab-entering')));
         }
@@ -1003,6 +1030,13 @@
     setActive(id) {
       if (id === this.activeId) return;
       this.activeId = id;
+      // A tab's hash in the URL (after a click) goes away once another panel shows, so the URL never
+      // names another panel (#highlights while Reviews showed), and a reload keeps the browser's own
+      // scroll place (a hash would jump back to its panel)
+      const hash = decodeURIComponent(window.location.hash.slice(1));
+      if (hash && hash !== id && this.targets?.has(hash)) {
+        history.replaceState(history.state, '', window.location.pathname + window.location.search);
+      }
       this.links.forEach((link) => {
         if (link.dataset.tabTarget !== id) {
           link.removeAttribute('aria-current');

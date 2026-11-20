@@ -527,6 +527,7 @@
       "empty": "Add Question blocks to start the conversation."
     },
     "related": {
+      "heading": "Related products",
       "empty": "Shopify shows related products here once it has worked them out for this product. Add fallback products in the section settings to show some now."
     },
     "quantity_rules": {

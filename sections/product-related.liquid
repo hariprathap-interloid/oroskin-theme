@@ -26,11 +26,15 @@
     assign related_items = section.settings.products
   endif
 
-  # Cards to show (never this product itself)
+  # Cards to show: never this product itself; it is skipped BEFORE the limit counts, so a fallback list
+  # that holds this product still gives "Number of products" cards
   assign related_count = 0
-  for item in related_items limit: related_limit
+  for item in related_items
     if item.id != product.id
       assign related_count = related_count | plus: 1
+    endif
+    if related_count >= related_limit
+      break
     endif
   endfor
 
@@ -39,9 +43,30 @@
     assign animation = 'none'
   endif
 
-  # Image sizes: one column of the grid on desktop, the full width on phones
-  assign column_vw = 100 | divided_by: columns
-  assign card_sizes = '(min-width: 990px) ' | append: column_vw | append: 'vw, 100vw'
+  # Photos: the theme's eager / lazy rule (section-loading). In the recommendations response the
+  # section has no place in the page: lazy (it is swapped in further down)
+  capture card_loading
+    render 'section-loading'
+  endcapture
+  assign card_loading = card_loading | strip
+  if recommendations.performed?
+    assign card_loading = 'lazy'
+  endif
+
+  # Image sizes. Tiles (from 750px): Products per row from 990px (widest ~92vw, full ~96vw, wide at most
+  # the 1650px page width), 2 per row from 750px. Full cards (phones): 2 per row
+  assign section_vw = 92
+  if section.settings.section_width == 'full'
+    assign section_vw = 96
+  endif
+  assign column_vw = section_vw | divided_by: columns | plus: 1
+  if section.settings.section_width == 'wide'
+    assign column_px = 1650 | divided_by: columns
+    assign tile_sizes = '(min-width: 990px) min(' | append: column_vw | append: 'vw, ' | append: column_px | append: 'px), 47vw'
+  else
+    assign tile_sizes = '(min-width: 990px) ' | append: column_vw | append: 'vw, 47vw'
+  endif
+  assign full_sizes = '46vw'
 
   # "View all": the link setting, else this product's first collection, else all products
   assign view_all_url = section.settings.link_url
@@ -55,18 +80,34 @@
     Its own <animate-on-scroll>: when the script swaps in the related cards, the new element starts
     watching them (it reads its [data-animate] children when it's added to the page)
   {%- endcomment -%}
+  {%- comment -%}
+    Each product has two cards: the wide photo tile (from 750px, Figma desktop) and the full card
+    (phones, Figma Variant97-3: 2 per row). CSS shows one; the other is display: none (no screen reader,
+    and its lazy photo does not load)
+  {%- endcomment -%}
   <animate-on-scroll class="product-related__grid" data-related-grid>
-    {%- for item in related_items limit: related_limit -%}
-      {%- if item.id != product.id -%}
-        <div
-          class="product-related__item"
-          {% if animation != 'none' %}
-            data-animate="{{ animation }}"
-            style="--animate-delay: {{ forloop.index0 | times: 120 }}ms;"
-          {% endif %}
-        >
-          {% render 'product-card', product: item, style: 'tile', sizes: card_sizes %}
+    {%- assign shown = 0 -%}
+    {%- for item in related_items -%}
+      {%- if item.id == product.id -%}
+        {%- continue -%}
+      {%- endif -%}
+      <div
+        class="product-related__item"
+        {% if animation != 'none' %}
+          data-animate="{{ animation }}"
+          style="--animate-delay: {{ shown | times: 120 }}ms;"
+        {% endif %}
+      >
+        <div class="product-related__tile">
+          {% render 'product-card', product: item, style: 'tile', sizes: tile_sizes, loading: card_loading %}
         </div>
+        <div class="product-related__full">
+          {% render 'product-card', product: item, style: 'full', sizes: full_sizes, loading: card_loading %}
+        </div>
+      </div>
+      {%- assign shown = shown | plus: 1 -%}
+      {%- if shown >= related_limit -%}
+        {%- break -%}
       {%- endif -%}
     {%- endfor -%}
   </animate-on-scroll>
@@ -79,7 +120,7 @@
   {%- assign related_url = routes.product_recommendations_url | append: '?product_id=' | append: product.id | append: '&section_id=' | append: section.id | append: '&limit=' | append: related_limit | append: '&intent=related' -%}
   <product-related
     class="product-related full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
-    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --columns: {{ columns }}; --tile-ratio: {{ section.settings.card_shape | default: '890 / 398' }};"
+    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --columns: {{ columns }}; --columns-tablet: {{ columns | at_most: 2 }}; --tile-ratio: {{ section.settings.card_shape | default: '890 / 398' }};"
     data-url="{{ related_url }}"
     {% if related_count == 0 and request.design_mode == false %}
       hidden
@@ -94,7 +135,10 @@
           <h2 class="product-related__heading">{{ section.settings.heading }}</h2>
         {%- elsif section.settings.eyebrow != blank -%}
           {%- comment -%} Figma: the eyebrow is the section's only title, so it is the heading {%- endcomment -%}
-          <h2 class="eyebrow product-related__eyebrow">{{ section.settings.eyebrow | escape }}</h2>
+          <h2 class="eyebrow eyebrow--center product-related__eyebrow">{{ section.settings.eyebrow | escape }}</h2>
+        {%- else -%}
+          {%- comment -%} The card titles are h3: they need an h2 above them {%- endcomment -%}
+          <h2 class="visually-hidden">{{ 'products.related.heading' | t }}</h2>
         {%- endif -%}
 
         {%- if section.settings.link_label != blank -%}
@@ -125,6 +169,8 @@
     left. The heart is the parked wishlist (hidden).
   */
   .product-related {
+    /* One Figma pixel: the 1920px sizes get smaller on smaller screens */
+    --px: min(calc(100vw / 1920), 0.0625rem);
     display: block;
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
     background-color: var(--color-background);
@@ -154,6 +200,19 @@
 
   .product-related__eyebrow {
     margin: 0;
+  }
+
+  /* The eyebrow as the title: centred with a line on each side on phones (the shared eyebrow--center);
+     from 750px at the left, as the Figma desktop */
+  @media (min-width: 750px) {
+    .product-related__eyebrow.eyebrow--center {
+      justify-content: flex-start;
+      text-align: start;
+    }
+
+    .product-related__eyebrow.eyebrow--center::after {
+      content: none;
+    }
   }
 
   .product-related__heading {
@@ -209,28 +268,58 @@
     gap: max(var(--space-lg), calc(40 * var(--px, 0.0625rem)));
   }
 
-  .product-related__item {
+  /* The tile from 750px, the full card on phones (the other one is not shown) */
+  .product-related__tile {
     aspect-ratio: var(--tile-ratio, 890 / 398);
+  }
+
+  .product-related__full {
+    display: none;
   }
 
   .product-related__empty {
     margin: 0;
   }
 
-  /* Tablets: two in a row at most. Phones: one under the other, a little taller so the strip fits */
+  /* Tablets: two tiles in a row at most (the count comes from Liquid: min() in repeat() breaks) */
   @media (max-width: 989px) {
     .product-related__grid {
-      grid-template-columns: repeat(min(var(--columns, 2), 2), minmax(0, 1fr));
+      grid-template-columns: repeat(var(--columns-tablet, 2), minmax(0, 1fr));
     }
   }
 
+  /*
+    Phones (Figma Variant97-3): the eyebrow centred with a line on each side, "View all" under it at the
+    right, then 2 full product cards in a row
+  */
   @media (max-width: 749px) {
-    .product-related__grid {
-      grid-template-columns: minmax(0, 1fr);
+    .product-related__header {
+      flex-direction: column;
+      align-items: stretch;
+      gap: var(--space-md);
+      margin-block-end: var(--space-lg);
     }
 
-    .product-related__item {
-      aspect-ratio: 4 / 3;
+    .product-related__heading {
+      order: 0; /* eyebrow, heading, then "View all" (the desktop row puts the heading last) */
+    }
+
+    .product-related__all {
+      align-self: flex-end;
+    }
+
+    .product-related__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-sm);
+    }
+
+    .product-related__tile {
+      display: none;
+    }
+
+    .product-related__full {
+      display: block;
+      block-size: 100%;
     }
   }
 {% endstylesheet %}
@@ -284,9 +373,12 @@
 {
   "name": "t:general.product_related",
   "tag": "section",
-  "class": "product-related-section",
   "enabled_on": { "templates": ["product"] },
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
     {
       "type": "paragraph",
       "content": "t:labels.product_related_info"
@@ -329,9 +421,21 @@
       "default": 2
     },
     {
+      "type": "product_list",
+      "id": "products",
+      "label": "t:labels.product_related_fallback",
+      "info": "t:labels.product_related_fallback_info",
+      "limit": 8
+    },
+    {
+      "type": "header",
+      "content": "t:labels.layout"
+    },
+    {
       "type": "range",
       "id": "columns",
       "label": "t:labels.product_related_columns",
+      "info": "t:labels.product_related_columns_info",
       "min": 2,
       "max": 4,
       "step": 1,
@@ -341,6 +445,7 @@
       "type": "select",
       "id": "card_shape",
       "label": "t:labels.product_related_card_shape",
+      "info": "t:labels.product_related_card_shape_info",
       "options": [
         { "value": "890 / 398", "label": "t:options.product_related_card_shape.wide" },
         { "value": "4 / 3", "label": "t:options.product_related_card_shape.landscape" },
@@ -350,15 +455,19 @@
       "default": "890 / 398"
     },
     {
-      "type": "product_list",
-      "id": "products",
-      "label": "t:labels.product_related_fallback",
-      "info": "t:labels.product_related_fallback_info",
-      "limit": 8
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "options": [
+        { "value": "wide", "label": "t:options.section_width.wide" },
+        { "value": "widest", "label": "t:options.section_width.widest" },
+        { "value": "full", "label": "t:options.section_width.full" }
+      ],
+      "default": "widest"
     },
     {
       "type": "header",
-      "content": "t:labels.style"
+      "content": "t:labels.animation_header"
     },
     {
       "type": "select",
@@ -373,21 +482,8 @@
       "default": "fade-up"
     },
     {
-      "type": "select",
-      "id": "section_width",
-      "label": "t:labels.section_width",
-      "options": [
-        { "value": "wide", "label": "t:options.section_width.wide" },
-        { "value": "widest", "label": "t:options.section_width.widest" },
-        { "value": "full", "label": "t:options.section_width.full" }
-      ],
-      "default": "widest"
-    },
-    {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -408,6 +504,16 @@
       "step": 8,
       "unit": "px",
       "default": 96
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ],
   "presets": [
