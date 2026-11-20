@@ -485,6 +485,12 @@
       "top": "Back to the top",
       "editor_empty": "No tab finds its section. Visitors do not see this bar. Make the Link name of a tab the same as the Link name of a section below this bar."
     },
+    "how_to": {
+      "pause": "Pause steps",
+      "step": "Step {{ number }}",
+      "step_empty": "This step has no heading, no text, no image and no caption. Visitors do not see it.",
+      "editor_empty": "This section has no content. Visitors do not see it. Add a heading or a step."
+    },
     "highlights": {
       "heading": "Product highlights",
       "benefit_empty": "This benefit has no icon, no heading and no text. Visitors do not see it.",

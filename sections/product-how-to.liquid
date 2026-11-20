@@ -1,13 +1,20 @@
 {%- comment -%}
-  How to use (M6.7, Figma PDP "Product details 13"): eyebrow, a heading with accent words, a vertical
-  timeline of steps (01 Cleanse & Press Dry…) on the left and a media panel on the right: the step's
-  image with its caption, "01/04" and a red progress line.
-  - The steps play on their own once the section is in view (the line fills over "Seconds per step",
-    then the next step), and a click on a step jumps to it. Keyboard focus on a step pauses; reduced
-    motion: no autoplay (click only). Inside the tabs' pinned block it only plays while its panel shows.
+  Step guide (M6.7, Figma PDP "Product details 13", phones Variant97-1): eyebrow, a heading with accent
+  words, a vertical timeline of steps (01 Cleanse & Press Dry…) and a media panel: the step's image with
+  its caption, "01/04" and a red progress line.
+  - Desktop (≥ 1200px): the heading and the timeline on the left, the media panel on the right.
+    Phones and tablets: the heading on top, then a small portrait media panel on the left beside the
+    timeline (phones ~42%, tablets ~40%).
+  - "Play the steps automatically": the steps play on their own while the section is in view (the
+    line fills over "Seconds per step", then the next step). A pause button stops them (WCAG 2.2.2);
+    keyboard focus on a step also pauses; reduced motion: no autoplay. A click on a step opens it.
+    Inside the tabs' pinned block it only plays while its panel shows.
   - The open step shows its text; the others show their number and title. The steps are buttons
-    (aria-expanded) controlling their text.
-  - Static content (connectable to metafields later). The tabs link here with the Anchor (#how-to-use).
+    (aria-expanded) controlling their text. Without JS every text shows.
+  - No image on any step: no media panel on the store (the editor shows placeholders); the line and
+    the pause button then go under the timeline. A step with no image shows a tinted panel.
+  - Static content (each field can be connected to a product metafield). The tabs link here with the
+    Link name (#how-to-use).
   The timer is the progress line's CSS animation: when it ends ("animationend") the next step opens,
   and pausing the animation pauses the steps.
 {%- endcomment -%}
@@ -15,17 +22,93 @@
 {%- liquid
   assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
   assign anchor = section.settings.anchor | handleize | default: 'how-to-use'
-  assign steps_count = section.blocks.size
   assign seconds = section.settings.seconds | default: 5
+
+  # The steps that show: an empty step (no title, text, image or caption) shows only in the editor
+  assign step_ids = ','
+  assign steps_count = 0
+  assign has_image = false
+  for block in section.blocks
+    if block.settings.title == blank and block.settings.text == blank and block.settings.image == blank and block.settings.caption == blank
+      unless request.design_mode
+        continue
+      endunless
+    endif
+    assign step_ids = step_ids | append: block.id | append: ','
+    assign steps_count = steps_count | plus: 1
+    if block.settings.image != blank
+      assign has_image = true
+    endif
+  endfor
+
+  # No image on any step: no media panel on the store; the editor shows placeholders
+  assign has_media = false
+  if steps_count > 0
+    if has_image or request.design_mode
+      assign has_media = true
+    endif
+  endif
+
+  assign has_intro = false
+  if section.settings.eyebrow != blank or section.settings.heading != blank
+    assign has_intro = true
+  endif
+
+  # Autoplay needs 2 steps or more
+  assign autoplay = false
+  if section.settings.autoplay and steps_count > 1
+    assign autoplay = true
+  endif
+
+  # The media panel: 667 / 1667 of the content from 1200px (widest ~92vw, full ~96vw, wide at most the
+  # 1650px page width); ~40% of the screen on phones and tablets
+  if section.settings.section_width == 'wide'
+    assign media_sizes = '(min-width: 1200px) min(37vw, 661px), 40vw'
+  elsif section.settings.section_width == 'full'
+    assign media_sizes = '(min-width: 1200px) 39vw, 40vw'
+  else
+    assign media_sizes = '(min-width: 1200px) 37vw, 40vw'
+  endif
+
+  assign steps_total = steps_count | prepend: '0' | slice: -2, 2
+  # The line without autoplay (and without JS): step 1 of N is open
+  assign step_fill = 100
+  if steps_count > 1
+    assign step_fill = 100.0 | divided_by: steps_count | round: 2
+  endif
 -%}
 
+{%- capture image_loading -%}{% render 'section-loading' %}{%- endcapture -%}
+{%- assign image_loading = image_loading | strip -%}
+
+{%- capture controls -%}
+  {%- if autoplay -%}
+    <button type="button" class="product-how-to__pause" aria-pressed="false" data-step-pause>
+      <span class="visually-hidden">{{ 'products.how_to.pause' | t }}</span>
+      <svg class="product-how-to__pause-icon product-how-to__pause-icon--pause" aria-hidden="true" focusable="false" viewBox="0 0 16 16"><rect x="3.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/><rect x="9.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/></svg>
+      <svg class="product-how-to__pause-icon product-how-to__pause-icon--play" aria-hidden="true" focusable="false" viewBox="0 0 16 16"><path d="M4.5 2.8v10.4a.8.8 0 0 0 1.2.7l8.4-5.2a.8.8 0 0 0 0-1.4L5.7 2.1a.8.8 0 0 0-1.2.7z" fill="currentColor"/></svg>
+    </button>
+  {%- endif -%}
+  <span class="product-how-to__progress" aria-hidden="true"><span data-step-progress></span></span>
+{%- endcapture -%}
+
+{%- if has_intro == false and steps_count == 0 -%}
+  {%- if request.design_mode -%}
+    <div class="product-how-to-empty color-{{ scheme_id }}">
+      <p>{{ 'products.how_to.editor_empty' | t }}</p>
+    </div>
+  {%- endif -%}
+{%- else -%}
 <product-how-to
   id="{{ anchor }}"
-  class="product-how-to full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
-  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --step-duration: {{ seconds }}s;"
+  class="product-how-to full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% unless has_media %} product-how-to--no-media{% endunless %}{% unless has_intro %} product-how-to--no-intro{% endunless %}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --step-duration: {{ seconds }}s; --step-fill: {{ step_fill }}%;"
+  {% if autoplay %}
+    data-autoplay
+  {% endif %}
 >
   <div class="product-how-to__inner">
-    <div class="product-how-to__content">
+    {%- if has_intro -%}
       <div class="product-how-to__intro" data-tab-item>
         {%- if section.settings.eyebrow != blank -%}
           <p class="eyebrow product-how-to__eyebrow">{{ section.settings.eyebrow | escape }}</p>
@@ -34,48 +117,91 @@
           <h2 class="product-how-to__heading">{{ section.settings.heading }}</h2>
         {%- endif -%}
       </div>
+    {%- endif -%}
 
-      {%- if steps_count > 0 -%}
-        <ol class="product-how-to__steps" role="list" data-tab-item>
+    {%- if steps_count > 0 -%}
+      <div class="product-how-to__timeline" data-tab-item>
+        <ol class="product-how-to__steps" role="list">
+          {%- assign n = 0 -%}
           {%- for block in section.blocks -%}
-            {%- assign step_number = forloop.index | prepend: '0' | slice: -2, 2 -%}
-            <li class="product-how-to__step{% if forloop.first %} is-active{% endif %}" {{ block.shopify_attributes }}>
+            {%- assign key = ',' | append: block.id | append: ',' -%}
+            {%- unless step_ids contains key -%}
+              {%- continue -%}
+            {%- endunless -%}
+            {%- liquid
+              assign n = n | plus: 1
+              assign step_number = n | prepend: '0' | slice: -2, 2
+              assign first = false
+              if n == 1
+                assign first = true
+              endif
+            -%}
+            <li class="product-how-to__step{% if first %} is-active{% endif %}" {{ block.shopify_attributes }}>
               <button
                 type="button"
                 class="product-how-to__step-button"
-                aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}"
-                aria-controls="StepText-{{ block.id }}"
-                data-step="{{ forloop.index0 }}"
+                {% if block.settings.text != blank %}
+                  aria-expanded="{{ first }}"
+                  aria-controls="StepText-{{ block.id }}"
+                {% endif %}
+                data-step="{{ n | minus: 1 }}"
               >
                 <span class="product-how-to__dot" aria-hidden="true"></span>
                 <span class="product-how-to__number">{{ step_number }}</span>
-                <span class="product-how-to__title">{{ block.settings.title | escape }}</span>
+                <span class="product-how-to__title">
+                  {%- if block.settings.title != blank -%}
+                    {{ block.settings.title | escape }}
+                  {%- else -%}
+                    <span class="visually-hidden">{{ 'products.how_to.step' | t: number: n }}</span>
+                  {%- endif -%}
+                </span>
               </button>
               {%- if block.settings.text != blank -%}
                 <p class="product-how-to__text" id="StepText-{{ block.id }}">{{ block.settings.text | escape }}</p>
+              {%- elsif request.design_mode -%}
+                {%- if block.settings.title == blank and block.settings.image == blank and block.settings.caption == blank -%}
+                  <p class="product-how-to__text">{{ 'products.how_to.step_empty' | t }}</p>
+                {%- endif -%}
               {%- endif -%}
             </li>
           {%- endfor -%}
         </ol>
-      {%- endif -%}
-    </div>
+        {%- unless has_media -%}
+          <div class="product-how-to__controls">{{ controls }}</div>
+        {%- endunless -%}
+      </div>
+    {%- endif -%}
 
-    {%- if steps_count > 0 -%}
+    {%- if has_media -%}
       <div class="product-how-to__media" data-tab-item>
+        {%- assign n = 0 -%}
         {%- for block in section.blocks -%}
-          <figure class="product-how-to__slide{% if forloop.first %} is-active{% endif %}" data-slide="{{ forloop.index0 }}">
+          {%- assign key = ',' | append: block.id | append: ',' -%}
+          {%- unless step_ids contains key -%}
+            {%- continue -%}
+          {%- endunless -%}
+          {%- assign n = n | plus: 1 -%}
+          <figure
+            class="product-how-to__slide{% if n == 1 %} is-active{% endif %}"
+            data-slide="{{ n | minus: 1 }}"
+            {% if n > 1 %}
+              aria-hidden="true"
+            {% endif %}
+          >
             {%- if block.settings.image != blank -%}
+              {%- comment -%} No alt text = decorative: the step title is read in the step button already {%- endcomment -%}
+              {%- assign image_alt = block.settings.image.alt | default: '' -%}
               {{
                 block.settings.image
                 | image_url: width: 1400
                 | image_tag:
-                  loading: 'lazy',
-                  widths: '500, 800, 1100, 1400',
-                  sizes: '(min-width: 990px) 35vw, 100vw',
-                  alt: block.settings.title,
+                  loading: image_loading,
+                  widths: '300, 500, 800, 1100, 1400',
+                  sizes: media_sizes,
+                  alt: image_alt,
                   class: 'product-how-to__image'
               }}
-            {%- else -%}
+            {%- elsif request.design_mode -%}
               {{ 'lifestyle-2' | placeholder_svg_tag: 'product-how-to__image product-how-to__placeholder' }}
             {%- endif -%}
             {%- if block.settings.caption != blank -%}
@@ -84,13 +210,14 @@
           </figure>
         {%- endfor -%}
         <p class="product-how-to__counter" aria-hidden="true">
-          <span data-step-current>01</span>/{{ steps_count | prepend: '0' | slice: -2, 2 }}
+          <span data-step-current>01</span>/{{ steps_total }}
         </p>
-        <span class="product-how-to__progress" aria-hidden="true"><span data-step-progress></span></span>
+        <div class="product-how-to__controls">{{ controls }}</div>
       </div>
     {%- endif -%}
   </div>
 </product-how-to>
+{%- endif -%}
 
 {% stylesheet %}
   /*
@@ -98,24 +225,66 @@
     accent; timeline x 50–665: a 1px pale line with dots (active: accent ~22px with a pale ring; others
     pale ~18px), number accent caps ~16px, title heading font ~28px, the open step's text ~18px; media
     x 1158–1825 (667 x 546), square corners, caption white ~18px bottom left on a dark fade, "01/04"
-    caps bottom right, a 2px line under them (accent fill over pale).
+    caps bottom right, a 2px line under them (accent fill over pale). --px = one Figma pixel: the 1920px
+    sizes get smaller on smaller screens.
+    Phones (Variant97-1): heading on top, then a portrait media panel (~157 x 187 at 390) on the left
+    beside the timeline.
   */
   .product-how-to {
+    --px: min(calc(100vw / 1920), 0.0625rem);
     display: block;
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
     background-color: var(--color-background);
   }
 
+  .product-how-to-empty {
+    padding: var(--space-2xl) var(--page-margin);
+    background-color: var(--color-background);
+    text-align: center;
+  }
+
+  /* Phones and tablets: the heading on top, the media panel on the left beside the timeline */
   .product-how-to__inner {
     display: grid;
-    grid-template-columns: minmax(0, 1000fr) minmax(0, 667fr);
-    align-items: start; /* the text starts at the top; the image is centred beside it (below) */
-    gap: max(var(--space-xl), calc(110 * var(--px, 0.0625rem)));
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    grid-template-areas:
+      "intro intro"
+      "media timeline";
+    align-items: center;
+    gap: var(--space-xl) var(--space-lg);
     inline-size: min(
       calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
       calc(100% - var(--page-margin) * 2)
     );
     margin-inline: auto;
+  }
+
+  /* No heading: no intro row (its row gap would leave empty space); no media: one column */
+  .product-how-to--no-intro .product-how-to__inner {
+    grid-template-areas: "media timeline";
+  }
+
+  .product-how-to--no-media .product-how-to__inner {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "intro"
+      "timeline";
+  }
+
+  .product-how-to--no-media.product-how-to--no-intro .product-how-to__inner {
+    grid-template-areas: "timeline";
+  }
+
+  .product-how-to__intro {
+    grid-area: intro;
+  }
+
+  .product-how-to__timeline {
+    grid-area: timeline;
+  }
+
+  .product-how-to__media {
+    grid-area: media;
   }
 
   .product-how-to__eyebrow {
@@ -124,7 +293,6 @@
 
   .product-how-to__heading {
     margin: 0;
-    max-inline-size: 20ch; /* Figma: 2 lines */
     font-size: var(--font-size-h1);
     font-weight: 400;
     line-height: 1.1;
@@ -137,11 +305,13 @@
 
   /* The timeline: a pale line down the dots */
   .product-how-to__steps {
+    --dot-column: 1.625rem;
+    --step-gap: max(var(--space-md), calc(24 * var(--px)));
     position: relative;
     display: flex;
     flex-direction: column;
-    gap: max(var(--space-md), calc(26 * var(--px, 0.0625rem)));
-    margin: max(var(--space-xl), calc(44 * var(--px, 0.0625rem))) 0 0;
+    gap: max(var(--space-md), calc(26 * var(--px)));
+    margin: 0;
     padding: 0;
     list-style: none;
   }
@@ -150,7 +320,7 @@
     content: "";
     position: absolute;
     inset-block: 0.75rem 0;
-    inset-inline-start: 0.8125rem;
+    inset-inline-start: calc(var(--dot-column) / 2);
     inline-size: 1px;
     background-color: var(--color-card-border);
   }
@@ -158,8 +328,8 @@
   .product-how-to__step-button {
     position: relative;
     display: grid;
-    grid-template-columns: 1.625rem minmax(0, 1fr);
-    column-gap: max(var(--space-md), calc(24 * var(--px, 0.0625rem)));
+    grid-template-columns: var(--dot-column) minmax(0, 1fr);
+    column-gap: var(--step-gap);
     align-items: start;
     inline-size: 100%;
     min-block-size: 0;
@@ -183,7 +353,9 @@
     outline-offset: 4px;
   }
 
+  /* The dot; the "ping" on the current step: a ring grows out of the dot and fades */
   .product-how-to__dot {
+    position: relative;
     grid-column: 1;
     grid-row: 1 / span 2;
     justify-self: center;
@@ -202,11 +374,6 @@
     box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 16%, var(--color-background));
   }
 
-  /* The "ping" on the current step: a ring grows out of the dot and fades, like a notification */
-  .product-how-to__dot {
-    position: relative;
-  }
-
   @media (prefers-reduced-motion: no-preference) {
     .product-how-to__step.is-active .product-how-to__dot::after {
       content: "";
@@ -215,6 +382,14 @@
       border-radius: 50%;
       background-color: var(--color-accent);
       animation: product-how-to-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+    }
+
+    .product-how-to__step.is-active .product-how-to__text {
+      animation: product-how-to-text var(--duration-normal) var(--ease-out);
+    }
+
+    .product-how-to__slide {
+      transition: opacity 0.6s var(--ease-out);
     }
   }
 
@@ -240,17 +415,22 @@
     line-height: 1.25;
   }
 
-  /* Only the open step shows its text (it opens with a short fade) */
+  /* Only the open step shows its text (it opens with a short fade); without JS every text shows */
   .product-how-to__text {
     display: none;
-    margin: var(--space-sm) 0 0 calc(1.625rem + max(var(--space-md), calc(24 * var(--px, 0.0625rem))));
+    margin: var(--space-sm) 0 0 calc(var(--dot-column) + var(--step-gap));
     font-size: var(--font-size-body-sm);
     line-height: 1.6;
   }
 
   .product-how-to__step.is-active .product-how-to__text {
     display: block;
-    animation: product-how-to-text var(--duration-normal) var(--ease-out);
+  }
+
+  @media (scripting: none) {
+    .product-how-to__text {
+      display: block;
+    }
   }
 
   @keyframes product-how-to-text {
@@ -260,14 +440,13 @@
     }
   }
 
-  /* The media panel: the slides stacked, the open one shown */
+  /* The media panel: the slides stacked, the open one shown; a step with no image = the tint */
   .product-how-to__media {
-    align-self: center;
     position: relative;
     display: grid;
     overflow: hidden;
-    aspect-ratio: 667 / 546;
-    background-color: var(--color-tint, color-mix(in srgb, var(--color-text) 6%, var(--color-background)));
+    aspect-ratio: 157 / 187;
+    background-color: color-mix(in srgb, var(--color-text) 6%, var(--color-background));
     color: #ffffff;
   }
 
@@ -275,7 +454,6 @@
     grid-area: 1 / 1;
     margin: 0;
     opacity: 0;
-    transition: opacity 0.6s var(--ease-out);
   }
 
   .product-how-to__slide.is-active {
@@ -298,37 +476,117 @@
     content: "";
     position: absolute;
     inset: auto 0 0;
-    block-size: 30%;
-    background: linear-gradient(to top, #00000080, transparent);
+    block-size: 35%;
+    background: linear-gradient(to top, #00000080, #00000000);
     pointer-events: none;
   }
 
   .product-how-to__caption {
     position: absolute;
     z-index: 1;
-    inset-block-end: max(var(--space-lg), calc(28 * var(--px, 0.0625rem)));
-    inset-inline: max(var(--space-md), calc(20 * var(--px, 0.0625rem))) 6rem;
+    inset-block-end: max(var(--space-lg), calc(28 * var(--px)));
+    inset-inline: max(var(--space-sm), calc(20 * var(--px))) 5.5rem; /* clear of the counter */
     margin: 0;
     font-size: var(--font-size-body);
+    line-height: 1.3;
   }
 
   .product-how-to__counter {
     position: absolute;
     z-index: 1;
-    inset-block-end: max(var(--space-lg), calc(24 * var(--px, 0.0625rem)));
-    inset-inline-end: max(var(--space-md), calc(20 * var(--px, 0.0625rem)));
+    inset-block-end: max(var(--space-lg), calc(24 * var(--px)));
+    inset-inline-end: max(var(--space-sm), calc(20 * var(--px)));
     margin: 0;
     font-size: var(--font-size-small);
     letter-spacing: var(--letter-spacing-label);
     font-variant-numeric: tabular-nums;
   }
 
-  /* The progress line: its fill is the step timer (the script moves on when the animation ends) */
-  .product-how-to__progress {
+  /*
+    The controls: on the media panel the pause button sits in the top corner and the line along the
+    bottom; with no media panel, both go under the timeline (the line in the text colours).
+  */
+  .product-how-to__media > .product-how-to__controls {
+    display: contents; /* its children sit on the panel; the wrapper must not add a grid row */
+  }
+
+  .product-how-to__media .product-how-to__pause {
     position: absolute;
     z-index: 1;
-    inset-block-end: max(var(--space-sm), calc(12 * var(--px, 0.0625rem)));
-    inset-inline: max(var(--space-md), calc(20 * var(--px, 0.0625rem)));
+    inset-block-start: max(var(--space-sm), calc(16 * var(--px)));
+    inset-inline-end: max(var(--space-sm), calc(16 * var(--px)));
+    border-color: #ffffff80;
+    background-color: #00000040;
+    color: #ffffff;
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+  }
+
+  .product-how-to__media .product-how-to__progress {
+    position: absolute;
+    z-index: 1;
+    inset-block-end: max(var(--space-sm), calc(12 * var(--px)));
+    inset-inline: max(var(--space-sm), calc(20 * var(--px)));
+  }
+
+  .product-how-to__timeline > .product-how-to__controls {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin-block-start: var(--space-lg);
+    padding-inline-start: calc(var(--dot-column) + var(--step-gap));
+  }
+
+  .product-how-to__timeline .product-how-to__progress {
+    flex: 1;
+    max-inline-size: 20rem;
+    background-color: var(--color-card-border);
+  }
+
+  .product-how-to__pause {
+    display: grid;
+    flex: none;
+    place-items: center;
+    inline-size: 2rem;
+    block-size: 2rem;
+    min-block-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, var(--color-accent) 50%, transparent);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-background);
+    color: var(--color-accent);
+    cursor: pointer;
+  }
+
+  .product-how-to__pause svg {
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
+  }
+
+  .product-how-to__pause-icon--play,
+  .product-how-to__pause[aria-pressed="true"] .product-how-to__pause-icon--pause {
+    display: none;
+  }
+
+  .product-how-to__pause[aria-pressed="true"] .product-how-to__pause-icon--play {
+    display: block;
+  }
+
+  .product-how-to__pause[hidden] {
+    display: none;
+  }
+
+  /* Without JS nothing plays, so the button would do nothing */
+  @media (scripting: none) {
+    .product-how-to .product-how-to__pause {
+      display: none;
+    }
+  }
+
+  /* The progress line: its fill is the step timer (the script moves on when the animation ends) */
+  .product-how-to__progress {
+    display: block;
     block-size: 2px;
     background-color: #ffffff59;
   }
@@ -348,9 +606,12 @@
     animation-play-state: paused;
   }
 
-  /* Without autoplay (click only / reduced motion): the line shows which step of how many is open */
+  /*
+    Without autoplay (click only / reduced motion / no JS): the line shows which step of how many is
+    open (--step-fill: step 1 from Liquid, then from the script)
+  */
   .product-how-to:not(.is-playing) .product-how-to__progress > span {
-    inline-size: var(--step-fill, 25%);
+    inline-size: var(--step-fill);
     transition: inline-size var(--duration-normal) var(--ease-out);
   }
 
@@ -365,34 +626,118 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .product-how-to__slide,
     .product-how-to__dot {
       transition: none;
     }
+  }
 
-    .product-how-to__step.is-active .product-how-to__text {
-      animation: none;
+  /* Phones (Variant97-1): media ~42% wide, smaller text and dots */
+  @media (max-width: 749px) {
+    .product-how-to__inner {
+      grid-template-columns: minmax(0, 21fr) minmax(0, 29fr);
+      gap: var(--space-xl) var(--space-md);
+    }
+
+    .product-how-to__eyebrow {
+      margin-block-end: var(--space-sm);
+    }
+
+    .product-how-to__heading {
+      font-size: 1.5rem;
+      line-height: 1.2;
+    }
+
+    .product-how-to__steps {
+      --dot-column: 0.625rem;
+      --step-gap: var(--space-sm);
+      gap: var(--space-lg);
+    }
+
+    .product-how-to__steps::before {
+      inset-block-start: 0.5rem;
+    }
+
+    .product-how-to__dot {
+      margin-block-start: 0.2rem;
+      inline-size: 0.4375rem;
+    }
+
+    .product-how-to__step.is-active .product-how-to__dot {
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 16%, var(--color-background));
+    }
+
+    .product-how-to__number {
+      font-size: 0.625rem;
+    }
+
+    .product-how-to__title {
+      font-size: 0.9375rem;
+    }
+
+    .product-how-to__text {
+      margin-block-start: var(--space-xs);
+      font-size: 0.75rem;
+      line-height: 1.5;
+    }
+
+    .product-how-to__caption {
+      inset-block-end: var(--space-md);
+      inset-inline-end: 3.25rem;
+      font-size: 0.75rem;
+    }
+
+    .product-how-to__counter {
+      inset-block-end: var(--space-md);
+      font-size: 0.625rem;
+      letter-spacing: 0.05em;
+    }
+
+    .product-how-to__media .product-how-to__progress {
+      inset-block-end: 0.5rem;
+    }
+
+    .product-how-to__pause {
+      inline-size: 1.75rem;
+      block-size: 1.75rem;
     }
   }
 
-  /* Tablets and phones (brief: small media beside the timeline): one column, the media first */
-  @media (max-width: 989px) {
+  /* Desktop: the heading and the timeline on the left, the media panel (667 x 546) centred on the right */
+  @media (min-width: 1200px) {
     .product-how-to__inner {
-      grid-template-columns: minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1000fr) minmax(0, 667fr);
+      grid-template-areas:
+        "intro media"
+        "timeline media";
+      /* A tall media panel gives its extra height to the timeline row, not to the heading row */
+      grid-template-rows: auto 1fr;
+      align-items: start;
+      gap: max(var(--space-xl), calc(44 * var(--px))) max(var(--space-xl), calc(110 * var(--px)));
+    }
+
+    .product-how-to--no-intro .product-how-to__inner {
+      grid-template-areas: "timeline media";
+      grid-template-rows: auto;
+    }
+
+    .product-how-to__heading {
+      max-inline-size: 20ch; /* Figma: 2 lines */
     }
 
     .product-how-to__media {
-      order: -1;
+      align-self: center;
+      aspect-ratio: 667 / 546;
     }
   }
 {% endstylesheet %}
 
 {% javascript %}
   /**
-   * <product-how-to>: opens one step at a time. Autoplay: the progress line's CSS animation is the timer;
-   * when it ends, the next step opens and the line starts again. It plays only while the section is on
-   * screen (and, inside the tabs' pinned block, while its panel shows); hover and keyboard focus pause it;
-   * reduced motion: no autoplay. A click on a step opens it (and restarts the timer).
+   * <product-how-to>: opens one step at a time. A click on a step opens it (and restarts the timer).
+   * Autoplay (data-autoplay): the progress line's CSS animation is the timer; when it ends, the next
+   * step opens and the line starts again. It plays only while the section is on screen (and, inside
+   * the tabs' pinned block, while its panel shows); the pause button and keyboard focus on a step stop
+   * it; reduced motion: no autoplay (followed when the visitor changes it).
    */
   class ProductHowTo extends HTMLElement {
     connectedCallback() {
@@ -404,6 +749,7 @@
       this.steps = [...this.querySelectorAll('.product-how-to__step')];
       this.slides = [...this.querySelectorAll('[data-slide]')];
       this.progress = this.querySelector('[data-step-progress]');
+      this.pauseButton = this.querySelector('[data-step-pause]');
       // The step that is open now (after a move in the page it isn't always the first)
       this.index = Math.max(0, this.steps.findIndex((step) => step.classList.contains('is-active')));
       if (this.steps.length < 2) return;
@@ -417,13 +763,49 @@
         { signal }
       );
 
-      this.autoplay = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      // Theme editor: selecting a step block opens that step and holds autoplay until it is deselected
+      this.addEventListener(
+        'shopify:block:select',
+        (event) => {
+          const index = this.steps.indexOf(event.target.closest('.product-how-to__step'));
+          if (index < 0) return;
+          this.editorHold = true;
+          this.open(index);
+          if (this.motion) this.updatePlay();
+        },
+        { signal }
+      );
+      this.addEventListener(
+        'shopify:block:deselect',
+        () => {
+          this.editorHold = false;
+          if (this.motion) this.updatePlay();
+        },
+        { signal }
+      );
+
       this.updateFill();
-      if (!this.autoplay) return;
+      if (!this.hasAttribute('data-autoplay')) return;
 
       this.progress?.addEventListener('animationend', () => this.open(this.index + 1), { signal });
+      this.paused = this.pauseButton?.getAttribute('aria-pressed') === 'true';
+      this.pauseButton?.addEventListener(
+        'click',
+        () => {
+          this.paused = !this.paused;
+          // The label stays "Pause steps"; aria-pressed says whether it is on (pressed = paused)
+          this.pauseButton.setAttribute('aria-pressed', String(this.paused));
+          this.updatePlay();
+        },
+        { signal }
+      );
+
+      // Reduced motion: no autoplay and no pause button; followed when the visitor changes it
+      this.motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+      this.motion.addEventListener('change', () => this.updatePlay(), { signal });
+
       this.inView = false;
-      this.hovered = false;
+      this.focused = false;
       this.observer = new IntersectionObserver(([entry]) => {
         this.inView = entry.isIntersecting;
         this.updatePlay();
@@ -431,9 +813,9 @@
       this.observer.observe(this);
 
       // Pause while a keyboard user is on a step (focus-visible), so the text doesn't change under them.
-      // Not after a mouse click (the button keeps focus, which used to pause it for good) or on hover.
+      // Not after a mouse click (the button keeps focus, which used to pause it for good)
       const onFocus = () => {
-        this.hovered = Boolean(this.querySelector(':focus-visible'));
+        this.focused = Boolean(this.querySelector('.product-how-to__step-button:focus-visible'));
         this.updatePlay();
       };
       this.addEventListener('focusin', onFocus, { signal });
@@ -445,6 +827,7 @@
         this.classObserver = new MutationObserver(() => this.updatePlay());
         this.classObserver.observe(wrapper, { attributes: true, attributeFilter: ['class'] });
       }
+      this.updatePlay();
     }
 
     disconnectedCallback() {
@@ -458,9 +841,11 @@
     }
 
     updatePlay() {
-      const play = this.inView && !this.panelHidden();
+      const reduced = this.motion.matches;
+      if (this.pauseButton) this.pauseButton.hidden = reduced;
+      const play = !reduced && this.inView && !this.panelHidden();
       this.classList.toggle('is-playing', play);
-      this.classList.toggle('is-paused', play && this.hovered);
+      this.classList.toggle('is-paused', play && (this.focused || this.paused || this.editorHold));
     }
 
     /** Opens step i (wrapping round), shows its slide, restarts the timer */
@@ -470,9 +855,15 @@
       this.steps.forEach((step, n) => {
         const active = n === this.index;
         step.classList.toggle('is-active', active);
-        step.querySelector('[data-step]')?.setAttribute('aria-expanded', String(active));
+        // Only a step with text has aria-expanded (a step with no text shows or hides nothing)
+        const button = step.querySelector('[data-step][aria-expanded]');
+        button?.setAttribute('aria-expanded', String(active));
       });
-      this.slides.forEach((slide, n) => slide.classList.toggle('is-active', n === this.index));
+      this.slides.forEach((slide, n) => {
+        slide.classList.toggle('is-active', n === this.index);
+        // Screen readers get only the shown image and caption
+        slide.toggleAttribute('aria-hidden', n !== this.index);
+      });
       const current = this.querySelector('[data-step-current]');
       if (current) current.textContent = String(this.index + 1).padStart(2, '0');
       this.updateFill();
@@ -497,7 +888,6 @@
 {
   "name": "t:general.product_how_to",
   "tag": "section",
-  "class": "product-how-to-section",
   "enabled_on": { "templates": ["product"] },
   "max_blocks": 6,
   "blocks": [
@@ -505,14 +895,24 @@
       "type": "step",
       "name": "t:general.product_how_to_step",
       "settings": [
+        { "type": "header", "content": "t:labels.content", "info": "t:labels.product_how_to_step_info" },
         { "type": "text", "id": "title", "label": "t:labels.heading", "default": "Cleanse & press dry" },
-        { "type": "textarea", "id": "text", "label": "t:labels.text", "default": "Begin on skin still faintly damp — the serum travels further on moisture." },
-        { "type": "image_picker", "id": "image", "label": "t:labels.image" },
+        { "type": "textarea", "id": "text", "label": "t:labels.text", "info": "t:labels.product_how_to_text_info", "default": "Begin on skin still faintly damp — the serum travels further on moisture." },
+        { "type": "header", "content": "t:labels.image" },
+        { "type": "image_picker", "id": "image", "label": "t:labels.image", "info": "t:labels.product_how_to_image_info" },
         { "type": "text", "id": "caption", "label": "t:labels.product_how_to_caption", "default": "Blot with linen — never wipe." }
       ]
     }
   ],
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
+    {
+      "type": "paragraph",
+      "content": "t:labels.product_content_dynamic"
+    },
     {
       "type": "text",
       "id": "anchor",
@@ -534,24 +934,14 @@
       "default": "Four minutes, performed the same way, <em>every evening.</em>"
     },
     {
-      "type": "range",
-      "id": "seconds",
-      "label": "t:labels.product_how_to_seconds",
-      "info": "t:labels.product_how_to_seconds_info",
-      "min": 3,
-      "max": 12,
-      "step": 1,
-      "unit": "s",
-      "default": 5
-    },
-    {
       "type": "header",
-      "content": "t:labels.style"
+      "content": "t:labels.layout"
     },
     {
       "type": "select",
       "id": "section_width",
       "label": "t:labels.section_width",
+      "info": "t:labels.product_how_to_layout_info",
       "options": [
         { "value": "wide", "label": "t:options.section_width.wide" },
         { "value": "widest", "label": "t:options.section_width.widest" },
@@ -560,10 +950,31 @@
       "default": "widest"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
+      "type": "header",
+      "content": "t:labels.autoplay"
+    },
+    {
+      "type": "checkbox",
+      "id": "autoplay",
+      "label": "t:labels.product_how_to_autoplay",
+      "info": "t:labels.product_how_to_autoplay_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "seconds",
+      "label": "t:labels.product_how_to_seconds",
+      "info": "t:labels.product_how_to_seconds_info",
+      "visible_if": "{{ section.settings.autoplay }}",
+      "min": 3,
+      "max": 12,
+      "step": 1,
+      "unit": "s",
+      "default": 5
+    },
+    {
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -584,6 +995,16 @@
       "step": 8,
       "unit": "px",
       "default": 64
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ],
   "presets": [
