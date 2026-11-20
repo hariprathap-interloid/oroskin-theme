@@ -500,7 +500,11 @@
       "hotspot_empty": "This hotspot has no heading and no text. Visitors do not see it."
     },
     "clinical": {
-      "compare": "Compare {{ before }} and {{ after }}"
+      "compare": "Compare {{ before }} and {{ after }}",
+      "compare_plain": "Compare the before and after images",
+      "position": "[percent]% of the before image shows",
+      "editor_empty": "This section has no content. Visitors do not see it. Add a heading, the two images or a result.",
+      "result_empty": "This result has no label. Visitors do not see it."
     },
     "reviews": {
       "label": "Customer reviews",
