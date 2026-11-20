@@ -24,8 +24,10 @@
     font_modify returns nothing if the chosen font has no 500, and then 500 text falls back to regular.
   {% endcomment %}
   {{ settings.type_body_font | font_modify: 'weight', '500' | font_face: font_display: 'swap' }}
-  {% # Heading 500 (the FAQ form card's heading). The file only downloads on pages that use it. %}
-  {{ settings.type_heading_font | font_modify: 'weight', '500' | font_face: font_display: 'swap' }}
+  {% comment %}
+    No heading 500 face: it was only for the Product FAQ card heading and cost a 75 KB high-priority
+    font file on the product page (Lighthouse mobile LCP). Headings use the chosen weight and bold only.
+  {% endcomment %}
 
   {% # Accent font: decorative lines (hero script, brush word). Only the chosen style is loaded. %}
   {{ settings.type_accent_font | font_face: font_display: 'swap' }}
