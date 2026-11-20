@@ -513,7 +513,8 @@
       "next": "Next review",
       "pause": "Pause reviews",
       "play": "Play reviews",
-      "empty": "Add Review blocks, or a reviews app block, to show reviews here."
+      "empty": "Add Review blocks, or a reviews app block, to show reviews here. Visitors do not see this section until then.",
+      "review_empty": "This review has no text. Visitors do not see it."
     },
     "faq": {
       "form_name": "Name",

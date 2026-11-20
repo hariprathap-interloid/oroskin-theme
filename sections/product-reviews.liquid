@@ -25,15 +25,37 @@
   assign reviews = section.blocks | where: 'type', 'review'
   assign app_count = section.blocks.size | minus: reviews.size
 
+  # The reviews that show: a review needs its text. review_count (the store) decides the layout, so the
+  # editor shows the same carousel / scroll; card_count also has the editor's empty cards (with a note)
+  assign review_count = 0
+  assign card_count = 0
+  for block in reviews
+    if block.settings.text != blank
+      assign review_count = review_count | plus: 1
+      assign card_count = card_count | plus: 1
+    elsif request.design_mode
+      assign card_count = card_count | plus: 1
+    endif
+  endfor
+
   assign write_url = section.settings.write_link
   if write_url == blank and app_count > 0
     assign write_url = '#' | append: app_id
   endif
 
+  # The carousel: more reviews than cards shown (the same number on every screen: a 2-card phone
+  # version was tried and reverted)
   assign carousel = false
-  if reviews.size > visible
+  if review_count > visible
     assign carousel = true
   endif
+
+  # The floating image's width at 1920px is "Floating image size": in vw that is size / 19.2
+  # (shown from 1200px only; hidden + lazy = not loaded on smaller screens)
+  assign float_vw = section.settings.float_size | default: 160 | divided_by: 19.2 | ceil
+  # It stops growing at 1920px (--px is at most 1px)
+  assign float_px = section.settings.float_size | default: 160
+  assign float_sizes = '(min-width: 1920px) ' | append: float_px | append: 'px, (min-width: 1200px) ' | append: float_vw | append: 'vw, 1px'
 
   # Card motion: scroll (default) / auto (timer) / buttons. On scroll, the section asks the tabs' pinned
   # block for extra scroll: about a third of a screen per card step, plus one for the image to leave
@@ -42,16 +64,18 @@
   assign tab_scroll = 0
   if motion == 'scroll'
     if carousel or section.settings.float_image != blank
-      assign card_steps = reviews.size | minus: visible | at_least: 0
+      assign card_steps = review_count | minus: visible | at_least: 0
       assign tab_scroll = card_steps | plus: 1 | times: 0.35
     endif
   endif
 -%}
 
+{%- comment -%} No review and no app block: no section on the store (the editor shows a note) {%- endcomment -%}
+{%- if review_count > 0 or app_count > 0 or request.design_mode -%}
 <product-reviews
   id="{{ anchor }}"
   class="product-reviews full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
-  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --visible: {{ visible }}; --float-size: {{ section.settings.float_size | default: 160 }};"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --float-size: {{ section.settings.float_size | default: 160 }};"
   data-motion="{{ motion }}"
   data-float="{{ section.settings.float_motion | default: 'hide' }}"
   {% if tab_scroll > 0 %}
@@ -86,8 +110,13 @@
         <div class="product-reviews__float" aria-hidden="true">
           {{
             section.settings.float_image
-            | image_url: width: 500
-            | image_tag: loading: 'lazy', widths: '250, 500', sizes: '10vw', alt: '', class: 'product-reviews__float-image'
+            | image_url: width: 1000
+            | image_tag:
+              loading: 'lazy',
+              widths: '200, 300, 500, 750, 1000',
+              sizes: float_sizes,
+              alt: '',
+              class: 'product-reviews__float-image'
           }}
         </div>
       {%- endif -%}
@@ -95,7 +124,7 @@
         <p class="product-reviews__word" aria-hidden="true">{{ section.settings.word | escape }}</p>
       {%- endif -%}
 
-      {%- if reviews.size > 0 -%}
+      {%- if card_count > 0 -%}
         <div
           class="product-reviews__viewport"
           {% if carousel %}
@@ -106,13 +135,21 @@
           data-tab-item
         >
           <div class="product-reviews__track" data-reviews-track>
+            {%- assign n = 0 -%}
             {%- for block in reviews -%}
               {%- liquid
+                # No text: nothing on the store; in the editor the card shows a note
+                if block.settings.text == blank
+                  unless request.design_mode
+                    continue
+                  endunless
+                endif
                 assign side = 'right'
-                assign is_odd = forloop.index0 | modulo: 2
+                assign is_odd = n | modulo: 2
                 if is_odd == 1
                   assign side = 'left'
                 endif
+                assign n = n | plus: 1
                 assign rating_percent = block.settings.rating | times: 20
               -%}
               <figure class="review-card review-card--{{ side }}" {{ block.shopify_attributes }}>
@@ -124,21 +161,28 @@
                   {%- endif -%}
                 </span>
 
-                <span class="review-card__avatar">
-                  {%- if block.settings.avatar != blank -%}
-                    {{
-                      block.settings.avatar
-                      | image_url: width: 160, height: 160, crop: 'center'
-                      | image_tag: loading: 'lazy', alt: '', class: 'review-card__avatar-image'
-                    }}
-                  {%- else -%}
-                    <span aria-hidden="true">{{ block.settings.name | slice: 0 | upcase }}</span>
-                  {%- endif -%}
-                </span>
+                {%- comment -%} The avatar: the photo, else the name's first letter, else none {%- endcomment -%}
+                {%- if block.settings.avatar != blank or block.settings.name != blank -%}
+                  <span class="review-card__avatar">
+                    {%- if block.settings.avatar != blank -%}
+                      {{
+                        block.settings.avatar
+                        | image_url: width: 160, height: 160, crop: 'center'
+                        | image_tag: loading: 'lazy', alt: '', class: 'review-card__avatar-image'
+                      }}
+                    {%- else -%}
+                      <span aria-hidden="true">{{ block.settings.name | slice: 0 | upcase }}</span>
+                    {%- endif -%}
+                  </span>
+                {%- endif -%}
 
-                <blockquote class="review-card__quote">
-                  <p>{{ block.settings.text | escape | newline_to_br }}</p>
-                </blockquote>
+                {%- if block.settings.text != blank -%}
+                  <blockquote class="review-card__quote">
+                    <p>{{ block.settings.text | escape | newline_to_br }}</p>
+                  </blockquote>
+                {%- else -%}
+                  <p class="review-card__note">{{ 'products.reviews.review_empty' | t }}</p>
+                {%- endif -%}
 
                 <div class="review-card__footer">
                   {%- if block.settings.rating > 0 -%}
@@ -185,7 +229,7 @@
             </button>
           </div>
         {%- endif -%}
-      {%- elsif request.design_mode -%}
+      {%- elsif request.design_mode and app_count == 0 -%}
         <p class="product-reviews__empty">{{ 'products.reviews.empty' | t }}</p>
       {%- endif -%}
     </div>
@@ -201,6 +245,7 @@
     {%- endif -%}
   </div>
 </product-reviews>
+{%- endif -%}
 
 {% stylesheet %}
   /*
@@ -213,6 +258,9 @@
     (~160 wide) at three poses; "REVIEWS" ~130px bold, pale grey, x 1290–1850, y 850–950.
   */
   .product-reviews {
+    /* One Figma pixel: the 1920px sizes get smaller on smaller screens */
+    --px: min(calc(100vw / 1920), 0.0625rem);
+    --float-width: calc(var(--float-size, 160) * var(--px));
     position: relative; /* the floating image measures its place from here (offsetTop) */
     display: block;
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
@@ -253,13 +301,13 @@
     font-style: normal;
   }
 
-  /* Top right, level with the eyebrow (phones: under the heading) */
+  /* Top right, level with the eyebrow, from 1200px (smaller screens: under the heading) */
   .product-reviews__write {
     letter-spacing: var(--letter-spacing-label);
     text-transform: uppercase;
   }
 
-  @media (min-width: 990px) {
+  @media (min-width: 1200px) {
     .product-reviews__write {
       position: absolute;
       inset-block-start: 0;
@@ -464,8 +512,18 @@
     text-transform: uppercase;
   }
 
+  /* Decoration: the empty alt text after the slash keeps screen readers from reading "tilde"
+     (browsers that do not know it keep the first declaration) */
   .review-card__author::before {
     content: "~";
+    content: "~" / "";
+  }
+
+  /* Editor only: a review with no text */
+  .review-card__note {
+    margin: 0;
+    font-style: italic;
+    text-align: center;
   }
 
   /* Prev / pause / next under the cards */
@@ -478,7 +536,8 @@
     margin-block-start: var(--space-xl);
   }
 
-  product-reviews:not(.is-ready) .product-reviews__controls {
+  product-reviews:not(.is-ready) .product-reviews__controls,
+  .product-reviews .product-reviews__control[hidden] {
     display: none;
   }
 
@@ -542,7 +601,6 @@
     or the carousel's steps). Size: the "Floating image size" setting (Figma 160px at 1920). Desktop only.
   */
   .product-reviews__float {
-    --float-width: calc(var(--float-size, 160) * var(--px, 0.0625rem));
     position: absolute;
     z-index: 0;
     inset-block-end: 0;
@@ -571,7 +629,7 @@
     block-size: auto;
   }
 
-  /* Below 1200px the cards use the full width (tablet rule below): no gutter for the image */
+  /* Below 1200px the cards use the full width: no room for the image (tried at 1024px: rejected) */
   @media (max-width: 1199px) {
     .product-reviews__float {
       display: none;
@@ -632,19 +690,35 @@
     }
   }
 
-  /* Phones: cards full width, no stagger */
+  /* Phones (agreed, no design): cards full width, no stagger, 48px avatars, 14px text */
   @media (max-width: 749px) {
     .review-card {
+      gap: var(--space-sm);
       inline-size: 100%;
-      padding-inline: var(--space-lg) calc(var(--space-lg) + 1.75rem);
-    }
-
-    .review-card--left {
-      padding-inline: calc(var(--space-lg) + 1.75rem) var(--space-lg);
+      min-inline-size: 0;
+      padding-block: var(--space-md);
+      /* 2.5rem each side: the quote mark (0.5rem from the corner, 1.75rem wide) on one side, half the
+         avatar on the other */
+      padding-inline: 2.5rem;
     }
 
     .product-reviews__viewport {
-      padding-inline: 1.75rem;
+      max-inline-size: none; /* the desktop column (1190 Figma px) would be 242px at 390 */
+      padding-inline: 1.5rem; /* half an avatar over each side */
+    }
+
+    .review-card__avatar {
+      inline-size: 3rem;
+      border-width: 2px;
+      font-size: var(--font-size-body-lg);
+    }
+
+    .review-card__mark svg {
+      inline-size: 1.75rem;
+    }
+
+    .review-card__quote {
+      font-size: 0.875rem;
     }
   }
 {% endstylesheet %}
@@ -682,6 +756,9 @@
       // runs connectedCallback again (see product-how-to)
       this.controller = new AbortController();
       const { signal } = this.controller;
+      // Set again by setUpScroll when the section is not pinned; pinned, the tabs send the progress
+      // (an onScroll left from before a move into the pinned track would fight tab:progress)
+      this.onScroll = null;
       this.motion = this.dataset.motion || 'scroll';
       this.floatMode = this.dataset.float || 'hide';
       this.float = this.querySelector('.product-reviews__float');
@@ -700,6 +777,7 @@
       this.resizeObserver = new ResizeObserver(() => {
         this.measure();
         this.measureFloat();
+        this.onScroll?.(); // a panel that was hidden shows: place the cards for where it is now
       });
       this.resizeObserver.observe(this);
       if (this.float) this.resizeObserver.observe(this.float);
@@ -742,6 +820,7 @@
       this.cards = [...this.track.children].filter((card) => !card.hasAttribute('data-clone'));
       this.count = this.cards.length;
       this.index ??= 0;
+      this.active = this.count > this.visible;
       // Endless only for the timer / buttons; on scroll the cards run from the first to the last
       if (this.motion !== 'scroll') this.addClones();
       this.classList.add('is-ready');
@@ -756,7 +835,7 @@
       // Theme editor: a review picked in the sidebar comes into the window and the carousel holds there
       this.addEventListener('shopify:block:select', (event) => {
         const i = this.cards.indexOf(event.target);
-        if (i < 0) return;
+        if (i < 0 || !this.active) return;
         this.editorHold = true;
         this.jump(Math.min(i, this.count - this.visible));
         this.updatePlay();
@@ -795,7 +874,7 @@
     /** Fades the cards outside the window */
     update() {
       [...this.track.children].forEach((card, n) => {
-        card.classList.toggle('is-out', n < this.index || n >= this.index + this.visible);
+        card.classList.toggle('is-out', this.active && (n < this.index || n >= this.index + this.visible));
       });
       this.style.setProperty('--index', this.index);
     }
@@ -816,7 +895,7 @@
 
     /** Timer / buttons: one step (endless). Before going back from the first card, jump onto its copy */
     go(i) {
-      if (this.busy) return;
+      if (this.busy || !this.active) return;
       const forward = i > this.index;
       if (i < 0) {
         this.jump(this.count);
@@ -848,12 +927,15 @@
     /* ---------- Scroll ---------- */
 
     setUpScroll(signal) {
-      const steps = this.carousel ? Math.max(0, this.count - this.visible) : 0;
       // The scroll in equal stretches: one per card position (the first cards, then each step) and a
-      // last one where the image leaves under the tabs. Card and image change together (back up = back)
-      const stretches = steps + 2;
+      // last one where the image leaves under the tabs. Card and image change together (back up = back).
+      // The steps are read each time: the floating image shows only from 1200px, so the last stretch
+      // (the image leaves) comes and goes with the screen width
       const apply = (progress) => {
         if (progress === this.progress) return;
+        const steps = this.carousel && this.active ? Math.max(0, this.count - this.visible) : 0;
+        // The last stretch (the image leaves) only when the image shows (hidden below 1200px)
+        const stretches = steps + (this.float?.offsetParent ? 2 : 1);
         const forward = progress > (this.progress ?? 0);
         this.progress = progress;
         const stretch = Math.min(stretches - 1, Math.floor(progress * stretches));
@@ -867,12 +949,19 @@
         this.addEventListener('tab:progress', (event) => apply(event.detail), { signal });
         return;
       }
-      // Anywhere else: from the moment the section's top passes 75% down the screen until its bottom does
+      // Anywhere else (phones, tablets, no tabs): from the card window itself, while its centre moves
+      // from 85% to 15% of the screen height, so the visitor sees each step (the whole section is much
+      // taller than the window: measured from it, the cards had reached the last step before they
+      // showed). A hidden panel (the phone tabs show one at a time) has no size: skipped, and placed
+      // again when it shows (the ResizeObserver calls onScroll)
       const onScroll = () => {
-        const rect = this.getBoundingClientRect();
-        const start = window.innerHeight * 0.75;
-        apply(Math.min(1, Math.max(0, (start - rect.top) / Math.max(1, rect.height))));
+        const box = (this.querySelector('.product-reviews__viewport') || this).getBoundingClientRect();
+        if (!box.height) return;
+        const screen = window.innerHeight;
+        const centre = box.top + box.height / 2;
+        apply(Math.min(1, Math.max(0, (screen * 0.85 - centre) / (screen * 0.7))));
       };
+      this.onScroll = onScroll;
       let ticking = false;
       window.addEventListener('scroll', () => {
         if (ticking) return;
@@ -986,11 +1075,11 @@
 
     setUpAutoplay(signal) {
       const delay = Number(this.dataset.autoplay);
-      if (!delay || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        this.querySelector('[data-reviews-pause]')?.remove();
-        return;
-      }
+      if (!delay) return;
       this.delay = delay;
+      // Reduced motion: no autoplay and no pause button; followed when the visitor changes it
+      this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+      this.reducedMotion.addEventListener('change', () => this.updatePlay(), { signal });
       this.inView = false;
       this.held = false;
       this.stopped ??= false;
@@ -1025,12 +1114,21 @@
         this.classObserver = new MutationObserver(() => this.updatePlay());
         this.classObserver.observe(wrapper, { attributes: true, attributeFilter: ['class'] });
       }
+      this.updatePlay(); // with reduced motion the pause button hides at once
     }
 
     updatePlay() {
       if (!this.delay) return;
+      const reduced = this.reducedMotion.matches;
+      const pause = this.querySelector('[data-reviews-pause]');
+      if (pause) {
+        const hide = reduced || !this.active;
+        // A focused button that hides would drop the focus to the page: move it to the next arrow
+        if (hide && !pause.hidden && pause === document.activeElement) this.querySelector('[data-reviews-next]')?.focus();
+        pause.hidden = hide;
+      }
       const hidden = Boolean(this.closest('.is-tab-faded, .is-tab-hidden'));
-      const play = this.inView && !hidden && !this.held && !this.stopped && !this.editorHold;
+      const play = this.active && !reduced && this.inView && !hidden && !this.held && !this.stopped && !this.editorHold;
       if (play === this.playing) return;
       this.playing = play;
       clearInterval(this.timer);
@@ -1045,7 +1143,6 @@
 {
   "name": "t:general.product_reviews",
   "tag": "section",
-  "class": "product-reviews-section",
   "enabled_on": { "templates": ["product"] },
   "max_blocks": 16,
   "blocks": [
@@ -1054,7 +1151,7 @@
       "name": "t:general.review",
       "settings": [
         { "type": "image_picker", "id": "avatar", "label": "t:labels.avatar", "info": "t:labels.avatar_info" },
-        { "type": "text", "id": "name", "label": "t:labels.reviewer_name", "default": "Prince" },
+        { "type": "text", "id": "name", "label": "t:labels.reviewer_name", "info": "t:labels.product_reviews_name_info", "default": "Prince" },
         { "type": "text", "id": "place", "label": "t:labels.reviewer_place", "default": "Canada" },
         {
           "type": "range",
@@ -1069,6 +1166,7 @@
           "type": "textarea",
           "id": "text",
           "label": "t:labels.review_text",
+          "info": "t:labels.product_reviews_text_info",
           "default": "I bought this to fade old acne marks. It feels gentle on my sensitive skin and has visibly lightened my dark spots in about three weeks."
         }
       ]
@@ -1076,6 +1174,10 @@
     { "type": "@app" }
   ],
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
     {
       "type": "text",
       "id": "anchor",
@@ -1120,6 +1222,7 @@
       "type": "range",
       "id": "visible",
       "label": "t:labels.product_reviews_visible",
+      "info": "t:labels.product_reviews_visible_info",
       "min": 2,
       "max": 4,
       "step": 1,
@@ -1189,7 +1292,7 @@
     },
     {
       "type": "header",
-      "content": "t:labels.style"
+      "content": "t:labels.layout"
     },
     {
       "type": "select",
@@ -1203,10 +1306,8 @@
       "default": "widest"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -1227,6 +1328,16 @@
       "step": 8,
       "unit": "px",
       "default": 64
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ],
   "presets": [
