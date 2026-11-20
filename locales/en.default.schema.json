@@ -1085,7 +1085,7 @@
     "product_related_products": "Products",
     "product_related_limit": "Number of products",
     "product_related_columns": "Products per row on desktop",
-    "product_related_columns_info": "From 990 px. Tablets show 2 in a row. Phones show 2 full product cards in a row.",
+    "product_related_columns_info": "From 990 px. Tablets show 2 in a row. Phones show one full product card in a row.",
     "product_related_card_shape_info": "The shape of the photo cards from 750 px. Phones show full product cards.",
     "product_related_card_shape": "Card shape",
     "product_related_fallback": "Fallback products",

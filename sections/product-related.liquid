@@ -54,7 +54,7 @@
   endif
 
   # Image sizes. Tiles (from 750px): Products per row from 990px (widest ~92vw, full ~96vw, wide at most
-  # the 1650px page width), 2 per row from 750px. Full cards (phones): 2 per row
+  # the 1650px page width), 2 per row from 750px. Full cards (phones): one per row
   assign section_vw = 92
   if section.settings.section_width == 'full'
     assign section_vw = 96
@@ -66,7 +66,7 @@
   else
     assign tile_sizes = '(min-width: 990px) ' | append: column_vw | append: 'vw, 47vw'
   endif
-  assign full_sizes = '46vw'
+  assign full_sizes = '92vw'
 
   # "View all": the link setting, else this product's first collection, else all products
   assign view_all_url = section.settings.link_url
@@ -290,7 +290,7 @@
 
   /*
     Phones (Figma Variant97-3): the eyebrow centred with a line on each side, "View all" under it at the
-    right, then 2 full product cards in a row
+    right, then the full product cards one under the other (agreed: one per row; the Figma shows 2)
   */
   @media (max-width: 749px) {
     .product-related__header {
@@ -309,8 +309,8 @@
     }
 
     .product-related__grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: var(--space-sm);
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-md);
     }
 
     .product-related__tile {
