@@ -1298,8 +1298,9 @@
   }
 
   /*
-    The fill grows from 0 on page load, and from the old width to the new one after a change: the
-    script copies the old --progress into --from on the new fill before it swaps the cart.
+    The fill grows from 0 on page load. After a change the same fill gets the new --progress and the
+    transition grows it; when the whole cart is swapped (layout change), the script copies the old
+    --progress into --from on the new fill, so the load animation starts from there.
   */
   .cart-shipping__fill {
     display: block;
@@ -1309,9 +1310,11 @@
     background-color: var(--color-accent);
   }
 
+  /* Page load: grows from 0 (animation); after a change: from its width to the new one (transition) */
   @media (prefers-reduced-motion: no-preference) {
     .cart-shipping__fill {
       animation: cart-shipping-fill 0.8s var(--ease-out);
+      transition: inline-size 0.8s var(--ease-out);
     }
   }
 
@@ -1712,6 +1715,9 @@
       this.root = window.Shopify?.routes?.root || '/';
       // Last quantity sent for each line key (see queueQuantity)
       this.sent ??= new Map();
+      // Shopify's HTML for each part of the cart as the page loaded: updates replace only what differs
+      const inner = this.querySelector('.cart-page__inner');
+      if (inner && !this.server) this.server = this.partsHtml(inner);
       this.status = this.querySelector('[data-cart-status]');
 
       // The cart was changed elsewhere on this page (quick add in "You might love"): show the new cart.
@@ -2150,11 +2156,12 @@
     }
 
     /**
-     * Swaps in Shopify's freshly rendered cart and keeps what the visitor was doing:
-     * - the photos already loaded (same image = the old element moves into the new line: no flash),
-     * - ticked boxes, the free-shipping fill's old width (it grows from there),
-     * - typed coupon text (keepCoupon), an open note, an open gift form and its choices (keepGift),
-     * - focus on the same control, or options.focus, else the heading.
+     * Shows Shopify's freshly rendered cart WITHOUT rebuilding the page: only the parts that changed
+     * are replaced (patch()), so the photos, the gift ribbon, Shopify's express checkout buttons, the
+     * note and the coupon field stay as they are (rebuilding all of it looked like a page reload).
+     * When the layout itself changes (the bag becomes empty, a card appears or goes), the whole cart is
+     * swapped, keeping what the visitor was doing (carryOver()).
+     * Focus goes back to the same control, or options.focus, else the heading.
      */
     render(html, { keepCoupon = true, keepGift = true, focus } = {}) {
       const focusKey = focus || document.activeElement?.closest('[data-cart-focus]')?.dataset.cartFocus;
@@ -2163,9 +2170,15 @@
       const fresh = parse(this.dataset.sectionId)?.querySelector('.cart-page__inner');
       const old = this.querySelector('.cart-page__inner');
       if (fresh && old) {
-        this.carryOver(old, fresh, { keepCoupon, keepGift });
-        old.replaceWith(fresh);
-        if (keepGift && old.querySelector('[data-cart-gift].is-open')) this.toggleGift(true, { focus: false });
+        // Shopify's HTML for each part, read before anything is moved into it: what the next update
+        // compares with
+        const freshHtml = this.partsHtml(fresh);
+        if (!this.patch(old, fresh, freshHtml, { keepCoupon, keepGift })) {
+          this.carryOver(old, fresh, { keepCoupon, keepGift });
+          old.replaceWith(fresh);
+          if (keepGift && old.querySelector('[data-cart-gift].is-open')) this.toggleGift(true, { focus: false });
+        }
+        this.server = freshHtml;
         this.updateToolbar();
       }
 
@@ -2181,21 +2194,143 @@
       // so focus is often "nowhere" here; without it, every + click there would jump the page up.
       const target = focusKey && this.querySelector(`[data-cart-focus="${CSS.escape(focusKey)}"]`);
       const visible = target && (target.checkVisibility ? target.checkVisibility() : target.offsetParent !== null);
+      if (visible && target === document.activeElement) return; // still there: nothing to move
       (visible ? target : this.querySelector('[data-cart-heading]'))?.focus({ preventScroll: true });
     }
 
-    /** Moves the visitor's state from the old cart HTML into the new one, before the swap */
+    /**
+     * The parts of the cart that an update can change, by name: the heading (count), the free-shipping
+     * block, the coupon codes, the gift card, the summary rows, the bottom bar's total, and every line
+     * ("item:<key>"). Everything else (forms, buttons, the note, express checkout) never changes.
+     */
+    parts(root) {
+      const map = new Map();
+      const add = (key, selector) => {
+        const el = root.querySelector(selector);
+        if (el) map.set(key, el);
+      };
+      add('header', '.cart-page__header');
+      add('shipping', '.cart-shipping');
+      add('codes', '[data-cart-coupon-codes]');
+      add('gift', '[data-cart-gift]');
+      add('rows', '.cart-summary__rows');
+      add('bar', '.cart-bar__total');
+      root.querySelectorAll('.cart-item[data-line-key]').forEach((el) => map.set(`item:${el.dataset.lineKey}`, el));
+      return map;
+    }
+
+    /**
+     * Each part's HTML for the comparison, without what differs between the first page and a section
+     * render for the same cart: the domain in URLs ("//shop.example/cdn/..." vs "/cdn/...") and the
+     * photos' loading / fetchpriority (eager near the top of the page, lazy in a section render).
+     */
+    partsHtml(root) {
+      const clean = (html) =>
+        html
+          .replace(/(?:https?:)?\/\/[^/"'\s]+(?=\/)/g, '')
+          .replace(/\s(?:loading|fetchpriority)="[^"]*"/g, '');
+      return new Map([...this.parts(root)].map(([key, el]) => [key, clean(el.outerHTML)]));
+    }
+
+    /**
+     * Replaces only the parts whose HTML from Shopify changed since the last update (this.server; the
+     * page's first HTML at the start). Returns false when the layout changed, so render() swaps it all.
+     */
+    patch(old, fresh, freshHtml, { keepCoupon, keepGift }) {
+      if (!this.server) return false;
+      const live = this.parts(old);
+      const next = this.parts(fresh);
+      const fixed = (map) => [...map.keys()].filter((key) => !key.startsWith('item:')).sort().join();
+      const hasLayout = (root) => Boolean(root.querySelector('.cart-page__layout'));
+      if (!hasLayout(old) || !hasLayout(fresh) || fixed(live) !== fixed(next)) return false;
+
+      const changed = (key) => this.server.get(key) !== freshHtml.get(key);
+
+      for (const [key, el] of next) {
+        if (key.startsWith('item:') || !changed(key)) continue;
+        const current = live.get(key);
+        if (key === 'shipping') {
+          this.patchShipping(current, el);
+        } else if (key === 'gift') {
+          const open = keepGift && current.classList.contains('is-open');
+          if (open) this.carryGift(current, el);
+          current.replaceWith(el);
+          if (open) this.toggleGift(true, { focus: false });
+        } else {
+          current.replaceWith(el);
+        }
+      }
+
+      // Lines: an unchanged line stays (the same element), a changed one is replaced (keeping its photo
+      // and tick), a removed one goes, a new one comes in. The order is Shopify's.
+      const order = [];
+      for (const [key, el] of next) {
+        if (!key.startsWith('item:')) continue;
+        const current = live.get(key);
+        if (current && !changed(key)) {
+          current.classList.remove('is-loading');
+          order.push(current);
+        } else {
+          if (current) this.carryItem(current, el);
+          order.push(el);
+        }
+      }
+      const list = old.querySelector('.cart-page__items');
+      const liveItems = [...list.querySelectorAll(':scope > .cart-item')];
+      const sameOrder = liveItems.length === order.length && order.every((el, index) => !liveItems.includes(el) || liveItems[index] === el);
+      if (sameOrder) {
+        order.forEach((el, index) => {
+          if (liveItems[index] !== el) liveItems[index].replaceWith(el);
+        });
+      } else {
+        list.replaceChildren(...order);
+      }
+
+      // The change worked: an old error goes; a new coupon code was applied = the field is emptied
+      const error = old.querySelector('[data-cart-error]');
+      if (error) error.hidden = true;
+      if (!keepCoupon) {
+        const input = old.querySelector('[data-cart-coupon] [name="discount"]');
+        if (input) input.value = '';
+      }
+      return true;
+    }
+
+    /** Free shipping: new text and class; the bar grows (CSS transition) from its width to the new one */
+    patchShipping(current, fresh) {
+      current.className = fresh.className;
+      current.querySelector('.cart-shipping__message')?.replaceWith(fresh.querySelector('.cart-shipping__message'));
+      current.querySelector('.cart-shipping__amounts')?.replaceWith(fresh.querySelector('.cart-shipping__amounts'));
+      const progress = fresh.querySelector('.cart-shipping__fill')?.style.getPropertyValue('--progress');
+      if (progress) current.querySelector('.cart-shipping__fill')?.style.setProperty('--progress', progress);
+    }
+
+    /** A changed line keeps its loaded photo (same file = the old element moves in) and its tick */
+    carryItem(before, item) {
+      const oldMedia = before.querySelector('.cart-item__media');
+      const newMedia = item.querySelector('.cart-item__media');
+      // The file name only: the full page writes the URL with the shop's domain, a section render without
+      const src = (media) => media?.querySelector('img')?.getAttribute('src')?.split('?')[0].split('/').pop();
+      if (oldMedia && newMedia && src(oldMedia) && src(oldMedia) === src(newMedia)) newMedia.replaceWith(oldMedia);
+      const box = item.querySelector('[data-cart-select]');
+      if (box && before.querySelector('[data-cart-select]')?.checked) box.checked = true;
+    }
+
+    /** An open gift form keeps the typed message and the chosen style */
+    carryGift(before, card) {
+      const message = before.querySelector('[data-cart-gift-form] [name="message"]');
+      const target = card.querySelector('[data-cart-gift-form] [name="message"]');
+      if (message && target && message.value !== message.defaultValue) target.value = message.value;
+      const wrap = before.querySelector('[data-cart-gift-form] [name="wrap"]:checked')?.value;
+      const radio = wrap && card.querySelector(`[data-cart-gift-form] [name="wrap"][value="${CSS.escape(wrap)}"]`);
+      if (radio) radio.checked = true;
+    }
+
+    /** Full swap (the layout changed): moves the visitor's state from the old cart HTML into the new one */
     carryOver(old, fresh, { keepCoupon, keepGift }) {
       fresh.querySelectorAll('.cart-item').forEach((item) => {
         const before = old.querySelector(`.cart-item[data-line-key="${CSS.escape(item.dataset.lineKey)}"]`);
-        if (!before) return;
-        const oldMedia = before.querySelector('.cart-item__media');
-        const newMedia = item.querySelector('.cart-item__media');
-        // The file name only: the full page writes the URL with the shop's domain, a section render without
-        const src = (media) => media?.querySelector('img')?.getAttribute('src')?.split('?')[0].split('/').pop();
-        if (oldMedia && newMedia && src(oldMedia) && src(oldMedia) === src(newMedia)) newMedia.replaceWith(oldMedia);
-        const box = item.querySelector('[data-cart-select]');
-        if (box && before.querySelector('[data-cart-select]')?.checked) box.checked = true;
+        if (before) this.carryItem(before, item);
       });
 
       const oldFill = old.querySelector('.cart-shipping__fill');
@@ -2212,12 +2347,9 @@
       const note = old.querySelector('.cart-summary__note');
       if (note?.open) fresh.querySelector('.cart-summary__note')?.setAttribute('open', '');
 
-      if (keepGift && old.querySelector('[data-cart-gift].is-open')) {
-        copyValue('[data-cart-gift-form] [name="message"]');
-        const wrap = old.querySelector('[data-cart-gift-form] [name="wrap"]:checked')?.value;
-        const radio = wrap && fresh.querySelector(`[data-cart-gift-form] [name="wrap"][value="${CSS.escape(wrap)}"]`);
-        if (radio) radio.checked = true;
-      }
+      const oldGift = old.querySelector('[data-cart-gift]');
+      const newGift = fresh.querySelector('[data-cart-gift]');
+      if (keepGift && oldGift?.classList.contains('is-open') && newGift) this.carryGift(oldGift, newGift);
     }
 
     announce(message) {
