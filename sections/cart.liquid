@@ -7,8 +7,8 @@
   join it with form="CartForm", so the page works without JavaScript: the browser posts the form to
   /cart and Shopify updates the cart or goes to checkout.
 
-  M7.1 builds the frame. The item cards (M7.2), free-shipping bar (M7.3), order summary (M7.4), coupons
-  (M7.5) and gift wrap (M7.6) replace the simple placeholders marked below.
+  Two columns from 1200px. Below 1200px (Figma mobile, also tablets): one column, the cards under the
+  items, and a bar with the total and the checkout button stuck to the bottom of the screen.
 {%- endcomment -%}
 
 {%- liquid
@@ -43,12 +43,27 @@
       assign progress = cart.total_price | times: 100 | divided_by: threshold | at_most: 100
     endif
   endif
+
+  # Gift wrap (the "Wrap style" blocks): the wrap products as "|id|" marks, to spot wrap lines in the
+  # item list and in the gift card, and how many can be bought now (sold-out wraps are not offered)
+  assign wrap_blocks = section.blocks | where: 'type', 'wrap_style'
+  assign wrap_ids = ''
+  assign wraps_available = 0
+  for wrap_block in wrap_blocks
+    if wrap_block.settings.product != blank
+      assign wrap_ids = wrap_ids | append: '|' | append: wrap_block.settings.product.id | append: '|'
+      if wrap_block.settings.product.available
+        assign wraps_available = wraps_available | plus: 1
+      endif
+    endif
+  endfor
 -%}
 
 <cart-page
   class="cart-page full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
-  style="--color-accent: {{ section.settings.highlight_color }}; --section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
+  style="{% if section.settings.highlight_color != blank %}--color-accent: {{ section.settings.highlight_color }}; {% endif %}--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
   data-section-id="{{ section.id }}"
+  data-cart-url="{{ routes.cart_url }}"
   data-label-updated="{{ 'cart.updated' | t }}"
   data-label-error="{{ 'cart.error' | t }}"
   data-label-selected="{{ 'cart.selected_count' | t }}"
@@ -96,7 +111,8 @@
         Settings: Cart → Empty bag.
       {%- endcomment -%}
       {%- liquid
-        # The texts are section settings; an empty setting falls back to the translated default
+        # An empty heading or button label falls back to the translated default (both are needed);
+        # an empty Message text shows no text
         assign empty_title = section.settings.empty_title
         if empty_title == blank
           assign empty_title = 'cart.empty_title' | t
@@ -113,8 +129,6 @@
             <h2 class="cart-empty__title">{{ empty_title | escape }}</h2>
             {%- if section.settings.empty_text != blank -%}
               <div class="cart-empty__text rte">{{ section.settings.empty_text }}</div>
-            {%- else -%}
-              <p class="cart-empty__text">{{ 'cart.empty_text' | t }}</p>
             {%- endif -%}
           </div>
           <div class="cart-empty__actions cart-empty__actions--{{ section.settings.empty_buttons_direction }}">
@@ -165,11 +179,20 @@
               </button>
             </div>
 
-            <p class="cart-page__error" role="alert" data-cart-error hidden></p>
+            {%- comment -%} No role="alert": the script reads the message out in the status line above {%- endcomment -%}
+            <p class="cart-page__error" data-cart-error hidden></p>
 
             <ul class="cart-page__items" role="list">
               {%- for item in cart.items -%}
-                {% render 'cart-item', item: item, index: forloop.index %}
+                {%- liquid
+                  # A wrap line gets the bin only (answer B): the gift card keeps it at 1
+                  assign is_wrap = false
+                  assign wrap_mark = '|' | append: item.product_id | append: '|'
+                  if wrap_ids contains wrap_mark
+                    assign is_wrap = true
+                  endif
+                -%}
+                {% render 'cart-item', item: item, index: forloop.index, wrap: is_wrap %}
               {%- endfor -%}
             </ul>
 
@@ -212,7 +235,7 @@
                 </button>
               </form>
 
-              <p class="cart-coupon__message" role="alert" data-cart-coupon-message hidden></p>
+              <p class="cart-coupon__message" data-cart-coupon-message hidden></p>
 
               {%- comment -%}
                 Always output (empty = hidden by CSS): the script adds the codes Liquid can't see, such
@@ -260,40 +283,35 @@
             Needs JavaScript (the switch and the save), so it's hidden without it.
           {%- endcomment -%}
           {%- liquid
-            assign wrap_blocks = section.blocks | where: 'type', 'wrap_style'
+            # wrap_blocks, wrap_ids and wraps_available are set at the top of the file
 
-            # The wrap products, as "|id|" marks, to spot wrap lines in the cart
-            assign wrap_ids = ''
-            for wrap_block in wrap_blocks
-              if wrap_block.settings.product != blank
-                assign wrap_ids = wrap_ids | append: '|' | append: wrap_block.settings.product.id | append: '|'
-              endif
-            endfor
-
-            # Wrap lines already in the cart (normally one): their keys and variant ids, for the script
+            # The first wrap line in the cart (normally the only one), for the saved state. The script
+            # finds every wrap line in the item list ([data-cart-wrap] with its key and variant id)
             assign wrap_line = blank
-            assign wrap_keys = ''
-            assign wrap_variants = ''
             for item in cart.items
               assign mark = '|' | append: item.product_id | append: '|'
               if wrap_ids contains mark
-                if wrap_line == blank
-                  assign wrap_line = item
-                endif
-                assign wrap_keys = wrap_keys | append: item.key | append: ','
-                assign wrap_variants = wrap_variants | append: item.variant_id | append: ','
+                assign wrap_line = item
+                break
               endif
             endfor
 
             # Fixed attribute name: it's data on the order, read by the merchant, not shopper text
             assign gift_message = cart.attributes['Gift message']
           -%}
-          {%- if section.settings.show_gift_wrap and wrap_ids != '' -%}
+          {%- liquid
+            # The card shows when a wrap can be added, or to show (and remove) the wrap already in the cart
+            assign show_gift = false
+            if section.settings.show_gift_wrap
+              if wraps_available > 0 or wrap_line != blank
+                assign show_gift = true
+              endif
+            endif
+          -%}
+          {%- if show_gift -%}
             <div
               class="cart-card cart-gift{% if wrap_line != blank %} cart-gift--saved{% endif %}"
               data-cart-gift
-              data-wrap-keys="{{ wrap_keys }}"
-              data-wrap-variants="{{ wrap_variants }}"
             >
               {%- comment -%}
                 Two states in the same card (Figma): the summary (title, text, Add gift wrap, ribbon) and,
@@ -317,7 +335,7 @@
                   <div class="cart-gift__item">
                     <span class="cart-gift__style-image">
                       {%- if wrap_line.image != blank -%}
-                        {{ wrap_line.image | image_url: width: 160 | image_tag: alt: '', loading: 'lazy', widths: '80, 160' }}
+                        {{ wrap_line.image | image_url: width: 160 | image_tag: alt: '', loading: 'lazy', widths: '80, 160', sizes: '52px' }}
                       {%- endif -%}
                     </span>
                     <p class="cart-gift__item-name">{{ wrap_line.product.title | escape }}</p>
@@ -334,10 +352,16 @@
                     <button type="button" class="cart-gift__remove" data-cart-gift-remove data-cart-focus="gift-remove">
                       {{- 'cart.gift_remove' | t -}}
                     </button>
-                    <button type="button" class="cart-gift__link" data-cart-gift-open data-cart-focus="gift-open" aria-controls="CartGiftPanel" aria-expanded="false">
-                      {{- 'cart.gift_edit' | t -}}
-                      <span class="cart-gift__arrow" aria-hidden="true">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
-                    </button>
+                    {%- comment -%}
+                      The open buttons have no aria-expanded: the summary (with the button) is hidden while
+                      the form shows, so the state could never be read. Focus moves into the form.
+                    {%- endcomment -%}
+                    {%- if wraps_available > 0 -%}
+                      <button type="button" class="cart-gift__link" data-cart-gift-open data-cart-focus="gift-open">
+                        {{- 'cart.gift_edit' | t -}}
+                        <span class="cart-gift__arrow" aria-hidden="true">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+                      </button>
+                    {%- endif -%}
                   </div>
                 {%- else -%}
                   {%- if section.settings.gift_title != blank -%}
@@ -346,7 +370,7 @@
                   {%- if section.settings.gift_text != blank -%}
                     <p class="cart-gift__text">{{ section.settings.gift_text | escape }}</p>
                   {%- endif -%}
-                  <button type="button" class="cart-gift__link" data-cart-gift-open data-cart-focus="gift-open" aria-controls="CartGiftPanel" aria-expanded="false">
+                  <button type="button" class="cart-gift__link" data-cart-gift-open data-cart-focus="gift-open">
                     {{- 'cart.gift_add' | t -}}
                     <span class="cart-gift__arrow" aria-hidden="true">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
                   </button>
@@ -380,7 +404,7 @@
                           >
                           <span class="cart-gift__style-image">
                             {%- if wrap_product.featured_image != blank -%}
-                              {{ wrap_product.featured_image | image_url: width: 160 | image_tag: alt: '', loading: 'lazy', widths: '80, 160' }}
+                              {{ wrap_product.featured_image | image_url: width: 160 | image_tag: alt: '', loading: 'lazy', widths: '80, 160', sizes: '80px' }}
                             {%- endif -%}
                           </span>
                           <span class="cart-gift__style-name">{{ 'cart.gift_style' | t: title: wrap_product.title, price: wrap_price }}</span>
@@ -399,7 +423,8 @@
                     placeholder="{{ 'cart.gift_message_placeholder' | t }}"
                   >{{ gift_message | escape }}</textarea>
 
-                  <p class="cart-gift__error" role="alert" data-cart-gift-error hidden></p>
+                  {%- comment -%} No role="alert": the script reads the message out in the status line {%- endcomment -%}
+                  <p class="cart-gift__error" data-cart-gift-error hidden></p>
 
                   <div class="cart-gift__actions">
                     <button type="button" class="cart-gift__cancel" data-cart-gift-close>{{ 'cart.gift_cancel' | t }}</button>
@@ -451,14 +476,16 @@
 
               <div class="cart-summary__row cart-summary__row--total">
                 <dt>{{ 'cart.total' | t }}</dt>
-                {%- comment -%} With more than one currency on sale, the code (USD, EUR) avoids "which dollar?" {%- endcomment -%}
-                <dd>
-                  {%- if shop.enabled_currencies.size > 1 -%}
-                    {{ cart.total_price | money_with_currency }}
-                  {%- else -%}
-                    {{ cart.total_price | money }}
-                  {%- endif -%}
-                </dd>
+                {%- liquid
+                  # With more than one currency on sale, the code (USD, EUR) avoids "which dollar?".
+                  # Also used by the phone bar at the end of the section.
+                  if shop.enabled_currencies.size > 1
+                    assign total_money = cart.total_price | money_with_currency
+                  else
+                    assign total_money = cart.total_price | money
+                  endif
+                -%}
+                <dd>{{ total_money }}</dd>
               </div>
             </dl>
 
@@ -474,6 +501,7 @@
               </details>
             {%- endif -%}
 
+            {%- comment -%} Below 1200px the bottom bar has the checkout button, so this one is hidden {%- endcomment -%}
             <button type="submit" class="button cart-summary__checkout" name="checkout" form="CartForm">
               {{- 'cart.proceed_to_checkout' | t -}}
               {{- 'icon-send.svg' | inline_asset_content -}}
@@ -487,11 +515,22 @@
               <div class="cart-summary__express">{{ content_for_additional_checkout_buttons }}</div>
             {%- endif -%}
 
-            <a class="cart-summary__continue" href="{{ continue_url }}">
+            {%- comment -%}
+              "Continue shopping": in the card from 750px (Figma desktop), under the card on phones (Figma
+              mobile). Written two times; display: none hides the other one, also from screen readers.
+            {%- endcomment -%}
+            {%- capture continue_link -%}
               {{- 'icon-arrow.svg' | inline_asset_content -}}
               {{- 'cart.continue_shopping' | t -}}
+            {%- endcapture -%}
+            <a class="cart-summary__continue cart-summary__continue--in-card" href="{{ continue_url }}">
+              {{- continue_link -}}
             </a>
           </div>
+
+          <a class="cart-summary__continue cart-summary__continue--under-card" href="{{ continue_url }}">
+            {{- continue_link -}}
+          </a>
 
           {%- comment -%}
             App blocks (upsells, free-shipping bars, notes…) added to this section in the theme editor. An
@@ -503,6 +542,23 @@
             {%- endif -%}
           {%- endfor -%}
         </aside>
+      </div>
+
+      {%- comment -%}
+        Bottom bar below 1200px (Figma mobile): the total and the checkout button, stuck to the bottom of
+        the screen (position: sticky) while the cart is on screen. It is the last part of the cart, so it
+        stops at the end of the section and never covers the footer. Hidden from 1200px, where the order
+        summary card has the checkout button (only one of the two buttons shows at a time).
+      {%- endcomment -%}
+      <div class="cart-bar">
+        <p class="cart-bar__total">
+          <span class="cart-bar__label">{{ 'cart.total' | t }}</span>
+          <span class="cart-bar__amount">{{ total_money }}</span>
+        </p>
+        <button type="submit" class="button cart-bar__checkout" name="checkout" form="CartForm">
+          {{- 'cart.proceed_to_checkout' | t -}}
+          {{- 'icon-send.svg' | inline_asset_content -}}
+        </button>
       </div>
     {%- endif -%}
   </div>
@@ -551,8 +607,10 @@
     text-transform: uppercase;
   }
 
+  /* The sign is decoration: the empty alternative text after "/" keeps screen readers quiet */
   .cart-page__breadcrumb li + li::before {
     content: "›";
+    content: "›" / "";
     margin-inline-end: var(--space-xs);
     color: var(--color-text);
   }
@@ -635,13 +693,10 @@
 
   /*
     Coupons (Figma): one white pill holding the code field and, at its right end, the gold "Apply"
-    pill with the paper plane. The field resets the global input rule with two classes (the global
-    input[type="text"] rule beats a single class).
-  */
-  /*
-    Figma: no inset around the field or the button. The pill is exactly as tall as the button (50px),
-    the gold Apply sits flush in its right end, and only the text has room on the left.
-    overflow: hidden keeps the button's square-ish ends inside the pill's round edge.
+    pill with the paper plane, flush with the pill's edge (the pill is as tall as the button, 50px).
+    overflow: hidden keeps the button's ends inside the pill's round edge. The field resets the global
+    input rule with two classes (input[type="text"] beats a single class). White on light schemes,
+    a lighter tone on dark ones (--color-surface-raised).
   */
   .cart-coupon__form {
     display: flex;
@@ -649,7 +704,7 @@
     min-block-size: 3.125rem;
     overflow: hidden;
     border-radius: var(--radius-pill);
-    background-color: color-mix(in srgb, #ffffff 70%, transparent);
+    background-color: color-mix(in srgb, var(--color-surface-raised) 70%, transparent);
     box-shadow:
       0 4px 10px 0 #b9b9b91a,
       inset 1px 1px 0 #ffffffcc;
@@ -678,7 +733,7 @@
     outline: none;
   }
 
-  .cart-coupon__apply {
+  .cart-coupon .cart-coupon__apply {
     --color-button: var(--color-accent);
     --color-button-border: var(--color-accent);
     --color-button-text: #ffffff;
@@ -762,9 +817,10 @@
   }
 
   /*
-    Gift wrap card (Figma): Glass (Light -7deg 80% = the theme's --glass-rim, Frost 100 = 35px blur)
-    over a soft gold tint with a light patch, a gold ribbon band near the right edge with the bow at its
-    top. The text keeps clear of the ribbon. Needs JavaScript, so it's hidden without it.
+    Gift wrap card (Figma): Glass (Light -7deg 80% = the theme's --glass-rim) over a soft gold tint with
+    a light patch, a gold ribbon band near the right edge with the bow at its top. The text keeps clear
+    of the ribbon. No backdrop blur: only the plain page is behind the card, so it showed nothing.
+    Needs JavaScript, so it's hidden without it.
   */
   .no-js .cart-gift {
     display: none;
@@ -792,8 +848,6 @@
       ),
       var(--color-background);
     box-shadow: var(--glass-rim);
-    -webkit-backdrop-filter: blur(var(--glass-frost));
-    backdrop-filter: blur(var(--glass-frost));
   }
 
   /* Figma ribbon: linear-gradient(180deg, #D9BB72 0%, #F7EED9 20.95%, #D9BB72 100%) */
@@ -866,6 +920,7 @@
   .cart-gift__item-price {
     font-size: var(--font-size-body);
     font-weight: var(--font-weight-medium);
+    white-space: nowrap;
   }
 
   /* One line; the Liquid also shortens long messages so the closing quote usually stays visible */
@@ -1002,7 +1057,7 @@
     margin: 0;
     border: 1px solid #ffffffcc;
     border-radius: 50%;
-    background-color: #ffffffd9;
+    background-color: color-mix(in srgb, var(--color-surface-raised) 85%, transparent);
     box-shadow: 0 2px 6px #b9b9b94d;
     appearance: none;
     cursor: pointer;
@@ -1049,7 +1104,7 @@
     padding: var(--space-md) var(--space-lg);
     border: 1px solid #ffffffcc;
     border-radius: var(--radius-md);
-    background-color: #ffffff99;
+    background-color: color-mix(in srgb, var(--color-surface-raised) 60%, transparent);
     box-shadow: inset 0 1px 3px #b9b9b933;
     resize: vertical;
   }
@@ -1081,7 +1136,7 @@
     text-decoration: underline;
   }
 
-  .cart-gift__save {
+  .cart-gift .cart-gift__save {
     --color-button: var(--color-accent);
     --color-button-border: var(--color-accent);
     --color-button-text: #ffffff;
@@ -1140,7 +1195,7 @@
   }
 
   /* Proceed to checkout: the gold pill with the paper plane (Figma); the button reads its colours from these */
-  .cart-summary__checkout {
+  .cart-summary .cart-summary__checkout {
     --color-button: var(--color-accent);
     --color-button-border: var(--color-accent);
     --color-button-text: #ffffff;
@@ -1178,6 +1233,21 @@
     inline-size: 1em;
     block-size: auto;
     rotate: 180deg;
+  }
+
+  .cart-summary__continue--under-card {
+    display: none;
+  }
+
+  @media (max-width: 749px) {
+    .cart-summary__continue--in-card {
+      display: none;
+    }
+
+    .cart-summary__continue--under-card {
+      display: inline-flex;
+      margin-block-start: var(--space-xs);
+    }
   }
 
   .cart-page__title:focus {
@@ -1227,7 +1297,10 @@
     background-color: color-mix(in srgb, var(--color-accent) 18%, var(--color-background));
   }
 
-  /* The fill grows from the old width to the new one when the cart is re-rendered after a change */
+  /*
+    The fill grows from 0 on page load, and from the old width to the new one after a change: the
+    script copies the old --progress into --from on the new fill before it swaps the cart.
+  */
   .cart-shipping__fill {
     display: block;
     inline-size: var(--progress);
@@ -1244,7 +1317,7 @@
 
   @keyframes cart-shipping-fill {
     from {
-      inline-size: 0;
+      inline-size: var(--from, 0%);
     }
   }
 
@@ -1270,17 +1343,21 @@
     color: var(--color-error, #b3261e);
   }
 
-  /* The script saves quantities on its own; the Update button is only for visitors without JavaScript */
+  /*
+    The script saves quantities on its own; the Update button is only for visitors without JavaScript.
+    .js (set in <head> before the first paint), not cart-page:defined: the button would show until the
+    deferred script runs, then go, and below 1200px the cards under it would jump up (layout shift).
+  */
   .js .cart-page__update {
     display: none;
   }
 
   /*
-    Empty bag (design C): a slim glass strip (icon, message, buttons on one line).
+    Empty bag (design C): a slim glass strip (icon, message, buttons on one line). .cart-empty is the
+    size container: the strip changes its layout by its own width (see the rules after the phone rules).
   */
   .cart-empty {
-    display: grid;
-    gap: var(--space-2xl);
+    container-type: inline-size;
   }
 
   .cart-empty__strip {
@@ -1292,8 +1369,6 @@
     border-radius: var(--radius-lg);
     background-color: var(--color-glass-strong);
     box-shadow: var(--glass-shadow), var(--glass-rim);
-    -webkit-backdrop-filter: blur(var(--glass-frost));
-    backdrop-filter: blur(var(--glass-frost));
   }
 
   /* The bag icon in a soft highlight circle */
@@ -1364,12 +1439,222 @@
     block-size: 1rem;
   }
 
-  /* Phones and small tablets: the strip stacks (no mobile design yet, decision 7) */
+  /*
+    Bottom bar (below 1200px, Figma mobile): "Total $306" on the left, the gold checkout pill on the
+    right, on the page colour with round top corners and a soft shadow above. It spans the screen: the
+    negative margins undo the page margins of .cart-page__inner (full width below 1200px).
+  */
+  /*
+    The amount and the button label never break; when both don't fit (a long total such as
+    "Rs. 107,700.00 INR" on a small phone), the button goes on its own full-width line.
+  */
+  .cart-bar {
+    position: sticky;
+    inset-block-end: 0;
+    z-index: 2;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    margin-inline: calc(var(--page-margin) * -1);
+    padding: var(--space-md) var(--page-margin);
+    padding-block-end: max(var(--space-md), env(safe-area-inset-bottom));
+    border-start-start-radius: var(--radius-md);
+    border-start-end-radius: var(--radius-md);
+    background-color: var(--color-background);
+    box-shadow: 0 -6px 20px 0 #b9b9b933;
+  }
+
+  .cart-bar__total {
+    display: grid;
+    margin: 0;
+    line-height: 1.2;
+  }
+
+  .cart-bar__label {
+    font-size: var(--font-size-body-sm);
+  }
+
+  .cart-bar__amount {
+    font-size: var(--font-size-h3);
+    font-weight: var(--font-weight-medium);
+    white-space: nowrap;
+  }
+
+  .cart-bar .cart-bar__checkout {
+    --color-button: var(--color-accent);
+    --color-button-border: var(--color-accent);
+    --color-button-text: #ffffff;
+    flex: 1 0 auto;
+    max-inline-size: 100%;
+    gap: var(--space-sm);
+    white-space: nowrap;
+  }
+
+  /* A button alone on its line is as wide as the bar; next to the total it keeps its own width */
+  @media (min-width: 750px) {
+    .cart-bar .cart-bar__checkout {
+      flex-grow: 0;
+    }
+  }
+
+  .cart-bar__checkout svg {
+    inline-size: 1.1em;
+    block-size: auto;
+  }
+
+  /* Large screens: two columns, the order summary card has the checkout button */
+  @media (min-width: 1200px) {
+    .cart-bar {
+      display: none;
+    }
+  }
+
+  /* Tablets and phones (below 1200px): one column, the cards under the items */
+  @media (max-width: 1199px) {
+    .cart-page__layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    /* Two classes: the global .button rule (display: inline-flex) loads later and beats one class */
+    .cart-summary .cart-summary__checkout {
+      display: none;
+    }
+  }
+
+  /* Phones (Figma mobile): smaller text and cards, half the bottom padding, the empty-bag strip stacks */
   @media (max-width: 749px) {
+    .cart-page {
+      padding-block-end: calc(var(--section-padding-bottom) / 2);
+    }
+
+    .cart-page__inner {
+      gap: var(--space-lg);
+    }
+
+    .cart-page__breadcrumb ol {
+      font-size: 0.75rem;
+    }
+
+    .cart-shipping {
+      gap: var(--space-xs) var(--space-sm);
+      margin-block-end: var(--space-lg);
+    }
+
+    .cart-shipping__message,
+    .cart-shipping__amounts {
+      font-size: 0.8125rem;
+    }
+
+    .cart-shipping__message svg {
+      inline-size: 1rem;
+    }
+
+    .cart-shipping__bar {
+      block-size: 0.25rem;
+    }
+
+    .cart-page__items {
+      gap: var(--space-sm);
+    }
+
+    .cart-page__aside {
+      gap: var(--space-sm);
+    }
+
+    /*
+      Not the end padding of the gift card: there it keeps the text clear of the ribbon and the bow
+      (34%, 27% with a wrap; the open form sets its own)
+    */
+    .cart-card {
+      gap: var(--space-md);
+      padding-block: var(--space-lg);
+      padding-inline-start: var(--space-lg);
+      border-radius: 1rem;
+    }
+
+    .cart-card:not(.cart-gift),
+    .cart-gift.is-open {
+      padding-inline-end: var(--space-lg);
+    }
+
+    .cart-card__title {
+      font-size: 1rem;
+    }
+
+    .cart-coupon__form {
+      min-block-size: 2.5rem;
+    }
+
+    .cart-coupon__form .cart-coupon__input {
+      padding-inline-start: 1.25rem;
+      font-size: 0.8125rem;
+    }
+
+    /* Two classes here and on the bar button: the global .button rule loads later and beats one class */
+    .cart-coupon .cart-coupon__apply {
+      padding-inline: var(--space-lg);
+      font-size: 0.75rem;
+    }
+
+    .cart-gift__title {
+      font-size: 0.9375rem;
+    }
+
+    .cart-gift__text,
+    .cart-gift__link,
+    .cart-gift__remove,
+    .cart-gift__item-name,
+    .cart-gift__message {
+      font-size: 0.8125rem;
+    }
+
+    .cart-gift__bow {
+      inline-size: 10rem;
+    }
+
+    .cart-gift__corner-bow {
+      inline-size: 12rem;
+      inset-inline-end: -3.5rem;
+    }
+
+    .cart-summary__rows {
+      gap: var(--space-sm);
+      font-size: 0.8125rem;
+    }
+
+    .cart-summary__row--total {
+      font-size: 0.9375rem;
+    }
+
+    .cart-summary__continue {
+      font-size: 0.8125rem;
+    }
+
+    .cart-bar__label {
+      font-size: 0.875rem;
+    }
+
+    .cart-bar__amount {
+      font-size: 1.25rem;
+    }
+
+    .cart-bar .cart-bar__checkout {
+      min-block-size: 2.75rem;
+      padding-inline: var(--space-lg);
+      font-size: 0.75rem;
+    }
+
     .cart-empty__strip {
       flex-direction: column;
       align-items: flex-start;
       padding: var(--space-lg);
+    }
+
+    /* Two buttons don't fit next to each other in the strip: they wrap (each label stays on one line) */
+    .cart-empty__actions--row {
+      flex-wrap: wrap;
     }
 
     .cart-empty__actions--column {
@@ -1377,10 +1662,28 @@
     }
   }
 
-  /* Tablets and phones: one column, the cards under the items (no mobile design yet, decision 7) */
-  @media (max-width: 989px) {
-    .cart-page__layout {
-      grid-template-columns: minmax(0, 1fr);
+  /*
+    Tablets and small laptops (from 750px; phones stack, above): a strip narrower than 56rem has no room
+    for the message AND both buttons on one line (at ~770px the text got ~90px and the link ran over
+    it). Then: icon | message on the first row, the buttons on a second row under the message.
+  */
+  @media (min-width: 750px) {
+    @container (max-width: 56rem) {
+      .cart-empty__strip {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: center;
+        row-gap: var(--space-md);
+      }
+
+      .cart-empty__actions {
+        grid-column: 2;
+        flex-wrap: wrap;
+      }
+
+      .cart-empty__actions--column {
+        align-items: flex-start;
+      }
     }
   }
 {% endstylesheet %}
@@ -1390,55 +1693,95 @@
    * <cart-page>: changes the cart without reloading the page.
    *
    * Every change (- / +, a typed quantity, remove, remove selected) goes to Shopify's Cart AJAX API
-   * together with `sections`: Shopify answers with the updated cart AND this section (and the header)
-   * rendered again in Liquid. The script swaps in the new HTML, so prices, totals and counts always come
-   * from Shopify, never from JavaScript maths. Focus goes back to the same control after the swap.
+   * together with `sections`: Shopify answers with the updated cart AND this section rendered again in
+   * Liquid. The script swaps in the new HTML, so prices, totals and counts always come from Shopify,
+   * never from JavaScript maths. What the visitor was doing stays: focus, ticked boxes, typed coupon
+   * text, an open note or gift form, and the photos already loaded (no flash).
+   * The header's count bubble follows the "cart:updated" event (<cart-count> in the header).
    *
    * Without JavaScript the page still works: the form posts to /cart (Update / Checkout) and the remove
    * buttons are plain links.
    */
   class CartPage extends HTMLElement {
-    disconnectedCallback() {
-      document.removeEventListener('cart:updated', this.onCartUpdated);
-    }
-
     connectedCallback() {
+      // All listeners on one controller: the theme editor can attach the same element again (a moved
+      // section); without this, one + click would then add 2
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+
       this.root = window.Shopify?.routes?.root || '/';
+      // Last quantity sent for each line key (see queueQuantity)
+      this.sent ??= new Map();
       this.status = this.querySelector('[data-cart-status]');
 
       // The cart was changed elsewhere on this page (quick add in "You might love"): show the new cart.
       // The cart's own changes say source: 'cart-page' and are already on screen.
-      this.onCartUpdated = (event) => {
-        if (event.detail?.source !== 'cart-page') this.refresh();
-      };
-      document.addEventListener('cart:updated', this.onCartUpdated);
+      document.addEventListener(
+        'cart:updated',
+        (event) => {
+          if (event.detail?.source !== 'cart-page') this.refresh();
+        },
+        { signal }
+      );
 
-      // One set of listeners on the element itself: they keep working after the inner HTML is swapped
-      this.addEventListener('click', (event) => this.onClick(event));
-      this.addEventListener('change', (event) => this.onChange(event));
-      this.addEventListener('submit', (event) => {
-        // Gift wrap form: "Save wrap" (saved by the script; the form has no action of its own)
-        if (event.target.matches('[data-cart-gift-form]')) {
-          event.preventDefault();
-          this.saveGift(event.target);
-          return;
-        }
-        // Coupon form: apply here; the form's own target (/checkout?discount=...) is the no-JS fallback
-        if (!event.target.matches('[data-cart-coupon]')) return;
+      // Listeners on the element itself: they keep working after the inner HTML is swapped
+      this.addEventListener('click', (event) => this.onClick(event), { signal });
+      this.addEventListener('change', (event) => this.onChange(event), { signal });
+      this.addEventListener('submit', (event) => this.onSubmit(event), { signal });
+      this.addEventListener('keydown', (event) => this.onKeydown(event), { signal });
+      // The quantity field is as wide as its number (--digits, first set by Liquid)
+      this.addEventListener(
+        'input',
+        (event) => {
+          if (!event.target.matches('[data-cart-quantity]')) return;
+          this.setDigits(event.target);
+        },
+        { signal }
+      );
+
+      // Theme editor: a selected "Wrap style" block is inside the gift form, so the form opens while
+      // the block is selected
+      if (window.Shopify?.designMode) {
+        document.addEventListener('shopify:block:select', (event) => this.onBlockSelect(event, true), { signal });
+        document.addEventListener('shopify:block:deselect', (event) => this.onBlockSelect(event, false), { signal });
+      }
+
+      if (this.codes === undefined && this.querySelector('[data-cart-coupon]')) this.loadCodes();
+    }
+
+    disconnectedCallback() {
+      this.controller?.abort();
+    }
+
+    onSubmit(event) {
+      // Gift wrap form: "Save wrap" (saved by the script; the form has no action of its own)
+      if (event.target.matches('[data-cart-gift-form]')) {
         event.preventDefault();
-        const code = event.target.querySelector('[name="discount"]').value.trim();
-        if (code) this.applyCoupon(code);
-      });
+        this.saveGift(event.target);
+        return;
+      }
+      // Coupon form: apply here; the form's own target (/checkout?discount=...) is the no-JS fallback
+      if (!event.target.matches('[data-cart-coupon]')) return;
+      event.preventDefault();
+      const code = event.target.querySelector('[name="discount"]').value.trim();
+      if (code) this.applyCoupon(code);
+    }
 
-      if (this.querySelector('[data-cart-coupon]')) this.loadCodes();
-      this.addEventListener('keydown', (event) => {
-        // Enter in a quantity field saves it here instead of submitting the whole form; focus stays
-        // in the field (render() puts it back on the new copy)
-        if (event.key === 'Enter' && event.target.matches('[data-cart-quantity]')) {
-          event.preventDefault();
-          this.queueQuantity(event.target, 0);
-        }
-      });
+    onKeydown(event) {
+      // Enter in a quantity field saves it here instead of submitting the whole form; focus stays in
+      // the field (render() puts it back on the new copy)
+      if (event.key === 'Enter' && event.target.matches('[data-cart-quantity]')) {
+        event.preventDefault();
+        this.queueQuantity(event.target, 0);
+      }
+      // Esc inside the gift form = Cancel
+      if (event.key === 'Escape' && event.target.closest('[data-cart-gift-panel]')) this.toggleGift(false);
+    }
+
+    onBlockSelect(event, selected) {
+      if (event.detail?.sectionId !== this.dataset.sectionId) return;
+      if (!event.target.closest?.('[data-cart-gift-panel]')) return;
+      this.toggleGift(selected, { focus: false });
     }
 
     onClick(event) {
@@ -1446,7 +1789,8 @@
       if (step) {
         const input = step.closest('.cart-item').querySelector('[data-cart-quantity]');
         // The minus stops at 1: removing a product is the bin's job (the minus is disabled at 1)
-        input.value = Math.max(1, Number(input.value) + Number(step.dataset.cartStep));
+        input.value = Math.max(1, (Number(input.value) || Number(input.defaultValue)) + Number(step.dataset.cartStep));
+        this.setDigits(input); // 9 -> 10
         this.queueQuantity(input);
         return;
       }
@@ -1454,14 +1798,20 @@
       const remove = event.target.closest('[data-cart-remove]');
       if (remove) {
         event.preventDefault(); // the link is the no-JavaScript fallback
-        this.change({ [remove.closest('.cart-item').dataset.lineKey]: 0 }, remove.closest('.cart-item'));
+        const line = remove.closest('.cart-item');
+        // A gift wrap line: the same as "Remove" in the gift card (the message goes too)
+        if (line.hasAttribute('data-cart-wrap')) this.removeGift({ focus: null });
+        else this.change({ [line.dataset.lineKey]: 0 }, line);
         return;
       }
 
       if (event.target.closest('[data-cart-remove-selected]')) {
         const updates = {};
         this.querySelectorAll('[data-cart-select]:checked').forEach((box) => (updates[box.value] = 0));
-        this.change(updates);
+        // All wrap lines go: the gift message goes with them
+        const wrapsLeft = this.wrapLines().some((line) => !(line.key in updates));
+        const extra = this.wrapLines().length && !wrapsLeft ? { attributes: { 'Gift message': '' } } : {};
+        this.change(updates, null, extra);
         return;
       }
 
@@ -1486,38 +1836,33 @@
     /**
      * Figma: the gift card itself turns into the form (no popup). Open: hide the summary, show the
      * form, put focus on the first style. Close (Cancel or Esc): back, with focus on the button that
-     * opened it, so a keyboard user isn't lost.
+     * opened it, so a keyboard user isn't lost. focus: false = the theme editor opens or closes it.
      */
-    toggleGift(open) {
+    toggleGift(open, { focus = true } = {}) {
       const card = this.querySelector('[data-cart-gift]');
       const panel = card?.querySelector('[data-cart-gift-panel]');
       if (!panel) return;
       card.classList.toggle('is-open', open);
       card.querySelector('[data-cart-gift-summary]').hidden = open;
       panel.hidden = !open;
-      card.querySelectorAll('[data-cart-gift-open]').forEach((button) => button.setAttribute('aria-expanded', String(open)));
+      if (!focus) return;
       if (open) {
         panel.querySelector('[data-cart-gift-error]').hidden = true;
         (panel.querySelector('[name="wrap"]:checked') || panel.querySelector('[name="wrap"]'))?.focus();
-        if (!this.giftEscape) {
-          // Esc inside the form = Cancel
-          this.giftEscape = (event) => {
-            if (event.key === 'Escape' && event.target.closest('[data-cart-gift-panel]')) this.toggleGift(false);
-          };
-          this.addEventListener('keydown', this.giftEscape);
-        }
       } else {
         card.querySelector('[data-cart-gift-open]')?.focus();
       }
     }
 
-    /** The wrap lines in the cart now (keys and variant ids, written by Liquid on the gift card) */
+    /**
+     * The wrap lines in the cart now: the item list marks them (data-cart-wrap, with the variant id).
+     * Read from the list, not from the gift card, so the bin works also when the card is turned off.
+     */
     wrapLines() {
-      const card = this.querySelector('[data-cart-gift]');
-      const list = (value) => (value || '').split(',').filter(Boolean);
-      const keys = list(card?.dataset.wrapKeys);
-      const variants = list(card?.dataset.wrapVariants);
-      return keys.map((key, index) => ({ key, variant: variants[index] }));
+      return [...this.querySelectorAll('.cart-item[data-cart-wrap]')].map((line) => ({
+        key: line.dataset.lineKey,
+        variant: line.dataset.variantId,
+      }));
     }
 
     /**
@@ -1545,20 +1890,25 @@
       } catch (error) {
         errorBox.textContent = error?.message || this.dataset.labelError;
         errorBox.hidden = false;
+        this.announce(errorBox.textContent);
         return;
       }
 
       // Other wraps out; the chosen one (if it was already there) back to 1. The re-render brings the
-      // card back in its summary state, now showing the wrap and the message.
+      // card back in its summary state (keepGift: false), now showing the wrap and the message.
       const updates = {};
       lines.forEach((line) => (updates[line.key] = line.variant === variant ? 1 : 0));
-      await this.change(updates, null, { attributes: { 'Gift message': message } });
+      await this.change(updates, null, { attributes: { 'Gift message': message } }, { keepGift: false, focus: 'gift-open' });
     }
 
-    removeGift() {
+    /**
+     * All wrap lines out and the message cleared. focus: the gift card's button after "Remove" in the
+     * card; null from the bin in the item list (focus then goes to the heading, as for any removed line).
+     */
+    removeGift({ focus = 'gift-open' } = {}) {
       const updates = {};
       this.wrapLines().forEach((line) => (updates[line.key] = 0));
-      this.change(updates, null, { attributes: { 'Gift message': '' } });
+      this.change(updates, null, { attributes: { 'Gift message': '' } }, { keepGift: false, focus });
     }
 
     /**
@@ -1612,7 +1962,8 @@
         return;
       }
 
-      const cart = await this.change({}, null, { discount: [...this.appliedCodes(), code].join(',') });
+      // keepCoupon: false = the field comes back empty; a code that doesn't apply is put back below
+      const cart = await this.change({}, null, { discount: [...this.appliedCodes(), code].join(',') }, { keepCoupon: false });
       if (!cart) return;
 
       const applied = Boolean((cart.discount_codes || []).find((entry) => same(entry.code))?.applicable);
@@ -1629,7 +1980,7 @@
       this.change({}, null, { discount: rest.join(',') });
     }
 
-    /** Shows the coupon result under the field (and, for screen readers, in the live region) */
+    /** Shows the coupon result under the field and reads it out (status line) */
     couponMessage(template, code, tone) {
       const box = this.querySelector('[data-cart-coupon-message]');
       const message = template.replace('[code]', code);
@@ -1663,13 +2014,40 @@
       }
     }
 
-    /** Waits a moment, so clicking + three times sends one request with the final number */
+    /**
+     * Waits a moment, so clicking + three times sends one request with the final number. An empty
+     * field (the visitor cleared it, then left) or the same number = no change: the number comes back.
+     * 0 still removes the line.
+     * "The same number" = the last number SENT for this line (this.sent), not the field's defaultValue:
+     * while a request is on its way, defaultValue is still the old cart. Example: 1, + sends 2, then -
+     * before the answer: 1 is not "no change", it must be sent, or the answer for 2 would stay.
+     */
     queueQuantity(input, delay = 400) {
       const line = input.closest('.cart-item');
+      const key = line.dataset.lineKey;
       clearTimeout(line.saveTimer);
       line.saveTimer = setTimeout(() => {
-        this.change({ [line.dataset.lineKey]: Math.max(0, Number(input.value) || 0) }, line);
+        const expected = this.sent.get(key) ?? input.defaultValue;
+        const value = input.value.trim();
+        if (value === '' || Number.isNaN(Number(value))) {
+          input.value = expected;
+          this.setDigits(input);
+          return;
+        }
+        const quantity = Math.max(0, Math.floor(Number(value)));
+        if (String(quantity) === expected) {
+          input.value = expected;
+          this.setDigits(input);
+          return;
+        }
+        this.sent.set(key, String(quantity));
+        this.change({ [key]: quantity }, line);
       }, delay);
+    }
+
+    /** The field is as wide as its number: --digits on the pill (first written by Liquid) */
+    setDigits(input) {
+      input.closest('.cart-item__quantity')?.style.setProperty('--digits', Math.max(1, input.value.length));
     }
 
     /** "2 selected  Remove selected" appears only while something is ticked */
@@ -1686,15 +2064,16 @@
      * updates = { lineKey: quantity, ... }. /cart/update.js accepts several lines at once and finds each
      * line by its key, so it works the same for one line or for "Remove selected".
      * extra = other cart fields to send in the same request (e.g. { discount: 'A,B' }).
+     * options = what render() keeps (see there) and the control to focus after it.
      * Returns Shopify's cart JSON once the new cart is on the page, false if it failed or a newer
      * change won.
      */
-    async change(updates, line, extra = {}) {
+    async change(updates, line, extra = {}, options = {}) {
       const lines = line ? [line] : Object.keys(updates).map((key) => this.querySelector(`[data-line-key="${CSS.escape(key)}"]`));
       lines.forEach((el) => el?.classList.add('is-loading'));
       this.setAttribute('aria-busy', 'true');
 
-      const { header, sections } = this.sectionsToRender();
+      const sections = this.sectionsToRender();
 
       // Number every request. Two quick changes (e.g. on two lines) can come back in the wrong order;
       // only the newest answer is shown, so an older cart never replaces a newer one.
@@ -1704,21 +2083,32 @@
         const response = await fetch(`${this.root}cart/update.js`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({ updates, ...extra, sections, sections_url: window.location.pathname }),
+          // sections_url: the page Shopify renders the sections for (the cart, with the language prefix)
+          body: JSON.stringify({ updates, ...extra, sections, sections_url: this.dataset.cartUrl }),
         });
         const data = await response.json();
         // Shopify explains a refused change (e.g. not enough stock) in "description" or "message"
         if (!response.ok) throw new Error(data.description || data.message || '');
         if (requestId !== this.latestRequest) return false; // a newer change is on its way; it will render
 
-        this.render(data.sections, header);
+        this.sent.clear(); // the new HTML has the real numbers, and no newer request is on its way
+        this.render(data.sections, options);
         this.setCodes(data); // the fresh card only lists what Liquid sees; add e.g. free-shipping codes
         this.announce(this.dataset.labelUpdated);
         document.dispatchEvent(new CustomEvent('cart:updated', { detail: { cart: data, source: 'cart-page' } }));
         return data;
       } catch (error) {
         if (requestId !== this.latestRequest) return false;
-        lines.forEach((el) => el?.classList.remove('is-loading'));
+        // The refused number must not stay on screen: back to the saved quantity
+        lines.forEach((el) => {
+          if (!el) return;
+          el.classList.remove('is-loading');
+          const input = el.querySelector('[data-cart-quantity]');
+          if (!input) return;
+          input.value = input.defaultValue;
+          this.setDigits(input);
+          this.sent.delete(el.dataset.lineKey); // the cart still has the old number
+        });
         const message = error?.message || this.dataset.labelError;
         const box = this.querySelector('[data-cart-error]');
         if (box) {
@@ -1733,19 +2123,15 @@
     }
 
     /**
-     * The sections Shopify should render again with each change (it accepts up to 5): this cart, the
-     * header (for the count bubble) and every section that depends on the cart, marked
-     * data-cart-refresh (e.g. the Product list set to "Only when the cart is empty").
+     * The sections Shopify should render again with each change (it accepts up to 5): this cart and
+     * every section that depends on the cart, marked data-cart-refresh (e.g. the Product list set to
+     * "Only when the cart is empty"). The header is not needed: its <cart-count> reads "cart:updated".
      */
     sectionsToRender() {
-      const header = document.querySelector('sticky-header')?.closest('.shopify-section');
       const dependents = [...document.querySelectorAll('[data-cart-refresh]')]
         .map((el) => el.closest('.shopify-section')?.id.replace('shopify-section-', ''))
         .filter(Boolean);
-      const sections = [this.dataset.sectionId, header?.id.replace('shopify-section-', ''), ...dependents]
-        .filter(Boolean)
-        .slice(0, 5);
-      return { header, sections };
+      return [...new Set([this.dataset.sectionId, ...dependents])].filter(Boolean).slice(0, 5);
     }
 
     /**
@@ -1753,23 +2139,35 @@
      * same sections again (Section Rendering API: ?sections=a,b) and swap them in.
      */
     async refresh() {
-      const { header, sections } = this.sectionsToRender();
       try {
-        const url = `${window.location.pathname}?sections=${sections.join(',')}`;
+        const url = `${this.dataset.cartUrl}?sections=${this.sectionsToRender().join(',')}`;
         const html = await fetch(url).then((response) => response.json());
-        this.render(html, header);
+        if (!this.hasAttribute('aria-busy')) this.sent.clear(); // only when no change of ours is on its way
+        this.render(html);
       } catch {
         // The cart itself is fine; the page just shows it after the next reload
       }
     }
 
-    /** Swaps in Shopify's freshly rendered cart (and the header's cart count), then restores focus */
-    render(html, header) {
-      const focusKey = document.activeElement?.closest('[data-cart-focus]')?.dataset.cartFocus;
+    /**
+     * Swaps in Shopify's freshly rendered cart and keeps what the visitor was doing:
+     * - the photos already loaded (same image = the old element moves into the new line: no flash),
+     * - ticked boxes, the free-shipping fill's old width (it grows from there),
+     * - typed coupon text (keepCoupon), an open note, an open gift form and its choices (keepGift),
+     * - focus on the same control, or options.focus, else the heading.
+     */
+    render(html, { keepCoupon = true, keepGift = true, focus } = {}) {
+      const focusKey = focus || document.activeElement?.closest('[data-cart-focus]')?.dataset.cartFocus;
       const parse = (id) => html?.[id] && new DOMParser().parseFromString(html[id], 'text/html');
 
       const fresh = parse(this.dataset.sectionId)?.querySelector('.cart-page__inner');
-      if (fresh) this.querySelector('.cart-page__inner').replaceWith(fresh);
+      const old = this.querySelector('.cart-page__inner');
+      if (fresh && old) {
+        this.carryOver(old, fresh, { keepCoupon, keepGift });
+        old.replaceWith(fresh);
+        if (keepGift && old.querySelector('[data-cart-gift].is-open')) this.toggleGift(true, { focus: false });
+        this.updateToolbar();
+      }
 
       // Sections that depend on the cart: replace their whole content (they may appear or disappear)
       document.querySelectorAll('[data-cart-refresh]').forEach((el) => {
@@ -1778,19 +2176,48 @@
         if (next) section.innerHTML = next.innerHTML;
       });
 
-      // Header: only its cart link (the red count bubble and the hidden "Cart, 2 items" label)
-      const freshHeader = header && parse(header.id.replace('shopify-section-', ''));
-      if (header && freshHeader) {
-        const link = `.header__icon-button[href="${this.root}cart"]`;
-        const next = freshHeader.querySelector(link);
-        if (next) header.querySelector(link)?.replaceWith(next);
-      }
-
-      // Same control again if it still exists (e.g. the + button); otherwise the heading (line removed).
-      // preventScroll: Safari doesn't focus buttons on click, so focus is often "nowhere" here; without
-      // it, every + click there would jump the page up to the heading.
+      // Same control again if it still exists and shows (e.g. the + button); otherwise the heading (line
+      // removed, or "Remove selected" now hidden). preventScroll: Safari doesn't focus buttons on click,
+      // so focus is often "nowhere" here; without it, every + click there would jump the page up.
       const target = focusKey && this.querySelector(`[data-cart-focus="${CSS.escape(focusKey)}"]`);
-      (target || this.querySelector('[data-cart-heading]'))?.focus({ preventScroll: true });
+      const visible = target && (target.checkVisibility ? target.checkVisibility() : target.offsetParent !== null);
+      (visible ? target : this.querySelector('[data-cart-heading]'))?.focus({ preventScroll: true });
+    }
+
+    /** Moves the visitor's state from the old cart HTML into the new one, before the swap */
+    carryOver(old, fresh, { keepCoupon, keepGift }) {
+      fresh.querySelectorAll('.cart-item').forEach((item) => {
+        const before = old.querySelector(`.cart-item[data-line-key="${CSS.escape(item.dataset.lineKey)}"]`);
+        if (!before) return;
+        const oldMedia = before.querySelector('.cart-item__media');
+        const newMedia = item.querySelector('.cart-item__media');
+        // The file name only: the full page writes the URL with the shop's domain, a section render without
+        const src = (media) => media?.querySelector('img')?.getAttribute('src')?.split('?')[0].split('/').pop();
+        if (oldMedia && newMedia && src(oldMedia) && src(oldMedia) === src(newMedia)) newMedia.replaceWith(oldMedia);
+        const box = item.querySelector('[data-cart-select]');
+        if (box && before.querySelector('[data-cart-select]')?.checked) box.checked = true;
+      });
+
+      const oldFill = old.querySelector('.cart-shipping__fill');
+      const newFill = fresh.querySelector('.cart-shipping__fill');
+      if (oldFill && newFill) newFill.style.setProperty('--from', oldFill.style.getPropertyValue('--progress'));
+
+      const copyValue = (selector) => {
+        const from = old.querySelector(selector);
+        const to = fresh.querySelector(selector);
+        if (from && to && from.value !== from.defaultValue) to.value = from.value;
+      };
+      if (keepCoupon) copyValue('[data-cart-coupon] [name="discount"]');
+      copyValue('[data-cart-note]');
+      const note = old.querySelector('.cart-summary__note');
+      if (note?.open) fresh.querySelector('.cart-summary__note')?.setAttribute('open', '');
+
+      if (keepGift && old.querySelector('[data-cart-gift].is-open')) {
+        copyValue('[data-cart-gift-form] [name="message"]');
+        const wrap = old.querySelector('[data-cart-gift-form] [name="wrap"]:checked')?.value;
+        const radio = wrap && fresh.querySelector(`[data-cart-gift-form] [name="wrap"][value="${CSS.escape(wrap)}"]`);
+        if (radio) radio.checked = true;
+      }
     }
 
     announce(message) {
@@ -1812,6 +2239,10 @@
   "name": "t:general.cart",
   "settings": [
     {
+      "type": "header",
+      "content": "t:labels.content"
+    },
+    {
       "type": "checkbox",
       "id": "show_breadcrumb",
       "label": "t:labels.show_breadcrumb",
@@ -1827,6 +2258,7 @@
       "type": "text",
       "id": "heading",
       "label": "t:labels.heading",
+      "info": "t:labels.cart_heading_info",
       "default": "Shopping bag"
     },
     {
@@ -1853,6 +2285,7 @@
       "type": "richtext",
       "id": "empty_text",
       "label": "t:labels.cart_empty_text",
+      "info": "t:labels.cart_empty_text_info",
       "default": "<p>Browse our skincare, fragrance and makeup to find something you love.</p>"
     },
     {
@@ -1871,17 +2304,52 @@
       "type": "text",
       "id": "empty_link_label",
       "label": "t:labels.cart_empty_link_label",
+      "info": "t:labels.cart_empty_link_label_info",
       "default": "Shop new arrivals"
     },
     {
       "type": "select",
       "id": "empty_buttons_direction",
       "label": "t:labels.cart_empty_buttons_direction",
+      "info": "t:labels.cart_empty_buttons_direction_info",
       "options": [
         { "value": "row", "label": "t:options.direction.horizontal" },
         { "value": "column", "label": "t:options.direction.vertical" }
       ],
       "default": "row"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.layout"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "paragraph",
+      "content": "t:labels.cart_layout_info"
     },
     {
       "type": "header",
@@ -1899,6 +2367,10 @@
       "id": "show_note",
       "label": "t:labels.show_cart_note",
       "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.cart_coupons_group"
     },
     {
       "type": "checkbox",
@@ -1921,14 +2393,16 @@
     {
       "type": "text",
       "id": "gift_title",
-      "label": "t:labels.heading",
+      "label": "t:labels.cart_gift_heading",
+      "info": "t:labels.cart_gift_visible_info",
       "default": "Buying for a loved one?",
       "visible_if": "{{ section.settings.show_gift_wrap }}"
     },
     {
       "type": "text",
       "id": "gift_text",
-      "label": "t:labels.text",
+      "label": "t:labels.cart_gift_text",
+      "info": "t:labels.cart_gift_visible_info",
       "default": "Add a personal message and have your order gift wrapped.",
       "visible_if": "{{ section.settings.show_gift_wrap }}"
     },
@@ -1960,45 +2434,7 @@
     },
     {
       "type": "header",
-      "content": "t:labels.style"
-    },
-    {
-      "type": "select",
-      "id": "section_width",
-      "label": "t:labels.section_width",
-      "info": "t:labels.section_width_info",
-      "options": [
-        {
-          "value": "narrow",
-          "label": "t:options.section_width.narrow"
-        },
-        {
-          "value": "wide",
-          "label": "t:options.section_width.wide"
-        },
-        {
-          "value": "widest",
-          "label": "t:options.section_width.widest"
-        },
-        {
-          "value": "full",
-          "label": "t:options.section_width.full"
-        }
-      ],
-      "default": "widest"
-    },
-    {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-1"
-    },
-    {
-      "type": "color",
-      "id": "highlight_color",
-      "label": "t:labels.highlight_color",
-      "info": "t:labels.cart_highlight_color_info",
-      "default": "#c8a24b"
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -2019,6 +2455,22 @@
       "step": 8,
       "unit": "px",
       "default": 96
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "color",
+      "id": "highlight_color",
+      "label": "t:labels.highlight_color",
+      "info": "t:labels.cart_highlight_color_info"
     }
   ],
   "blocks": [

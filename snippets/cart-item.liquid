@@ -9,6 +9,8 @@
 
   @param {line_item} item - The cart line
   @param {number} index - The line's position in cart.items, starting at 1 (Shopify's "line" number)
+  @param {boolean} [wrap] - true for a gift wrap line (a "Wrap style" product): no - / + (the gift card
+    keeps it at 1), only the bin, which also clears the gift message
 
   @example
   {% for item in cart.items %}
@@ -26,7 +28,15 @@
   endif
 -%}
 
-<li class="cart-item" data-line-key="{{ item.key }}" data-index="{{ index }}">
+<li
+  class="cart-item{% if wrap %} cart-item--wrap{% endif %}"
+  data-line-key="{{ item.key }}"
+  data-index="{{ index }}"
+  {% if wrap %}
+    data-cart-wrap
+    data-variant-id="{{ item.variant_id }}"
+  {% endif %}
+>
   <label class="cart-item__select">
     <input class="cart-item__checkbox" type="checkbox" value="{{ item.key }}" data-cart-select data-cart-focus="select-{{ item.key }}">
     <span class="visually-hidden">{{ 'cart.select_item' | t: title: item.product.title }}</span>
@@ -34,7 +44,21 @@
 
   <a class="cart-item__media" href="{{ item.url }}" tabindex="-1" aria-hidden="true">
     {%- if item.image != blank -%}
-      {% render 'image', image: item.image, class: 'image--cover', sizes: '100px', widths: '100, 200, 300', alt: '' %}
+      {%- comment -%} The first 3 lines follow the page's eager / lazy rule; lines further down are lazy {%- endcomment -%}
+      {%- liquid
+        assign item_loading = nil
+        if index > 3
+          assign item_loading = 'lazy'
+        endif
+      -%}
+      {% render 'image',
+        image: item.image,
+        class: 'image--cover',
+        sizes: '(min-width: 750px) 98px, 36px',
+        widths: '100, 200, 300',
+        alt: '',
+        loading: item_loading
+      %}
     {%- else -%}
       {{ 'product-1' | placeholder_svg_tag: 'cart-item__placeholder' }}
     {%- endif -%}
@@ -123,7 +147,18 @@
   </div>
 
   <div class="cart-item__actions">
-    <div class="cart-item__quantity">
+    {%- if wrap -%}
+      {%- comment -%}
+        Gift wrap: no - / +. The hidden field keeps the place in updates[] (the no-JS Update button sends
+        the quantities in the order of cart.items, so every line needs one).
+      {%- endcomment -%}
+      <input type="hidden" name="updates[]" value="{{ item.quantity }}">
+    {%- else -%}
+    {%- comment -%}
+      --digits = the number's length: the field is as wide as its number, so 4 digits stay in the centre
+      (the script updates it while the visitor types)
+    {%- endcomment -%}
+    <div class="cart-item__quantity" style="--digits: {{ item.quantity | append: '' | size }};">
       <button
         type="button"
         class="cart-item__step"
@@ -158,6 +193,7 @@
         {{- 'icon-plus.svg' | inline_asset_content -}}
       </button>
     </div>
+    {%- endif -%}
 
     <a
       class="cart-item__remove"
@@ -172,8 +208,9 @@
 
 {% stylesheet %}
   /*
-    Figma cart item card: Glass (Light -45deg 80%, Frost 4), fill #FFFFFF1A, drop shadow
-    0 4px 10px #B9B9B91A. Frost 4 = a 1.4px blur, as on the testimonial cards.
+    Figma cart item card: Glass (Light -45deg 80%), fill #FFFFFF1A, drop shadow 0 4px 10px #B9B9B91A.
+    No backdrop blur (Frost 4): only the plain page is behind the card. The fill reads
+    --color-surface-raised (white on light schemes, a lighter tone on dark ones).
   */
   .cart-item {
     display: grid;
@@ -182,14 +219,23 @@
     gap: var(--space-md) var(--space-lg);
     padding: var(--space-lg) var(--space-xl) var(--space-lg) var(--space-lg);
     border-radius: var(--radius-md);
-    background-color: #ffffff1a;
+    background-color: color-mix(in srgb, var(--color-surface-raised) 10%, transparent);
     box-shadow:
       0 4px 10px 0 #b9b9b91a,
       inset 1px 1px 0 #ffffffcc,
       inset -1px -1px 0 #ffffffbd;
-    -webkit-backdrop-filter: blur(1.4px);
-    backdrop-filter: blur(1.4px);
     transition: opacity var(--duration-base) var(--ease-out);
+  }
+
+  /*
+    The label around the box is the click area: 2px more on each side than the 20px box = 24px
+    (WCAG target size). The negative margin keeps the layout the same.
+  */
+  .cart-item__select {
+    display: grid;
+    padding: 0.125rem;
+    margin: -0.125rem;
+    cursor: pointer;
   }
 
   /*
@@ -204,7 +250,7 @@
     margin: 0;
     border: 1px solid color-mix(in srgb, var(--color-text) 15%, var(--color-background));
     border-radius: 0.3rem;
-    background-color: #ffffff;
+    background-color: var(--color-surface-raised);
     cursor: pointer;
     appearance: none;
   }
@@ -229,13 +275,21 @@
     opacity: 1;
   }
 
-  /* Selecting items only does something with JavaScript ("Remove selected") */
-  .no-js .cart-item__select {
+  /*
+    Without JavaScript: selecting items ("Remove selected") and - / + do nothing, so they are hidden;
+    the number field and the Update button still work.
+  */
+  .no-js .cart-item__select,
+  .no-js .cart-item__step {
     display: none;
   }
 
   .no-js .cart-item {
     grid-template-columns: 6.125rem minmax(0, 1fr) auto;
+  }
+
+  .no-js .cart-item__quantity {
+    justify-content: center;
   }
 
   .cart-item__media {
@@ -337,16 +391,19 @@
     gap: clamp(var(--space-md), 3vw, 2.5rem);
   }
 
-  /* The - 1 + pill (Figma: 160 x 50px, same glass as the card, a little brighter) */
+  /*
+    The - 1 + pill (Figma: 160 x 50px, same glass as the card, a little brighter). At least 160px, wider
+    when a long number needs it (the field grows with --digits), so the number stays in the centre.
+  */
   .cart-item__quantity {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    inline-size: 10rem;
+    min-inline-size: 10rem;
     block-size: 3.125rem;
     padding-inline: var(--space-xs);
     border-radius: var(--radius-pill);
-    background-color: #ffffff59;
+    background-color: color-mix(in srgb, var(--color-surface-raised) 35%, transparent);
     box-shadow:
       0 4px 10px 0 #b9b9b91a,
       inset 1px 1px 0 #ffffffcc,
@@ -364,14 +421,6 @@
     background: none;
     color: var(--color-text);
     cursor: pointer;
-  }
-
-  /*
-    critical.css adds a top margin between neighbouring form controls (label + input, input + button)
-    for stacked forms. The stepper is a row, so that margin pushed the number and the + down.
-  */
-  .cart-item__quantity > * {
-    margin-block-start: 0;
   }
 
   /* display: block: an inline SVG sits on the text baseline, which pushed the - and + off centre */
@@ -400,8 +449,12 @@
     padding, 50px height and 100% width. Every property that rule sets is reset here.
   */
   .cart-item__quantity .cart-item__input {
-    /* Room for 4 digits (2.5rem cut "2000" to "20(") */
-    inline-size: 4.25ch;
+    /*
+      As wide as the number: --digits (from Liquid, updated by the script while typing) x 1ch, at
+      least 2 digits, + a little room. Same-width digits (tabular-nums), so 1ch = one digit.
+    */
+    inline-size: calc(max(var(--digits, 1), 2) * 1ch + 0.75ch);
+    font-variant-numeric: tabular-nums;
     min-block-size: 0;
     block-size: 100%;
     line-height: 1; /* the number sits on the same centre line as the - and + */
@@ -440,7 +493,7 @@
     inline-size: 3rem;
     block-size: 3rem;
     border-radius: 50%;
-    background-color: #ffffff;
+    background-color: var(--color-surface-raised);
     box-shadow: 0 4px 10px 0 #b9b9b933;
     color: var(--color-text);
     transition:
@@ -465,19 +518,132 @@
     pointer-events: none;
   }
 
-  /* Small screens: the stepper and remove button move under the text (no mobile design yet) */
+  /*
+    Phones (Figma mobile): one row per item: box, small photo, text, a small - 1 + pill and the bin.
+    Smaller text (type 8px, title 13px, options 10px, price 13px). The - / + stay 24px (target size).
+  */
   @media (max-width: 749px) {
     .cart-item {
-      grid-template-columns: auto 5rem minmax(0, 1fr);
+      grid-template-columns: auto 2.25rem minmax(0, 1fr) auto;
+      gap: var(--space-xs);
+      padding: var(--space-sm);
+      border-radius: 0.75rem;
+    }
+
+    .no-js .cart-item {
+      grid-template-columns: 2.25rem minmax(0, 1fr) auto;
+    }
+
+    .cart-item__select .cart-item__checkbox {
+      inline-size: 1rem;
+      block-size: 1rem;
+      border-radius: 0.25rem;
+    }
+
+    /* 16px box + 4px each side = 24px click area */
+    .cart-item__select {
+      padding: 0.25rem;
+      margin: -0.25rem;
+    }
+
+    .cart-item__select .cart-item__checkbox::after {
+      inline-size: 0.28rem;
+      block-size: 0.5rem;
+    }
+
+    .cart-item__details {
+      gap: 0.125rem;
+    }
+
+    .cart-item__type {
+      font-size: 0.5rem;
+    }
+
+    .cart-item__title,
+    .cart-item__price {
+      font-size: 0.8125rem;
+    }
+
+    .cart-item__options,
+    .cart-item__note,
+    .cart-item__unit,
+    .cart-item__discount {
+      font-size: 0.625rem;
+    }
+
+    .cart-item__swatch {
+      inline-size: 0.5rem;
+      block-size: 0.5rem;
+    }
+
+    .cart-item__price {
+      margin-block-start: 0.125rem;
+    }
+
+    .cart-item__compare {
+      font-size: 0.6875rem;
     }
 
     .cart-item__actions {
-      grid-column: 2 / -1;
-      justify-content: space-between;
+      gap: var(--space-xs);
+    }
+
+    .cart-item__quantity {
+      min-inline-size: 4.75rem;
+      block-size: 1.75rem;
+      padding-inline: 0.125rem;
+    }
+
+    .cart-item__step {
+      inline-size: 1.5rem;
+      block-size: 1.5rem;
+    }
+
+    .cart-item__step svg {
+      inline-size: 0.625rem;
+    }
+
+    .cart-item__quantity .cart-item__input {
+      font-size: 0.8125rem;
+    }
+
+    .cart-item__remove {
+      inline-size: 1.625rem;
+      block-size: 1.625rem;
+    }
+
+    .cart-item__remove svg {
+      inline-size: 0.625rem;
+    }
+  }
+
+  /*
+    Small phones (below 375px, no design): the text column gets too narrow for a long price
+    ("Rs. 3,780,000.00" broke inside the number), so - 1 + and the bin go on a second row under the
+    text, at the end.
+  */
+  @media (max-width: 374px) {
+    .cart-item {
+      grid-template-columns: auto 2.25rem minmax(0, 1fr);
+    }
+
+    .cart-item__actions {
+      grid-column: 3;
+      justify-content: flex-end;
+    }
+
+    .no-js .cart-item {
+      grid-template-columns: 2.25rem minmax(0, 1fr);
     }
 
     .no-js .cart-item__actions {
-      grid-column: 1 / -1;
+      grid-column: 2;
     }
+  }
+
+  /* Never break inside an amount (the body's overflow-wrap: break-word did); the space between the sale
+     price and the old price can still wrap */
+  .cart-item__price {
+    overflow-wrap: normal;
   }
 {% endstylesheet %}
