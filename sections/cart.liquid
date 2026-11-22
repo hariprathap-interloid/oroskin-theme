@@ -320,7 +320,20 @@
               <div class="cart-gift__summary" data-cart-gift-summary>
               {%- comment -%} Decorative ribbon: a gold band with the bow at its top (Figma) {%- endcomment -%}
               <div class="cart-gift__ribbon" aria-hidden="true">
-                <img class="cart-gift__bow" src="{{ 'cart-gift-ribbon.png' | asset_url }}" alt="" width="676" height="369" loading="lazy">
+                {%- comment -%}
+                  Not lazy: on phones the gift card is in the first screen, and this bow was the page's
+                  largest element (LCP). Small copies from Shopify's CDN (the file is 676px, shown 160 /
+                  240px), so the browser loads ~20 KB, not 115 KB.
+                {%- endcomment -%}
+                <img
+                  class="cart-gift__bow"
+                  src="{{ 'cart-gift-ribbon.png' | asset_img_url: '480x' }}"
+                  srcset="{{ 'cart-gift-ribbon.png' | asset_img_url: '240x' }} 240w, {{ 'cart-gift-ribbon.png' | asset_img_url: '480x' }} 480w, {{ 'cart-gift-ribbon.png' | asset_url }} 676w"
+                  sizes="(min-width: 750px) 240px, 160px"
+                  alt=""
+                  width="676"
+                  height="369"
+                >
               </div>
 
               <div class="cart-gift__body">
@@ -380,7 +393,16 @@
 
               <div class="cart-gift__panel" id="CartGiftPanel" data-cart-gift-panel hidden>
                 <form class="cart-gift__form" data-cart-gift-form>
-                  <img class="cart-gift__corner-bow" src="{{ 'cart-gift-ribbon.png' | asset_url }}" alt="" width="676" height="369" loading="lazy">
+                  <img
+                    class="cart-gift__corner-bow"
+                    src="{{ 'cart-gift-ribbon.png' | asset_img_url: '480x' }}"
+                    srcset="{{ 'cart-gift-ribbon.png' | asset_img_url: '240x' }} 240w, {{ 'cart-gift-ribbon.png' | asset_img_url: '480x' }} 480w, {{ 'cart-gift-ribbon.png' | asset_url }} 676w"
+                    sizes="(min-width: 750px) 288px, 192px"
+                    alt=""
+                    width="676"
+                    height="369"
+                    loading="lazy"
+                  >
 
                   <fieldset class="cart-gift__styles">
                     <legend class="cart-gift__label" id="CartGiftHeading">{{ 'cart.gift_choose' | t }}</legend>

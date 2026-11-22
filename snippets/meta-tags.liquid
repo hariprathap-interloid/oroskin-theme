@@ -103,9 +103,12 @@
   href="{{ canonical_url }}"
 >
 
-{% if page_description %}
-  <meta
-    name="description"
-    content="{{ page_description | escape }}"
-  >
-{% endif %}
+{%- comment -%}
+  Every page gets a description (Lighthouse SEO): the page's own (product, collection, page, article,
+  or Online Store > Preferences for the homepage), else the shop description, else the shop name.
+  Pages such as the cart have no description of their own.
+{%- endcomment -%}
+<meta
+  name="description"
+  content="{{ og_description | escape }}"
+>
