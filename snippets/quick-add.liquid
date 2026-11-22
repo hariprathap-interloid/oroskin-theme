@@ -5,10 +5,10 @@
   2. it drives off to the right, out of the circle
   3. it rolls back in from the left (meanwhile the product is added: Cart AJAX API, /cart/add.js)
   4. a gold circle with a white tick pops onto its top right
-  5. the tilted cart cross-fades into the upright one and the button STAYS
-     in this final state (upright cart + gold tick), showing the product is in the cart; clicking again
-     adds one more and replays the animation
-  The header's cart count updates. On failure: a short shake and a screen-reader message.
+  5. the tilted cart cross-fades into the upright one, and the "Added to your bag" card shows
+     (snippets/cart-notification.liquid: the product, how many are in the bag, the bag total, View bag /
+     Checkout). The tick stays while the card is open, then the button is as before.
+  The header's cart count updates. On failure: a short shake and the reason in a small message.
   Reduced motion: no driving, just the tick. Without JavaScript: a normal product form that adds the
   product and opens the cart.
 
@@ -122,7 +122,11 @@
       {%- endif -%}
     {%- endform -%}
     <span class="visually-hidden" role="status" data-quick-add-status></span>
-    <span class="quick-add__message" data-quick-add-message hidden></span>
+    {%- comment -%}
+      The error message is a popover: it shows in the top layer, so a card with overflow: hidden can't
+      cut it off. aria-hidden: the status line above reads it out.
+    {%- endcomment -%}
+    <span class="quick-add__message" popover="manual" aria-hidden="true" data-quick-add-message hidden></span>
   </quick-add>
 {%- elsif button_style == 'pill' -%}
   <div class="quick-add quick-add--pill {{ class }}" style="{{ quick_add_style }}">
@@ -380,36 +384,60 @@
     animation: quick-add-tick 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
 
+  /* Back to the normal button when the "Added" card closes: the tick shrinks away (the cart stays) */
+  quick-add.is-resetting .quick-add__tick {
+    animation: quick-add-tick 0.3s ease-in reverse both;
+  }
+
   quick-add.is-error .quick-add__button {
     animation: quick-add-shake 0.4s ease both;
   }
 
   /*
-    Error message under the button (e.g. Shopify's "You can't add more mak to the cart." when the
-    cart already holds all the stock): a small dark pill, shown for a few seconds.
+    Error message near the button: the reason a product can't be added (e.g. Shopify's "You can't add
+    more ... to the cart." when the bag already holds all the stock). A small dark pill for 4 seconds. It is a popover (top layer, never cut off by a card): fixed position,
+    the script writes --message-top / --message-left from the button's place (above it, else below,
+    kept inside the screen). The resets undo the browser's popover box (centred, border, padding).
   */
-  quick-add {
-    position: relative;
-  }
-
   .quick-add__message {
-    position: absolute;
-    inset-block-start: calc(100% + 0.5rem);
-    inset-inline-end: 0;
-    z-index: 3;
+    position: fixed;
+    inset: auto;
+    top: var(--message-top, 0);
+    left: var(--message-left, 0);
     inline-size: max-content;
-    max-inline-size: 15rem;
+    max-inline-size: min(15rem, calc(100vw - 1rem));
+    margin: 0;
     padding: 0.5rem 0.75rem;
+    border: 0;
     border-radius: var(--radius-sm);
     background-color: #1f1f1fe6;
     color: #ffffff;
     font-size: var(--font-size-small);
     line-height: 1.4;
     text-align: start;
+    pointer-events: none;
   }
 
+  quick-add {
+    position: relative;
+  }
+
+  /* hidden = off in every browser; browsers without popovers (Safari < 17) show it in place, fixed */
   .quick-add__message[hidden] {
     display: none;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .quick-add__message:not([hidden]) {
+      animation: quick-add-message 0.2s var(--ease-out);
+    }
+  }
+
+  @keyframes quick-add-message {
+    from {
+      opacity: 0;
+      translate: 0 0.25rem;
+    }
   }
 
   /* One cross-fade from the tilted to the upright cart, after the tick has popped in */
@@ -478,6 +506,10 @@
       scale: 1;
     }
 
+    quick-add.is-resetting .quick-add__tick {
+      animation: none;
+    }
+
     quick-add.is-error .quick-add__button {
       animation: none;
     }
@@ -489,22 +521,46 @@
    * <quick-add>: adds the product with Shopify's Cart AJAX API instead of submitting the form, plays
    * the cart animation, then updates the header's cart count. The animation (1s) and the request run
    * together; the tick shows once both are done, so a fast request still gets the full animation.
+   * Then the "Added to your bag" card shows (cart:added), and when it closes the button goes back to its
+   * normal state.
    */
   class QuickAdd extends HTMLElement {
+    static HOLD = 2500; // ms the tick stays when the page has no "Added" card
+
     connectedCallback() {
+      // One controller for every listener: an element moved in the page (theme editor, the product
+      // page's pinned track) connects again, and two submit listeners would add 2
+      this.controller = new AbortController();
+      const { signal } = this.controller;
       this.form = this.querySelector('form');
       this.status = this.querySelector('[data-quick-add-status]');
-      this.form?.addEventListener('submit', (event) => {
-        event.preventDefault();
-        this.add();
-      });
+      this.message = this.querySelector('[data-quick-add-message]');
+      this.form?.addEventListener(
+        'submit',
+        (event) => {
+          event.preventDefault();
+          this.add();
+        },
+        { signal }
+      );
+    }
+
+    disconnectedCallback() {
+      this.controller?.abort();
+      this.closeListener?.abort();
+      this.hideMessage();
+      clearTimeout(this.resetTimer);
+      this.classList.remove('is-adding', 'is-added', 'is-resetting', 'is-error');
+      this.busy = false;
     }
 
     async add() {
       if (this.busy) return;
       this.busy = true;
       clearTimeout(this.resetTimer);
-      this.classList.remove('is-added', 'is-error');
+      this.closeListener?.abort();
+      this.hideMessage();
+      this.classList.remove('is-added', 'is-resetting', 'is-error');
       this.classList.add('is-adding');
 
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -522,35 +578,82 @@
       const drive = new Promise((resolve) => setTimeout(resolve, reduced ? 0 : 1000));
 
       try {
-        await Promise.all([request, drive]);
+        const [data] = await Promise.all([request, drive]);
         this.classList.replace('is-adding', 'is-added');
         this.announce(this.dataset.labelAdded);
-        // The header's <cart-count> refreshes the count (and tells the cart page)
+
+        // The "Added to your bag" card (snippets/cart-notification.liquid) shows the line. Its
+        // quantity in Shopify's answer is the line's total in the bag, not just this add.
+        const card = document.querySelector('cart-notification');
+        document.dispatchEvent(new CustomEvent('cart:added', { detail: { item: data?.items?.[0] } }));
+        // The header's <cart-count> refreshes the count (and tells the cart page and the card)
         document.dispatchEvent(new CustomEvent('cart:changed'));
-        // Stays in the final state (upright cart + gold tick): the product is in the cart. Clicking
-        // again adds one more and plays the animation again.
+
+        // Back to the normal button when the card closes (or after a moment where there is no card,
+        // e.g. on the cart page): the tick shrinks away (0.3s), the cart stays. Listening only after
+        // "cart:added": that event closes a card still open for another button, not this one.
+        const reset = () => {
+          clearTimeout(this.resetTimer);
+          this.closeListener?.abort();
+          this.classList.replace('is-added', 'is-resetting');
+          this.resetTimer = setTimeout(() => this.classList.remove('is-resetting'), reduced ? 0 : 300);
+        };
+        this.closeListener?.abort();
+        this.closeListener = new AbortController();
+        document.addEventListener('cart-notification:close', reset, { once: true, signal: this.closeListener.signal });
+        if (!card) this.resetTimer = setTimeout(reset, QuickAdd.HOLD);
       } catch (error) {
         this.classList.remove('is-adding');
         this.classList.add('is-error');
         const reason = error?.message || this.dataset.labelError;
         this.announce(reason);
-        this.showMessage(reason);
+        this.showMessage(reason, 4000);
         this.resetTimer = setTimeout(() => this.classList.remove('is-error'), 600);
       } finally {
         this.busy = false;
       }
     }
 
-    /** Shows the reason under the button for 4 seconds */
-    showMessage(message) {
-      const box = this.querySelector('[data-quick-add-message]');
+    /**
+     * Shows the message near the button for `duration` ms: above it, or below when there's no room,
+     * kept 8px inside the screen. A popover (top layer) where the browser has them, so a card's
+     * overflow: hidden can't cut it off. Its place is fixed on the screen, so it goes on scroll.
+     */
+    showMessage(message, duration) {
+      const box = this.message;
       if (!box || !message) return;
       box.textContent = message;
       box.hidden = false;
+      if (box.showPopover && !box.matches(':popover-open')) box.showPopover();
+
+      const button = this.querySelector('.quick-add__button')?.getBoundingClientRect();
+      if (button) {
+        const gap = 8;
+        const { width, height } = box.getBoundingClientRect();
+        let top = button.top - height - gap;
+        if (top < gap) top = button.bottom + gap;
+        const left = Math.min(Math.max(gap, button.left + button.width / 2 - width / 2), window.innerWidth - width - gap);
+        box.style.setProperty('--message-top', `${Math.round(top)}px`);
+        box.style.setProperty('--message-left', `${Math.round(left)}px`);
+      }
+
       clearTimeout(this.messageTimer);
-      this.messageTimer = setTimeout(() => {
-        box.hidden = true;
-      }, 4000);
+      this.messageTimer = setTimeout(() => this.hideMessage(), duration);
+      this.onScroll ??= () => this.hideMessage();
+      window.addEventListener('scroll', this.onScroll, { passive: true, once: true });
+      window.addEventListener('resize', this.onScroll, { once: true });
+    }
+
+    hideMessage() {
+      const box = this.message;
+      clearTimeout(this.messageTimer);
+      if (this.onScroll) {
+        window.removeEventListener('scroll', this.onScroll);
+        window.removeEventListener('resize', this.onScroll);
+      }
+      if (!box || box.hidden) return;
+      if (box.hidePopover && box.matches(':popover-open')) box.hidePopover();
+      box.hidden = true;
     }
 
     announce(message) {
@@ -560,7 +663,6 @@
         this.status.textContent = message;
       });
     }
-
   }
 
   if (!customElements.get('quick-add')) {

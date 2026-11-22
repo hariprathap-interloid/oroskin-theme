@@ -106,5 +106,13 @@
     {%- endif -%}
 
     {% sections 'footer-group' %}
+
+    {%- comment -%}
+      "Added to your bag" card for the round cart buttons (one for the page). Not on the cart page: there
+      the cart itself updates in place.
+    {%- endcomment -%}
+    {%- unless template.name == 'cart' -%}
+      {% render 'cart-notification' %}
+    {%- endunless -%}
   </body>
 </html>

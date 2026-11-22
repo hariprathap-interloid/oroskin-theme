@@ -1,0 +1,471 @@
+{% doc %}
+  "Added to your bag" card: shows after a product is added with a round cart button (quick-add), with
+  the product (photo, name, variant, price), how many of it are in the bag now, the bag's item count
+  and total, and two buttons: View bag / Checkout.
+
+  One card for the page, rendered in layout/theme.liquid (not on the cart page, where the cart updates
+  in place). The quick-add script sends "cart:added" with Shopify's answer for the added line; this
+  card shows it at once and fills in the bag line from the next "cart:updated" (the header's
+  <cart-count> reads /cart.js after every add), or reads /cart.js itself when that doesn't come.
+
+  Desktop: top right, under the header. Phones: at the bottom of the screen. It is a popover (top
+  layer: above the sticky header and bars). It closes after 5 seconds, but not while the pointer or
+  the keyboard focus is on it; Escape and the x button close it too. It never takes the focus: the
+  quick-add button already tells screen readers what was added.
+
+  @example
+  {% render 'cart-notification' %}
+{% enddoc %}
+
+<cart-notification
+  class="cart-notification"
+  popover="manual"
+  role="region"
+  aria-label="{{ 'cart.added_title' | t | escape }}"
+  data-money-format="{{ shop.money_format | strip_html | escape }}"
+  data-label-in-bag="{{ 'cart.added_in_bag' | t: count: '[count]' | escape }}"
+  data-label-bag-one="{{ 'cart.added_bag_count' | t: count: 1 | escape }}"
+  data-label-bag-other="{{ 'cart.added_bag_count' | t: count: 999999 | escape }}"
+  hidden
+>
+  <div class="cart-notification__head">
+    <p class="cart-notification__title">
+      <span class="cart-notification__check" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="m6 12.5 4 4 8-9"/></svg>
+      </span>
+      {{- 'cart.added_title' | t -}}
+    </p>
+    <button type="button" class="cart-notification__close" data-cart-notification-close aria-label="{{ 'cart.added_close' | t | escape }}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+  </div>
+
+  <div class="cart-notification__item">
+    <a class="cart-notification__media" href="#" tabindex="-1" aria-hidden="true" data-cart-notification-link>
+      <img src="data:," alt="" width="160" height="200" data-cart-notification-image>
+    </a>
+    <div class="cart-notification__details">
+      <a class="cart-notification__name" href="#" data-cart-notification-link data-cart-notification-name></a>
+      <p class="cart-notification__variant" data-cart-notification-variant></p>
+      <p class="cart-notification__price" data-cart-notification-price></p>
+      <p class="cart-notification__in-bag" data-cart-notification-in-bag></p>
+    </div>
+  </div>
+
+  <p class="cart-notification__bag" data-cart-notification-bag hidden>
+    <span data-cart-notification-count></span>
+    <span class="cart-notification__total" data-cart-notification-total></span>
+  </p>
+
+  <div class="cart-notification__actions">
+    <a class="button button--secondary cart-notification__view" href="{{ routes.cart_url }}">{{ 'cart.view_bag' | t }}</a>
+    {%- comment -%} The cart form with "checkout" goes straight to Shopify's checkout (same as the cart page) {%- endcomment -%}
+    <form action="{{ routes.cart_url }}" method="post" class="cart-notification__checkout-form">
+      <button type="submit" name="checkout" class="button cart-notification__checkout">
+        {{- 'cart.checkout' | t -}}
+        {{- 'icon-send.svg' | inline_asset_content -}}
+      </button>
+    </form>
+  </div>
+</cart-notification>
+
+{% stylesheet %}
+  /*
+    The card: the theme's light glass (scheme background, soft shadow and rim), 22rem wide, top right
+    under the header. Popover resets: the browser centres a popover with a border and padding.
+  */
+  .cart-notification {
+    position: fixed;
+    inset: auto;
+    inset-block-start: calc(var(--header-space, 6rem) + var(--space-xs));
+    inset-inline-end: var(--page-margin, 1rem);
+    z-index: 30;
+    display: grid;
+    gap: var(--space-md);
+    inline-size: min(22rem, calc(100vw - var(--page-margin, 1rem) * 2));
+    margin: 0;
+    padding: var(--space-lg);
+    border: 0;
+    border-radius: var(--radius-md);
+    background-color: var(--color-background);
+    box-shadow: 0 12px 40px 0 #0000001f, var(--glass-rim);
+    color: var(--color-text);
+  }
+
+  /* hidden = off in every browser (also without popovers, where it shows in place, fixed) */
+  .cart-notification[hidden] {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .cart-notification:not([hidden]) {
+      animation: cart-notification-in 0.3s var(--ease-out);
+    }
+  }
+
+  @keyframes cart-notification-in {
+    from {
+      opacity: 0;
+      translate: 0 -0.75rem;
+    }
+  }
+
+  .cart-notification__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+  }
+
+  .cart-notification p {
+    margin: 0;
+  }
+
+  .cart-notification__title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-medium);
+  }
+
+  /* The gold tick of the cart button, small */
+  .cart-notification__check {
+    display: grid;
+    place-items: center;
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+    border-radius: 50%;
+    background-color: var(--color-accent);
+    color: #ffffff;
+  }
+
+  .cart-notification__check svg {
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
+  }
+
+  /* Two classes: the global button[type] rules would win over one class */
+  .cart-notification .cart-notification__close {
+    display: grid;
+    place-items: center;
+    inline-size: 2rem;
+    block-size: 2rem;
+    min-block-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--color-text);
+    cursor: pointer;
+  }
+
+  .cart-notification .cart-notification__close:hover {
+    background-color: color-mix(in srgb, var(--color-text) 8%, transparent);
+  }
+
+  .cart-notification__close svg {
+    inline-size: 1.125rem;
+    block-size: 1.125rem;
+  }
+
+  .cart-notification__item {
+    display: grid;
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-md);
+  }
+
+  .cart-notification__media {
+    display: block;
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    border-radius: 0.5rem;
+    background-color: var(--color-tint, #f3ede2);
+  }
+
+  .cart-notification__media img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .cart-notification__media img[src="data:,"] {
+    visibility: hidden;
+  }
+
+  .cart-notification__details {
+    display: grid;
+    gap: 0.125rem;
+    min-inline-size: 0;
+  }
+
+  .cart-notification__name {
+    overflow: hidden;
+    color: var(--color-text);
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-heading);
+    text-decoration: none;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .cart-notification__name:hover {
+    text-decoration: underline;
+  }
+
+  .cart-notification__variant {
+    color: color-mix(in srgb, var(--color-text) 70%, var(--color-background));
+    font-size: var(--font-size-small);
+  }
+
+  .cart-notification__variant:empty {
+    display: none;
+  }
+
+  .cart-notification__price {
+    font-weight: var(--font-weight-medium);
+  }
+
+  /* "In your bag: 2" in the accent colour */
+  .cart-notification__in-bag {
+    color: var(--color-accent);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-medium);
+  }
+
+  /* "Bag: 5 items   Rs. 21,300.00" on a hairline */
+  .cart-notification__bag:not([hidden]) {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-md);
+    padding-block-start: var(--space-sm);
+    border-block-start: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    font-size: var(--font-size-body-sm);
+  }
+
+  .cart-notification__total {
+    font-weight: var(--font-weight-medium);
+    white-space: nowrap;
+  }
+
+  .cart-notification__actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-sm);
+  }
+
+  .cart-notification__checkout-form {
+    display: grid;
+    margin: 0;
+  }
+
+  /* Both buttons the same size; the checkout pill in the accent colour (as on the cart page) */
+  .cart-notification .cart-notification__view,
+  .cart-notification .cart-notification__checkout {
+    min-block-size: 2.75rem;
+    padding-inline: var(--space-sm);
+    font-size: var(--font-size-small);
+    white-space: nowrap;
+  }
+
+  .cart-notification .cart-notification__checkout {
+    --color-button: var(--color-accent);
+    --color-button-border: var(--color-accent);
+    --color-button-text: #ffffff;
+    gap: var(--space-xs);
+  }
+
+  .cart-notification__checkout svg {
+    inline-size: 1em;
+    block-size: auto;
+  }
+
+  /* Phones: at the bottom of the screen, full width (thumbs reach the buttons) */
+  @media (max-width: 749px) {
+    .cart-notification {
+      inset-block-start: auto;
+      inset-block-end: calc(var(--space-sm) + env(safe-area-inset-bottom));
+      inset-inline: var(--page-margin, 1rem);
+      inline-size: auto;
+      padding: var(--space-md);
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .cart-notification:not([hidden]) {
+        animation-name: cart-notification-up;
+      }
+    }
+  }
+
+  @keyframes cart-notification-up {
+    from {
+      opacity: 0;
+      translate: 0 0.75rem;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <cart-notification>: the "Added to your bag" card. Listens for "cart:added" (detail.item = the
+   * line from Shopify's /cart/add.js answer; its quantity is the line's total in the bag).
+   * Sends "cart-notification:close" when it closes or is replaced, so the cart button that opened it
+   * can take its tick away.
+   */
+  class CartNotification extends HTMLElement {
+    static DURATION = 5000;
+
+    connectedCallback() {
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+      document.addEventListener('cart:added', (event) => this.open(event.detail?.item), { signal });
+      this.addEventListener('click', (event) => {
+        if (event.target.closest('[data-cart-notification-close]')) this.close();
+      }, { signal });
+      this.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') this.close();
+      }, { signal });
+      // The timer stops while the visitor is reading or using the card (WCAG 2.2.1)
+      this.addEventListener('pointerenter', () => this.pause(), { signal });
+      this.addEventListener('pointerleave', () => this.resume(), { signal });
+      this.addEventListener('focusin', () => this.pause(), { signal });
+      this.addEventListener('focusout', (event) => {
+        if (!this.contains(event.relatedTarget)) this.resume();
+      }, { signal });
+    }
+
+    disconnectedCallback() {
+      this.controller?.abort();
+      clearTimeout(this.timer);
+      clearTimeout(this.bagTimer);
+    }
+
+    open(item) {
+      if (!item) return;
+      // A card that is still open belongs to another add: its button takes its tick away
+      if (!this.hidden) document.dispatchEvent(new CustomEvent('cart-notification:close'));
+
+      this.fill(item);
+      this.hidden = false;
+      if (this.showPopover && !this.matches(':popover-open')) this.showPopover();
+      this.restartAnimation();
+      this.resume();
+      this.waitForBag();
+    }
+
+    /** Writes the product into the card (text only: textContent, no HTML from the answer) */
+    fill(item) {
+      const image = this.querySelector('[data-cart-notification-image]');
+      image.src = 'data:,';
+      if (item.image) {
+        try {
+          // A small file (Shopify's image CDN resizes by the width parameter). document.baseURI, not
+          // location.origin: that is "null" in some frames, and new URL() then throws
+          const url = new URL(item.image, document.baseURI);
+          url.searchParams.set('width', '160');
+          image.src = url.toString();
+        } catch (error) {
+          image.src = item.image;
+        }
+      }
+      this.querySelectorAll('[data-cart-notification-link]').forEach((link) => (link.href = item.url || '#'));
+      this.querySelector('[data-cart-notification-name]').textContent = item.product_title || item.title || '';
+      const variant = item.product_has_only_default_variant ? '' : item.variant_title || '';
+      this.querySelector('[data-cart-notification-variant]').textContent = variant;
+      this.querySelector('[data-cart-notification-price]').textContent = this.money(item.final_price ?? item.price ?? 0);
+      this.querySelector('[data-cart-notification-in-bag]').textContent = this.dataset.labelInBag.replace('[count]', item.quantity);
+      this.querySelector('[data-cart-notification-bag]').hidden = true;
+    }
+
+    /**
+     * The bag line (item count + total) comes from the next "cart:updated" (the header reads /cart.js
+     * after every add). Without a header, or if it doesn't come within 1.5s, read /cart.js here.
+     */
+    waitForBag() {
+      clearTimeout(this.bagTimer);
+      this.bagController?.abort();
+      this.bagController = new AbortController();
+      document.addEventListener('cart:updated', (event) => {
+        if (event.detail?.cart) this.fillBag(event.detail.cart);
+      }, { signal: this.bagController.signal, once: true });
+      this.bagTimer = setTimeout(async () => {
+        try {
+          const root = window.Shopify?.routes?.root || '/';
+          this.fillBag(await fetch(`${root}cart.js`, { headers: { Accept: 'application/json' } }).then((r) => r.json()));
+        } catch (error) {
+          // The bag line stays hidden; the rest of the card is right
+        }
+      }, 1500);
+    }
+
+    fillBag(cart) {
+      clearTimeout(this.bagTimer);
+      this.bagController?.abort();
+      const count = cart.item_count;
+      const label = count === 1 ? this.dataset.labelBagOne : this.dataset.labelBagOther.replace('999999', count);
+      this.querySelector('[data-cart-notification-count]').textContent = label;
+      this.querySelector('[data-cart-notification-total]').textContent = this.money(cart.total_price);
+      this.querySelector('[data-cart-notification-bag]').hidden = false;
+    }
+
+    close() {
+      if (this.hidden) return;
+      clearTimeout(this.timer);
+      clearTimeout(this.bagTimer);
+      this.bagController?.abort();
+      if (this.hidePopover && this.matches(':popover-open')) this.hidePopover();
+      this.hidden = true;
+      document.dispatchEvent(new CustomEvent('cart-notification:close'));
+    }
+
+    pause() {
+      clearTimeout(this.timer);
+    }
+
+    resume() {
+      clearTimeout(this.timer);
+      if (this.matches(':hover') || this.contains(document.activeElement)) return;
+      this.timer = setTimeout(() => this.close(), CartNotification.DURATION);
+    }
+
+    /** A new add while the card is open plays the entrance again */
+    restartAnimation() {
+      this.style.animation = 'none';
+      void this.offsetWidth;
+      this.style.animation = '';
+    }
+
+    /**
+     * Cents → the store's money format (Settings > General > Store currency), e.g. "Rs. 4,000.00".
+     * Same placeholders as Product bundle (sections/product-pairs.liquid).
+     */
+    money(cents) {
+      const format = this.dataset.moneyFormat || '';
+      if (!format) return (cents / 100).toFixed(2);
+      const group = (value, decimals, thousands, decimal) => {
+        const [whole, fraction] = (value / 100).toFixed(decimals).split('.');
+        return whole.replace(/\B(?=(\d{3})+(?!\d))/g, thousands) + (fraction ? decimal + fraction : '');
+      };
+      return format.replace(/\{\{\s*(\w+)\s*\}\}/, (match, key) => {
+        switch (key) {
+          case 'amount_no_decimals':
+            return group(cents, 0, ',', '.');
+          case 'amount_with_comma_separator':
+            return group(cents, 2, '.', ',');
+          case 'amount_no_decimals_with_comma_separator':
+            return group(cents, 0, '.', ',');
+          case 'amount_with_apostrophe_separator':
+            return group(cents, 2, "'", '.');
+          default:
+            return group(cents, 2, ',', '.');
+        }
+      });
+    }
+  }
+
+  if (!customElements.get('cart-notification')) customElements.define('cart-notification', CartNotification);
+{% endjavascript %}

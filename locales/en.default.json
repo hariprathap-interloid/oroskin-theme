@@ -114,7 +114,15 @@
     "gift_message_placeholder": "e.g. Happy birthday!",
     "gift_cancel": "Cancel",
     "gift_save": "Save wrap",
-    "gift_message": "Message:"
+    "gift_message": "Message:",
+    "added_title": "Added to your bag",
+    "added_close": "Close",
+    "added_in_bag": "In your bag: {{ count }}",
+    "added_bag_count": {
+      "one": "Bag: {{ count }} item",
+      "other": "Bag: {{ count }} items"
+    },
+    "view_bag": "View bag"
   },
   "collections": {
     "title": "Collections",
