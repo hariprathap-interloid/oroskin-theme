@@ -1,15 +1,19 @@
 {%- comment -%}
-  Contact locations (M8.1, Figma 170:108823): two columns.
-  Left: "Visit our office" eyebrow, "Our global locations", and a white panel of office cards.
-  Right, a little lower: the centred "Find us online" eyebrow, "Connect on social", and the social
-  cards in rows of 3 + 2.
+  Contact locations (M8.1, Figma 170:108823; phones: design/inbox/contactpage/contact-mobile/
+  Property 1=Variant14.png): the office cards and the social cards.
+  - From 1440px: two columns. Left: "Visit our office", "Our global locations" and a panel of office
+    cards. Right, a little lower: the centred "Find us online", "Connect on social" and the social
+    cards in rows of 3 (a last row that is not full is centred, Figma 3 + 2).
+  - Below 1440px (phone design, also tablets and small laptops): the social part first, then the
+    offices. Social cards 3 per row, office cards 2 per row (a last one alone is centred); below 375px
+    one per row.
 
-  Each column's cards live in their own static block (Locations panel, Social cards), because a
+  Each part's cards live in their own static block (Locations panel, Social cards), because a
   section's {% content_for 'blocks' %} outputs all its blocks in one place; static blocks let the
-  merchant add and reorder cards in each column separately.
-
-  The social heading is placed as in the Figma (centred slightly left of the cards' middle), by
-  the developer's choice (2026-10-29).
+  merchant add and reorder cards in each part separately.
+  The blocks are captured first: a part with no card is left out on the store (the theme editor shows
+  it with a note). No card at all: no section on the store.
+  No heading: a hidden h2 keeps the h3 card titles under a heading.
 {%- endcomment -%}
 
 {%- liquid
@@ -20,62 +24,88 @@
     assign animation = 'none'
   endif
 -%}
+{%- capture offices_html -%}{% content_for 'block', type: '_location-list', id: 'locations' %}{%- endcapture -%}
+{%- capture social_html -%}{% content_for 'block', type: '_social-list', id: 'social' %}{%- endcapture -%}
+{%- liquid
+  assign show_offices = request.design_mode
+  if offices_html contains 'class="location-card'
+    assign show_offices = true
+  endif
+  assign show_social = request.design_mode
+  if social_html contains 'class="social-card'
+    assign show_social = true
+  endif
+-%}
 
 {% render 'screen-scale' %}
 
-<div
-  class="contact-locations full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.fill_screen %} section--fill-screen{% endif %}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
-  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};"
->
-  <animate-on-scroll class="contact-locations__inner">
-    <div class="contact-locations__offices">
-      {%- if section.settings.locations_eyebrow != blank or section.settings.locations_heading != blank -%}
-        <div
-          class="contact-locations__titles"
-          {% if animation != 'none' %}
-            data-animate="slide-left"
-          {% endif %}
-        >
-          {%- if section.settings.locations_eyebrow != blank -%}
-            <p class="eyebrow">{{ section.settings.locations_eyebrow | escape }}</p>
+{%- if show_offices or show_social -%}
+  <div
+    class="contact-locations full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.fill_screen %} section--fill-screen{% endif %}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
+    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;{% if section.settings.scale_screen %} --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};{% endif %}"
+  >
+    <animate-on-scroll class="contact-locations__inner">
+      {%- if show_social -%}
+        <div class="contact-locations__social">
+          {%- if section.settings.social_eyebrow != blank or section.settings.social_heading != blank -%}
+            <div
+              class="contact-locations__titles contact-locations__titles--social"
+              {% if animation != 'none' %}
+                data-animate="fade-up"
+              {% endif %}
+            >
+              {%- if section.settings.social_eyebrow != blank -%}
+                <p class="eyebrow eyebrow--center">{{ section.settings.social_eyebrow | escape }}</p>
+              {%- endif -%}
+              {%- if section.settings.social_heading != blank -%}
+                <h2 class="contact-locations__heading">{{ section.settings.social_heading }}</h2>
+              {%- endif -%}
+            </div>
           {%- endif -%}
-          {%- if section.settings.locations_heading != blank -%}
-            <h2 class="contact-locations__heading">{{ section.settings.locations_heading }}</h2>
+          {%- if section.settings.social_heading == blank -%}
+            {%- assign hidden_heading = 'contact.locations.social_heading_hidden' | t -%}
+            <h2 class="visually-hidden">{{ section.settings.social_eyebrow | default: hidden_heading | escape }}</h2>
           {%- endif -%}
+
+          {{ social_html }}
         </div>
       {%- endif -%}
 
-      {% content_for 'block', type: '_location-list', id: 'locations' %}
-    </div>
+      {%- if show_offices -%}
+        <div class="contact-locations__offices">
+          {%- if section.settings.locations_eyebrow != blank or section.settings.locations_heading != blank -%}
+            <div
+              class="contact-locations__titles"
+              {% if animation != 'none' %}
+                data-animate="slide-left"
+              {% endif %}
+            >
+              {%- if section.settings.locations_eyebrow != blank -%}
+                <p class="eyebrow">{{ section.settings.locations_eyebrow | escape }}</p>
+              {%- endif -%}
+              {%- if section.settings.locations_heading != blank -%}
+                <h2 class="contact-locations__heading">{{ section.settings.locations_heading }}</h2>
+              {%- endif -%}
+            </div>
+          {%- endif -%}
+          {%- if section.settings.locations_heading == blank -%}
+            {%- assign hidden_heading = 'contact.locations.heading_hidden' | t -%}
+            <h2 class="visually-hidden">{{ section.settings.locations_eyebrow | default: hidden_heading | escape }}</h2>
+          {%- endif -%}
 
-    <div class="contact-locations__social">
-      {%- if section.settings.social_eyebrow != blank or section.settings.social_heading != blank -%}
-        <div
-          class="contact-locations__titles contact-locations__titles--social"
-          {% if animation != 'none' %}
-            data-animate="fade-up"
-          {% endif %}
-        >
-          {%- if section.settings.social_eyebrow != blank -%}
-            <p class="eyebrow eyebrow--center">{{ section.settings.social_eyebrow | escape }}</p>
-          {%- endif -%}
-          {%- if section.settings.social_heading != blank -%}
-            <h2 class="contact-locations__heading">{{ section.settings.social_heading }}</h2>
-          {%- endif -%}
+          {{ offices_html }}
         </div>
       {%- endif -%}
-
-      {% content_for 'block', type: '_social-list', id: 'social' %}
-    </div>
-  </animate-on-scroll>
-</div>
+    </animate-on-scroll>
+  </div>
+{%- endif -%}
 
 {% stylesheet %}
   .contact-locations {
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
   }
 
-  /* Phones and tablets: offices, then social. Two columns from 1200px (Figma 546 + 64 + 1212) */
+  /* Below 1440px: social, then offices. Two columns from 1440px (Figma 546 + 64 + 1212) */
   .contact-locations__inner {
     display: grid;
     gap: var(--space-3xl);
@@ -87,13 +117,20 @@
     margin-inline: auto;
   }
 
-  @media (min-width: 1200px) {
+  @media (min-width: 1440px) {
     .contact-locations__inner {
       grid-template-columns: minmax(0, 546fr) minmax(0, 1212fr);
     }
 
+    .contact-locations__offices {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
     /* The social column starts 68px lower than the offices (Figma eyebrows at y 162 and 230) */
     .contact-locations__social {
+      grid-column: 2;
+      grid-row: 1;
       padding-block-start: var(--space-3xl);
     }
 
@@ -125,13 +162,35 @@
     margin-block-end: var(--space-2xl); /* heading → social cards: 55px */
     text-align: center;
   }
+
+  /* The rules start at 0 and take only the free space (66px at most), so the label keeps its line */
+  .contact-locations__titles--social .eyebrow::before,
+  .contact-locations__titles--social .eyebrow::after {
+    flex: 1 1 0;
+    min-inline-size: 1rem;
+    max-inline-size: 66px;
+    inline-size: auto;
+  }
+
+  @media (max-width: 749px) {
+    .contact-locations__inner {
+      gap: var(--space-2xl);
+    }
+
+    .contact-locations__heading {
+      margin-block-start: var(--space-sm);
+    }
+
+    .contact-locations__titles--social {
+      margin-block-end: var(--space-lg);
+    }
+  }
 {% endstylesheet %}
 
 {% schema %}
 {
   "name": "t:general.contact_locations",
   "tag": "section",
-  "class": "contact-locations-section",
   "blocks": [
     {
       "type": "_location-list"
@@ -143,24 +202,7 @@
   "settings": [
     {
       "type": "header",
-      "content": "t:labels.locations"
-    },
-    {
-      "type": "text",
-      "id": "locations_eyebrow",
-      "label": "t:labels.eyebrow",
-      "default": "Visit our office"
-    },
-    {
-      "type": "inline_richtext",
-      "id": "locations_heading",
-      "label": "t:labels.heading",
-      "info": "t:labels.italic_accent_info",
-      "default": "Our global locations"
-    },
-    {
-      "type": "header",
-      "content": "t:labels.social_media"
+      "content": "t:labels.contact_locations_social_group"
     },
     {
       "type": "text",
@@ -172,7 +214,7 @@
       "type": "inline_richtext",
       "id": "social_heading",
       "label": "t:labels.heading",
-      "info": "t:labels.italic_accent_info",
+      "info": "t:labels.contact_heading_hidden_info",
       "default": "Connect on social"
     },
     {
@@ -192,8 +234,33 @@
       "default": "brand"
     },
     {
+      "type": "paragraph",
+      "content": "t:labels.contact_locations_cards_info"
+    },
+    {
       "type": "header",
-      "content": "t:labels.style"
+      "content": "t:labels.contact_locations_offices_group"
+    },
+    {
+      "type": "text",
+      "id": "locations_eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "Visit our office"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "locations_heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.contact_heading_hidden_info",
+      "default": "Our global locations"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.layout"
+    },
+    {
+      "type": "paragraph",
+      "content": "t:labels.contact_locations_layout_info"
     },
     {
       "type": "select",
@@ -231,14 +298,14 @@
       "type": "checkbox",
       "id": "scale_screen",
       "label": "t:labels.scale_screen",
-      "info": "t:labels.scale_screen_info",
+      "info": "t:labels.contact_scale_screen_info",
       "default": true
     },
     {
       "type": "range",
       "id": "text_scale",
       "label": "t:labels.text_scale",
-      "info": "t:labels.text_scale_info",
+      "info": "t:labels.contact_text_scale_info",
       "min": 100,
       "max": 130,
       "step": 5,
@@ -247,10 +314,8 @@
       "visible_if": "{{ section.settings.scale_screen }}"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
+      "type": "header",
+      "content": "t:labels.animation_header"
     },
     {
       "type": "select",
@@ -268,6 +333,10 @@
         }
       ],
       "default": "fade-up"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -288,6 +357,16 @@
       "step": 8,
       "unit": "px",
       "default": 96
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ],
   "presets": [
@@ -301,15 +380,30 @@
           "blocks": [
             {
               "type": "_location-card",
-              "settings": { "code": "FR", "title": "Paris — Headquarters", "address": "14 Rue du Faubourg Saint-Honoré\n75008 Paris, France", "hours": "Mon–Fri · 9am – 7pm CET" }
+              "settings": {
+                "code": "FR",
+                "title": "Paris — Headquarters",
+                "address": "14 Rue du Faubourg Saint-Honoré\n75008 Paris, France",
+                "hours": "Mon–Fri · 9am – 7pm CET"
+              }
             },
             {
               "type": "_location-card",
-              "settings": { "code": "US", "title": "New York", "address": "432 West Broadway, Suite 300\nSoHo, New York NY 10012", "hours": "Mon–Fri · 9am – 6pm EST" }
+              "settings": {
+                "code": "US",
+                "title": "New York",
+                "address": "432 West Broadway, Suite 300\nSoHo, New York NY 10012",
+                "hours": "Mon–Fri · 9am – 6pm EST"
+              }
             },
             {
               "type": "_location-card",
-              "settings": { "code": "JP", "title": "Tokyo", "address": "2-11-3 Minami-Aoyama\nMinato-ku, Tokyo 107-0062", "hours": "Mon–Fri · 10am – 7pm JST" }
+              "settings": {
+                "code": "JP",
+                "title": "Tokyo",
+                "address": "2-11-3 Minami-Aoyama\nMinato-ku, Tokyo 107-0062",
+                "hours": "Mon–Fri · 10am – 7pm JST"
+              }
             }
           ]
         },
@@ -318,11 +412,51 @@
           "id": "social",
           "static": true,
           "blocks": [
-            { "type": "_social-card", "settings": { "network": "instagram", "name": "Instagram", "handle": "@oroskin.beauty", "followers": "1.2M followers" } },
-            { "type": "_social-card", "settings": { "network": "x", "name": "Twitter/X", "handle": "@oroskin", "followers": "340k followers" } },
-            { "type": "_social-card", "settings": { "network": "youtube", "name": "YouTube", "handle": "OroSkin Beauty", "followers": "215k followers" } },
-            { "type": "_social-card", "settings": { "network": "facebook", "name": "Facebook", "handle": "OroSkin Beauty Co.", "followers": "896k followers" } },
-            { "type": "_social-card", "settings": { "network": "linkedin", "name": "LinkedIn", "handle": "OroSkin Beauty Co.", "followers": "58k followers" } }
+            {
+              "type": "_social-card",
+              "settings": {
+                "network": "instagram",
+                "name": "Instagram",
+                "handle": "@oroskin.beauty",
+                "followers": "1.2M followers"
+              }
+            },
+            {
+              "type": "_social-card",
+              "settings": {
+                "network": "x",
+                "name": "Twitter/X",
+                "handle": "@oroskin",
+                "followers": "340k followers"
+              }
+            },
+            {
+              "type": "_social-card",
+              "settings": {
+                "network": "youtube",
+                "name": "YouTube",
+                "handle": "OroSkin Beauty",
+                "followers": "215k followers"
+              }
+            },
+            {
+              "type": "_social-card",
+              "settings": {
+                "network": "facebook",
+                "name": "Facebook",
+                "handle": "OroSkin Beauty Co.",
+                "followers": "896k followers"
+              }
+            },
+            {
+              "type": "_social-card",
+              "settings": {
+                "network": "linkedin",
+                "name": "LinkedIn",
+                "handle": "OroSkin Beauty Co.",
+                "followers": "58k followers"
+              }
+            }
           ]
         }
       ]

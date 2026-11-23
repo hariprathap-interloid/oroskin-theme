@@ -196,6 +196,62 @@
       transition: none;
     }
   }
+
+  /* All cards in a row are the same height (the flex row stretches the item, the card fills it) */
+  .social-card-item {
+    display: flex;
+  }
+
+  .social-card {
+    flex: 1;
+    min-inline-size: 0;
+  }
+
+  /* Below the wide grid (3 small cards per row): no Figma minimum height */
+  @media (max-width: 1439px) {
+    .social-card {
+      min-block-size: 0;
+    }
+  }
+
+  /* Phones (phone design): compact cards, small text */
+  @media (max-width: 749px) {
+    .social-card {
+      padding: var(--space-sm);
+      border-radius: var(--radius-xs);
+    }
+
+    .social-card__badge {
+      inline-size: 1.75rem;
+    }
+
+    .social-card__badge svg {
+      inline-size: 0.875rem;
+    }
+
+    .social-card__arrow {
+      inset-block-start: var(--space-xs);
+      inset-inline-end: var(--space-xs);
+    }
+
+    .social-card__arrow svg {
+      inline-size: 0.625rem;
+    }
+
+    .social-card__name {
+      margin-block-start: var(--space-sm);
+      font-size: 0.8125rem;
+    }
+
+    .social-card__handle,
+    .social-card__followers {
+      font-size: 0.6875rem;
+    }
+
+    .social-card__handle {
+      margin-block-start: var(--space-2xs);
+    }
+  }
 {% endstylesheet %}
 
 {% schema %}

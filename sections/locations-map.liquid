@@ -9,7 +9,11 @@
   and the pins both live on that stage, so a pin's % is always a % of the image.
 
   Filters: only the types that have pins get a button, and only with 2+ types. Without JavaScript the
-  buttons stay hidden and every pin shows.
+  buttons stay hidden and every pin shows. A hidden status line tells screen readers how many places show.
+
+  Phones (design/inbox/contactpage/contact-mobile/Property 1=Variant13.png): small filter pills and a
+  taller map ("Map shape on phones", Tall), so the city labels have room.
+  Positions use physical left / top: the map image is never mirrored, also in right-to-left languages.
 {%- endcomment -%}
 
 {%- liquid
@@ -37,6 +41,32 @@
     assign map_ratio_mobile = image_ratio
   endif
 
+  # sizes: the stage is wider than the box when the box is wider than the image's shape
+  # (box width x image ratio / box ratio). Content width: about 92vw (100vw with Full width),
+  # at most 1200px (Narrow) or 1650px (Wide).
+  assign ratio_number = map_ratio | times: 1.0
+  assign ratio_mobile_number = map_ratio_mobile | times: 1.0
+  assign stage_factor = image_ratio | divided_by: ratio_number | at_least: 1
+  assign stage_factor_mobile = image_ratio | divided_by: ratio_mobile_number | at_least: 1
+  assign base_vw = 92
+  if section.settings.section_width == 'full'
+    assign base_vw = 100
+  endif
+  assign max_px = 0
+  if section.settings.section_width == 'narrow'
+    assign max_px = 1200
+  elsif section.settings.section_width == 'wide'
+    assign max_px = 1650
+  endif
+  assign desktop_vw = base_vw | times: stage_factor | ceil
+  assign mobile_vw = 92 | times: stage_factor_mobile | ceil
+  assign map_sizes = '(max-width: 749px) ' | append: mobile_vw | append: 'vw, '
+  if max_px > 0
+    assign max_stage = max_px | times: stage_factor | ceil
+    assign map_sizes = map_sizes | append: '(min-width: ' | append: max_px | append: 'px) ' | append: max_stage | append: 'px, '
+  endif
+  assign map_sizes = map_sizes | append: desktop_vw | append: 'vw'
+
   assign focus_x = section.settings.focus_x | divided_by: 100.0
   assign focus_y = section.settings.focus_y | divided_by: 100.0
 
@@ -46,12 +76,14 @@
   # the script below: a section can count its theme blocks but can't read their settings.
   assign type_names = section.settings.filter_types | split: ','
 -%}
+{%- capture map_loading -%}{%- render 'section-loading' -%}{%- endcapture -%}
+{%- assign map_loading = map_loading | strip -%}
 
 {% render 'screen-scale' %}
 
 <div
   class="locations-map full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.fill_screen %} section--fill-screen{% endif %}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
-  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;{% if section.settings.scale_screen %} --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};{% endif %}"
 >
   <animate-on-scroll class="locations-map__inner">
     <location-map>
@@ -101,6 +133,13 @@
               {%- endif -%}
             {%- endfor -%}
           </div>
+          <p
+            class="visually-hidden"
+            role="status"
+            data-map-status
+            data-one="{{ 'contact.map.count_one' | t | escape }}"
+            data-other="{{ 'contact.map.count_other' | t | escape }}"
+          ></p>
         {%- endif -%}
       </div>
 
@@ -120,8 +159,8 @@
               | image_tag:
                 class: 'locations-map__image',
                 widths: '750, 1100, 1500, 2000, 3000',
-                sizes: '100vw',
-                loading: 'lazy',
+                sizes: map_sizes,
+                loading: map_loading,
                 alt: map_alt
             }}
           {%- else -%}
@@ -131,7 +170,7 @@
               width="1536"
               height="1024"
               alt=""
-              loading="lazy"
+              loading="{{ map_loading }}"
             >
           {%- endif -%}
 
@@ -233,9 +272,26 @@
     container-type: size;
   }
 
+  /* Phones (phone design): small pills in one row, the taller map shape */
   @media (max-width: 749px) {
+    .locations-map__heading {
+      margin-block-start: var(--space-sm);
+      font-size: var(--font-size-h2);
+    }
+
+    .locations-map__filters {
+      gap: 0.375rem;
+    }
+
+    .locations-map__filter {
+      min-block-size: 2rem;
+      padding-inline: 0.5rem;
+      font-size: 0.6875rem;
+    }
+
     .locations-map__map {
       aspect-ratio: var(--map-ratio-mobile);
+      margin-block-start: var(--space-lg);
     }
   }
 
@@ -249,8 +305,8 @@
     --stage-w: max(100cqw, 100cqh * var(--image-ratio));
     --stage-h: max(100cqh, 100cqw / var(--image-ratio));
     position: absolute;
-    inset-inline-start: calc((100cqw - var(--stage-w)) * var(--focus-x));
-    inset-block-start: calc((100cqh - var(--stage-h)) * var(--focus-y));
+    left: calc((100cqw - var(--stage-w)) * var(--focus-x));
+    top: calc((100cqh - var(--stage-h)) * var(--focus-y));
     inline-size: var(--stage-w);
     block-size: var(--stage-h);
   }
@@ -288,7 +344,11 @@
   class LocationMap extends HTMLElement {
     connectedCallback() {
       this.filters = this.querySelector('[data-map-filters]');
+      this.status = this.querySelector('[data-map-status]');
       if (!this.filters) return;
+
+      this.controller?.abort();
+      this.controller = new AbortController();
 
       // A pin can belong to several types: data-pin-type is a space-separated list of handles
       const usedTypes = new Set(
@@ -301,11 +361,11 @@
         button.hidden = type !== 'all' && !usedTypes.has(type);
       }
       this.filters.hidden = false;
-      this.filters.addEventListener('click', this);
+      this.filters.addEventListener('click', this, { signal: this.controller.signal });
     }
 
     disconnectedCallback() {
-      this.filters?.removeEventListener('click', this);
+      this.controller?.abort();
     }
 
     handleEvent(event) {
@@ -316,8 +376,15 @@
       for (const other of this.filters.querySelectorAll('[data-filter]')) {
         other.setAttribute('aria-pressed', String(other === button));
       }
+      let shown = 0;
       for (const pin of this.querySelectorAll('[data-pin-type]')) {
         pin.hidden = type !== 'all' && !pin.dataset.pinType.split(' ').includes(type);
+        if (!pin.hidden) shown += 1;
+      }
+
+      if (this.status) {
+        const text = shown === 1 ? this.status.dataset.one : this.status.dataset.other;
+        this.status.textContent = (text || '').replace('[count]', shown);
       }
     }
   }
@@ -329,7 +396,6 @@
 {
   "name": "t:general.locations_map",
   "tag": "section",
-  "class": "locations-map-section",
   "blocks": [
     {
       "type": "_map-pin"
@@ -337,6 +403,10 @@
   ],
   "max_blocks": 12,
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
     {
       "type": "text",
       "id": "eyebrow",
@@ -351,6 +421,10 @@
       "default": "Find us <em>worldwide</em>"
     },
     {
+      "type": "header",
+      "content": "t:labels.locations_map_filters_group"
+    },
+    {
       "type": "checkbox",
       "id": "show_filters",
       "label": "t:labels.show_map_filters",
@@ -358,22 +432,20 @@
       "default": true
     },
     {
-      "type": "header",
-      "content": "t:labels.filter_labels",
-      "info": "t:labels.filter_labels_info"
-    },
-    {
       "type": "text",
       "id": "filter_all",
       "label": "t:labels.filter_all",
-      "default": "All locations"
+      "default": "All locations",
+      "info": "t:labels.locations_map_filter_all_info",
+      "visible_if": "{{ section.settings.show_filters }}"
     },
     {
       "type": "text",
       "id": "filter_types",
       "label": "t:labels.filter_types",
-      "info": "t:labels.filter_types_info",
-      "default": "Flagship stores, Offices, Pop-ups"
+      "info": "t:labels.locations_map_filter_types_info",
+      "default": "Flagship stores, Offices, Pop-ups",
+      "visible_if": "{{ section.settings.show_filters }}"
     },
     {
       "type": "header",
@@ -427,11 +499,16 @@
           "label": "t:options.map_ratio.square"
         },
         {
+          "value": "1.1",
+          "label": "t:options.map_ratio.tall"
+        },
+        {
           "value": "original",
           "label": "t:options.map_ratio.original"
         }
       ],
-      "default": "1.5"
+      "default": "1.5",
+      "info": "t:labels.locations_map_ratio_mobile_info"
     },
     {
       "type": "range",
@@ -456,7 +533,7 @@
     },
     {
       "type": "header",
-      "content": "t:labels.style"
+      "content": "t:labels.layout"
     },
     {
       "type": "select",
@@ -494,14 +571,14 @@
       "type": "checkbox",
       "id": "scale_screen",
       "label": "t:labels.scale_screen",
-      "info": "t:labels.scale_screen_info",
+      "info": "t:labels.contact_scale_screen_info",
       "default": true
     },
     {
       "type": "range",
       "id": "text_scale",
       "label": "t:labels.text_scale",
-      "info": "t:labels.text_scale_info",
+      "info": "t:labels.contact_text_scale_info",
       "min": 100,
       "max": 130,
       "step": 5,
@@ -510,10 +587,8 @@
       "visible_if": "{{ section.settings.scale_screen }}"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
+      "type": "header",
+      "content": "t:labels.animation_header"
     },
     {
       "type": "select",
@@ -531,6 +606,10 @@
         }
       ],
       "default": "fade-up"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -551,6 +630,16 @@
       "step": 8,
       "unit": "px",
       "default": 96
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ],
   "presets": [
@@ -559,19 +648,43 @@
       "blocks": [
         {
           "type": "_map-pin",
-          "settings": { "name": "New York", "type_label": "Flagship", "types": "Flagship stores", "x": 29, "y": 36 }
+          "settings": {
+            "name": "New York",
+            "type_label": "Flagship",
+            "types": "Flagship stores",
+            "x": 29,
+            "y": 36
+          }
         },
         {
           "type": "_map-pin",
-          "settings": { "name": "London", "type_label": "Studio", "types": "Offices", "x": 50, "y": 35 }
+          "settings": {
+            "name": "London",
+            "type_label": "Studio",
+            "types": "Offices",
+            "x": 50,
+            "y": 35
+          }
         },
         {
           "type": "_map-pin",
-          "settings": { "name": "Dubai", "type_label": "Pop-up", "types": "Pop-ups", "x": 61, "y": 45 }
+          "settings": {
+            "name": "Dubai",
+            "type_label": "Pop-up",
+            "types": "Pop-ups",
+            "x": 61,
+            "y": 45
+          }
         },
         {
           "type": "_map-pin",
-          "settings": { "name": "Tokyo", "type_label": "Office", "types": "Offices", "x": 81, "y": 41 }
+          "settings": {
+            "name": "Tokyo",
+            "type_label": "Office",
+            "types": "Offices",
+            "x": 81,
+            "y": 41
+          }
         }
       ]
     }

@@ -1,6 +1,10 @@
 {% doc %}
-  The Locations panel (static block, left column of Contact locations): a white panel holding one
-  Location card per office. Only the Contact locations section uses it.
+  The Locations panel (static block of Contact locations): a white panel holding one Location card
+  per office. Only the Contact locations section uses it.
+  - From 1440px (the left column): one card per row.
+  - 375–1439px (phone design): 2 cards per row; a last card alone is centred.
+  - Below 375px: one card per row.
+  No card: nothing on the store (the section leaves this part out), a note in the theme editor.
 
   @example
   {% content_for 'block', type: '_location-list', id: 'locations' %}
@@ -12,6 +16,7 @@
     assign animation = 'none'
   endif
 -%}
+{%- capture cards_html -%}{% content_for 'blocks' %}{%- endcapture -%}
 
 <div
   class="location-list"
@@ -21,22 +26,52 @@
   {% endif %}
   {{ block.shopify_attributes }}
 >
-  {% content_for 'blocks' %}
+  {{ cards_html }}
+  {%- unless cards_html contains 'class="location-card' -%}
+    {%- if request.design_mode -%}
+      <p class="location-list__note">{{ 'contact.locations.editor_empty' | t }}</p>
+    {%- endif -%}
+  {%- endunless -%}
 </div>
 
 {% stylesheet %}
   /* Figma: 546 x 715 white panel, cards 492 wide, 27px in from the sides, ~16px apart */
   .location-list {
-    display: grid;
-    gap: var(--space-md);
+    --location-gap: var(--space-md);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--location-gap);
     padding: var(--space-lg);
     border: 1px solid var(--color-card-border);
     border-radius: var(--radius-md);
     background-color: var(--color-background);
   }
 
-  .location-list:empty {
-    display: none;
+  .location-list > * {
+    flex: 1 1 100%;
+    min-inline-size: 0;
+  }
+
+  @media (min-width: 375px) and (max-width: 1439px) {
+    .location-list > * {
+      flex: 0 0 calc((100% - var(--location-gap)) / 2);
+    }
+  }
+
+  @media (max-width: 749px) {
+    .location-list {
+      --location-gap: var(--space-xs);
+      padding: var(--space-xs);
+      border-radius: var(--radius-sm);
+    }
+  }
+
+  .location-list__note {
+    margin: 0;
+    padding: var(--space-md);
+    font-style: italic;
+    text-align: center;
   }
 {% endstylesheet %}
 

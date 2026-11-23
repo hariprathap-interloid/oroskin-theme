@@ -1,15 +1,18 @@
 {%- comment -%}
-  One question of an FAQ topic (design/briefs/faq.md, exports "Default-1" … "Default-5"): a row
-  "01 How long does delivery take?" with its answer.
+  One question of an FAQ topic (design/briefs/faq.md, exports "Default-1" … "Default-5", phones
+  design/inbox/Faq/faq-mobile): a row "01 How long does delivery take?" with its answer.
   - Without JS it's a <details>: the row opens and shows the answer under it.
-  - With the section's script (data-ready) the row becomes a button: the answer is hidden here and
-    copied into the topic's answer card on the right.
+  - With the section's script (data-ready) a real button takes the row's place (the script adds it;
+    the <details> is hidden), and the answer shows in the topic's answer card. A <summary> would tell
+    screen readers "collapsed" for a row that never opens.
   - Microdata (itemprop / itemtype) marks it as a Question with an Answer for search engines; the
     section is the FAQPage around all of them.
+  - A question shows only with a question AND an answer (search engines need both). In the theme
+    editor an incomplete one shows as a note row, so it can be selected.
 {%- endcomment -%}
 
-{%- if block.settings.question != blank -%}
-  <details
+{%- if block.settings.question != blank and block.settings.answer != blank -%}
+  <div
     class="faq-question"
     data-faq-question
     itemscope
@@ -17,44 +20,58 @@
     itemtype="https://schema.org/Question"
     {{ block.shopify_attributes }}
   >
-    <summary class="faq-question__row">
-      <span class="faq-question__number" aria-hidden="true"></span>
-      <span class="faq-question__text" itemprop="name">{{ block.settings.question | escape }}</span>
-    </summary>
-    <div
-      class="faq-question__answer"
-      data-faq-answer
-      itemscope
-      itemprop="acceptedAnswer"
-      itemtype="https://schema.org/Answer"
-    >
-      <div itemprop="text">{{ block.settings.answer }}</div>
-    </div>
-  </details>
+    <details class="faq-question__details">
+      <summary class="faq-question__row">
+        <span class="faq-question__number" aria-hidden="true"></span>
+        <span class="faq-question__text" itemprop="name">{{ block.settings.question | escape }}</span>
+      </summary>
+      <div
+        class="faq-question__answer"
+        data-faq-answer
+        itemscope
+        itemprop="acceptedAnswer"
+        itemtype="https://schema.org/Answer"
+      >
+        <div itemprop="text">{{ block.settings.answer }}</div>
+      </div>
+    </details>
+  </div>
+{%- elsif request.design_mode -%}
+  <p class="faq-question faq-question--empty" {{ block.shopify_attributes }}>{{ 'faq.question_empty' | t }}</p>
 {%- endif -%}
 
 {% stylesheet %}
   /*
     Figma 1920 (Default-1): rows 712 x 68, one every 95px (gap ~27); "01" body ~20px accent and the
     question body ~22px; the left edge is a thin pale accent "(" (a 2px border, rounded by the
-    section's "Question corner radius" setting, --faq-row-radius, default 19px). Open / active: fill accent ~5%, radius on the right too, accent edge, accent question.
+    section's "Question corner radius" setting, --faq-row-radius, default 19px). Open / active: fill
+    accent ~5%, radius on the right too, accent edge, accent question.
   */
   .faq-question {
     counter-increment: faq-question;
   }
 
+  /* Shared by the <summary> (no JS) and the script's <button> */
   .faq-question__row {
     display: flex;
     align-items: center;
     gap: var(--space-md);
+    inline-size: 100%;
     min-block-size: max(3.25rem, calc(68 * var(--px, 0.0625rem)));
     box-sizing: border-box;
+    margin: 0;
     padding: var(--space-sm) var(--space-lg) var(--space-sm) max(var(--space-md), calc(22 * var(--px, 0.0625rem)));
+    border: 0;
     border-inline-start: 2px solid color-mix(in srgb, var(--color-accent) 30%, transparent);
     /* Full pill radius always: without a fill only the left "(" edge shows; with the hover or active fill the right end is round too */
     border-radius: var(--faq-row-radius, 19px);
+    background: none;
+    color: var(--color-text);
+    font-family: var(--font-body--family);
     font-size: max(1.0625rem, calc(22 * var(--px, 0.0625rem)));
+    font-weight: inherit;
     line-height: 1.35;
+    text-align: start;
     list-style: none;
     cursor: pointer;
     transition:
@@ -82,10 +99,9 @@
     background-color: color-mix(in srgb, var(--color-accent) 3%, transparent);
   }
 
-  .faq-question[open] > .faq-question__row,
+  .faq-question__details[open] > .faq-question__row,
   .faq-question.is-active > .faq-question__row {
     border-inline-start-color: var(--color-accent);
-    border-radius: var(--faq-row-radius, 19px);
     background-color: color-mix(in srgb, var(--color-accent) 5%, transparent);
     color: var(--color-accent);
   }
@@ -103,15 +119,26 @@
     margin-block-start: var(--space-sm);
   }
 
-  /* With the script the answer lives in the answer card; the row is a button that never "opens" */
-  .faq[data-ready] .faq-question__answer {
+  /* With the script the answer lives in the answer card and the button is the row */
+  .faq[data-ready] .faq-question__details {
     display: none;
   }
 
+  .faq-question--empty {
+    margin: 0;
+    padding: var(--space-sm) var(--space-lg);
+    border-inline-start: 2px dashed color-mix(in srgb, var(--color-accent) 30%, transparent);
+    color: color-mix(in srgb, var(--color-text) 65%, transparent);
+    font-style: italic;
+  }
+
+  /* Phones (faq-mobile): small rows */
   @media (max-width: 749px) {
     .faq-question__row {
       gap: var(--space-sm);
-      padding-inline-end: var(--space-md);
+      min-block-size: 2.25rem;
+      padding: var(--space-2xs) var(--space-md) var(--space-2xs) var(--space-sm);
+      font-size: 0.8125rem;
     }
   }
 {% endstylesheet %}
@@ -130,6 +157,7 @@
       "type": "richtext",
       "id": "answer",
       "label": "t:labels.faq_answer",
+      "info": "t:labels.faq_answer_info",
       "default": "<p>Write the answer here.</p>"
     }
   ],

@@ -6,6 +6,10 @@
   - the panel (id = handle): icon + title + line, the questions (nested Question blocks) and, for
     the script, the answer card.
   The section's script shows one view at a time; without JS the cards and all panels show.
+  The questions are captured first and counted (only complete ones show): a topic with no question
+  shows nothing on the store; in the theme editor it shows with a note.
+  Icon: the Custom icon image when set (it keeps its own colours), else the chosen built-in icon (in
+  the accent colour). The same badge shows on the card, in the topic heading and in the search results.
 {%- endcomment -%}
 
 {%- liquid
@@ -16,11 +20,25 @@
   endif
   assign icon = block.settings.icon | default: 'box'
   assign icon_file = 'icon-' | append: icon | append: '.svg'
-  assign question_count = block.blocks.size
 -%}
+{%- capture icon_loading -%}{%- render 'section-loading' -%}{%- endcapture -%}
+{%- assign icon_loading = icon_loading | strip -%}
+{%- capture icon_html -%}
+  {%- if block.settings.icon_image != blank -%}
+    <span class="faq-topic__icon faq-topic__icon--image" aria-hidden="true">
+      {{- block.settings.icon_image | image_url: width: 80 | image_tag: widths: '40, 80', sizes: '20px', alt: '', loading: icon_loading -}}
+    </span>
+  {%- elsif icon != 'none' -%}
+    <span class="faq-topic__icon" aria-hidden="true">{{ icon_file | inline_asset_content }}</span>
+  {%- endif -%}
+{%- endcapture -%}
+{%- capture questions_html -%}{% content_for 'blocks' %}{%- endcapture -%}
+{%- assign question_parts = questions_html | split: 'data-faq-question' -%}
+{%- assign question_count = question_parts.size | minus: 1 | at_least: 0 -%}
 
+{%- if question_count > 0 or request.design_mode -%}
 <div
-  class="faq-topic"
+  class="faq-topic{% if question_count == 0 %} faq-topic--empty{% endif %}"
   data-faq-topic
   data-handle="{{ handle | escape }}"
   data-title="{{ title | escape }}"
@@ -28,9 +46,7 @@
 >
   <a class="faq-topic__card" href="#{{ handle | escape }}">
     <span class="faq-topic__number" aria-hidden="true"></span>
-    {%- if icon != 'none' -%}
-      <span class="faq-topic__icon" aria-hidden="true">{{ icon_file | inline_asset_content }}</span>
-    {%- endif -%}
+    {{ icon_html }}
     <span class="faq-topic__title">{{ title | escape }}</span>
     {%- if block.settings.text != blank -%}
       <span class="faq-topic__text">{{ block.settings.text | escape }}</span>
@@ -43,9 +59,7 @@
 
   <section class="faq-topic__panel" id="{{ handle | escape }}" aria-labelledby="FaqTopic-{{ block.id }}">
     <header class="faq-topic__head">
-      {%- if icon != 'none' -%}
-        <span class="faq-topic__icon" aria-hidden="true">{{ icon_file | inline_asset_content }}</span>
-      {%- endif -%}
+      {{ icon_html }}
       <div>
         <h2 class="faq-topic__heading" id="FaqTopic-{{ block.id }}">{{ title | escape }}</h2>
         {%- if block.settings.text != blank -%}
@@ -55,11 +69,14 @@
     </header>
 
     <div class="faq-topic__list">
-      {% content_for 'blocks' %}
+      {{ questions_html }}
+      {%- if question_count == 0 -%}
+        <p class="faq-topic__note">{{ 'faq.topic_empty' | t }}</p>
+      {%- endif -%}
     </div>
 
     {%- comment -%} Filled by the script with the chosen question; hidden without JS {%- endcomment -%}
-    <div class="faq-answer" data-faq-card>
+    <div class="faq-answer" id="FaqAnswer-{{ block.id }}" data-faq-card>
       <span class="faq-answer__number" data-faq-card-number aria-hidden="true"></span>
       <p class="faq-answer__label">{{ title | escape }}</p>
       <h3 class="faq-answer__question" data-faq-card-question tabindex="-1"></h3>
@@ -79,6 +96,7 @@
     </div>
   </section>
 </div>
+{%- endif -%}
 
 {% stylesheet %}
   /*
@@ -123,7 +141,7 @@
     color: color-mix(in srgb, var(--color-accent) 20%, transparent);
     font-family: var(--font-heading--family);
     font-size: max(3.5rem, calc(90 * var(--px, 0.0625rem)));
-    font-weight: 200;
+    font-weight: var(--font-heading--weight);
     line-height: 1;
     pointer-events: none;
   }
@@ -141,9 +159,16 @@
     color: var(--color-accent);
   }
 
-  .faq-topic__icon svg {
+  .faq-topic__icon svg,
+  .faq-topic__icon img {
     inline-size: max(1.125rem, calc(20 * var(--px, 0.0625rem)));
     block-size: max(1.125rem, calc(20 * var(--px, 0.0625rem)));
+  }
+
+  /* Custom icon: the whole image shows in the box, in its own colours */
+  .faq-topic__icon img {
+    display: block;
+    object-fit: contain;
   }
 
   .faq-topic__title {
@@ -284,8 +309,16 @@
     gap: max(var(--space-md), calc(27 * var(--px, 0.0625rem)));
   }
 
+  /* Theme editor only: a topic with no complete question */
+  .faq-topic__note {
+    margin: 0;
+    color: color-mix(in srgb, var(--color-text) 65%, transparent);
+    font-style: italic;
+  }
+
   /* ---------- The answer card (only with the script) ---------- */
-  .faq-answer {
+  .faq-answer,
+  .faq[data-ready] .faq-topic--empty .faq-answer {
     display: none;
   }
 
@@ -309,7 +342,7 @@
     color: color-mix(in srgb, var(--color-accent) 20%, transparent);
     font-family: var(--font-heading--family);
     font-size: max(3.5rem, calc(90 * var(--px, 0.0625rem)));
-    font-weight: 200;
+    font-weight: var(--font-heading--weight);
     line-height: 1;
   }
 
@@ -373,16 +406,19 @@
     font-size: var(--font-size-body-sm);
   }
 
-  /* Figma ~40px tall at 1920; they follow the screen like the card (the theme's .button is fixed) */
-  .faq-answer__yes,
-  .faq-answer__human {
+  /*
+    Figma ~40px tall at 1920; they follow the screen like the card. Two classes: the theme's .button
+    rule loads after this file and beats one class.
+  */
+  .faq-answer .faq-answer__yes,
+  .faq-answer .faq-answer__human {
     min-block-size: max(2.5rem, calc(40 * var(--px, 0.0625rem)));
     padding-inline: max(1.25rem, calc(25 * var(--px, 0.0625rem)));
     font-size: max(var(--font-size-caption), calc(16 * var(--px, 0.0625rem)));
   }
 
   /* YES: the glass pill (white, the glass shadows, no red border) */
-  .faq-answer__yes {
+  .faq-answer .faq-answer__yes {
     border-color: transparent;
     box-shadow: var(--shadow-header);
   }
@@ -437,7 +473,8 @@
       block-size: 1.75rem;
     }
 
-    .faq-topic__icon svg {
+    .faq-topic__icon svg,
+    .faq-topic__icon img {
       inline-size: 0.875rem;
       block-size: 0.875rem;
     }
@@ -474,12 +511,50 @@
       margin-block-start: var(--space-lg);
     }
 
+    /* faq-mobile: a compact answer card, full width */
+    .faq[data-ready] .faq-answer {
+      margin-block-start: var(--space-lg);
+      padding: var(--space-lg) var(--space-md);
+    }
+
+    .faq-answer__number {
+      font-size: 2.5rem;
+    }
+
+    .faq-answer__label {
+      font-size: 0.6875rem;
+    }
+
     .faq-answer__question {
-      font-size: 1.25rem;
+      margin-block-start: var(--space-sm);
+      font-size: 1.125rem;
     }
 
     .faq-answer__text {
-      font-size: var(--font-size-caption);
+      margin-block-start: var(--space-sm);
+      font-size: 0.8125rem;
+    }
+
+    .faq-answer__footer {
+      gap: var(--space-sm);
+      margin-block-start: var(--space-md);
+      padding-block-start: var(--space-md);
+    }
+
+    .faq-answer__ask {
+      font-size: 0.75rem;
+    }
+
+    .faq-answer .faq-answer__yes,
+    .faq-answer .faq-answer__human {
+      min-block-size: 2.25rem;
+      padding-inline: 0.75rem;
+      font-size: 0.75rem;
+    }
+
+    .faq-answer__thanks:not(:empty) {
+      margin-block-start: var(--space-md);
+      padding-block-start: var(--space-md);
     }
   }
 {% endstylesheet %}
@@ -502,9 +577,17 @@
       "default": "Delivery windows, tracking, packaging"
     },
     {
+      "type": "image_picker",
+      "id": "icon_image",
+      "label": "t:labels.product_benefit_icon_image",
+      "info": "t:labels.faq_topic_icon_image_info"
+    },
+    {
       "type": "select",
       "id": "icon",
       "label": "t:labels.icon",
+      "info": "t:labels.faq_topic_icon_info",
+      "visible_if": "{{ block.settings.icon_image == blank }}",
       "options": [
         { "value": "box", "label": "t:options.faq_icon.box" },
         { "value": "account", "label": "t:options.faq_icon.account" },

@@ -9,6 +9,10 @@
   {% content_for 'block', type: '_location-card', id: 'location-card' %}
 {% enddoc %}
 
+{%- comment -%} No place and no address: nothing on the store, a note in the theme editor {%- endcomment -%}
+{%- if block.settings.title == blank and block.settings.address == blank and request.design_mode -%}
+  <p class="location-card location-card--empty" {{ block.shopify_attributes }}>{{ 'contact.locations.card_empty' | t }}</p>
+{%- endif -%}
 {%- if block.settings.title != blank or block.settings.address != blank -%}
   <div class="location-card{% if block.settings.map_link != blank %} location-card--link{% endif %}" {{ block.shopify_attributes }}>
 
@@ -70,10 +74,6 @@
     text-transform: uppercase;
   }
 
-  /* No code: the text uses the whole width */
-  .location-card:not(:has(.location-card__badge)) .location-card__body {
-    grid-column: 1 / -1;
-  }
 
   .location-card__title {
     margin: 0;
@@ -142,6 +142,87 @@
     margin: var(--space-xs) 0 0;
     color: var(--color-accent);
     font-size: var(--font-size-body-lg);
+  }
+
+  /*
+    The badge beside the place, the address and the hours under both (phone design), so the text uses
+    the card's full width (in the narrow desktop column the text had ~200px beside the badge).
+  */
+  .location-card {
+    align-items: center;
+    row-gap: 0;
+  }
+
+  .location-card__body {
+    display: contents;
+  }
+
+  .location-card__address,
+  .location-card__hours,
+  .location-card:not(:has(.location-card__badge)) .location-card__title {
+    grid-column: 1 / -1;
+  }
+
+  /* Below 1440px (2 cards per row): smaller badge, text and padding */
+  @media (max-width: 1439px) {
+    .location-card {
+      column-gap: var(--space-sm);
+      padding: var(--space-md);
+    }
+
+    .location-card__badge {
+      inline-size: 3rem;
+      font-size: var(--font-size-body);
+    }
+
+    .location-card__title {
+      font-size: var(--font-size-body-lg);
+      line-height: 1.3;
+    }
+
+    .location-card__address,
+    .location-card__hours {
+      font-size: var(--font-size-body);
+    }
+  }
+
+  /* Phones: compact cards, small text (phone design) */
+  @media (max-width: 749px) {
+    .location-card {
+      padding: var(--space-sm);
+      border-radius: var(--radius-xs);
+    }
+
+    .location-card__badge {
+      inline-size: 1.75rem;
+      font-size: 0.625rem;
+    }
+
+    .location-card__title {
+      font-size: 0.8125rem;
+    }
+
+    .location-card__address,
+    .location-card__hours {
+      font-size: 0.75rem;
+      line-height: 1.5;
+    }
+
+    .location-card__address {
+      margin-block-start: var(--space-xs);
+    }
+
+    .location-card__hours {
+      margin-block-start: var(--space-2xs);
+    }
+  }
+
+  .location-card--empty {
+    display: block;
+    margin: 0;
+    color: color-mix(in srgb, var(--color-text) 65%, transparent);
+    font-style: italic;
+    text-align: center;
   }
 {% endstylesheet %}
 

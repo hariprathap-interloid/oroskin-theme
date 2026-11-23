@@ -1,7 +1,10 @@
 {% doc %}
-  The Social cards grid (static block, right column of Contact locations): one Social card per
-  account. Wide: rows of 3 + 2, the second row centred between the first (Figma). Narrow: a plain
-  grid of 2 (or 1 on small phones). Only the Contact locations section uses it.
+  The Social cards grid (static block of Contact locations): one Social card per account. Only the
+  Contact locations section uses it.
+  - 3 cards per row from 375px (phone design); a last row that is not full is centred, so 5 cards
+    give the Figma 3 + 2 (the 2 sit under the gaps). Below 375px: one card per row.
+  - A wide grid (62rem, desktop): the Figma 300px cards, the first and third at the edges.
+  No card: nothing on the store (the section leaves this part out), a note in the theme editor.
 
   @example
   {% content_for 'block', type: '_social-list', id: 'social' %}
@@ -11,9 +14,16 @@
   Two elements on purpose: a container query styles what's INSIDE the container, never the container
   itself, so the outer div is the container and the inner one is the grid it changes.
 {%- endcomment -%}
+{%- capture cards_html -%}{% content_for 'blocks' %}{%- endcapture -%}
+
 <div class="social-list" {{ block.shopify_attributes }}>
   <div class="social-list__grid">
-    {% content_for 'blocks' %}
+    {{ cards_html }}
+    {%- unless cards_html contains 'class="social-card' -%}
+      {%- if request.design_mode -%}
+        <p class="social-list__note">{{ 'contact.locations.social_editor_empty' | t }}</p>
+      {%- endif -%}
+    {%- endunless -%}
   </div>
 </div>
 
@@ -22,52 +32,63 @@
     container-type: inline-size;
   }
 
-  .social-list__grid {
-    /* 300 Figma px (Figma 262, enlarged), following the screen in a scaled section */
-    --social-card-w: max(16.375rem, calc(300 * var(--px, 0.0625rem)));
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(13rem, 100%), 1fr));
-    gap: var(--space-lg);
-  }
-
-  .social-list__grid:empty {
-    display: none;
-  }
-
   /*
-    Figma 3 + 2: three cards spread edge to edge (space-between), then two cards that sit centred
-    under the gaps. With space-between, each gap is (width - 3 cards) / 2, so the second row moves
-    right by half a card plus half a gap = (width - one card) / 4. position: relative (not transform)
-    so the reveal animation and the hover lift keep their own transforms.
+    Flex rows with a centred last row: with equal cards and equal gaps, two cards in a row of three
+    sit exactly under the two gaps above them (Figma 3 + 2), for any number of cards.
   */
-  /* Three cards of 300px plus gaps need ~62rem */
+  .social-list__grid {
+    --social-columns: 1;
+    --social-gap: var(--space-sm);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--social-gap);
+  }
+
+  .social-list__grid > * {
+    flex: 0 0 calc((100% - (var(--social-columns) - 1) * var(--social-gap)) / var(--social-columns));
+    min-inline-size: 0;
+  }
+
+  @media (min-width: 375px) {
+    .social-list__grid {
+      --social-columns: 3;
+    }
+  }
+
+  @media (min-width: 750px) {
+    .social-list__grid {
+      --social-gap: var(--space-lg);
+    }
+  }
+
+  /* Wide: 300 Figma px cards (Figma 262, enlarged), the gaps take the rest (first and third card at the edges) */
   @container (min-width: 62rem) {
     .social-list__grid {
-      grid-template-columns: repeat(3, var(--social-card-w));
-      justify-content: space-between;
+      --social-card-w: max(16.375rem, calc(300 * var(--px, 0.0625rem)));
+      column-gap: calc((100% - 3 * var(--social-card-w)) / 2);
       row-gap: var(--space-2xl); /* 42px */
     }
 
-    .social-list__grid > :nth-child(5n + 4),
-    .social-list__grid > :nth-child(5n + 5) {
-      position: relative;
-      inset-inline-start: calc((100cqi - var(--social-card-w)) / 4);
-    }
-
-    .social-list__grid > :nth-child(5n + 4) {
-      grid-column: 1;
-    }
-
-    .social-list__grid > :nth-child(5n + 5) {
-      grid-column: 2;
+    .social-list__grid > * {
+      flex-basis: var(--social-card-w);
     }
   }
 
-  /* Reveal one after the other: row 1, then row 2 */
+  /* Reveal one after the other in each group of five */
   .social-list__grid > :nth-child(5n + 2) { --animate-delay: 100ms; }
   .social-list__grid > :nth-child(5n + 3) { --animate-delay: 200ms; }
   .social-list__grid > :nth-child(5n + 4) { --animate-delay: 300ms; }
   .social-list__grid > :nth-child(5n + 5) { --animate-delay: 400ms; }
+
+  .social-list__note {
+    flex-basis: 100%;
+    margin: 0;
+    padding: var(--space-md);
+    border: 1px dashed var(--color-border);
+    font-style: italic;
+    text-align: center;
+  }
 {% endstylesheet %}
 
 {% schema %}

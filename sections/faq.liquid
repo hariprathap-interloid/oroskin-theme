@@ -7,7 +7,8 @@
   - results (typing in the search): every matching question, across all topics.
   Topic blocks draw their own card and panel; the script (<faq-page>) shows one view at a time.
   Without JS: the cards, then every topic with its questions as open/close rows.
-  Microdata: the section is the FAQPage, each question block a Question (search engines).
+  Microdata: the section is the FAQPage (only when it has a question), each question block a Question.
+  Cards: 2 + 2 + 1 on phones, 3 + 2 up to 1439px, 5 in a row from 1440px.
 {%- endcomment -%}
 
 {%- liquid
@@ -17,26 +18,29 @@
   assign breadcrumb_title = page.title | default: faq_title
   assign results_label = 'faq.results_for' | t: query: '[query]'
 -%}
+{%- comment -%} The topics first: the FAQPage data only when at least one question shows {%- endcomment -%}
+{%- capture topics_html -%}{% content_for 'blocks' %}{%- endcapture -%}
+{%- assign has_questions = false -%}
+{%- if topics_html contains 'data-faq-question' -%}
+  {%- assign has_questions = true -%}
+{%- endif -%}
 
 {% render 'screen-scale' %}
 
-{%- comment -%} The big numbers use the heading font's thin weight, the "Still unanswered?" title its semibold; only this page needs them {%- endcomment -%}
-{% style %}
-  {{ settings.type_heading_font | font_modify: 'weight', '200' | font_face: font_display: 'swap' }}
-  {{ settings.type_heading_font | font_modify: 'weight', '600' | font_face: font_display: 'swap' }}
-{% endstyle %}
-
 <faq-page
   class="faq{% if request.design_mode %} faq--editor{% endif %} full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}{% if section.settings.fill_screen %} section--fill-screen{% endif %}"
-  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }}; --faq-row-radius: {{ section.settings.question_radius | default: 19 }}px;"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; {% if section.settings.scale_screen %}--text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }}; {% endif %}--faq-row-radius: {{ section.settings.question_radius | default: 19 }}px;"
   data-view="overview"
   data-label-count-one="{{ 'faq.results_count.one' | t: count: '[count]' | escape }}"
   data-label-count-other="{{ 'faq.results_count.other' | t: count: '[count]' | escape }}"
   data-label-results="{{ results_label | escape }}"
   data-label-all="{{ 'faq.all_subjects' | t | escape }}"
   data-label-thanks="{{ 'faq.thanks' | t | escape }}"
-  itemscope
-  itemtype="https://schema.org/FAQPage"
+  data-label-no-results="{{ 'faq.no_results' | t | escape }}"
+  {% if has_questions %}
+    itemscope
+    itemtype="https://schema.org/FAQPage"
+  {% endif %}
 >
   <div class="faq__inner">
     {%- if section.settings.show_breadcrumb -%}
@@ -93,10 +97,12 @@
       <ul class="faq__results-list" role="list" data-faq-results-list></ul>
       <p class="faq__results-empty" data-faq-results-empty hidden>{{ 'faq.no_results' | t }}</p>
     </div>
+    {%- comment -%} Screen readers hear the result count while the visitor types {%- endcomment -%}
+    <p class="visually-hidden" role="status" data-faq-status></p>
 
     {%- if section.blocks.size > 0 -%}
       <div class="faq__topics">
-        {% content_for 'blocks' %}
+        {{ topics_html }}
       </div>
     {%- elsif request.design_mode -%}
       <p class="faq__empty">{{ 'faq.empty' | t }}</p>
@@ -122,7 +128,9 @@
     under the intro; 5 cards 322 wide, gap 52, ~82px under the search.
     Topic view ("Default-1"): pills y 193–241 (48 tall, radius ~8, gap ~36), the panel from y 315.
   */
+  /* --px: one Figma pixel, also with Scale with the screen off (else the 1920px sizes show on every screen) */
   .faq {
+    --px: min(calc(100vw / 1920), 0.0625rem);
     display: block;
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
     background-color: var(--color-background);
@@ -151,8 +159,21 @@
     text-align: center;
   }
 
+  .faq.section--screen-scale {
+    --px: min(calc(100vw / 1920), calc(100svh / 1031));
+  }
+
   .faq__eyebrow {
     margin-block-start: var(--space-sm);
+  }
+
+  /* The rules start at 0 and take only the free space (66px at most), so the label keeps its line */
+  .faq__eyebrow::before,
+  .faq__eyebrow::after {
+    flex: 1 1 0;
+    min-inline-size: 1rem;
+    max-inline-size: 66px;
+    inline-size: auto;
   }
 
   .faq__heading {
@@ -181,7 +202,7 @@
   /* ---------- Search (767 x 48, magnifier at the right) ---------- */
   .faq__search {
     position: relative;
-    max-inline-size: max(20rem, calc(767 * var(--px, 0.0625rem)));
+    max-inline-size: max(36rem, calc(767 * var(--px, 0.0625rem)));
     margin: max(var(--space-xl), calc(70 * var(--px, 0.0625rem))) auto 0;
   }
 
@@ -189,8 +210,9 @@
     display: none;
   }
 
-  /* display: block: an inline input leaves a gap under it, so the form (and the centred icon) was taller */
-  .faq__search-input {
+  /* display: block: an inline input leaves a gap under it, so the form (and the centred icon) was taller.
+     Two classes: critical.css styles input[type=search] (0,1,1), which beats one class */
+  .faq .faq__search-input {
     display: block;
     inline-size: 100%;
     min-block-size: max(2.5rem, calc(48 * var(--px, 0.0625rem)));
@@ -204,7 +226,7 @@
   }
 
   /* The browser's own clear ✕ is hidden: it sat on top of the magnifier. Ours replaces the magnifier */
-  .faq__search-input::-webkit-search-cancel-button {
+  .faq .faq__search-input::-webkit-search-cancel-button {
     display: none;
     -webkit-appearance: none;
   }
@@ -355,7 +377,7 @@
 
   .faq__results-title {
     margin: 0;
-    font-size: var(--font-size-h3);
+    font-size: max(1.375rem, calc(32 * var(--px, 0.0625rem)));
     font-weight: 400;
     line-height: 1.2;
   }
@@ -367,16 +389,24 @@
   .faq__results-count {
     margin: 0;
     color: var(--color-accent);
-    font-size: var(--font-size-caption);
+    font-size: max(0.75rem, calc(15 * var(--px, 0.0625rem)));
     letter-spacing: 0.15em;
     text-transform: uppercase;
   }
 
-  /* At least ~22rem per card: 3 on a laptop, 4 or more on a wide screen, then 2, then 1 */
+  /*
+    At least ~22rem per card and never more than 5 in a row (the topic cards' 5): 3 on a laptop,
+    4 or 5 on a wide screen, then 2, then 1. The column minimum is the larger of 22rem and one fifth
+    of the row (less the 4 gaps), so a sixth column never fits.
+  */
   .faq__results-list {
+    --results-gap: max(var(--space-md), calc(32 * var(--px, 0.0625rem)));
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
-    gap: max(var(--space-md), calc(32 * var(--px, 0.0625rem)));
+    grid-template-columns: repeat(
+      auto-fill,
+      minmax(min(100%, max(22rem, calc((100% - 4 * var(--results-gap)) / 5))), 1fr)
+    );
+    gap: var(--results-gap);
     margin: max(var(--space-lg), calc(32 * var(--px, 0.0625rem))) 0 0;
     padding: 0;
     list-style: none;
@@ -418,15 +448,16 @@
     min-inline-size: 0;
   }
 
+  /* Text on the same scale as the topic cards and the question rows (Figma px x --px) */
   .faq__result-topic {
     color: var(--color-accent);
-    font-size: var(--font-size-small);
+    font-size: max(0.75rem, calc(14 * var(--px, 0.0625rem)));
     letter-spacing: 0.15em;
     text-transform: uppercase;
   }
 
   .faq__result-question {
-    font-size: var(--font-size-body-lg);
+    font-size: max(1rem, calc(22 * var(--px, 0.0625rem)));
     line-height: 1.35;
   }
 
@@ -435,7 +466,7 @@
     display: -webkit-box;
     overflow: hidden;
     color: color-mix(in srgb, var(--color-text) 70%, transparent);
-    font-size: var(--font-size-body-sm);
+    font-size: max(0.875rem, calc(17 * var(--px, 0.0625rem)));
     line-height: 1.5;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
@@ -485,15 +516,67 @@
     font-size: var(--font-size-body);
   }
 
+  /* Phones: compact result cards, the same scale as the question rows and the answer card (faq-mobile) */
   @media (max-width: 749px) {
+    .faq__results {
+      margin-block-start: var(--space-xl);
+    }
+
+    .faq__results-head {
+      padding-block-end: var(--space-sm);
+    }
+
+    .faq__results-title {
+      font-size: 1.125rem;
+    }
+
+    .faq__results-count {
+      font-size: 0.6875rem;
+    }
+
+    .faq__results-list {
+      gap: var(--space-sm);
+      margin-block-start: var(--space-md);
+    }
+
     .faq__result {
       grid-template-columns: minmax(0, 1fr) auto;
       gap: var(--space-sm);
-      padding: var(--space-md);
+      padding: var(--space-sm) var(--space-md);
+      border-radius: 0.75rem;
     }
 
     .faq__result .faq-topic__icon {
       display: none;
+    }
+
+    .faq__result-body {
+      gap: 0.125rem;
+    }
+
+    .faq__result-topic {
+      font-size: 0.625rem;
+    }
+
+    .faq__result-question {
+      font-size: 0.875rem;
+    }
+
+    .faq__result-excerpt {
+      font-size: 0.75rem;
+    }
+
+    .faq__result-arrow {
+      inline-size: 1.75rem;
+      block-size: 1.75rem;
+    }
+
+    .faq__result-arrow svg {
+      inline-size: 0.75rem;
+    }
+
+    .faq__results-empty {
+      font-size: 0.8125rem;
     }
   }
 
@@ -553,8 +636,8 @@
     }
   }
 
-  /* Tablets: 3 + 2 cards */
-  @media (max-width: 1199px) {
+  /* Tablets and small laptops: 3 + 2 cards (5 in a row made 200px cards at 1280px) */
+  @media (max-width: 1439px) {
     .faq__topics {
       grid-template-columns: repeat(6, minmax(0, 1fr));
       gap: var(--space-lg);
@@ -562,6 +645,17 @@
 
     .faq-topic__card {
       grid-column: span 2;
+    }
+  }
+
+  /* 3 + 2 from 750px: a last row of 2 (or 1) is centred. The wrappers are counted (one per topic) */
+  @media (min-width: 750px) and (max-width: 1439px) {
+    .faq__topics > :nth-child(3n + 1):nth-last-child(2) .faq-topic__card {
+      grid-column: 2 / span 2;
+    }
+
+    .faq__topics > :nth-child(3n + 1):last-child .faq-topic__card {
+      grid-column: 3 / span 2;
     }
   }
 
@@ -575,8 +669,34 @@
       font-size: 0.8125rem;
     }
 
-    .faq__search {
+    .faq__eyebrow {
       margin-block-start: var(--space-lg);
+    }
+
+    /* faq-mobile: a slim search box, full width */
+    .faq__search {
+      max-inline-size: none;
+      margin-block-start: var(--space-lg);
+    }
+
+    .faq .faq__search-input {
+      min-block-size: 2.25rem;
+      padding-inline-start: var(--space-sm);
+      border-radius: 0.5rem;
+      font-size: 0.75rem;
+    }
+
+    .faq__search-icon {
+      inset-inline-end: var(--space-sm);
+    }
+
+    .faq__search-icon svg {
+      inline-size: 0.875rem;
+      block-size: 0.875rem;
+    }
+
+    .faq__search-clear {
+      inset-inline-end: 0;
     }
 
     .faq__topics {
@@ -611,10 +731,13 @@
    * <faq-page>: shows one view of the FAQ at a time.
    * - The URL's #handle picks the topic (the cards and pills are plain links to it, so the Back
    *   button returns to the overview); no #handle = the overview, or the search results.
-   * - A question row (a <details> summary) shows its answer in the topic's answer card instead of
-   *   opening; focus moves to the card's question so screen readers read it.
+   * - Each question row becomes a real button (the <details> stays for no JS): it shows its answer
+   *   in the topic's answer card, and focus moves to the card's question so screen readers read it.
    * - Search filters every question (question and answer text) on the page; nothing is sent anywhere.
+   *   A hidden status line says how many questions match.
    * - In the theme editor, selecting a Topic or Question block shows it.
+   * - Every listener is on one AbortController: the editor can move the section, which connects the
+   *   element again (the pills and the row buttons are built only once).
    */
   class FaqPage extends HTMLElement {
     connectedCallback() {
@@ -628,41 +751,50 @@
       }));
       if (!this.topics.length) return;
 
-      this.query = '';
+      this.controller?.abort();
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+
+      this.query ??= '';
       this.breadcrumb = this.querySelector('.faq__breadcrumb ol');
-      this.breadcrumbHTML = this.breadcrumb?.innerHTML;
+      this.breadcrumbHTML ??= this.breadcrumb?.innerHTML;
       this.buildPills();
+      this.buildRows();
 
       this.topics.forEach((topic) => {
         topic.questions.forEach((question, index) => {
-          question.open = false;
-          question.querySelector('summary').addEventListener('click', (event) => {
-            event.preventDefault();
-            this.select(topic, index, true);
-          });
+          question.row.addEventListener('click', () => this.select(topic, index, true), { signal });
         });
-        topic.card?.querySelector('[data-faq-yes]')?.addEventListener('click', () => this.thank(topic));
+        topic.card?.querySelector('[data-faq-yes]')?.addEventListener('click', () => this.thank(topic), { signal });
       });
 
       const search = this.querySelector('[data-faq-search]');
       const input = search?.querySelector('input');
       const clear = search?.querySelector('[data-faq-search-clear]');
-      search?.addEventListener('submit', (event) => event.preventDefault());
-      input?.addEventListener('input', () => {
-        const hasText = input.value !== '';
-        search.classList.toggle('has-text', hasText);
-        if (clear) clear.hidden = !hasText;
-        clearTimeout(this.searchTimer);
-        this.searchTimer = setTimeout(() => {
-          this.query = input.value.trim();
-          this.render();
-        }, 150);
-      });
-      clear?.addEventListener('click', () => {
-        input.value = '';
-        input.dispatchEvent(new Event('input'));
-        input.focus();
-      });
+      search?.addEventListener('submit', (event) => event.preventDefault(), { signal });
+      input?.addEventListener(
+        'input',
+        () => {
+          const hasText = input.value !== '';
+          search.classList.toggle('has-text', hasText);
+          if (clear) clear.hidden = !hasText;
+          clearTimeout(this.searchTimer);
+          this.searchTimer = setTimeout(() => {
+            this.query = input.value.trim();
+            this.render();
+          }, 150);
+        },
+        { signal }
+      );
+      clear?.addEventListener(
+        'click',
+        () => {
+          input.value = '';
+          input.dispatchEvent(new Event('input'));
+          input.focus();
+        },
+        { signal }
+      );
 
       /*
         Topic links (cards, pills): handled here instead of by the browser. A plain #link lets the
@@ -670,27 +802,34 @@
         changes the URL without a jump, and the new topic is drawn in the same frame. Back /
         forward still work (popstate).
       */
-      this.addEventListener('click', (event) => {
-        const link = event.target.closest('a[href^="#"]');
-        if (!link || event.metaKey || event.ctrlKey || event.shiftKey) return;
-        const handle = decodeURIComponent(link.getAttribute('href').slice(1));
-        if (!this.topics.some((topic) => topic.handle === handle)) return;
-        event.preventDefault();
-        this.goTo(handle);
-      });
+      this.addEventListener(
+        'click',
+        (event) => {
+          const link = event.target.closest('a[href^="#"]');
+          if (!link || event.metaKey || event.ctrlKey || event.shiftKey) return;
+          const handle = decodeURIComponent(link.getAttribute('href').slice(1));
+          if (!this.topics.some((topic) => topic.handle === handle)) return;
+          event.preventDefault();
+          this.goTo(handle);
+        },
+        { signal }
+      );
 
-      this.onLocation = () => this.render(true);
-      window.addEventListener('hashchange', this.onLocation);
-      window.addEventListener('popstate', this.onLocation);
+      const onLocation = () => this.render(true);
+      window.addEventListener('hashchange', onLocation, { signal });
+      window.addEventListener('popstate', onLocation, { signal });
 
       // Theme editor: show the topic of the selected block
-      this.onSelect = (event) => {
-        const topic = this.topics.find((item) => item.element.contains(event.target));
-        if (!topic) return;
-        const index = topic.questions.findIndex((question) => question.contains(event.target));
-        this.showTopic(topic, Math.max(index, 0));
-      };
-      document.addEventListener('shopify:block:select', this.onSelect);
+      document.addEventListener(
+        'shopify:block:select',
+        (event) => {
+          const topic = this.topics.find((item) => item.element.contains(event.target));
+          if (!topic) return;
+          const index = topic.questions.findIndex((question) => question.contains(event.target));
+          this.showTopic(topic, Math.max(index, 0));
+        },
+        { signal }
+      );
 
       this.setAttribute('data-ready', '');
       // A shared #topic link: the browser has already jumped down to that panel; start at the top
@@ -698,30 +837,59 @@
     }
 
     disconnectedCallback() {
-      window.removeEventListener('hashchange', this.onLocation);
-      window.removeEventListener('popstate', this.onLocation);
-      document.removeEventListener('shopify:block:select', this.onSelect);
+      this.controller?.abort();
+      clearTimeout(this.searchTimer);
     }
 
+    /** The "All subjects" pill and one pill per topic (only one time: a re-attach keeps them) */
     buildPills() {
       const list = this.querySelector('[data-faq-pills]');
       if (!list) return;
-      const all = document.createElement('li');
-      all.innerHTML = `<button type="button" class="faq__pill">${this.querySelector('.faq__pill-arrow')?.innerHTML ?? ''}</button>`;
-      const allButton = all.firstElementChild;
-      allButton.append(this.dataset.labelAll);
-      allButton.addEventListener('click', () => this.goOverview());
-      list.append(all);
+
+      if (!list.children.length) {
+        const all = document.createElement('li');
+        all.innerHTML = `<button type="button" class="faq__pill" data-faq-all>${this.querySelector('.faq__pill-arrow')?.innerHTML ?? ''}</button>`;
+        all.firstElementChild.append(this.dataset.labelAll);
+        list.append(all);
+
+        this.topics.forEach((topic) => {
+          const item = document.createElement('li');
+          const link = document.createElement('a');
+          link.className = 'faq__pill';
+          link.href = `#${topic.handle}`;
+          link.textContent = topic.title;
+          item.append(link);
+          list.append(item);
+        });
+      }
 
       this.topics.forEach((topic) => {
-        const item = document.createElement('li');
-        const link = document.createElement('a');
-        link.className = 'faq__pill';
-        link.href = `#${topic.handle}`;
-        link.textContent = topic.title;
-        topic.pill = link;
-        item.append(link);
-        list.append(item);
+        topic.pill = list.querySelector(`a[href="#${CSS.escape(topic.handle)}"]`);
+      });
+      list
+        .querySelector('[data-faq-all]')
+        ?.addEventListener('click', () => this.goOverview(), { signal: this.controller.signal });
+    }
+
+    /**
+     * A real button in place of each <summary> (one time): the same look and text, linked to the
+     * answer card it fills (aria-controls). The <details> stays in the page for search engines.
+     */
+    buildRows() {
+      this.topics.forEach((topic) => {
+        topic.questions.forEach((question) => {
+          question.row = question.querySelector(':scope > .faq-question__row');
+          if (question.row) return;
+          const summary = question.querySelector('summary');
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'faq-question__row';
+          if (topic.card?.id) button.setAttribute('aria-controls', topic.card.id);
+          summary.childNodes.forEach((node) => button.append(node.cloneNode(true)));
+          button.querySelectorAll('[itemprop]').forEach((node) => node.removeAttribute('itemprop'));
+          question.prepend(button);
+          question.row = button;
+        });
       });
     }
 
@@ -738,6 +906,7 @@
       const changed = this.dataset.view !== view;
       this.dataset.view = view;
       this.querySelector('[data-faq-results]').hidden = view !== 'results';
+      if (view !== 'results') this.setStatus('');
       if (view !== 'topic') this.setBreadcrumb(null);
       // A new view fades in (not the first one: no animation on page load)
       if (changed && this.rendered) {
@@ -746,6 +915,11 @@
         this.classList.add('is-entering');
       }
       this.rendered = true;
+    }
+
+    setStatus(text) {
+      const status = this.querySelector('[data-faq-status]');
+      if (status && status.textContent !== text) status.textContent = text;
     }
 
     showTopic(topic, index = 0, scroll = false) {
@@ -799,7 +973,7 @@
       if (!question || !topic.card) return;
       topic.questions.forEach((item, i) => {
         item.classList.toggle('is-active', i === index);
-        item.querySelector('summary').setAttribute('aria-current', String(i === index));
+        item.row?.setAttribute('aria-current', String(i === index));
       });
 
       const card = topic.card;
@@ -883,8 +1057,10 @@
         this.query
       );
       const countLabel = count === 1 ? this.dataset.labelCountOne : this.dataset.labelCountOther;
-      this.querySelector('[data-faq-results-count]').textContent = count ? countLabel.replace('[count]', count) : '';
+      const countText = count ? countLabel.replace('[count]', count) : '';
+      this.querySelector('[data-faq-results-count]').textContent = countText;
       this.querySelector('[data-faq-results-empty]').hidden = count > 0;
+      this.setStatus(countText || this.dataset.labelNoResults);
     }
 
     /** A <span> with `text`, each match of `query` wrapped in <mark> (as text nodes, never HTML) */
@@ -918,13 +1094,22 @@
 {
   "name": "t:general.faq",
   "tag": "section",
-  "class": "faq-section",
   "enabled_on": {
-    "templates": ["page"]
+    "templates": [
+      "page"
+    ]
   },
-  "blocks": [{ "type": "_faq-topic" }],
+  "blocks": [
+    {
+      "type": "_faq-topic"
+    }
+  ],
   "max_blocks": 12,
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
     {
       "type": "checkbox",
       "id": "show_breadcrumb",
@@ -941,7 +1126,7 @@
       "type": "inline_richtext",
       "id": "heading",
       "label": "t:labels.heading",
-      "info": "t:labels.italic_accent_info",
+      "info": "t:labels.faq_heading_info",
       "default": "Ask us <em>anything.</em>"
     },
     {
@@ -951,6 +1136,25 @@
       "default": "<p>Find quick answers to your questions about our services, billing, or account setup. If you cannot find what you need, our team is always ready to assist you.</p>"
     },
     {
+      "type": "paragraph",
+      "content": "t:labels.faq_topics_info"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.faq_questions_group"
+    },
+    {
+      "type": "range",
+      "id": "question_radius",
+      "label": "t:labels.faq_question_radius",
+      "info": "t:labels.faq_question_radius_info",
+      "min": 0,
+      "max": 40,
+      "step": 1,
+      "unit": "px",
+      "default": 19
+    },
+    {
       "type": "url",
       "id": "ask_link",
       "label": "t:labels.faq_ask_link",
@@ -958,8 +1162,11 @@
     },
     {
       "type": "header",
-      "content": "t:labels.faq_contact_header",
-      "info": "t:labels.faq_contact_header_info"
+      "content": "t:labels.faq_contact_header"
+    },
+    {
+      "type": "paragraph",
+      "content": "t:labels.faq_contact_header_info"
     },
     {
       "type": "checkbox",
@@ -992,7 +1199,8 @@
       "type": "url",
       "id": "contact_button_link",
       "label": "t:labels.button_link",
-      "info": "t:labels.faq_contact_link_info"
+      "info": "t:labels.faq_contact_link_visible_info",
+      "visible_if": "{{ section.settings.show_contact }}"
     },
     {
       "type": "text",
@@ -1005,22 +1213,12 @@
       "type": "url",
       "id": "contact_second_link",
       "label": "t:labels.faq_second_link",
-      "info": "t:labels.faq_second_link_info"
+      "info": "t:labels.faq_second_link_visible_info",
+      "visible_if": "{{ section.settings.show_contact }}"
     },
     {
       "type": "header",
-      "content": "t:labels.style"
-    },
-    {
-      "type": "range",
-      "id": "question_radius",
-      "label": "t:labels.faq_question_radius",
-      "info": "t:labels.faq_question_radius_info",
-      "min": 0,
-      "max": 40,
-      "step": 1,
-      "unit": "px",
-      "default": 19
+      "content": "t:labels.layout"
     },
     {
       "type": "select",
@@ -1058,14 +1256,14 @@
       "type": "checkbox",
       "id": "scale_screen",
       "label": "t:labels.scale_screen",
-      "info": "t:labels.scale_screen_info",
+      "info": "t:labels.faq_scale_screen_info",
       "default": true
     },
     {
       "type": "range",
       "id": "text_scale",
       "label": "t:labels.text_scale",
-      "info": "t:labels.text_scale_info",
+      "info": "t:labels.faq_text_scale_info",
       "min": 100,
       "max": 130,
       "step": 5,
@@ -1074,10 +1272,8 @@
       "visible_if": "{{ section.settings.scale_screen }}"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -1098,6 +1294,16 @@
       "step": 8,
       "unit": "px",
       "default": 64
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ],
   "presets": [
@@ -1106,7 +1312,11 @@
       "blocks": [
         {
           "type": "_faq-topic",
-          "blocks": [{ "type": "_faq-question" }]
+          "blocks": [
+            {
+              "type": "_faq-question"
+            }
+          ]
         }
       ]
     }

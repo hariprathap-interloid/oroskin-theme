@@ -10,6 +10,8 @@
   The Link setting is only for the "None (text only)" type, e.g. a chat app's page for "Start
   conversation". With no link the bottom link is hidden.
   An email card with no address uses the store's email (Settings > General).
+  A card with no text at all (no label, title, address, text, status or link) shows nothing on the
+  store and a note in the theme editor.
 
   @example
   {% content_for 'block', type: '_contact-channel', id: 'contact-channel' %}
@@ -62,6 +64,17 @@
 
   assign icon_file = 'icon-' | append: block.settings.icon | append: '.svg'
 
+  assign has_content = false
+  if block.settings.label != blank or block.settings.title != blank or block.settings.text != blank or block.settings.status != blank
+    assign has_content = true
+  endif
+  if value != blank and value_type != 'none'
+    assign has_content = true
+  endif
+  if link_url != blank and block.settings.link_label != blank
+    assign has_content = true
+  endif
+
   # Each card animates on its own (the section staggers them); never in the first section
   assign animation = section.settings.animation
   if section.index == 1
@@ -69,6 +82,11 @@
   endif
 -%}
 
+{%- if has_content == false -%}
+  {%- if request.design_mode -%}
+    <p class="contact-channel contact-channel--empty" {{ block.shopify_attributes }}>{{ 'contact.channels.card_empty' | t }}</p>
+  {%- endif -%}
+{%- else -%}
 <div
   class="contact-channel"
   {% if animation != 'none' %}
@@ -89,7 +107,7 @@
   {%- endif -%}
 
   {%- if value != blank and value_type != 'none' -%}
-    <p class="contact-channel__value">
+    <p class="contact-channel__value contact-channel__value--{{ value_type }}">
       <a
         href="{{ value_url }}"
         {% if new_tab %}
@@ -130,6 +148,7 @@
     </p>
   {%- endif -%}
 </div>
+{%- endif -%}
 
 {% stylesheet %}
   /*
@@ -143,7 +162,6 @@
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    min-block-size: calc(520 * var(--px, 0.0625rem));
     padding: var(--space-xl) var(--space-2xl) var(--space-2xl);
     border: 1px solid var(--color-card-border);
     border-radius: var(--radius-md);
@@ -188,7 +206,16 @@
   .contact-channel__value {
     margin: var(--space-xs) 0 0;
     font-size: var(--font-size-body-lg);
-    overflow-wrap: anywhere; /* long email addresses */
+  }
+
+  /* A long email address may break anywhere; a phone number stays on one line */
+  .contact-channel__value--email {
+    overflow-wrap: anywhere;
+  }
+
+  .contact-channel__value--phone,
+  .contact-channel__value--whatsapp {
+    white-space: nowrap;
   }
 
   .contact-channel__value a {
@@ -256,6 +283,82 @@
       transform: translateX(0.25rem);
     }
   }
+
+  /* RTL: the arrow points the other way */
+  .contact-channel__link:dir(rtl) svg {
+    scale: -1 1;
+  }
+
+  /* 4 per row (from 1440px): at least 520 Figma px tall */
+  @media (min-width: 1440px) {
+    .contact-channel {
+      min-block-size: calc(520 * var(--px, 0.0625rem));
+    }
+  }
+
+  /* Tablets, small laptops and the first 4-per-row widths: less padding */
+  @media (min-width: 750px) and (max-width: 1599px) {
+    .contact-channel {
+      padding: var(--space-lg) var(--space-xl) var(--space-xl);
+    }
+  }
+
+  /* Phones (phone design): compact cards, small text */
+  @media (max-width: 749px) {
+    .contact-channel {
+      padding: var(--space-sm) var(--space-sm) var(--space-md);
+      border-radius: var(--radius-sm);
+    }
+
+    .contact-channel__badge {
+      inline-size: 2rem;
+    }
+
+    .contact-channel__badge svg {
+      inline-size: 1rem;
+    }
+
+    .contact-channel__label {
+      margin-block-start: var(--space-sm);
+      font-size: 0.625rem;
+    }
+
+    .contact-channel__title {
+      font-size: var(--font-size-body);
+    }
+
+    .contact-channel__value,
+    .contact-channel__text,
+    .contact-channel__status {
+      font-size: 0.75rem;
+    }
+
+    .contact-channel__status {
+      gap: var(--space-sm);
+      margin-block-start: var(--space-sm);
+    }
+
+    .contact-channel__footer {
+      padding-block-start: var(--space-md);
+    }
+
+    .contact-channel__link {
+      gap: var(--space-xs);
+      font-size: 0.625rem;
+    }
+
+    .contact-channel__link svg {
+      inline-size: 0.75rem;
+    }
+  }
+
+  .contact-channel--empty {
+    justify-content: center;
+    margin: 0;
+    color: color-mix(in srgb, var(--color-text) 65%, transparent);
+    font-style: italic;
+    text-align: center;
+  }
 {% endstylesheet %}
 
 {% schema %}
@@ -264,16 +367,38 @@
   "tag": null,
   "settings": [
     {
+      "type": "header",
+      "content": "t:labels.content"
+    },
+    {
       "type": "select",
       "id": "icon",
       "label": "t:labels.icon",
       "options": [
-        { "value": "chat", "label": "t:options.channel_icon.chat" },
-        { "value": "mail", "label": "t:options.channel_icon.mail" },
-        { "value": "phone", "label": "t:options.channel_icon.phone" },
-        { "value": "mobile", "label": "t:options.channel_icon.mobile" },
-        { "value": "whatsapp", "label": "t:options.channel_icon.whatsapp" },
-        { "value": "none", "label": "t:options.channel_icon.none" }
+        {
+          "value": "chat",
+          "label": "t:options.channel_icon.chat"
+        },
+        {
+          "value": "mail",
+          "label": "t:options.channel_icon.mail"
+        },
+        {
+          "value": "phone",
+          "label": "t:options.channel_icon.phone"
+        },
+        {
+          "value": "mobile",
+          "label": "t:options.channel_icon.mobile"
+        },
+        {
+          "value": "whatsapp",
+          "label": "t:options.channel_icon.whatsapp"
+        },
+        {
+          "value": "none",
+          "label": "t:options.channel_icon.none"
+        }
       ],
       "default": "chat"
     },
@@ -290,16 +415,45 @@
       "default": "Live chat"
     },
     {
+      "type": "richtext",
+      "id": "text",
+      "label": "t:labels.text",
+      "default": "<p>Speak directly with a beauty concierge. No bots — only humans who love beauty.</p>"
+    },
+    {
+      "type": "text",
+      "id": "status",
+      "label": "t:labels.channel_status",
+      "info": "t:labels.channel_status_info"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.contact_channel_contact_group"
+    },
+    {
       "type": "select",
       "id": "value_type",
       "label": "t:labels.channel_type",
       "options": [
-        { "value": "none", "label": "t:options.channel_type.none" },
-        { "value": "email", "label": "t:options.channel_type.email" },
-        { "value": "phone", "label": "t:options.channel_type.phone" },
-        { "value": "whatsapp", "label": "t:options.channel_type.whatsapp" }
+        {
+          "value": "none",
+          "label": "t:options.channel_type.none"
+        },
+        {
+          "value": "email",
+          "label": "t:options.channel_type.email"
+        },
+        {
+          "value": "phone",
+          "label": "t:options.channel_type.phone"
+        },
+        {
+          "value": "whatsapp",
+          "label": "t:options.channel_type.whatsapp"
+        }
       ],
-      "default": "none"
+      "default": "none",
+      "info": "t:labels.contact_channel_type_info"
     },
     {
       "type": "text",
@@ -335,22 +489,15 @@
       "visible_if": "{{ block.settings.value_type == 'whatsapp' }}"
     },
     {
-      "type": "richtext",
-      "id": "text",
-      "label": "t:labels.text",
-      "default": "<p>Speak directly with a beauty concierge. No bots — only humans who love beauty.</p>"
-    },
-    {
-      "type": "text",
-      "id": "status",
-      "label": "t:labels.channel_status",
-      "info": "t:labels.channel_status_info"
+      "type": "header",
+      "content": "t:labels.contact_channel_link_group"
     },
     {
       "type": "text",
       "id": "link_label",
       "label": "t:labels.link_label",
-      "default": "Start conversation"
+      "default": "Start conversation",
+      "info": "t:labels.contact_channel_link_label_info"
     },
     {
       "type": "url",

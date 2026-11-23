@@ -5,6 +5,8 @@
   is cropped to another shape (e.g. on phones). Location types: one or more of the names in the
   section's Location types list ("Offices" or "Offices, Flagship stores"); the matching filter
   buttons show the pin. Compared as handles, so capitals and spaces don't matter.
+  Physical left / top: the map image is never mirrored, also in right-to-left languages.
+  No place name: nothing on the store; in the theme editor a dot with a note, so it can be selected.
 
   @example
   {% content_for 'block', type: '_map-pin', id: 'map-pin' %}
@@ -20,7 +22,11 @@
   endif
 -%}
 
-{%- if block.settings.name != blank -%}
+{%- assign pin_name = block.settings.name -%}
+{%- if pin_name == blank and request.design_mode -%}
+  {%- assign pin_name = 'contact.map.pin_empty' | t -%}
+{%- endif -%}
+{%- if pin_name != blank -%}
   <div
     class="map-pin"
     data-pin-type="{%- for pin_type in pin_types -%}{{ pin_type | strip | handleize }} {% endfor -%}"
@@ -39,7 +45,7 @@
     >
       <span class="map-pin__dot" aria-hidden="true"></span>
       <p class="map-pin__label">
-        <span class="map-pin__name">{{ block.settings.name | escape }}</span>
+        <span class="map-pin__name">{{ pin_name | escape }}</span>
         {%- if block.settings.type_label != blank -%}
           <span class="map-pin__type">{{ block.settings.type_label | escape }}</span>
         {%- endif -%}
@@ -55,9 +61,11 @@
   */
   .map-pin {
     position: absolute;
-    inset-inline-start: var(--pin-x);
-    inset-block-start: var(--pin-y);
-    transform: translate(-50%, calc(-14 * var(--px, 0.0625rem)));
+    left: var(--pin-x);
+    top: var(--pin-y);
+    --pin-dot: max(1rem, calc(28 * var(--px, 0.0625rem)));
+    /* The point is the dot's centre */
+    transform: translate(-50%, calc(var(--pin-dot) / -2));
   }
 
   .map-pin[hidden] {
@@ -73,7 +81,7 @@
 
   /* Red dot with a darker ring and a soft glow (the map behind is always dark) */
   .map-pin__dot {
-    inline-size: max(1rem, calc(28 * var(--px, 0.0625rem)));
+    inline-size: var(--pin-dot);
     aspect-ratio: 1;
     border: 1px solid var(--color-accent);
     border-radius: 50%;
@@ -104,16 +112,23 @@
     color: #ffffffb3;
   }
 
-  /* Small screens: smaller labels so neighbouring cities (London, Dubai) overlap less */
-  @media (max-width: 749px) {
-    .map-pin__dot {
-      inline-size: 1rem;
+  /*
+    Phones and tablets (phone design): smaller labels, so neighbouring cities (London, Dubai) overlap
+    less. On phones the map is taller (Map shape on phones), so the cities are further apart.
+  */
+  @media (max-width: 1199px) {
+    .map-pin {
+      --pin-dot: 0.75rem;
+    }
+
+    .map-pin__inner {
+      gap: var(--space-2xs);
     }
 
     .map-pin__label {
       min-inline-size: 0;
-      padding: var(--space-2xs) var(--space-xs);
-      font-size: var(--font-size-small);
+      padding: var(--space-2xs) var(--space-sm);
+      font-size: 0.75rem;
     }
   }
 {% endstylesheet %}
@@ -127,6 +142,7 @@
       "type": "text",
       "id": "name",
       "label": "t:labels.pin_name",
+      "info": "t:labels.map_pin_name_info",
       "default": "London"
     },
     {

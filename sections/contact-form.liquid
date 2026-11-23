@@ -1,16 +1,25 @@
 {%- comment -%}
-  Contact (M8.1, Figma 170:108449 "Contact us", top of the page): breadcrumb, then two columns.
-  Left: eyebrow, H1 with red words, intro text, a round photo with a glass stat circle ("97%
-  Satisfaction rate") over its edge and a "Live support" box with a pulsing dot. Right: the "Send a
+  Contact (M8.1, Figma 170:108449 "Contact us", top of the page; phones: design/inbox/contactpage/
+  contact-mobile/Property 1=contact.png): breadcrumb, then the intro and the form.
+  Intro: eyebrow, H1 with red words, intro text, a round photo with a glass stat circle ("97%
+  Satisfaction rate") over its edge and a "Live support" box with a pulsing dot. Form: the "Send a
   message" panel with Shopify's contact form.
+
+  Layouts:
+  - from 1200px: two columns (intro | form), the photo left of the circle, the box under the circle
+  - 375–1199px (phone design, also tablets): one column; the box on the left, the circle and the photo
+    on the right; the form fields 2 per row
+  - below 375px: the photo and the circle on one row, the box under them, 1 field per row
 
   - Contact form: {% form 'contact' %} sends every field named contact[...] to the store's email
     (Settings > Notifications > Staff notifications > Contact form). contact[email] is required by
     Shopify; contact[body] is the message. The other names (First name, Topic...) are the headings
     the merchant sees in that email, so they come from the locale file and follow the shop language.
+  - Errors: the script turns off the browser's own bubbles (novalidate) and writes a styled message
+    under each field. Without JavaScript the browser's own check stays. After Shopify sends the page
+    back with an error, the script puts back what the visitor typed (sessionStorage).
   - Topics: one comma-separated text setting, shown as pill-shaped radio buttons (none pre-selected).
   - Heading and text left empty: the page's own title and content (Admin > Online Store > Pages).
-  - Section 1 of the page, so no scroll animation (project rule: never on the first section).
 {%- endcomment -%}
 
 {%- liquid
@@ -69,12 +78,14 @@
     assign show_photo = true
   endif
 -%}
+{%- capture photo_loading -%}{%- render 'section-loading' -%}{%- endcapture -%}
+{%- assign photo_loading = photo_loading | strip -%}
 
 {% render 'screen-scale' %}
 
 <div
   class="contact full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.fill_screen %} section--fill-screen{% endif %}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
-  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;{% if section.settings.scale_screen %} --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};{% endif %}"
 >
   <animate-on-scroll class="contact__inner">
     {%- if section.settings.show_breadcrumb -%}
@@ -101,7 +112,10 @@
         {%- if show_photo or has_stat or has_support -%}
           <div class="contact__media{% unless show_photo %} contact__media--no-photo{% endunless %}">
             {%- if show_photo -%}
-              {%- comment -%} Decorative: the heading and text say what the page is. Not the LCP (the H1 is), so no high priority {%- endcomment -%}
+              {%- comment -%}
+                Decorative: the heading and text say what the page is. Not the LCP (the H1 is), so no high
+                priority. Sizes: 42% of the intro column from 1200px (about 20vw), else a fixed circle.
+              {%- endcomment -%}
               {% render 'image',
                 image: section.settings.image,
                 class: 'contact__photo image--cover',
@@ -109,9 +123,9 @@
                 width: 960,
                 height: 960,
                 crop: 'center',
-                sizes: '(min-width: 990px) 30rem, 12rem',
-                widths: '200, 320, 480, 640, 960',
-                loading: 'eager'
+                sizes: '(min-width: 1200px) min(20vw, 36rem), (min-width: 750px) 12rem, (min-width: 375px) 6rem, 9rem',
+                widths: '120, 200, 320, 480, 640, 960',
+                loading: photo_loading
               %}
             {%- endif -%}
 
@@ -143,7 +157,7 @@
         {%- endif -%}
       </div>
 
-      <div
+      <contact-form
         class="contact-form"
         {% if animation != 'none' %}
           data-animate="{{ animation }}"
@@ -159,7 +173,7 @@
           {%- assign value_email = form.email | default: customer.email -%}
           {%- comment -%}
             After sending, Shopify reloads the page at this form (#id) with a success or error message.
-            The script below moves focus to that message, so screen readers announce it.
+            The script moves focus to that message, so screen readers announce it.
           {%- endcomment -%}
           {%- if form.posted_successfully? -%}
             <p
@@ -203,6 +217,10 @@
             </fieldset>
           {%- endif -%}
 
+          {%- comment -%}
+            Each required field has a hidden error line under it. The script fills it from its
+            data-missing / data-format text and links it to the field (aria-describedby).
+          {%- endcomment -%}
           <div class="contact-form__fields">
             <div class="contact-form__field">
               <label class="contact-form__label" for="{{ form_id }}-first-name">{{ 'contact.form.first_name' | t }}</label>
@@ -215,7 +233,9 @@
                 placeholder="{{ 'contact.form.first_name_placeholder' | t }}"
                 autocomplete="given-name"
                 required
+                data-validate
               >
+              <p class="contact-form__error" id="{{ form_id }}-first-name-error" data-missing="{{ 'contact.form.error_first_name' | t | escape }}" hidden></p>
             </div>
 
             <div class="contact-form__field">
@@ -229,7 +249,9 @@
                 placeholder="{{ 'contact.form.last_name_placeholder' | t }}"
                 autocomplete="family-name"
                 required
+                data-validate
               >
+              <p class="contact-form__error" id="{{ form_id }}-last-name-error" data-missing="{{ 'contact.form.error_last_name' | t | escape }}" hidden></p>
             </div>
 
             <div class="contact-form__field">
@@ -245,11 +267,19 @@
                 autocapitalize="off"
                 spellcheck="false"
                 required
+                data-validate
                 {% if form.errors contains 'email' %}
                   aria-invalid="true"
                   aria-describedby="{{ error_id }}"
                 {% endif %}
               >
+              <p
+                class="contact-form__error"
+                id="{{ form_id }}-email-error"
+                data-missing="{{ 'contact.form.error_email' | t | escape }}"
+                data-format="{{ 'contact.form.error_email_format' | t | escape }}"
+                hidden
+              ></p>
             </div>
 
             {%- if section.settings.show_order_number -%}
@@ -275,7 +305,9 @@
                 name="contact[{{ name_subject }}]"
                 placeholder="{{ 'contact.form.subject_placeholder' | t }}"
                 required
+                data-validate
               >
+              <p class="contact-form__error" id="{{ form_id }}-subject-error" data-missing="{{ 'contact.form.error_subject' | t | escape }}" hidden></p>
             </div>
 
             <div class="contact-form__field contact-form__field--full">
@@ -287,16 +319,18 @@
                 rows="4"
                 placeholder="{{ 'contact.form.message_placeholder' | t }}"
                 required
+                data-validate
               >
                 {{- form.body | escape -}}
               </textarea>
+              <p class="contact-form__error" id="{{ form_id }}-message-error" data-missing="{{ 'contact.form.error_message' | t | escape }}" hidden></p>
             </div>
           </div>
 
           {%- assign submit_label = 'contact.form.send' | t -%}
           {% render 'explore-button', label: submit_label, tag: 'button', class: 'contact-form__submit' %}
         {%- endform -%}
-      </div>
+      </contact-form>
     </div>
   </animate-on-scroll>
 </div>
@@ -322,14 +356,14 @@
     margin-block-end: var(--space-2xl); /* breadcrumb → eyebrow: 45px */
   }
 
-  /* Phones and tablets: intro, then the form. Two columns from 990px */
+  /* Phones and tablets: intro, then the form. Two columns from 1200px */
   .contact__grid {
     display: grid;
     gap: var(--space-2xl);
     align-items: start;
   }
 
-  @media (min-width: 990px) {
+  @media (min-width: 1200px) {
     .contact__grid {
       grid-template-columns: minmax(0, 886fr) minmax(0, 899fr);
       gap: var(--space-xl); /* 36px */
@@ -348,42 +382,37 @@
   }
 
   .contact__text {
-    max-inline-size: calc(857 * var(--px, 0.0625rem)); /* 857px */
     margin-block-start: var(--space-xl); /* 33px */
     font-size: var(--font-size-body-lg); /* 22px, 35px lines */
     line-height: var(--line-height-body);
   }
 
+  /* The Figma line length (857px) only on desktop: --px is small on phones (it made the text 174px wide) */
+  @media (min-width: 1200px) {
+    .contact__text {
+      max-inline-size: max(36rem, calc(857 * var(--px, 0.0625rem)));
+    }
+  }
+
   /*
-    Photo, stat circle and support box. Two columns: the photo and the rest, 30px apart.
-    The stat circle starts back inside the photo column, so it covers the photo's right edge by 15.7%
-    of the photo (Figma: photo 44-362, circle 312-518 = 50px of 318), and sits a little higher than
-    the photo. The support box is under the circle.
-    Sizes follow the intro column, not the screen: .contact__intro is a container, and the photo is
-    42cqi = 42% of the column's width (a little bigger than the Figma's 318 of 886px, developer's
-    choice 2026-10-30). On wide screens the group grows with the column, on narrow ones it shrinks;
-    11rem and 36rem keep it sensible at both ends.
-    The support box fills the rest of the column and its bottom lines up with the photo's bottom.
+    Photo, stat circle and support box (desktop, from 1200px): two columns, the photo and the rest,
+    30px apart. The stat circle starts back inside the photo column, so it covers the photo's right
+    edge by 15.7% of the photo (Figma: photo 44-362, circle 312-518 = 50px of 318), and sits a little
+    higher than the photo. The support box is under the circle and fills the rest of the column; its
+    bottom lines up with the photo's bottom.
+    The photo is 42cqi = 42% of the intro column (.contact__intro is a container).
   */
   .contact__intro {
     container-type: inline-size;
   }
 
   .contact__media {
-    --contact-photo: clamp(11rem, 42cqi, max(36rem, calc(560 * var(--px, 0.0625rem))));
-    --contact-stat: calc(var(--contact-photo) * 0.648); /* 206px */
     display: grid;
-    grid-template-columns: var(--contact-photo) minmax(0, 1fr);
-    column-gap: var(--space-xl); /* 30px */
     margin-block-start: var(--space-2xl); /* 41px */
   }
 
   /* Two classes: the image snippet's .image / .image--cover set a height and load after this file */
   .contact__media .contact__photo {
-    grid-column: 1;
-    grid-row: 1 / span 2;
-    align-self: start;
-    margin-block-start: calc(var(--contact-stat) * 0.136); /* 28px below the circle's top */
     /* A fixed square, not aspect-ratio: the image inside would otherwise stretch it taller */
     inline-size: var(--contact-photo);
     block-size: var(--contact-photo);
@@ -402,8 +431,6 @@
   .contact__stat {
     position: relative;
     z-index: 1;
-    grid-column: 2;
-    grid-row: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -411,7 +438,6 @@
     inline-size: var(--contact-stat);
     aspect-ratio: 1;
     margin: 0;
-    margin-inline-start: calc(var(--contact-photo) * -0.157 - var(--space-xl)); /* over the photo's last 15.7% */
     border: 1px solid color-mix(in srgb, var(--color-border) 80%, #ffffff);
     border-radius: 50%;
     background-color: var(--color-glass-strong);
@@ -450,28 +476,19 @@
     overflow-wrap: normal;
     text-wrap: balance;
     margin-block-start: 4cqi;
-    font-size: max(0.6875rem, 8.7cqi); /* 18px in the 206px circle */
+    font-size: max(0.5rem, 8.7cqi); /* 18px in the 206px circle */
     font-weight: var(--font-weight-medium);
     line-height: 1.5;
-    letter-spacing: var(--letter-spacing-nav);
+    letter-spacing: var(--contact-stat-spacing, var(--letter-spacing-nav));
     text-transform: uppercase;
     /* Letter spacing also adds space after the last letter; the same space on the left re-centres it */
-    padding-inline-start: var(--letter-spacing-nav);
+    padding-inline-start: var(--contact-stat-spacing, var(--letter-spacing-nav));
   }
 
   .contact__support {
-    grid-column: 2;
-    grid-row: 2;
     display: flex;
     align-items: center;
     gap: var(--space-lg);
-    /*
-      Fills the column to its right edge and sits at the bottom of the group, so its bottom lines up
-      with the photo's (the photo spans both rows, so the second row ends where the photo ends).
-      The margin keeps at least 32px under the circle.
-    */
-    align-self: end;
-    margin-block-start: var(--space-xl);
     padding: var(--space-lg) var(--space-2xl) var(--space-lg) var(--space-lg);
     border: 1px solid var(--color-tint-border);
     border-radius: var(--radius-md);
@@ -490,35 +507,163 @@
     font-weight: var(--font-weight-medium);
   }
 
-  /* Phones: photo and circle on one row, the support box full width under them */
-  @media (max-width: 749px) {
+  /* Below 375px: the photo and the circle on one row, the support box full width under them */
+  @media (max-width: 374px) {
+    .contact__media {
+      --contact-photo: 9rem;
+      --contact-stat: 6rem;
+      grid-template-columns: var(--contact-photo) minmax(0, 1fr);
+      row-gap: var(--space-md);
+      margin-block-start: var(--space-lg);
+    }
+
     .contact__media .contact__photo {
+      grid-column: 1;
       grid-row: 1;
+    }
+
+    .contact__stat {
+      grid-column: 2;
+      grid-row: 1;
+      margin-inline-start: calc(var(--contact-photo) * -0.2);
     }
 
     .contact__support {
       grid-column: 1 / -1;
-      justify-self: stretch;
     }
   }
 
-  /* No photo: the circle and the box stack in one column, starting at the left */
-  .contact__media--no-photo {
-    grid-template-columns: minmax(0, 1fr);
+  /*
+    375–1199px (phone design, also tablets): the support box on the left, the circle and the photo on
+    the right; the circle covers the photo's left edge and sits a little higher.
+  */
+  @media (min-width: 375px) and (max-width: 1199px) {
+    .contact__media {
+      --contact-photo: 6rem;
+      --contact-stat: 4.75rem;
+      --contact-stat-overlap: 0.3;
+      --contact-stat-spacing: 0.04em;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      align-items: center;
+      column-gap: var(--space-sm);
+      margin-block-start: var(--space-lg);
+    }
+
+    .contact__media .contact__photo {
+      grid-column: 3;
+      grid-row: 1;
+      margin-block-start: calc(var(--contact-stat) * 0.25);
+    }
+
+    .contact__stat {
+      grid-column: 2;
+      grid-row: 1;
+      align-self: start;
+      margin-inline-end: calc(var(--contact-photo) * var(--contact-stat-overlap) * -1 - var(--space-sm));
+    }
+
+    .contact__support {
+      grid-column: 1;
+      grid-row: 1;
+      gap: var(--space-xs);
+      padding: var(--space-sm);
+      border-radius: var(--radius-sm);
+    }
+
+    .contact__support-text {
+      gap: 0;
+      font-size: var(--font-size-small);
+      line-height: 1.5;
+    }
   }
 
-  .contact__media--no-photo .contact__stat {
-    grid-column: 1;
-    margin-inline-start: 0;
+  @media (min-width: 750px) and (max-width: 1199px) {
+    .contact__media {
+      --contact-photo: 12rem;
+      --contact-stat: 9rem;
+      --contact-stat-overlap: 0.22;
+      --contact-stat-spacing: var(--letter-spacing-nav);
+      column-gap: var(--space-lg);
+      margin-block-start: var(--space-xl);
+    }
+
+    .contact__support {
+      gap: var(--space-md);
+      padding: var(--space-md) var(--space-lg);
+    }
+
+    .contact__support-text {
+      font-size: var(--font-size-body);
+    }
   }
 
-  .contact__media--no-photo .contact__support {
-    grid-column: 1;
+  @media (min-width: 1200px) {
+    .contact__media {
+      --contact-photo: clamp(11rem, 42cqi, max(36rem, calc(560 * var(--px, 0.0625rem))));
+      --contact-stat: calc(var(--contact-photo) * 0.648); /* 206px */
+      grid-template-columns: var(--contact-photo) minmax(0, 1fr);
+      column-gap: var(--space-xl); /* 30px */
+    }
+
+    .contact__media .contact__photo {
+      grid-column: 1;
+      grid-row: 1 / span 2;
+      align-self: start;
+      margin-block-start: calc(var(--contact-stat) * 0.136); /* 28px below the circle's top */
+    }
+
+    .contact__stat {
+      grid-column: 2;
+      grid-row: 1;
+      margin-inline-start: calc(var(--contact-photo) * -0.157 - var(--space-xl)); /* over the photo's last 15.7% */
+    }
+
+    /* The margin keeps at least 32px under the circle */
+    .contact__support {
+      grid-column: 2;
+      grid-row: 2;
+      align-self: end;
+      margin-block-start: var(--space-xl);
+    }
+
+    /* No photo: the circle and the box stack in one column, starting at the left */
+    .contact__media--no-photo {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .contact__media--no-photo .contact__stat {
+      grid-column: 1;
+      margin-inline-start: 0;
+    }
+
+    .contact__media--no-photo .contact__support {
+      grid-column: 1;
+    }
+  }
+
+  /* Phones: less space between the parts (phone design) */
+  @media (max-width: 749px) {
+    .contact__breadcrumb {
+      margin-block-end: var(--space-lg);
+    }
+
+    .contact__heading {
+      margin-block-start: var(--space-sm);
+    }
+
+    .contact__text {
+      margin-block-start: var(--space-md);
+    }
+
+    .contact__grid {
+      gap: var(--space-lg);
+    }
   }
 
   /* ---------- Form panel ---------- */
   .contact-form {
-    padding: var(--space-xl) var(--space-3xl); /* 34px top, 66px sides */
+    display: block;
+    padding: var(--space-md);
     border: 1px solid var(--color-card-border);
     border-radius: var(--radius-md);
     background-color: var(--color-card);
@@ -526,9 +671,16 @@
     container-type: inline-size;
   }
 
-  @media (max-width: 749px) {
+  @media (min-width: 750px) {
     .contact-form {
-      padding: var(--space-lg);
+      padding: var(--space-xl);
+    }
+  }
+
+  /* 34px top, 66px sides (Figma) from 1440px; less on small laptops, so the fields stay 2 per row */
+  @media (min-width: 1440px) {
+    .contact-form {
+      padding: var(--space-xl) var(--space-3xl);
     }
   }
 
@@ -543,6 +695,19 @@
   .contact-form__message,
   .contact-form__topics {
     margin-block-end: var(--space-xl); /* 37px */
+  }
+
+  /* Shopify's answer after sending: a tinted box (red for an error, green for sent) */
+  .contact-form__message {
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid color-mix(in srgb, currentcolor 35%, transparent);
+    border-radius: var(--radius-sm);
+    background-color: color-mix(in srgb, currentcolor 8%, transparent);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .contact-form__message .errors {
+    margin: 0;
   }
 
   .contact-form__title {
@@ -571,15 +736,13 @@
     margin-block-start: var(--space-sm); /* 13px */
   }
 
-  /* critical.css spaces neighbouring form controls (input + label); the pills set their own gap */
+  /* margin 0: the global form rule (label + input) would push each topic pill down */
   .contact-form__pills > * {
     margin: 0;
   }
 
-  /* margin 0: the global form rule (input + label) would push each topic pill 12px down */
   .contact-form__pill {
     display: inline-flex;
-    margin: 0;
     align-items: center;
     min-block-size: max(2.5625rem, calc(41 * var(--px, 0.0625rem))); /* 41px */
     padding-inline: var(--space-sm);
@@ -606,16 +769,15 @@
   }
 
   /*
-    One column in a narrow panel, two from 28rem (448px) of panel width (Figma 340 + 64 + 340 at
-    1920). 28rem, not 34rem: on a laptop with display scaling the panel is ~530px and two fields
-    still fit comfortably; one per row made the form almost two screens tall.
+    One column in a very narrow panel (320px phones), two from 18rem of panel width (phone design:
+    First / Last name and Email / Order number side by side). Figma 340 + 64 + 340 at 1920.
   */
   .contact-form__fields {
     display: grid;
-    gap: var(--space-lg) var(--space-3xl);
+    gap: var(--space-lg) var(--space-lg);
   }
 
-  @container (min-width: 28rem) {
+  @container (min-width: 18rem) {
     .contact-form__fields {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -625,13 +787,45 @@
     }
   }
 
+  @media (min-width: 1440px) {
+    .contact-form__fields {
+      column-gap: var(--space-3xl);
+    }
+  }
+
   .contact-form__field {
     display: grid;
+    align-content: start;
     gap: var(--space-2xs); /* label → field: 5px */
   }
 
   .contact-form__field > * {
     margin: 0;
+  }
+
+  /*
+    Side by side fields share their rows (subgrid): when one label takes two lines ("ORDER NUMBER
+    (OPTIONAL)" on a phone), the two inputs still start on the same line. Rows: label, input, error.
+  */
+  @supports (grid-template-rows: subgrid) {
+    .contact-form__fields {
+      row-gap: 0;
+    }
+
+    .contact-form__field {
+      grid-row: span 3;
+      grid-template-rows: subgrid;
+      row-gap: var(--space-2xs);
+      margin-block-end: var(--space-lg);
+    }
+
+    .contact-form__field > .contact-form__label {
+      align-self: end;
+    }
+
+    .contact-form__field:last-child {
+      margin-block-end: 0;
+    }
   }
 
   /*
@@ -658,11 +852,42 @@
 
   .contact-form .contact-form__input[aria-invalid='true'] {
     border-color: var(--color-error);
+    background-color: color-mix(in srgb, var(--color-error) 4%, var(--color-card));
   }
 
   .contact-form .contact-form__textarea {
     min-block-size: max(6.625rem, calc(106 * var(--px, 0.0625rem))); /* 106px */
     padding-block: var(--space-md);
+  }
+
+  /* The theme's own error line (in place of the browser's bubble): a round "!" and the text */
+  .contact-form__error {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2xs);
+    color: var(--color-error);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.4;
+  }
+
+  .contact-form__error[hidden] {
+    display: none;
+  }
+
+  .contact-form__error::before {
+    content: "!" / "";
+    display: grid;
+    flex: none;
+    place-items: center;
+    inline-size: 1.1em;
+    block-size: 1.1em;
+    margin-block-start: 0.15em;
+    border-radius: 50%;
+    background-color: var(--color-error);
+    color: #ffffff;
+    font-size: 0.85em;
+    line-height: 1;
   }
 
   /*
@@ -676,34 +901,210 @@
     min-block-size: max(3.125rem, calc(56 * var(--px, 0.0625rem)));
     margin-block-start: var(--space-xl); /* 38px */
   }
+
+  /* Phones (phone design): a compact panel, small captions, pills and fields */
+  @media (max-width: 749px) {
+    .contact-form__title {
+      margin-block-end: var(--space-md);
+      font-size: var(--font-size-body);
+    }
+
+    .contact-form__message,
+    .contact-form__topics {
+      margin-block-end: var(--space-lg);
+    }
+
+    .contact-form__label {
+      font-size: 0.6875rem;
+    }
+
+    .contact-form__pills {
+      gap: var(--space-xs);
+      margin-block-start: var(--space-xs);
+    }
+
+    .contact-form__pill {
+      min-block-size: 2rem;
+      padding-inline: var(--space-xs);
+      font-size: var(--font-size-small);
+    }
+
+    .contact-form__fields {
+      column-gap: var(--space-sm);
+    }
+
+    @supports (grid-template-rows: subgrid) {
+      .contact-form__field {
+        margin-block-end: var(--space-md);
+      }
+
+      .contact-form__field:last-child {
+        margin-block-end: 0;
+      }
+    }
+
+    .contact-form .contact-form__input {
+      min-block-size: 2.5rem;
+      padding-inline: var(--space-sm);
+      font-size: var(--font-size-small);
+    }
+
+    .contact-form .contact-form__textarea {
+      min-block-size: 5rem;
+      padding-block: var(--space-sm);
+    }
+
+    .contact-form .contact-form__submit {
+      min-block-size: 2.75rem;
+      margin-block-start: var(--space-lg);
+    }
+  }
 {% endstylesheet %}
 
 {% javascript %}
-  /*
-    After sending, Shopify reloads the page with a success or error message marked
-    data-focus-after-submit. It only exists right after the visitor's own submit, so focus moves
-    only then, never on a normal page load (and without the autofocus attribute: Theme Store rule).
-  */
-  function focusContactResult() {
-    document.querySelector('.contact-form [data-focus-after-submit]')?.focus({ preventScroll: true });
+  /**
+   * <contact-form>: the theme's own error lines in place of the browser's bubbles, and the typed
+   * fields kept after Shopify sends the page back with an error.
+   * - novalidate is set here, so without JavaScript the browser's own check stays.
+   * - Submit: every required field is checked; each problem shows under its field (aria-invalid +
+   *   aria-describedby) and focus goes to the first one. A marked field is checked again while the
+   *   visitor types or leaves it, so the message goes away when it is correct.
+   * - A valid submit saves the fields in sessionStorage; when the page comes back with an error they
+   *   are put back (Shopify keeps only the email and the message). A sent message clears them.
+   * - After sending, focus moves to Shopify's message one time (never on a normal page load, and
+   *   without the autofocus attribute: Theme Store rule).
+   */
+  class ContactForm extends HTMLElement {
+    connectedCallback() {
+      this.form = this.querySelector('form');
+      if (!this.form) return;
+
+      this.controller?.abort();
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+
+      this.form.noValidate = true;
+      this.storageKey = `oroskin-contact:${this.form.id}`;
+
+      // Only one time: the editor can move the section, and that connects the element again
+      if (!this.started) {
+        this.started = true;
+        this.restore();
+        this.querySelector('[data-focus-after-submit]')?.focus({ preventScroll: true });
+      }
+
+      this.form.addEventListener('submit', (event) => this.onSubmit(event), { signal });
+      this.form.addEventListener('input', (event) => this.recheck(event), { signal });
+      this.form.addEventListener('focusout', (event) => this.recheck(event), { signal });
+    }
+
+    disconnectedCallback() {
+      this.controller?.abort();
+    }
+
+    get fields() {
+      return [...this.form.querySelectorAll('[data-validate]')];
+    }
+
+    problem(field) {
+      const value = field.value.trim();
+      if (field.required && !value) return 'missing';
+      if (field.type === 'email' && value && field.validity.typeMismatch) return 'format';
+      return null;
+    }
+
+    show(field, problem) {
+      const line = document.getElementById(`${field.id}-error`);
+      if (!line) return;
+      const ids = (field.getAttribute('aria-describedby') || '').split(' ').filter((id) => id && id !== line.id);
+
+      if (problem) {
+        line.textContent = line.dataset[problem] || line.dataset.missing;
+        line.hidden = false;
+        field.setAttribute('aria-invalid', 'true');
+        ids.push(line.id);
+      } else {
+        line.hidden = true;
+        line.textContent = '';
+        field.removeAttribute('aria-invalid');
+      }
+
+      if (ids.length) field.setAttribute('aria-describedby', ids.join(' '));
+      else field.removeAttribute('aria-describedby');
+    }
+
+    onSubmit(event) {
+      const wrong = [];
+      for (const field of this.fields) {
+        const problem = this.problem(field);
+        this.show(field, problem);
+        if (problem) wrong.push(field);
+      }
+
+      if (wrong.length) {
+        event.preventDefault();
+        wrong[0].focus();
+        return;
+      }
+
+      this.save();
+    }
+
+    recheck(event) {
+      const field = event.target.closest?.('[data-validate]');
+      if (field?.getAttribute('aria-invalid') === 'true') this.show(field, this.problem(field));
+    }
+
+    save() {
+      const data = {};
+      for (const element of this.form.elements) {
+        if (!element.name?.startsWith('contact[')) continue;
+        if (element.type === 'radio') {
+          if (element.checked) data[element.name] = element.value;
+        } else {
+          data[element.name] = element.value;
+        }
+      }
+      try {
+        sessionStorage.setItem(this.storageKey, JSON.stringify(data));
+      } catch (error) {
+        // Storage can be blocked (private mode): the form still sends
+      }
+    }
+
+    restore() {
+      let data = null;
+      try {
+        if (this.querySelector('.form-message--error')) data = JSON.parse(sessionStorage.getItem(this.storageKey) || 'null');
+        sessionStorage.removeItem(this.storageKey);
+      } catch (error) {
+        return;
+      }
+      if (!data) return;
+
+      for (const element of this.form.elements) {
+        if (!(element.name in data)) continue;
+        if (element.type === 'radio') element.checked = element.value === data[element.name];
+        else if (!element.value) element.value = data[element.name];
+      }
+    }
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', focusContactResult);
-  } else {
-    focusContactResult();
-  }
+  if (!customElements.get('contact-form')) customElements.define('contact-form', ContactForm);
 {% endjavascript %}
 
 {% schema %}
 {
   "name": "t:general.contact_form",
   "tag": "section",
-  "class": "contact-section",
   "enabled_on": {
     "templates": ["page"]
   },
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
     {
       "type": "checkbox",
       "id": "show_breadcrumb",
@@ -737,7 +1138,8 @@
     {
       "type": "image_picker",
       "id": "image",
-      "label": "t:labels.image"
+      "label": "t:labels.image",
+      "info": "t:labels.contact_image_info"
     },
     {
       "type": "text",
@@ -749,6 +1151,7 @@
       "type": "text",
       "id": "stat_label",
       "label": "t:labels.stat_label",
+      "info": "t:labels.contact_stat_info",
       "default": "Satisfaction rate"
     },
     {
@@ -761,11 +1164,16 @@
       "type": "text",
       "id": "support_hours",
       "label": "t:labels.support_hours",
+      "info": "t:labels.contact_support_info",
       "default": "Mon–Fri 9am–9pm · Sat–Sun 10am–6pm CET"
     },
     {
       "type": "header",
       "content": "t:labels.contact_form"
+    },
+    {
+      "type": "paragraph",
+      "content": "t:labels.contact_form_info"
     },
     {
       "type": "text",
@@ -788,7 +1196,7 @@
     },
     {
       "type": "header",
-      "content": "t:labels.style"
+      "content": "t:labels.layout"
     },
     {
       "type": "select",
@@ -826,14 +1234,14 @@
       "type": "checkbox",
       "id": "scale_screen",
       "label": "t:labels.scale_screen",
-      "info": "t:labels.scale_screen_info",
+      "info": "t:labels.contact_scale_screen_info",
       "default": true
     },
     {
       "type": "range",
       "id": "text_scale",
       "label": "t:labels.text_scale",
-      "info": "t:labels.text_scale_info",
+      "info": "t:labels.contact_text_scale_info",
       "min": 100,
       "max": 130,
       "step": 5,
@@ -842,10 +1250,8 @@
       "visible_if": "{{ section.settings.scale_screen }}"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
+      "type": "header",
+      "content": "t:labels.animation_header"
     },
     {
       "type": "select",
@@ -869,6 +1275,10 @@
       "default": "fade-up"
     },
     {
+      "type": "header",
+      "content": "t:labels.spacing"
+    },
+    {
       "type": "range",
       "id": "padding_top",
       "label": "t:labels.padding_top",
@@ -887,6 +1297,16 @@
       "step": 8,
       "unit": "px",
       "default": 96
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ],
   "presets": [

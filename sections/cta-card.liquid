@@ -12,11 +12,6 @@
 
 {% render 'screen-scale' %}
 
-{%- comment -%} The title is semibold (600): the page only loads regular and bold {%- endcomment -%}
-{% style %}
-  {{ settings.type_heading_font | font_modify: 'weight', '600' | font_face: font_display: 'swap' }}
-{% endstyle %}
-
 <div
   class="cta-card full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
   style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 100 | divided_by: 100.0 }};"

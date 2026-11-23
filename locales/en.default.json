@@ -577,11 +577,32 @@
       "message_placeholder": "How can we help?",
       "send": "Send message",
       "success": "Thanks for reaching out. We'll get back to you as soon as possible.",
-      "subject_field": "Message subject"
+      "subject_field": "Message subject",
+      "error_first_name": "Enter your first name.",
+      "error_last_name": "Enter your last name.",
+      "error_email": "Enter your email address.",
+      "error_email_format": "Enter an email address like name@example.com.",
+      "error_subject": "Enter a subject.",
+      "error_message": "Enter your message."
     },
     "map": {
       "filters": "Filter locations",
-      "all": "All locations"
+      "all": "All locations",
+      "count_one": "[count] location shows",
+      "count_other": "[count] locations show",
+      "pin_empty": "Add a place name"
+    },
+    "channels": {
+      "heading_hidden": "Ways to reach us",
+      "editor_empty": "Add Channel blocks to show this section.",
+      "card_empty": "This channel has no text. Add a heading, a contact or a text."
+    },
+    "locations": {
+      "heading_hidden": "Our locations",
+      "social_heading_hidden": "Social media",
+      "editor_empty": "Add Location blocks to show the offices.",
+      "social_editor_empty": "Add Social account blocks to show the social cards.",
+      "card_empty": "This location has no place and no address. It does not show on the store."
     }
   },
   "about": {
@@ -620,7 +641,9 @@
       "one": "{{ count }} answer",
       "other": "{{ count }} answers"
     },
-    "search_clear": "Clear the search"
+    "search_clear": "Clear the search",
+    "question_empty": "This question has no question text or no answer. It does not show on the store.",
+    "topic_empty": "Add Question blocks with a question and an answer. A topic with no question does not show on the store."
   },
   "policy": {
     "contents": "Contents",

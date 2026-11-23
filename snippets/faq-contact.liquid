@@ -65,7 +65,7 @@
     Figma 1920 ("Default-1"): ~90px under the questions; card 1418 x 135 centred, fill #fcfafa (accent
     ~2% on white), radius ~24, soft shadow, padding 32 / 49 / 32 / 55; title heading font semibold
     ~32px; line body ~20px; "WRITE MESSAGE" red pill 258 x 50 with a paper plane; "TRACK ORDER"
-    glass pill ~185 x 50. The FAQ section loads the 600 weight and sets --px (screen scale).
+    glass pill ~185 x 50. The title uses the heading font's own weight (no extra font file).
   */
   .faq-contact {
     margin-block-start: max(var(--space-2xl), calc(90 * var(--px, 0.0625rem)));
@@ -78,7 +78,8 @@
     align-items: center;
     justify-content: space-between;
     gap: var(--space-lg) var(--space-xl);
-    inline-size: min(calc(1418 * var(--px, 0.0625rem)), 100%);
+    /* Figma 1418px at 1920; never less than 60rem (full width on phones and tablets) */
+    inline-size: min(max(calc(1418 * var(--px, 0.0625rem)), 60rem), 100%);
     min-block-size: max(7rem, calc(135 * var(--px, 0.0625rem)));
     box-sizing: border-box;
     margin-inline: auto;
@@ -124,7 +125,7 @@
   .faq-contact__heading {
     margin: 0;
     font-size: max(1.5rem, calc(32 * var(--px, 0.0625rem)));
-    font-weight: 600;
+    font-weight: var(--font-heading--weight);
     line-height: 1.2;
   }
 
@@ -145,8 +146,8 @@
     The buttons follow the screen like the rest of the card (the theme's .button has fixed sizes):
     Figma 50px tall, 35px side padding, ~16.5px lettering at 1920.
   */
-  .faq-contact__button,
-  .faq-contact__second {
+  .faq-contact .faq-contact__button,
+  .faq-contact .faq-contact__second {
     min-block-size: max(2.75rem, calc(50 * var(--px, 0.0625rem)));
     padding-inline: max(1.25rem, calc(35 * var(--px, 0.0625rem)));
     font-size: max(var(--font-size-caption), calc(16.5 * var(--px, 0.0625rem)));
@@ -199,10 +200,30 @@
       gap: var(--space-sm);
     }
 
-    .faq-contact__button,
-    .faq-contact__second {
+    .faq-contact .faq-contact__button,
+    .faq-contact .faq-contact__second {
       min-block-size: 2.75rem;
       padding-inline: var(--space-md);
+    }
+
+    .faq-contact--glass .faq-contact__heading {
+      font-size: 0.9375rem;
+    }
+
+    .faq-contact--glass .faq-contact__text {
+      font-size: 0.75rem;
+    }
+
+    .faq-contact--glass .faq-contact__actions {
+      justify-content: flex-end;
+      inline-size: 100%;
+    }
+
+    .faq-contact--glass .faq-contact__actions .faq-contact__button,
+    .faq-contact--glass .faq-contact__actions .faq-contact__second {
+      min-block-size: 2.25rem;
+      padding-inline: var(--space-sm);
+      font-size: 0.6875rem;
     }
 
     /*

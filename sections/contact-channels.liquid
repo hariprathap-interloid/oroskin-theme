@@ -1,7 +1,10 @@
 {%- comment -%}
   Contact channels (M8.1, Figma 170:108573 "Ways to reach us / Choose your channel"): an eyebrow, a
   heading with red words, then one card per Channel block (Live chat, Email, Phone, WhatsApp).
-  Cards: 1 column on phones, 2 on tablets, 4 from 1200px, all the same height.
+  Cards (phones: design/inbox/contactpage/contact-mobile/Property 1=Variant12.png): 1 column below
+  375px, 2 from 375px (compact on phones), 4 from 1440px, all the same height in a row.
+  No heading: a hidden h2 keeps the h3 card titles under a heading. No cards: no section on the store,
+  a note in the theme editor.
 
   Animation (Figma scroll states): the heading slides in from the left; the cards use the
   Scroll animation setting, one after the other (cards 2 and 3 together, as in the Figma).
@@ -18,10 +21,14 @@
 
 {% render 'screen-scale' %}
 
+{%- if section.blocks.size == 0 and request.design_mode -%}
+  <p class="contact-channels__editor-note">{{ 'contact.channels.editor_empty' | t }}</p>
+{%- endif -%}
+
 {%- if section.blocks.size > 0 -%}
   <div
     class="contact-channels full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.fill_screen %} section--fill-screen{% endif %}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
-    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};"
+    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;{% if section.settings.scale_screen %} --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};{% endif %}"
   >
     <animate-on-scroll class="contact-channels__inner">
       {%- if section.settings.eyebrow != blank or section.settings.heading != blank -%}
@@ -38,6 +45,10 @@
             <h2 class="h1 contact-channels__heading">{{ section.settings.heading }}</h2>
           {%- endif -%}
         </div>
+      {%- endif -%}
+      {%- if section.settings.heading == blank -%}
+        {%- assign hidden_heading = 'contact.channels.heading_hidden' | t -%}
+        <h2 class="visually-hidden">{{ section.settings.eyebrow | default: hidden_heading | escape }}</h2>
       {%- endif -%}
 
       <div class="contact-channels__grid">
@@ -72,22 +83,54 @@
 
   .contact-channels__grid {
     display: grid;
-    gap: var(--space-lg);
+    gap: var(--space-sm);
     margin-block-start: var(--space-3xl); /* heading → cards: 72px */
   }
 
-  @media (min-width: 750px) {
+  /* 2 per row from 375px (phone design) and on tablets / small laptops */
+  @media (min-width: 375px) {
     .contact-channels__grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
-  /* Figma: four 408px cards with 63px between them */
-  @media (min-width: 1200px) {
+  @media (min-width: 750px) {
+    .contact-channels__grid {
+      gap: var(--space-lg);
+    }
+  }
+
+  /* Figma: four 408px cards with 63px between them. From 1440px: below, 4 cards had ~140px for text */
+  @media (min-width: 1440px) {
     .contact-channels__grid {
       grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--space-xl);
+    }
+  }
+
+  @media (min-width: 1600px) {
+    .contact-channels__grid {
       gap: var(--space-3xl);
     }
+  }
+
+  /* Phones: the heading on one line (phone design) */
+  @media (max-width: 749px) {
+    .contact-channels__heading {
+      margin-block-start: var(--space-sm);
+      font-size: var(--font-size-h2);
+    }
+
+    .contact-channels__grid {
+      margin-block-start: var(--space-xl);
+    }
+  }
+
+  .contact-channels__editor-note {
+    margin: var(--space-lg) var(--page-margin);
+    padding: var(--space-md);
+    border: 1px dashed var(--color-border);
+    text-align: center;
   }
 
   /* Stagger (Figma: card 1, then cards 2 + 3 together, then card 4) */
@@ -105,7 +148,6 @@
 {
   "name": "t:general.contact_channels",
   "tag": "section",
-  "class": "contact-channels-section",
   "blocks": [
     {
       "type": "_contact-channel"
@@ -113,6 +155,10 @@
   ],
   "max_blocks": 8,
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
     {
       "type": "text",
       "id": "eyebrow",
@@ -123,12 +169,16 @@
       "type": "inline_richtext",
       "id": "heading",
       "label": "t:labels.heading",
-      "info": "t:labels.italic_accent_info",
+      "info": "t:labels.contact_heading_hidden_info",
       "default": "Choose your <em>channel</em>"
     },
     {
+      "type": "paragraph",
+      "content": "t:labels.contact_channels_info"
+    },
+    {
       "type": "header",
-      "content": "t:labels.style"
+      "content": "t:labels.layout"
     },
     {
       "type": "select",
@@ -166,14 +216,14 @@
       "type": "checkbox",
       "id": "scale_screen",
       "label": "t:labels.scale_screen",
-      "info": "t:labels.scale_screen_info",
+      "info": "t:labels.contact_scale_screen_info",
       "default": true
     },
     {
       "type": "range",
       "id": "text_scale",
       "label": "t:labels.text_scale",
-      "info": "t:labels.text_scale_info",
+      "info": "t:labels.contact_text_scale_info",
       "min": 100,
       "max": 130,
       "step": 5,
@@ -182,10 +232,8 @@
       "visible_if": "{{ section.settings.scale_screen }}"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
+      "type": "header",
+      "content": "t:labels.animation_header"
     },
     {
       "type": "select",
@@ -213,6 +261,10 @@
       "default": "fade-up"
     },
     {
+      "type": "header",
+      "content": "t:labels.spacing"
+    },
+    {
       "type": "range",
       "id": "padding_top",
       "label": "t:labels.padding_top",
@@ -231,6 +283,16 @@
       "step": 8,
       "unit": "px",
       "default": 96
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ],
   "presets": [
