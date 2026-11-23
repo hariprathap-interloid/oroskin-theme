@@ -8,6 +8,8 @@
     "links": "Popular links"
   },
   "blog": {
+    "tag_heading": "Topic: {{ tags }}",
+    "stat_card_empty": "Empty card: type a Value or a Text. It does not show on the store.",
     "related": {
       "empty_editor": "No other articles in this blog yet, so this section is hidden on the store."
     },

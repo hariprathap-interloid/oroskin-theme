@@ -1,14 +1,19 @@
 {%- comment -%}
-  Blog hero (M8.2, Figma 3007:81466, top of the blog page): breadcrumb, then two columns.
-  Left: an eyebrow with a rule on both sides, the H1 with a red second line, the intro text and three
-  counters (Articles, Authors, Topics). Right: up to four floating stat cards in a zig-zag collage,
-  with faded book / award outlines and soft rose glows behind them.
+  Blog hero (M8.2, Figma 3007:81466 desktop, design/inbox/blog-list/Property 1=Variant13.png phones):
+  breadcrumb, then the intro (eyebrow with a rule on both sides, the H1 with a red second line, the
+  intro text, three counters: Articles, Authors, Topics) and up to four floating stat cards in a
+  zig-zag, with faded book / award outlines and soft rose glows behind them.
 
+  - Below 1440px (phones, tablets, small laptops): the phone design. Centred intro, counters in one
+    row, cards 2 per row in the zig-zag. From 1440px: intro left, cards right (the Figma desktop).
+  - Page 2 and later, and tag pages (/tagged/…): a small version. No Fill the screen, no intro text,
+    no cards, so the articles come first. A tag page also names the tag in the H1 ("Topic: …")
+    and shows no counters (Shopify filters some blog numbers by the tag, not others).
   - Counters: the typed value when filled in, otherwise counted from the blog: articles =
     blog.articles_count, topics = the number of tags, authors = the different author names among the
     50 newest articles (Liquid reads at most 50 articles here). Shopify has no "authors" number.
   - The first section of the page, so no scroll animation (project rule); the cards may float slowly
-    instead (off with reduced motion).
+    instead (needs "Reveal sections on scroll", off with reduced motion).
   - Sized to the screen like the hero (snippets/screen-scale.liquid), with the section's settings.
 {%- endcomment -%}
 
@@ -20,9 +25,26 @@
     assign animation = 'none'
   endif
 
+  assign is_compact = false
+  if current_page > 1
+    assign is_compact = true
+  endif
+  if current_tags.size > 0
+    assign is_compact = true
+  endif
+
   assign heading = section.settings.heading
   if heading == blank
     assign heading = blog.title | escape
+  endif
+
+  # A tag page names its tag in the H1 (each tag page gets its own main heading) and shows no
+  # counters: Shopify filters some blog numbers by the tag and not others, so they would not agree.
+  assign is_tag_page = false
+  if current_tags.size > 0
+    assign is_tag_page = true
+    assign tags_title = current_tags | join: ', '
+    assign heading = 'blog.tag_heading' | t: tags: tags_title | escape
   endif
 
   assign articles_value = section.settings.articles_value
@@ -39,20 +61,69 @@
   if topics_value == blank
     assign topics_value = blog.all_tags.size
   endif
+
+  assign counter_count = 0
+  unless is_tag_page
+    if articles_value != blank and articles_value != 0
+      assign counter_count = counter_count | plus: 1
+    endif
+    if authors_value != blank and authors_value != 0
+      assign counter_count = counter_count | plus: 1
+    endif
+    if topics_value != blank and topics_value != 0
+      assign counter_count = counter_count | plus: 1
+    endif
+  endunless
+
+  # Cards show when at least one Stat card writes something (an empty card writes nothing on the
+  # store, a note in the editor). The section can't read its theme blocks' settings
+  # (section.blocks gives empty settings), so the blocks are rendered first and their HTML checked.
+  assign show_cards = false
+  unless is_compact
+    capture cards_html
+      content_for 'blocks'
+    endcapture
+    if cards_html contains 'class="blog-stat-card'
+      assign show_cards = true
+    endif
+  endunless
+
+  assign section_width = section.settings.section_width | default: 'widest'
+  assign hero_classes = 'section-width--' | append: section_width
+  if section.settings.fill_screen
+    unless is_compact
+      assign hero_classes = hero_classes | append: ' section--fill-screen'
+    endunless
+  endif
+  if section.settings.scale_screen
+    assign hero_classes = hero_classes | append: ' section--screen-scale'
+  endif
+  if section.settings.float_cards
+    assign hero_classes = hero_classes | append: ' blog-hero--float'
+  endif
 -%}
 
 {% render 'screen-scale' %}
 
 <div
-  class="blog-hero full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.fill_screen %} section--fill-screen{% endif %}{% if section.settings.scale_screen %} section--screen-scale{% endif %}{% if section.settings.float_cards %} blog-hero--float{% endif %}"
-  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};"
+  class="blog-hero full-width {{ hero_classes }} color-{{ scheme_id }}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }}; --counters: {{ counter_count | at_least: 1 }};"
 >
   <animate-on-scroll class="blog-hero__inner">
     {%- if section.settings.show_breadcrumb -%}
-      {% render 'breadcrumb', current: blog.title, class: 'blog-hero__breadcrumb' %}
+      {%- if is_tag_page -%}
+        {% render 'breadcrumb',
+          current: tags_title,
+          parent_title: blog.title,
+          parent_url: blog.url,
+          class: 'blog-hero__breadcrumb'
+        %}
+      {%- else -%}
+        {% render 'breadcrumb', current: blog.title, class: 'blog-hero__breadcrumb' %}
+      {%- endif -%}
     {%- endif -%}
 
-    <div class="blog-hero__grid">
+    <div class="blog-hero__grid{% if show_cards %} blog-hero__grid--split{% endif %}">
       <div
         class="blog-hero__intro"
         {% if animation != 'none' %}
@@ -66,34 +137,38 @@
         <h1 class="blog-hero__heading">{{ heading }}</h1>
 
         {%- if section.settings.text != blank -%}
-          <div class="blog-hero__text rte">{{ section.settings.text }}</div>
+          {%- unless is_compact -%}
+            <div class="blog-hero__text rte">{{ section.settings.text }}</div>
+          {%- endunless -%}
         {%- endif -%}
 
-        <dl class="blog-hero__counters">
-          {%- if articles_value != blank and articles_value != 0 -%}
-            <div class="blog-hero__counter">
-              <dt>{{ section.settings.articles_label | escape }}</dt>
-              <dd>{{ articles_value }}</dd>
-            </div>
-          {%- endif -%}
-          {%- if authors_value != blank and authors_value != 0 -%}
-            <div class="blog-hero__counter">
-              <dt>{{ section.settings.authors_label | escape }}</dt>
-              <dd>{{ authors_value }}</dd>
-            </div>
-          {%- endif -%}
-          {%- if topics_value != blank and topics_value != 0 -%}
-            <div class="blog-hero__counter">
-              <dt>{{ section.settings.topics_label | escape }}</dt>
-              <dd>{{ topics_value }}</dd>
-            </div>
-          {%- endif -%}
-        </dl>
+        {%- if counter_count > 0 -%}
+          <dl class="blog-hero__counters">
+            {%- if articles_value != blank and articles_value != 0 -%}
+              <div class="blog-hero__counter">
+                <dt>{{ section.settings.articles_label | escape }}</dt>
+                <dd>{{ articles_value }}</dd>
+              </div>
+            {%- endif -%}
+            {%- if authors_value != blank and authors_value != 0 -%}
+              <div class="blog-hero__counter">
+                <dt>{{ section.settings.authors_label | escape }}</dt>
+                <dd>{{ authors_value }}</dd>
+              </div>
+            {%- endif -%}
+            {%- if topics_value != blank and topics_value != 0 -%}
+              <div class="blog-hero__counter">
+                <dt>{{ section.settings.topics_label | escape }}</dt>
+                <dd>{{ topics_value }}</dd>
+              </div>
+            {%- endif -%}
+          </dl>
+        {%- endif -%}
       </div>
 
-      {%- if section.blocks.size > 0 -%}
+      {%- if show_cards -%}
         <div class="blog-hero__collage">
-          {%- comment -%} The Figma's faded outlines (assets/deco-*.svg, accent at 7%), breathing slowly {%- endcomment -%}
+          {%- comment -%} The Figma's faded outlines (assets/deco-*.svg, accent), breathing slowly {%- endcomment -%}
           <span class="blog-hero__deco blog-hero__deco--book" aria-hidden="true">
             {{- 'deco-book.svg' | inline_asset_content -}}
           </span>
@@ -104,7 +179,7 @@
             {{- 'deco-heart.svg' | inline_asset_content -}}
           </span>
           <div class="blog-hero__cards">
-            {% content_for 'blocks' %}
+            {{- cards_html -}}
           </div>
         </div>
       {%- endif -%}
@@ -115,7 +190,8 @@
 {% stylesheet %}
   /*
     Figma 1920 frame: text column x 49-590 (541px), collage x 745-1797 (1052 x 634, from y 257),
-    155px apart. Sizes are tokens or Figma px x --px (screen-scale), with the Figma px in comments.
+    155px apart. Phone frame (375px): centred intro, cards 2 per row. Sizes are tokens or Figma px x
+    --px (screen-scale), with the Figma px in comments.
   */
   .blog-hero {
     position: relative;
@@ -156,30 +232,35 @@
   }
 
   .blog-hero__breadcrumb {
-    margin-block-end: var(--space-2xl); /* breadcrumb → eyebrow: ~65px */
+    margin-block-end: var(--space-2xl); /* breadcrumb → eyebrow: ~65px (phones ~30px) */
   }
 
-  /* Phones and tablets: text, then the cards. Two columns from 1200px */
+  /* Below 1440px (the phone design): the centred intro, then the cards */
   .blog-hero__grid {
     display: grid;
     gap: var(--space-2xl);
     align-items: center;
   }
 
-  @media (min-width: 1200px) {
-    .blog-hero__grid {
-      grid-template-columns: minmax(0, 541fr) minmax(0, 1052fr);
-      column-gap: calc(155 * var(--px, 0.0625rem));
-    }
+  /* ---------- Intro ---------- */
+  .blog-hero__intro {
+    text-align: center;
   }
 
-  /* ---------- Text column ---------- */
+  /* A rule on both sides of the label (Figma "—— BEAUTY INTELLIGENCE ——"); the rules get shorter
+     before the label goes onto two lines */
+  .blog-hero__eyebrow {
+    justify-content: center;
+  }
 
-  /* A rule on both sides of the label, left aligned (Figma "—— BEAUTY INTELLIGENCE ——") */
+  /* The rules start at 0 and take only the free space (66px at most), so the label keeps its line */
+  .blog-hero__eyebrow::before,
   .blog-hero__eyebrow::after {
     content: "";
-    flex: none;
-    inline-size: 66px;
+    flex: 1 1 0;
+    min-inline-size: 1rem;
+    max-inline-size: 66px;
+    inline-size: auto;
     block-size: 2px;
     background-color: currentcolor;
   }
@@ -198,7 +279,7 @@
   .blog-hero__text {
     /* 550 Figma px, but never narrower than 34rem: on a small screen --px is tiny (500px wide = 0.26) */
     max-inline-size: max(34.375rem, calc(550 * var(--px, 0.0625rem)));
-    margin-block-start: var(--space-2xl); /* ~58px */
+    margin: var(--space-2xl) auto 0; /* ~58px */
     font-size: var(--font-size-body-sm); /* 18px */
     line-height: 1.6; /* 29px lines */
   }
@@ -207,18 +288,20 @@
     margin-block-start: var(--space-xl); /* ~37px between the two paragraphs */
   }
 
-  /* Number on top, label under it (the <dt> label comes first in the HTML for screen readers) */
+  /* Counters: one row of equal columns, number on top, label under it (the <dt> label comes first
+     in the HTML for screen readers) */
   .blog-hero__counters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-xl) max(var(--space-2xl), calc(110 * var(--px, 0.0625rem)));
-    margin: max(var(--space-2xl), calc(100 * var(--px, 0.0625rem))) 0 0;
+    display: grid;
+    grid-template-columns: repeat(var(--counters, 3), minmax(0, 1fr));
+    gap: var(--space-md);
+    max-inline-size: 36rem;
+    margin: var(--space-2xl) auto 0;
   }
 
   .blog-hero__counter {
     display: flex;
     flex-direction: column-reverse;
-    align-items: flex-start;
+    align-items: center;
   }
 
   .blog-hero__counter dd {
@@ -240,126 +323,214 @@
     text-transform: uppercase;
   }
 
-  /* ---------- Collage ---------- */
+  /* ---------- Cards ---------- */
+
+  /*
+    The zig-zag at all sizes: 2 columns, the 2nd card lower, the 2nd row moved to the inline end
+    (Figma desktop: cards at (0, 0), (49.9%, 7.7%), (16.2%, 56%), (66.5%, 69.7%), 33.7% wide; phones
+    the same shape, smaller). In normal flow, so a taller card (long text, Text size) pushes the next
+    row down and never covers it. Sizes in cqi = % of the collage width.
+  */
   .blog-hero__collage {
     position: relative;
+    container: blog-hero-cards / inline-size;
+    inline-size: 100%;
+    max-inline-size: 48rem;
+    margin-inline: auto;
   }
 
   .blog-hero__cards {
+    --cards-gap: 4cqi; /* phones: 14px of 343 */
+    --cards-shift: 4.5cqi; /* row 2 moves 16px to the end */
+    --cards-drop: min(10cqi, 3.5rem); /* card 2: 35px lower */
+    --cards-drop-2: 1.5cqi; /* card 4: 5px lower than card 3 */
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
-    gap: var(--space-lg);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    column-gap: var(--cards-gap);
+    row-gap: 4.5cqi;
+    margin-block-end: 8cqi; /* room for the award outline under the cards */
+    padding-inline-end: var(--cards-shift);
   }
 
-  /* Faded outline icons behind the cards; only in the wide collage */
+  .blog-hero__cards > :nth-child(2) {
+    margin-block-start: var(--cards-drop);
+  }
+
+  .blog-hero__cards > :nth-child(4) {
+    margin-block-start: var(--cards-drop-2);
+  }
+
+  /* The card block is position: relative, so this only moves it */
+  .blog-hero__cards > :nth-child(n + 3) {
+    inset-inline-start: var(--cards-shift);
+  }
+
+  /* Faded outline icons behind the cards (phones: book at the left between the rows, award under
+     the last card) */
   .blog-hero__deco {
-    display: none;
+    position: absolute;
+    display: block;
     color: var(--color-accent);
     pointer-events: none;
   }
 
   .blog-hero__deco svg {
+    display: block;
     inline-size: 100%;
     block-size: auto;
   }
 
-  /*
-    Wide screens: the Figma zig-zag. The box has the collage's shape (1052 x 634) and each card sits
-    at its Figma position in %: (0, 0), (49.9%, 7.7%), (16.2%, 56%), (66.5%, 69.7%), 33.7% wide.
-    Two classes (.blog-hero .blog-hero__cards > *) on purpose: the stat card block sets its own
-    position: relative and its stylesheet loads after this one, so one class lost and cards 3 and 4
-    stacked under the box, out of sight.
-  */
-  @media (min-width: 1200px) {
-    .blog-hero__collage {
-      aspect-ratio: 1052 / 634;
+  .blog-hero__deco--book {
+    inset-block-start: 45%;
+    inset-inline-start: -2.5%;
+    inline-size: 11cqi;
+  }
+
+  .blog-hero__deco--award {
+    inset-block-start: calc(100% - 9cqi);
+    inset-inline-start: 70%;
+    inline-size: 8cqi;
+  }
+
+  .blog-hero__deco--heart {
+    display: none;
+  }
+
+  @media (max-width: 749px) {
+    .blog-hero__breadcrumb {
+      margin-block-end: var(--space-xl);
     }
 
-    .blog-hero__cards {
-      position: absolute;
-      inset: 0;
-      display: block;
+    .blog-hero__heading {
+      margin-block-start: var(--space-lg);
     }
 
-    .blog-hero .blog-hero__cards > * {
-      position: absolute;
-      inline-size: 33.7%;
+    .blog-hero__text {
+      margin-block-start: var(--space-lg);
     }
 
-    .blog-hero__cards > :nth-child(1) {
-      inset: 0 auto auto 0;
+    .blog-hero__counters {
+      gap: var(--space-xs);
+      margin-block-start: var(--space-xl);
     }
 
-    .blog-hero__cards > :nth-child(2) {
-      inset: 7.7% auto auto 49.9%;
+    .blog-hero__counter dd {
+      font-size: 1.875rem; /* ~30px */
     }
 
-    .blog-hero__cards > :nth-child(3) {
-      inset: 56% auto auto 16.2%;
-    }
-
-    .blog-hero__cards > :nth-child(4) {
-      inset: 69.7% auto auto 66.5%;
-    }
-
-    .blog-hero__deco {
-      position: absolute;
-      display: block;
-    }
-
-    /*
-      Open book 97 x 78 at (5, 240), award ribbon 63 x 83 at (623, 565) in the collage (Figma); the
-      heart 81 x 74 isn't in the final frame, so it fills the empty space beside the second card.
-    */
-    .blog-hero__deco--book {
-      inset: 37.9% auto auto 0.5%;
-      inline-size: 9.2%;
-    }
-
-    .blog-hero__deco--award {
-      inset: 89.1% auto auto 59.2%;
-      inline-size: 6%;
-    }
-
-    .blog-hero__deco--heart {
-      inset: 24% auto auto 89%;
-      inline-size: 7.7%;
+    .blog-hero__counter dt {
+      margin-block-start: var(--space-sm);
+      font-size: 0.75rem;
     }
   }
 
-  /* Slow float, each card on its own rhythm; only when the visitor allows motion */
+  /* From 1440px with cards: the Figma desktop, intro left and cards right */
+  @media (min-width: 1440px) {
+    .blog-hero__grid--split {
+      /* The text column keeps 28rem, so the H1 stays on two lines */
+      grid-template-columns: minmax(min(28rem, 100%), 541fr) minmax(0, 1052fr);
+      column-gap: calc(155 * var(--px, 0.0625rem));
+    }
+
+    .blog-hero__grid--split .blog-hero__intro {
+      text-align: start;
+    }
+
+    .blog-hero__grid--split .blog-hero__eyebrow {
+      justify-content: flex-start;
+    }
+
+    .blog-hero__grid--split .blog-hero__eyebrow::before,
+    .blog-hero__grid--split .blog-hero__eyebrow::after {
+      flex: none;
+      inline-size: 66px;
+      max-inline-size: none;
+    }
+
+    .blog-hero__grid--split .blog-hero__text {
+      margin-inline: 0;
+    }
+
+    /* Counters: from the left edge, spread over the text column (Figma x 49 / 271 / 491 in 541px) */
+    .blog-hero__grid--split .blog-hero__counters {
+      grid-template-columns: repeat(var(--counters, 3), auto);
+      justify-content: space-between;
+      gap: var(--space-xl);
+      margin: max(var(--space-2xl), calc(100 * var(--px, 0.0625rem))) 0 0;
+    }
+
+    .blog-hero__grid--split .blog-hero__counter {
+      align-items: flex-start;
+    }
+
+    .blog-hero__grid--split .blog-hero__collage {
+      max-inline-size: none;
+    }
+
+    .blog-hero__grid--split .blog-hero__cards {
+      --cards-gap: 16.2cqi;
+      --cards-shift: 16.2cqi;
+      --cards-drop: 4.6cqi; /* 49px of 1052 */
+      --cards-drop-2: 8.3cqi; /* 87px */
+      row-gap: 10.5cqi; /* 111px */
+      margin-block-end: 0;
+    }
+
+    /* Book 97 x 78 at (5, 240), award 63 x 83 at (623, 565) in the collage (Figma); the heart
+       isn't in the final frame, so it fills the empty space beside the second card */
+    .blog-hero__grid--split .blog-hero__deco--book {
+      inset-block-start: 37.9%;
+      inset-inline-start: 0.5%;
+      inline-size: 9.2cqi;
+    }
+
+    .blog-hero__grid--split .blog-hero__deco--award {
+      inset-block-start: 89.1%;
+      inset-inline-start: 59.2%;
+      inline-size: 6cqi;
+    }
+
+    .blog-hero__grid--split .blog-hero__deco--heart {
+      display: block;
+      inset-block-start: 24%;
+      inset-inline-start: 89%;
+      inline-size: 7.7cqi;
+    }
+  }
+
+  /* Slow float and breathing: looping movements, so only with "Reveal sections on scroll" on
+     (.motion-on) and when the visitor allows motion */
   @media (prefers-reduced-motion: no-preference) {
-    .blog-hero--float .blog-hero__cards > * {
+    .motion-on .blog-hero--float .blog-hero__cards > * {
       animation: blog-hero-float 7s ease-in-out infinite;
     }
 
-    .blog-hero--float .blog-hero__cards > :nth-child(2) {
+    .motion-on .blog-hero--float .blog-hero__cards > :nth-child(2) {
       animation-duration: 8s;
       animation-delay: -2s;
     }
 
-    .blog-hero--float .blog-hero__cards > :nth-child(3) {
+    .motion-on .blog-hero--float .blog-hero__cards > :nth-child(3) {
       animation-duration: 6.5s;
       animation-delay: -4s;
     }
 
-    .blog-hero--float .blog-hero__cards > :nth-child(4) {
+    .motion-on .blog-hero--float .blog-hero__cards > :nth-child(4) {
       animation-duration: 7.5s;
       animation-delay: -1s;
     }
-  }
 
-  @media (prefers-reduced-motion: no-preference) {
-    .blog-hero__deco {
+    .motion-on .blog-hero__deco {
       animation: blog-hero-breathe 5s ease-in-out infinite;
     }
 
-    .blog-hero__deco--award {
+    .motion-on .blog-hero__deco--award {
       animation-duration: 6s;
       animation-delay: -2s;
     }
 
-    .blog-hero__deco--heart {
+    .motion-on .blog-hero__deco--heart {
       animation-duration: 5.5s;
       animation-delay: -3.5s;
     }
@@ -395,7 +566,6 @@
 {
   "name": "t:general.blog_hero",
   "tag": "section",
-  "class": "blog-hero-section",
   "enabled_on": {
     "templates": ["blog"]
   },
@@ -406,6 +576,10 @@
   ],
   "max_blocks": 4,
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
     {
       "type": "checkbox",
       "id": "show_breadcrumb",
@@ -429,52 +603,13 @@
       "type": "richtext",
       "id": "text",
       "label": "t:labels.text",
+      "info": "t:labels.blog_hero_text_info",
       "default": "<p>Where beauty meets culture, science meets ritual, and every story is an invitation to discover your most luminous self.</p><p>By blending time-tested subcontinent traditions with modern dermatological science, we decode the secrets to healthy skin while celebrating the rich diversity of South Asian skin tones through expert-backed guides and clean ingredient breakdowns.</p>"
     },
     {
       "type": "header",
-      "content": "t:labels.counters",
-      "info": "t:labels.counters_info"
-    },
-    {
-      "type": "text",
-      "id": "articles_label",
-      "label": "t:labels.articles_label",
-      "default": "Articles"
-    },
-    {
-      "type": "text",
-      "id": "articles_value",
-      "label": "t:labels.articles_value",
-      "info": "t:labels.articles_value_info"
-    },
-    {
-      "type": "text",
-      "id": "authors_label",
-      "label": "t:labels.authors_label",
-      "default": "Authors"
-    },
-    {
-      "type": "text",
-      "id": "authors_value",
-      "label": "t:labels.authors_value",
-      "info": "t:labels.authors_value_info"
-    },
-    {
-      "type": "text",
-      "id": "topics_label",
-      "label": "t:labels.topics_label",
-      "default": "Topics"
-    },
-    {
-      "type": "text",
-      "id": "topics_value",
-      "label": "t:labels.topics_value",
-      "info": "t:labels.topics_value_info"
-    },
-    {
-      "type": "header",
-      "content": "t:labels.stat_cards"
+      "content": "t:labels.stat_cards",
+      "info": "t:labels.blog_hero_cards_info"
     },
     {
       "type": "checkbox",
@@ -485,7 +620,8 @@
     },
     {
       "type": "header",
-      "content": "t:labels.style"
+      "content": "t:labels.layout",
+      "info": "t:labels.blog_hero_layout_info"
     },
     {
       "type": "select",
@@ -539,16 +675,55 @@
       "visible_if": "{{ section.settings.scale_screen }}"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
+      "type": "header",
+      "content": "t:labels.counters",
+      "info": "t:labels.counters_info"
+    },
+    {
+      "type": "text",
+      "id": "articles_label",
+      "label": "t:labels.articles_label",
+      "default": "Articles"
+    },
+    {
+      "type": "text",
+      "id": "articles_value",
+      "label": "t:labels.articles_value",
+      "info": "t:labels.articles_value_info"
+    },
+    {
+      "type": "text",
+      "id": "authors_label",
+      "label": "t:labels.authors_label",
+      "default": "Authors"
+    },
+    {
+      "type": "text",
+      "id": "authors_value",
+      "label": "t:labels.authors_value",
+      "info": "t:labels.authors_value_info"
+    },
+    {
+      "type": "text",
+      "id": "topics_label",
+      "label": "t:labels.topics_label",
+      "default": "Topics"
+    },
+    {
+      "type": "text",
+      "id": "topics_value",
+      "label": "t:labels.topics_value",
+      "info": "t:labels.topics_value_info"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.animation_header"
     },
     {
       "type": "select",
       "id": "animation",
       "label": "t:labels.animation",
-      "info": "t:labels.animation_info",
+      "info": "t:labels.blog_hero_animation_info",
       "options": [
         {
           "value": "none",
@@ -560,6 +735,10 @@
         }
       ],
       "default": "fade-up"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -580,6 +759,16 @@
       "step": 8,
       "unit": "px",
       "default": 64
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ],
   "presets": [

@@ -2,7 +2,8 @@
   One floating stat card in the Blog hero (Figma 3007:81466: "2.4M / Monthly readers across all
   journal editions" with an eye in a white circle). A big value in the accent colour, a round icon
   badge in the top-right corner and a short text. The section places up to four of them in its
-  zig-zag collage. Merchant text, not live data.
+  zig-zag. Merchant text, not live data. A card with no value and no text shows nothing on the store
+  and a note in the theme editor (so the merchant can still select it).
 
   @example
   {% content_for 'block', type: '_blog-stat-card', id: 'blog-stat-card' %}
@@ -24,13 +25,18 @@
       <p class="blog-stat-card__text">{{ block.settings.text | escape }}</p>
     {%- endif -%}
   </div>
+{%- elsif request.design_mode -%}
+  <div class="blog-stat-card blog-stat-card--empty" {{ block.shopify_attributes }}>
+    <p class="blog-stat-card__text">{{ 'blog.stat_card_empty' | t }}</p>
+  </div>
 {%- endif -%}
 
 {% stylesheet %}
   /*
     Figma card: 354 x 195, padding ~36px, value ~52px (heading font, accent), 56px white icon circle at
     the top right, 2-line text 18px. Figma px x --px follow the screen in a scaled section
-    (snippets/screen-scale.liquid) and are exact px elsewhere.
+    (snippets/screen-scale.liquid) and are exact px elsewhere. Phones (Figma 375px): ~152px wide,
+    value ~22px, icon circle ~28px, small text.
   */
   .blog-stat-card {
     position: relative;
@@ -44,8 +50,6 @@
     border-radius: var(--radius-md);
     background-color: var(--color-card);
     box-shadow: var(--shadow-card-rose);
-    -webkit-backdrop-filter: blur(var(--glass-frost));
-    backdrop-filter: blur(var(--glass-frost));
   }
 
   .blog-stat-card__value {
@@ -69,7 +73,7 @@
     inline-size: max(2.75rem, calc(56 * var(--px, 0.0625rem)));
     aspect-ratio: 1;
     border-radius: 50%;
-    background-color: #ffffff;
+    background-color: var(--color-surface-raised);
     box-shadow: var(--shadow-card);
     color: var(--color-accent);
   }
@@ -86,6 +90,58 @@
     font-size: var(--font-size-body-sm);
     line-height: 1.6;
   }
+
+  .blog-stat-card--empty .blog-stat-card__text {
+    margin: 0;
+    font-style: italic;
+  }
+
+  /*
+    Sizes by the width of the section's collage (container "blog-hero-cards"), not the screen: the
+    stacked layout runs up to 1439px, so the card width decides. Below 50rem (tablets, 1440px
+    desktop): medium. Below 36rem (phones, cards ~150px): the phone design.
+  */
+  @container blog-hero-cards (width < 50rem) {
+    .blog-stat-card {
+      padding: var(--space-md) var(--space-lg);
+    }
+
+    .blog-stat-card__value {
+      font-size: 1.875rem;
+    }
+
+    .blog-stat-card__icon {
+      inline-size: 2.25rem;
+    }
+
+    .blog-stat-card__text {
+      margin-block-start: var(--space-md);
+      font-size: var(--font-size-small);
+      line-height: 1.5;
+    }
+  }
+
+  @container blog-hero-cards (width < 36rem) {
+    .blog-stat-card {
+      column-gap: var(--space-xs);
+      padding: var(--space-md) var(--space-sm) var(--space-md) var(--space-md);
+      border-radius: var(--radius-sm);
+    }
+
+    .blog-stat-card__value {
+      font-size: 1.375rem;
+    }
+
+    .blog-stat-card__icon {
+      inline-size: 1.75rem;
+    }
+
+    .blog-stat-card__text {
+      margin-block-start: var(--space-sm);
+      font-size: 0.75rem;
+      line-height: 1.45;
+    }
+  }
 {% endstylesheet %}
 
 {% schema %}
@@ -97,12 +153,14 @@
       "type": "text",
       "id": "value",
       "label": "t:labels.stat_value",
+      "info": "t:labels.blog_stat_value_info",
       "default": "2.4M"
     },
     {
       "type": "text",
       "id": "text",
       "label": "t:labels.text",
+      "info": "t:labels.blog_stat_text_info",
       "default": "Monthly readers across all journal editions"
     },
     {
