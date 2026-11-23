@@ -1,6 +1,6 @@
 {
   "general": {
-    "404": "Not found",
+    "404": "Page not found",
     "article": "Article",
     "blog": "Article list",
     "cart": "Cart",
@@ -15,7 +15,7 @@
     "header": "Header",
     "layout": "Layout",
     "page": "Page",
-    "password": "Password",
+    "password": "Password page",
     "product": "Product",
     "row": "Group (row)",
     "search": "Search",
@@ -933,14 +933,16 @@
     "policy_heading_tag_info": "Heading 1 when this is the page's main heading; Heading 2 when it sits under another section's heading (e.g. on the returns page).",
     "not_found_show_search": "Show the search bar",
     "not_found_placeholder": "Search placeholder",
-    "not_found_menu": "Links",
-    "not_found_menu_info": "Optional: a menu whose links show as pills (e.g. your main categories).",
+    "not_found_menu": "Menu",
+    "not_found_menu_info": "Each link of this menu shows as a round button. Use it for your main collections, for example. Empty = no links.",
     "not_found_links_heading": "Links heading",
     "page_heading_info": "Italic words show in the accent color. Empty = the page title.",
     "page_align": "Heading alignment",
     "page_text_width": "Text width",
     "page_text_width_info": "The maximum width of the page text. Long lines are hard to read: 700–800px is good.",
-    "password_heading_info": "Italic words show in the accent color. The message under it comes from Online Store > Preferences.",
+    "password_heading_info": "Italic words show in the accent color. Empty = \"This shop is private\".",
+    "password_eyebrow_info": "Small uppercase text above the heading. Empty = no text.",
+    "password_content_info": "The message under the heading comes from Online Store > Preferences > Password protection. The logo comes from Theme settings > Logo.",
     "buy_buttons_layout": "Layout",
     "add_to_cart_style": "Add to cart style",
     "show_installments": "Show Shop Pay Installments",
@@ -1313,7 +1315,15 @@
     "page_eyebrow_info": "Small uppercase text above the heading. Empty = no text.",
     "page_align_info": "Centre also puts the text column in the middle.",
     "page_scale_screen_info": "On: the heading and the spaces grow and shrink with the screen width and height (as on the contact and policy pages). Off: they grow with the screen width only, not more than the desktop size.",
-    "page_text_scale_info": "Makes the heading and the page text bigger. 100% = normal. Shows only when Scale with the screen is on."
+    "page_text_scale_info": "Makes the heading and the page text bigger. 100% = normal. Shows only when Scale with the screen is on.",
+    "not_found_eyebrow_info": "Small uppercase text above the heading. Empty = no text.",
+    "not_found_heading_info": "Italic words show in the accent color. Empty = \"Page not found.\"",
+    "not_found_search_group": "Search",
+    "not_found_placeholder_info": "Shows only when \"Show the search bar\" is on. Empty = the text of the search popup.",
+    "not_found_links_group": "Links",
+    "not_found_links_heading_info": "Shows above the links only when you select a Menu. Empty = no heading.",
+    "not_found_scale_screen_info": "On: the heading grows and shrinks with the screen width and height. Off: the heading grows with the screen width only, not more than the desktop size.",
+    "not_found_text_scale_info": "Makes the heading, the text and the search text bigger. 100% = normal. Shows only when \"Scale with the screen\" is on."
   },
   "options": {
     "panels_mobile_layout": {

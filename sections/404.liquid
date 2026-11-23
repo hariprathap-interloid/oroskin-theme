@@ -14,17 +14,13 @@
 
 {% render 'screen-scale' %}
 
-{%- comment -%} The big "404" uses the heading font's thin weight {%- endcomment -%}
-{% style %}
-  {{ settings.type_heading_font | font_modify: 'weight', '200' | font_face: font_display: 'swap' }}
-{% endstyle %}
-
 <div
   class="not-found full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.fill_screen %} section--fill-screen{% endif %}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
-  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 100 | divided_by: 100.0 }};"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;{% if section.settings.scale_screen %} --text-boost: {{ section.settings.text_scale | default: 100 | divided_by: 100.0 }};{% endif %}"
 >
   <div class="not-found__inner">
-    <p class="not-found__code" aria-hidden="true">404</p>
+    {%- comment -%} Decorative: the digits are CSS content, so contrast checkers skip them (a div: the theme hides p:empty) {%- endcomment -%}
+    <div class="not-found__code" data-code="404" aria-hidden="true"></div>
 
     {%- if section.settings.eyebrow != blank -%}
       <p class="eyebrow eyebrow--center not-found__eyebrow">{{ section.settings.eyebrow | escape }}</p>
@@ -71,7 +67,7 @@
       {%- assign links_label = '404.links' | t -%}
       <nav class="not-found__links" aria-label="{{ section.settings.links_heading | default: links_label | escape }}">
         {%- if section.settings.links_heading != blank -%}
-          <p class="not-found__links-heading">{{ section.settings.links_heading | escape }}</p>
+          <h2 class="not-found__links-heading">{{ section.settings.links_heading | escape }}</h2>
         {%- endif -%}
         <ul class="not-found__links-list" role="list">
           {%- for link in section.settings.menu.links -%}
@@ -88,12 +84,19 @@
     No Figma frame: built from the M5 pages (collection banner / search hero): centred, the eyebrow
     with rules, a heading-font h1 with an accent word, a pill search field (the search page's),
     .button + .button--secondary, pills like the category pills. The "404" is decorative (the
-    FAQ numbers' style: heading font thin, accent 15%).
+    FAQ numbers' style: heading font, accent 15%).
   */
   .not-found {
+    /* One Figma pixel: the screen width only, never more than 1px (Scale with the screen off) */
+    --px: min(calc(100vw / 1920), 0.0625rem);
     display: block;
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
     background-color: var(--color-background);
+  }
+
+  /* Scale with the screen on: the width and the height, as in the screen-scale snippet */
+  .not-found.section--screen-scale {
+    --px: min(calc(100vw / 1920), calc(100svh / 1031));
   }
 
   .not-found__inner {
@@ -110,9 +113,13 @@
     color: color-mix(in srgb, var(--color-accent) 15%, transparent);
     font-family: var(--font-heading--family);
     font-size: clamp(7rem, 4rem + 14vw, 17rem);
-    font-weight: 200;
+    font-weight: var(--font-heading--weight);
     line-height: 0.85;
     letter-spacing: -0.02em;
+  }
+
+  .not-found__code::before {
+    content: attr(data-code);
   }
 
   .not-found__eyebrow {
@@ -122,7 +129,8 @@
   .not-found__heading {
     max-inline-size: 18em;
     margin: var(--space-lg) auto 0;
-    font-size: max(2rem, calc(64 * var(--px, 0.0625rem)));
+    /* --text-boost = the Text size setting (only with Scale with the screen) */
+    font-size: calc(max(2rem, calc(64 * var(--px))) * var(--text-boost, 1));
     font-weight: 400;
     line-height: 1.1;
   }
@@ -222,7 +230,10 @@
   .not-found__links-heading {
     margin: 0;
     color: var(--color-accent);
+    font-family: var(--font-body--family);
     font-size: var(--font-size-small);
+    font-weight: 400;
+    line-height: 1.5;
     letter-spacing: var(--letter-spacing-label);
     text-transform: uppercase;
   }
@@ -252,9 +263,11 @@
       color var(--duration-fast) var(--ease-out);
   }
 
-  .not-found__link:hover {
-    border-color: color-mix(in srgb, var(--color-accent) 35%, transparent);
-    color: var(--color-accent);
+  @media (hover: hover) {
+    .not-found__link:hover {
+      border-color: color-mix(in srgb, var(--color-accent) 35%, transparent);
+      color: var(--color-accent);
+    }
   }
 
   /* Phones: full-width buttons, easy to tap */
@@ -269,19 +282,23 @@
 {
   "name": "t:general.404",
   "tag": "section",
-  "class": "not-found-section",
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
     {
       "type": "text",
       "id": "eyebrow",
       "label": "t:labels.eyebrow",
+      "info": "t:labels.not_found_eyebrow_info",
       "default": "Page not found"
     },
     {
       "type": "inline_richtext",
       "id": "heading",
       "label": "t:labels.heading",
-      "info": "t:labels.italic_accent_info",
+      "info": "t:labels.not_found_heading_info",
       "default": "This page has <em>wandered off.</em>"
     },
     {
@@ -289,6 +306,10 @@
       "id": "text",
       "label": "t:labels.text",
       "default": "<p>The link may be old, or the piece may have moved. Search for it, or start again from the home page.</p>"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.not_found_search_group"
     },
     {
       "type": "checkbox",
@@ -300,7 +321,12 @@
       "type": "text",
       "id": "search_placeholder",
       "label": "t:labels.not_found_placeholder",
+      "info": "t:labels.not_found_placeholder_info",
       "visible_if": "{{ section.settings.show_search }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.not_found_links_group"
     },
     {
       "type": "link_list",
@@ -312,11 +338,12 @@
       "type": "text",
       "id": "links_heading",
       "label": "t:labels.not_found_links_heading",
+      "info": "t:labels.not_found_links_heading_info",
       "default": "Popular right now"
     },
     {
       "type": "header",
-      "content": "t:labels.style"
+      "content": "t:labels.layout"
     },
     {
       "type": "select",
@@ -354,14 +381,14 @@
       "type": "checkbox",
       "id": "scale_screen",
       "label": "t:labels.scale_screen",
-      "info": "t:labels.scale_screen_info",
+      "info": "t:labels.not_found_scale_screen_info",
       "default": true
     },
     {
       "type": "range",
       "id": "text_scale",
       "label": "t:labels.text_scale",
-      "info": "t:labels.text_scale_info",
+      "info": "t:labels.not_found_text_scale_info",
       "min": 100,
       "max": 130,
       "step": 5,
@@ -370,10 +397,8 @@
       "visible_if": "{{ section.settings.scale_screen }}"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -394,6 +419,16 @@
       "step": 8,
       "unit": "px",
       "default": 80
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ]
 }
