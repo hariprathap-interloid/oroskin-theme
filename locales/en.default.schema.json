@@ -140,7 +140,8 @@
     "image_banner_cards": "Image banner with cards",
     "countdown": "Countdown",
     "product_grid": "Product grid",
-    "collection_tiles_promo": "Promo cards"
+    "collection_tiles_promo": "Promo cards",
+    "search_results": "Search results"
   },
   "labels": {
     "alignment": "Alignment",
@@ -629,7 +630,7 @@
     "collection_list_header_style": "Header style",
     "show_empty_collections": "Show empty collections",
     "show_empty_collections_info": "Hidden empty collections still take a place when the pages are counted, so a page can show fewer. To keep every page full, remove empty collections from the Online Store sales channel.",
-    "search_suggestions_group": "Before searching and no results",
+    "search_suggestions_group": "Suggestions",
     "search_suggestions_menu": "Popular categories menu",
     "search_suggestions_menu_info": "Shown as pills when nothing has been searched yet and under \"No results\".",
     "search_suggestions_collection_info": "The first 4 products are shown under the categories.",
@@ -1291,7 +1292,13 @@
     "article_help_heading": "Section heading: Heading 2. Make a word italic to show it in the accent color. Small label: Heading 6, directly above the Heading 2.",
     "article_help_quote": "Quote card: Blockquote. Start the last line with \"—\" to show the name of the person.",
     "article_help_caption": "Image caption: an italic paragraph directly under the image.",
-    "article_help_steps": "Steps: a numbered list. In each item, type a bold word, Shift + Enter, a title, Shift + Enter, then the text."
+    "article_help_steps": "Steps: a numbered list. In each item, type a bold word, Shift + Enter, a title, Shift + Enter, then the text.",
+    "search_empty_heading_info": "Shows before the visitor searches. After a search, the heading is \"Results for\" and the words.",
+    "search_placeholder_info": "The gray text in the empty search box.",
+    "search_suggestions_help": "The suggestions show before the visitor searches and when a search finds nothing.",
+    "search_suggestions_heading_info": "The heading above the suggested products. Italic words show in the accent color. If it is empty, screen readers still get a hidden heading.",
+    "search_card_style_info": "Card: the details show under the photo. Phones show 2 cards in each row. Photo tile: the photo fills the tile and the details show when the pointer is on it. Phones show 1 tile in each row.",
+    "search_columns_info": "For screens that are 1200px or wider. Tablets show 3 products in each row."
   },
   "options": {
     "panels_mobile_layout": {

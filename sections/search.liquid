@@ -3,7 +3,7 @@
   - a heading ("Results for “serum”") and a large glass search box to search again
   - the collection toolbar: Filters (from search.filters, products only), the result count, SORT
   - the results in groups, each with its own heading, so the kinds are told apart:
-    Products (tiles, snippets/product-card.liquid 'tile'), Collections (cards; Shopify's search doesn't return
+    Products (snippets/product-card.liquid: "Card" or "Tile" by the Product card setting), Collections (cards; Shopify's search doesn't return
     collections, so they're matched by name here), Articles (image cards) and Pages (text cards)
   - the Figma pagination (snippets/pagination.liquid)
   - before a search and under "No results": popular categories (a menu, as pills) and a few products
@@ -16,7 +16,34 @@
 {% # theme-check-disable ValidScopedCSSClass %}
 
 {%- liquid
-  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-1'
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+
+  # Product cards: "Card" (details under the photo, the collection page's card; 2 per row on phones) or
+  # "Tile" (details on the photo; 1 per row on phones). Both: 3 per row on tablets, "Columns on desktop"
+  # from 1200px (CSS below).
+  assign card_style = section.settings.card_style | default: 'full'
+  assign columns = section.settings.columns_desktop | default: 4
+
+  # Photo sizes from those columns and the Section width (Narrow is at most 1200px, Wide 1650px)
+  assign desktop_vw = 100 | divided_by: columns | plus: 1
+  assign card_sizes = '(min-width: 1200px) ' | append: desktop_vw | append: 'vw, (min-width: 750px) 34vw, '
+  if card_style == 'full'
+    assign card_sizes = card_sizes | append: '50vw'
+  else
+    assign card_sizes = card_sizes | append: '100vw'
+  endif
+  case section.settings.section_width
+    when 'narrow'
+      assign cap = 1200 | divided_by: columns
+      assign card_sizes = '(min-width: 1250px) ' | append: cap | append: 'px, ' | append: card_sizes
+    when 'wide'
+      assign cap = 1650 | divided_by: columns
+      assign card_sizes = '(min-width: 1720px) ' | append: cap | append: 'px, ' | append: card_sizes
+  endcase
+
+  # Collection, article and page cards: as many 20rem columns as fit (about 5 at 1920px, 3 at 1280px,
+  # 2 on tablets, 1 on phones)
+  assign result_sizes = '(min-width: 1600px) 20vw, (min-width: 1200px) 30vw, (min-width: 750px) 45vw, 92vw'
 
   # Is any filter applied? (Decides the chips and which empty message to show.)
   assign filters_active = false
@@ -88,14 +115,21 @@
 
   {%- if suggestions_collection != blank and suggestions_collection.products_count > 0 -%}
     <section class="search-group" aria-labelledby="SearchPicks-{{ section.id }}">
-      <h2 class="search-group__title" id="SearchPicks-{{ section.id }}">{{ section.settings.suggestions_heading }}</h2>
-      <ul class="collection-grid collection-grid--grid collection-grid--portrait" role="list" style="--grid-columns: 4;">
+      {%- comment -%} No heading: the products still get a heading for screen readers {%- endcomment -%}
+      {%- if section.settings.suggestions_heading != blank -%}
+        <h2 class="search-group__title" id="SearchPicks-{{ section.id }}">{{ section.settings.suggestions_heading }}</h2>
+      {%- else -%}
+        <h2 class="visually-hidden" id="SearchPicks-{{ section.id }}">{{ 'search.products' | t }}</h2>
+      {%- endif -%}
+      <ul class="collection-grid collection-grid--grid collection-grid--{{ section.settings.image_ratio | default: 'portrait' }}{% if card_style == 'full' %} collection-grid--full{% endif %}" role="list" style="--grid-columns: {{ columns }};">
         {%- for product in suggestions_collection.products limit: 4 -%}
           <li class="collection-grid__item">
             {%- render 'product-card',
               product: product,
-              style: 'tile',
-              sizes: '(min-width: 990px) 25vw, (min-width: 750px) 50vw, 100vw',
+              style: card_style,
+              image_ratio: section.settings.image_ratio,
+              sizes: card_sizes,
+              loading: 'lazy',
               heading_tag: 'h3',
               show_details: section.settings.show_details,
               show_rating: section.settings.show_rating,
@@ -291,23 +325,24 @@
                 <h2 class="search-group__title" id="SearchProducts-{{ section.id }}">{{ 'search.products' | t }}</h2>
                 <div class="collection-grid-wrap">
                   <ul
-                    class="collection-grid collection-grid--grid collection-grid--{{ section.settings.image_ratio | default: 'portrait' }}"
+                    class="collection-grid collection-grid--grid collection-grid--{{ section.settings.image_ratio | default: 'portrait' }}{% if card_style == 'full' %} collection-grid--full{% endif %}"
                     role="list"
-                    style="--grid-columns: {{ section.settings.columns_desktop }};"
+                    style="--grid-columns: {{ columns }};"
                   >
                     {%- for product in page_products -%}
                       {%- liquid
                         # The first row may be above the fold: load those photos straight away
                         assign card_loading = 'lazy'
-                        if forloop.index <= section.settings.columns_desktop
+                        if forloop.index <= columns
                           assign card_loading = 'eager'
                         endif
                       -%}
                       <li class="collection-grid__item">
                         {%- render 'product-card',
                           product: product,
-                          style: 'tile',
-                          sizes: '(min-width: 990px) 25vw, (min-width: 750px) 50vw, 100vw',
+                          style: card_style,
+                          image_ratio: section.settings.image_ratio,
+                          sizes: card_sizes,
                           heading_tag: 'h3',
                           loading: card_loading,
                           show_details: section.settings.show_details,
@@ -331,11 +366,11 @@
                     {%- if item_title contains terms_lower and item.all_products_count > 0 -%}
                       <li class="result-card">
                         <a class="result-card__link" href="{{ item.url }}">
-                          <div class="result-card__media">
-                            {%- if item.featured_image != blank -%}
-                              {{ item.featured_image | image_url: width: 800 | image_tag: widths: '400, 600, 800', sizes: '(min-width: 990px) 33vw, (min-width: 750px) 50vw, 100vw', loading: 'lazy', alt: '' }}
-                            {%- endif -%}
-                          </div>
+                          {%- if item.featured_image != blank -%}
+                            <div class="result-card__media">
+                              {{ item.featured_image | image_url: width: 800 | image_tag: widths: '400, 600, 800', sizes: result_sizes, loading: 'lazy', alt: '' }}
+                            </div>
+                          {%- endif -%}
                           <div class="result-card__body">
                             <p class="result-card__meta">{{ 'collections.products_count' | t: count: item.all_products_count }}</p>
                             <h3 class="result-card__title">{{ item.title | escape }}</h3>
@@ -355,11 +390,12 @@
                   {%- for article in page_articles -%}
                     <li class="result-card">
                       <a class="result-card__link" href="{{ article.url }}">
-                        <div class="result-card__media">
-                          {%- if article.image != blank -%}
-                            {{ article.image | image_url: width: 800 | image_tag: widths: '400, 600, 800', sizes: '(min-width: 990px) 33vw, (min-width: 750px) 50vw, 100vw', loading: 'lazy', alt: '' }}
-                          {%- endif -%}
-                        </div>
+                        {%- comment -%} No image = no photo box (as in the Article list) {%- endcomment -%}
+                        {%- if article.image != blank -%}
+                          <div class="result-card__media">
+                            {{ article.image | image_url: width: 800 | image_tag: widths: '400, 600, 800', sizes: result_sizes, loading: 'lazy', alt: '' }}
+                          </div>
+                        {%- endif -%}
                         <div class="result-card__body">
                           <p class="result-card__meta">
                             {{- 'search.type_article' | t }} · {{ article.published_at | time_tag: format: 'date' -}}
@@ -545,6 +581,23 @@
     margin: 0;
   }
 
+  /*
+    Product columns (the grid and card styles come from sections/collection.liquid): phones 2 cards or
+    1 tile, tablets 3, "Columns on desktop" from 1200px. Three classes, so these beat the collection
+    page's own column rules (its tablets have 2, its laptops 3).
+  */
+  @media (min-width: 750px) and (max-width: 1199px) {
+    .search-section .collection-grid.collection-grid--grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1200px) {
+    .search-section .collection-grid.collection-grid--grid {
+      grid-template-columns: repeat(var(--grid-columns, 4), minmax(0, 1fr));
+    }
+  }
+
   /* Results groups: Products, Collections, Articles, Pages, each with a section-size heading */
   .search-group {
     display: grid;
@@ -668,40 +721,33 @@
 
 {% schema %}
 {
-  "name": "t:general.search",
+  "name": "t:general.search_results",
   "settings": [
     {
       "type": "header",
-      "content": "t:labels.toolbar_group"
+      "content": "t:labels.content"
     },
     {
-      "type": "checkbox",
-      "id": "show_filters",
-      "label": "t:labels.show_filters",
-      "info": "t:labels.show_filters_info",
-      "default": true
+      "type": "text",
+      "id": "empty_heading",
+      "label": "t:labels.search_empty_heading",
+      "default": "What are you looking for?",
+      "info": "t:labels.search_empty_heading_info"
     },
     {
-      "type": "checkbox",
-      "id": "show_sort",
-      "label": "t:labels.show_sort",
-      "default": true
+      "type": "text",
+      "id": "placeholder",
+      "label": "t:labels.search_placeholder",
+      "default": "Search for skincare, fragrances, makeup products…",
+      "info": "t:labels.search_placeholder_info"
     },
     {
       "type": "header",
       "content": "t:labels.search_suggestions_group"
     },
     {
-      "type": "text",
-      "id": "empty_heading",
-      "label": "t:labels.search_empty_heading",
-      "default": "What are you looking for?"
-    },
-    {
-      "type": "text",
-      "id": "placeholder",
-      "label": "t:labels.search_placeholder",
-      "default": "Search for skincare, fragrances, makeup products…"
+      "type": "paragraph",
+      "content": "t:labels.search_suggestions_help"
     },
     {
       "type": "text",
@@ -720,9 +766,18 @@
       "id": "pill_image_animation",
       "label": "t:labels.pill_image_animation",
       "options": [
-        { "value": "collection-pills--image-rise", "label": "t:options.pill_image_animation.rise" },
-        { "value": "collection-pills--image-scale", "label": "t:options.pill_image_animation.scale" },
-        { "value": "collection-pills--image-fade", "label": "t:options.pill_image_animation.fade" }
+        {
+          "value": "collection-pills--image-rise",
+          "label": "t:options.pill_image_animation.rise"
+        },
+        {
+          "value": "collection-pills--image-scale",
+          "label": "t:options.pill_image_animation.scale"
+        },
+        {
+          "value": "collection-pills--image-fade",
+          "label": "t:options.pill_image_animation.fade"
+        }
       ],
       "default": "collection-pills--image-rise",
       "visible_if": "{{ section.settings.suggestions_menu != blank }}"
@@ -748,11 +803,29 @@
       "type": "inline_richtext",
       "id": "suggestions_heading",
       "label": "t:labels.heading",
-      "default": "You might <em>love</em>"
+      "default": "You might <em>love</em>",
+      "info": "t:labels.search_suggestions_heading_info"
     },
     {
       "type": "header",
-      "content": "t:labels.layout"
+      "content": "t:labels.products"
+    },
+    {
+      "type": "select",
+      "id": "card_style",
+      "label": "t:labels.product_grid_card_style",
+      "info": "t:labels.search_card_style_info",
+      "options": [
+        {
+          "value": "full",
+          "label": "t:options.product_grid_card_style.full"
+        },
+        {
+          "value": "tile",
+          "label": "t:options.product_grid_card_style.tile"
+        }
+      ],
+      "default": "full"
     },
     {
       "type": "range",
@@ -764,13 +837,59 @@
       "default": 24
     },
     {
+      "type": "checkbox",
+      "id": "show_details",
+      "label": "t:labels.show_card_details",
+      "info": "t:labels.show_card_details_info",
+      "default": true,
+      "visible_if": "{{ section.settings.card_style == 'tile' }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_rating",
+      "label": "t:labels.show_card_rating",
+      "info": "t:labels.show_card_rating_info",
+      "default": true,
+      "visible_if": "{{ section.settings.card_style == 'full' or section.settings.show_details }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_description",
+      "label": "t:labels.show_card_description",
+      "default": true,
+      "visible_if": "{{ section.settings.card_style == 'tile' and section.settings.show_details }}"
+    },
+    {
+      "type": "select",
+      "id": "cart_options",
+      "label": "t:labels.cart_options",
+      "info": "t:labels.cart_options_info",
+      "options": [
+        {
+          "value": "add_first",
+          "label": "t:options.cart_options.add_first"
+        },
+        {
+          "value": "link",
+          "label": "t:options.cart_options.link"
+        }
+      ],
+      "default": "add_first",
+      "visible_if": "{{ section.settings.card_style == 'tile' and section.settings.show_details }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.layout"
+    },
+    {
       "type": "range",
       "id": "columns_desktop",
       "label": "t:labels.columns_desktop",
       "min": 2,
       "max": 5,
       "step": 1,
-      "default": 4
+      "default": 4,
+      "info": "t:labels.search_columns_info"
     },
     {
       "type": "select",
@@ -791,54 +910,6 @@
         }
       ],
       "default": "portrait"
-    },
-    {
-      "type": "header",
-      "content": "t:labels.card_details_group"
-    },
-    {
-      "type": "checkbox",
-      "id": "show_details",
-      "label": "t:labels.show_card_details",
-      "info": "t:labels.show_card_details_info",
-      "default": true
-    },
-    {
-      "type": "checkbox",
-      "id": "show_rating",
-      "label": "t:labels.show_card_rating",
-      "info": "t:labels.show_card_rating_info",
-      "default": true,
-      "visible_if": "{{ section.settings.show_details }}"
-    },
-    {
-      "type": "checkbox",
-      "id": "show_description",
-      "label": "t:labels.show_card_description",
-      "default": true,
-      "visible_if": "{{ section.settings.show_details }}"
-    },
-    {
-      "type": "select",
-      "id": "cart_options",
-      "label": "t:labels.cart_options",
-      "info": "t:labels.cart_options_info",
-      "options": [
-        {
-          "value": "add_first",
-          "label": "t:options.cart_options.add_first"
-        },
-        {
-          "value": "link",
-          "label": "t:options.cart_options.link"
-        }
-      ],
-      "default": "add_first",
-      "visible_if": "{{ section.settings.show_details }}"
-    },
-    {
-      "type": "header",
-      "content": "t:labels.style"
     },
     {
       "type": "select",
@@ -866,10 +937,25 @@
       "default": "widest"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
+      "type": "header",
+      "content": "t:labels.toolbar_group"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_filters",
+      "label": "t:labels.show_filters",
+      "info": "t:labels.show_filters_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_sort",
+      "label": "t:labels.show_sort",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -890,6 +976,16 @@
       "step": 8,
       "unit": "px",
       "default": 96
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ]
 }

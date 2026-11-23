@@ -9,7 +9,7 @@
   editor writes (also explained in the theme editor's help text):
   - first paragraph = the lead (italic, accent rule on the left)
   - Heading 2 = section heading, an italic word shows upright in the accent colour; a Heading 6
-    right above it = the small eyebrow ("—— SECTION ONE")
+    right above it = the small eyebrow ("—— SECTION ONE"), written as <p class="h6">
   - quote = quote card; a last line starting with "—" = the attribution (accent)
   - quote with a bullet list inside = tips box; its first line is the box's title
   - image, then a paragraph that is all italic = the caption, shown on the image
@@ -34,6 +34,32 @@
 
   # 2. Quote attribution: a paragraph that starts with a dash ("— Dr. Arnaud") gets a class
   assign body = body | replace: '<p>—', '<p class="article-body__cite">—' | replace: '<p>&mdash;', '<p class="article-body__cite">&mdash;'
+
+  # 2b. The small label: a Heading 6 directly above a Heading 2 becomes <p class="h6 …"> (same look).
+  #     As a heading it skipped levels (h2 → h6 → h2: Lighthouse "heading-order"); it is a label, not a
+  #     heading. Its own attributes are left out. A Heading 6 with no Heading 2 after it stays a heading.
+  if body contains '<h6'
+    assign h6_chunks = body | split: '<h6'
+    capture body
+      for chunk in h6_chunks
+        if forloop.first
+          echo chunk
+          continue
+        endif
+
+        assign h6_html = chunk | split: '</h6>' | first
+        assign h6_rest = chunk | remove_first: h6_html | remove_first: '</h6>'
+        assign h6_next = h6_rest | lstrip | slice: 0, 3
+        if chunk contains '</h6>' and h6_next == '<h2'
+          assign h6_attrs = h6_html | split: '>' | first
+          assign h6_text = h6_html | remove_first: h6_attrs | remove_first: '>'
+          echo '<p class="h6 article-body__eyebrow">' | append: h6_text | append: '</p>' | append: h6_rest
+        else
+          echo '<h6' | append: chunk
+        endif
+      endfor
+    endcapture
+  endif
 
   # 3. H2 ids + the contents list. Split before every "<h2": each piece after the first starts with
   #    the rest of a heading tag, e.g. '>The philosophy of <em>Intention</em></h2><p>…'. The id is a
@@ -430,7 +456,7 @@
     The text after the lead is a second .article-body (the top block sits between them below 1200px).
     Its first part gets the space it had after the lead; headings keep their own bigger space.
   */
-  .article-body.article-body--after-lead > :first-child:not(h1, h2, h3, h4, h5, h6) {
+  .article-body.article-body--after-lead > :first-child:not(h1, h2, h3, h4, h5, h6, .article-body__eyebrow) {
     margin-block-start: max(var(--space-lg), calc(40 * var(--px, 0.0625rem)));
   }
 
@@ -459,8 +485,8 @@
     margin-block-start: max(var(--space-md), calc(28 * var(--px, 0.0625rem)));
   }
 
-  /* Eyebrow: a Heading 6, with the theme's 66px accent rule before it, right above the H2 */
-  .article-body.rte > h6 {
+  /* Eyebrow: a Heading 6 right above an H2 (a <p class="h6"> after the Liquid pass), with the theme's 66px accent rule before it */
+  .article-body.rte > .article-body__eyebrow {
     display: flex;
     align-items: center;
     gap: var(--space-md);
@@ -468,7 +494,7 @@
     color: var(--color-accent);
   }
 
-  .article-body > h6::before {
+  .article-body > .article-body__eyebrow::before {
     content: "";
     flex: none;
     inline-size: 4.125rem; /* 66px */
@@ -476,7 +502,7 @@
     background-color: currentcolor;
   }
 
-  .article-body.rte > h6 + h2 {
+  .article-body.rte > .article-body__eyebrow + h2 {
     margin-block-start: max(var(--space-sm), calc(18 * var(--px, 0.0625rem)));
   }
 
@@ -849,12 +875,12 @@
       font-size: 1.375rem;
     }
 
-    .article-body.rte > h6 {
+    .article-body.rte > .article-body__eyebrow {
       gap: var(--space-sm);
       font-size: 0.75rem;
     }
 
-    .article-body > h6::before {
+    .article-body > .article-body__eyebrow::before {
       inline-size: 2rem;
     }
 

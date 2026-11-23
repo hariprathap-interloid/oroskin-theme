@@ -249,8 +249,16 @@
     }
   }
 
+  /*
+    Centred (search page): auto margins on the first and last pill, not justify-content: center. A
+    centred row that is wider than the screen loses its start (the first pill could not be scrolled to);
+    with auto margins a short row is centred and a long row starts at the edge and scrolls.
+  */
+  .collection-pills--centred .collection-pills__list > li:first-child {
+    margin-inline-start: auto;
+  }
 
-  .collection-pills--centred .collection-pills__list {
-    justify-content: center;
+  .collection-pills--centred .collection-pills__list > li:last-child {
+    margin-inline-end: auto;
   }
 {% endstylesheet %}
