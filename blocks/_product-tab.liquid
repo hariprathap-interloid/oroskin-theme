@@ -2,15 +2,107 @@
   One tab of the Product list section's "Tabs" layout: a label ("New", "Bestsellers", "Under $50") and
   the collection whose products the tab shows.
 
-  It draws nothing here: the section reads every Tab block (section.blocks) and draws the tab buttons
-  in its top bar and the product panels under them, so buttons and panels stay together whatever other
-  blocks (heading, text) sit in the heading area.
+  The block draws itself: its tab button and its product panel, inside <product-tab> (display: contents).
+  The section can't do it: in a section, theme block settings can only be read in the block's own file
+  (section.blocks gives every theme block with the type "@theme" and empty settings).
+  The section's script moves every tab button into the section's tab row and shows one panel. Without
+  JavaScript the buttons are hidden and each panel shows with its tab name as a heading.
+
+  Shows nothing when: the section's Layout is not Tabs, "Show this tab" is off, or the collection has no
+  products on the store (the theme editor shows placeholder cards for a tab without a collection).
 {% enddoc %}
+
+{%- liquid
+  assign shows = false
+  # Nested ifs: one logical operator per condition (project rule)
+  assign editor = false
+  if request.design_mode or request.visual_preview_mode
+    assign editor = true
+  endif
+  if section.settings.layout == 'tabs' and block.settings.show_tab
+    # Placeholder cards in the theme editor and its "Add section" preview (no collection there)
+    if block.settings.collection.products_count > 0 or editor
+      assign shows = true
+    endif
+  endif
+
+  assign tab_label = block.settings.label
+  if tab_label == blank
+    assign tab_label = block.settings.collection.title
+  endif
+  if tab_label == blank
+    assign tab_label = 'products.tab_untitled' | t
+  endif
+
+  capture card_sizes
+    render 'product-list-sizes'
+  endcapture
+  assign card_sizes = card_sizes | strip
+
+  # Never animate the first section on the page (hero / LCP must paint immediately)
+  assign animation = section.settings.animation
+  if section.index == 1
+    assign animation = 'none'
+  endif
+-%}
+
+{%- if shows -%}
+  <product-tab class="product-list__tab-item">
+    <button
+      type="button"
+      class="product-list__tab"
+      role="tab"
+      id="Tab-{{ block.id }}"
+      aria-controls="Panel-{{ block.id }}"
+      aria-selected="false"
+      tabindex="-1"
+      data-tab
+    >
+      {{- tab_label | escape -}}
+    </button>
+    <div
+      class="product-list__panel"
+      role="tabpanel"
+      id="Panel-{{ block.id }}"
+      aria-labelledby="Tab-{{ block.id }}"
+      data-tab-panel
+      {{ block.shopify_attributes }}
+    >
+      {%- comment -%}
+        The tab name above its products: visible without JavaScript (no tab row), visually hidden with it.
+        The product titles are h4 under it (h2 section, h3 tab, h4 product).
+      {%- endcomment -%}
+      <h3 class="product-list__panel-title">{{ tab_label | escape }}</h3>
+      {% render 'product-list-items',
+        heading_tag: 'h4',
+        collection: block.settings.collection,
+        limit: section.settings.products_to_show,
+        layout: 'grid',
+        image_ratio: section.settings.image_ratio,
+        show_secondary_image: section.settings.show_secondary_image,
+        sizes: card_sizes,
+        animation: animation
+      %}
+    </div>
+  </product-tab>
+{%- elsif request.design_mode and section.settings.layout == 'tabs' -%}
+  {%- comment -%} Theme editor: a selectable note for a tab that is off {%- endcomment -%}
+  <p class="product-list__tab-off" {{ block.shopify_attributes }}>
+    {{- 'products.tab_off' | t: label: tab_label -}}
+  </p>
+{%- endif -%}
 
 {% schema %}
 {
   "name": "t:general.product_tab",
   "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_tab",
+      "label": "t:labels.product_tab_show",
+      "info": "t:labels.product_tab_show_info",
+      "default": true
+    },
     {
       "type": "text",
       "id": "label",
@@ -20,7 +112,8 @@
     {
       "type": "collection",
       "id": "collection",
-      "label": "t:labels.collection"
+      "label": "t:labels.collection",
+      "info": "t:labels.product_tab_collection_info"
     }
   ],
   "presets": [

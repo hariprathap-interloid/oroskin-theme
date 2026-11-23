@@ -269,7 +269,7 @@
     "sale_badge_color_scheme": "Sale badge color scheme",
     "sold_out_badge_color_scheme": "Sold out badge color scheme",
     "products": "Products",
-    "product_list_collection_info": "Tip: an automatic collection such as \"Badges contains New\" keeps this list up to date by itself. Not used by the Tabs layout (each Tab block has its own).",
+    "product_list_collection_info": "Not used by Tabs (each Tab block has its own collection). If the collection has no products, the section does not show on the store. Tip: an automatic collection, for example \"Badges contains New\", keeps the list up to date.",
     "products_to_show": "Number of products",
     "layout": "Layout",
     "columns_desktop": "Columns on desktop",
@@ -583,7 +583,7 @@
     "cart_empty_info": "This message shows when the bag is empty. To show more under it, add sections below this section and turn on \"Only when the cart is empty\" in them. Examples: Product list, Collection tiles.",
     "cart_empty_link": "Text link",
     "product_list_layout": "Layout",
-    "product_list_layout_info": "Tabs: add a Tab block per tab, each with its own collection.",
+    "product_list_layout_info": "Grid: large cards in columns. Compact rows: small rows with a cart button (2 per row from 750px). Scrolling strip: one row of large cards that scrolls sideways. Tabs: add one Tab block for each tab, each with its own collection.",
     "product_list_only_empty_cart": "Only when the cart is empty",
     "product_list_only_empty_cart_info": "For the cart page: shown only while the cart is empty.",
     "product_tab_label": "Tab label",
@@ -1252,7 +1252,13 @@
     "announcement_close_group": "Close button",
     "announcement_autoplay_info": "Shows when \"How messages show\" is Slideshow. The messages change on their own, and a pause button shows. The messages fade only when \"Enable animations\" is on and the visitor does not reduce motion.",
     "announcement_interval_info": "Shows when \"Change messages automatically\" is on.",
-    "announcement_arrows_info": "Shows when \"Change messages automatically\" is on. When it is off, the arrows always show, so visitors can see all messages."
+    "announcement_arrows_info": "Shows when \"Change messages automatically\" is on. When it is off, the arrows always show, so visitors can see all messages.",
+    "product_list_empty_cart_info": "The section shows only while the cart is empty. Use it on the cart page. On other pages it is hidden while the cart has items.",
+    "product_list_columns_info": "Shows when Layout is Grid or Tabs.",
+    "product_list_card_info": "Shows when Layout is not Compact rows.",
+    "product_tab_show": "Show this tab",
+    "product_tab_show_info": "Off: the tab does not show, but its settings are kept. A tab without products also does not show on the store.",
+    "product_tab_collection_info": "The tab shows the first products of this collection (the section's Number of products). A tab without products does not show on the store."
   },
   "options": {
     "panels_mobile_layout": {

@@ -13,7 +13,15 @@
   {% render 'product-row-card', product: product %}
 {% enddoc %}
 
-{%- assign title_tag = heading_tag | default: 'h3' -%}
+{%- liquid
+  assign title_tag = heading_tag | default: 'h3'
+  # The theme's one eager / lazy rule: eager in the first three sections (on the empty cart the rows are
+  # in the first screen), lazy further down. Strip it: the capture can start with a newline.
+  capture row_loading
+    render 'section-loading'
+  endcapture
+  assign row_loading = row_loading | strip
+-%}
 
 <div class="product-row-card">
   <a class="product-row-card__link" href="{{ product.url | default: routes.all_products_collection_url }}">
@@ -22,7 +30,7 @@
         {{
           product.featured_media.preview_image
           | image_url: width: 192, height: 192, crop: 'center'
-          | image_tag: widths: '96, 192', sizes: '96px', alt: '', loading: 'lazy'
+          | image_tag: widths: '96, 192', sizes: '84px', alt: '', loading: row_loading
         }}
       {%- else -%}
         {{ 'product-1' | placeholder_svg_tag }}
@@ -46,12 +54,16 @@
     </div>
   </a>
   {%- if product != blank -%}
-    {% render 'quick-add', product: product, size: 44, icon_color: '#7d0000', class: 'product-row-card__add' %}
+    {%- comment -%} The icon in the scheme's accent colour ("Links and highlights"), so it follows the colour scheme {%- endcomment -%}
+    {% render 'quick-add', product: product, size: 44, icon_color: 'var(--color-accent)', class: 'product-row-card__add' %}
   {%- endif -%}
 </div>
 
 {% stylesheet %}
-  /* Glass row (Figma Glass: Light 45deg 80%, Frost 100), like the search popup's product cards */
+  /*
+    Glass row (Figma Glass: Light 45deg 80%), like the search popup's product cards. No backdrop blur:
+    only the plain page is behind the row (the blur also gave a dark band under the header on phones).
+  */
   .product-row-card {
     display: flex;
     align-items: center;
@@ -64,8 +76,6 @@
       0 4px 15px #b9b9b926,
       inset -1px 1px 0 #ffffffcc,
       inset 1px -1px 0 #ffffff80;
-    -webkit-backdrop-filter: blur(var(--glass-frost));
-    backdrop-filter: blur(var(--glass-frost));
   }
 
   .product-row-card__link {

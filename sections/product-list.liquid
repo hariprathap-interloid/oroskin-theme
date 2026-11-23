@@ -11,7 +11,12 @@
   has items, and the cart's script renders it again (data-cart-refresh) when the cart changes, so it
   appears when the last item is removed and disappears when something is added.
 
-  Without a collection (e.g. just added in the editor) it shows placeholder cards.
+  Without products (no collection chosen, or an empty one) it shows placeholder cards in the theme
+  editor and its "Add section" preview only; on the store the section shows nothing (a Tab without
+  products is left out).
+  Tabs: each Tab block draws its own tab button and panel (blocks/_product-tab): a section can't read
+  its theme blocks' settings (section.blocks gives them as "@theme" with empty settings).
+  Compact rows: 1 per row on phones, 2 per row from 750px (mockup "Main" of the empty bag).
 {%- endcomment -%}
 
 {%- liquid
@@ -20,34 +25,31 @@
   assign limit = section.settings.products_to_show
   assign columns_desktop = section.settings.columns_desktop
   assign columns_mobile = section.settings.columns_mobile | plus: 0
-  assign tabs = section.blocks | where: 'type', '_product-tab'
-
-  # The heading area holds every block except the tabs (they draw nothing there)
-  assign heading_block_count = section.blocks.size | minus: tabs.size
-
-  # Tabs without any Tab block: show the section's own collection, like the grid
-  if layout == 'tabs' and tabs.size == 0
-    assign layout = 'grid'
-  endif
 
   assign hidden_by_cart = false
   if section.settings.show_only_empty_cart and cart.item_count > 0
     assign hidden_by_cart = true
   endif
 
-  # sizes: each card is about (content width / columns) wide, content width at most 1650px.
-  # Lets the browser download a small enough image per card (see the image snippet).
-  # (Each number is worked out on its own line first: in one long filter chain, divided_by would
-  # apply to the whole text built so far, not to the 100.)
-  assign desktop_card = 1650 | divided_by: columns_desktop
-  assign desktop_vw = 100 | divided_by: columns_desktop
-  assign mobile_vw = 100 | divided_by: columns_mobile
-  capture card_sizes
-    echo '(min-width: 1650px) ' | append: desktop_card | append: 'px, (min-width: 750px) ' | append: desktop_vw | append: 'vw, ' | append: mobile_vw | append: 'vw'
-  endcapture
-  if layout == 'strip'
-    assign card_sizes = '(min-width: 750px) 20rem, 70vw'
+  # Products: placeholders only in the theme editor and in its "Add section" preview
+  # (visual_preview_mode); on the store, no products = no section.
+  assign editor = false
+  if request.design_mode or request.visual_preview_mode
+    assign editor = true
   endif
+  # Tabs: the section can't read its Tab blocks (theme block settings are only readable in the block's
+  # own file), so each Tab decides itself whether it shows; a tab row with no Tab = no section (CSS :has).
+  assign show_section = true
+  if layout != 'tabs'
+    unless product_collection.products_count > 0 or editor
+      assign show_section = false
+    endunless
+  endif
+
+  capture card_sizes
+    render 'product-list-sizes'
+  endcapture
+  assign card_sizes = card_sizes | strip
 
   # Never animate the first section on the page (hero / LCP must paint immediately)
   assign animation = section.settings.animation
@@ -56,96 +58,88 @@
   endif
 -%}
 
-{%- if hidden_by_cart -%}
+{%- if hidden_by_cart or show_section == false -%}
   {%- comment -%} Kept so the cart's script knows to render this section again when the cart changes {%- endcomment -%}
-  <div data-cart-refresh hidden></div>
+  {%- if section.settings.show_only_empty_cart -%}
+    <div data-cart-refresh hidden></div>
+  {%- endif -%}
 {%- else -%}
   <div
-    class="product-list product-list--{{ layout }} full-width section-width--{{ section.settings.section_width | default: 'wide' }} color-{{ section.settings.color_scheme.id }}"
+    class="product-list product-list--{{ layout }}{% unless editor %} product-list--live{% endunless %} full-width section-width--{{ section.settings.section_width | default: 'wide' }} color-{{ section.settings.color_scheme.id }}"
     style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --columns-desktop: {{ columns_desktop }}; --columns-mobile: {{ columns_mobile }};"
     {% if section.settings.show_only_empty_cart %}
       data-cart-refresh
     {% endif %}
   >
     <product-list-ui class="product-list__inner">
-      {%- if heading_block_count > 0 or layout == 'tabs' or layout == 'strip' -%}
-        <div class="product-list__top">
-          {%- if heading_block_count > 0 -%}
-            <div class="product-list__header">
-              {% content_for 'blocks' %}
-            </div>
-          {%- endif -%}
+      {%- comment -%}
+        A hidden h2 for the product titles (h3) when no heading block shows one. The section can't read
+        its blocks (Tab blocks count in section.blocks), so it is always written and CSS removes it when
+        the heading area has its own h1 / h2.
+      {%- endcomment -%}
+      <h2 class="visually-hidden product-list__fallback-heading">{{ 'products.list_heading' | t }}</h2>
 
-          {%- if layout == 'tabs' -%}
-            {%- comment -%}
-              Real buttons with the ARIA tab pattern: ← / → move between tabs (script below). Without
-              JavaScript the buttons are hidden and every panel shows, one under the other.
-            {%- endcomment -%}
-            <div class="product-list__tablist" role="tablist">
-              {%- for block in tabs -%}
-                {%- liquid
-                  assign tab_label = block.settings.label
-                  if tab_label == blank
-                    assign tab_label = block.settings.collection.title
-                  endif
-                  if tab_label == blank
-                    assign tab_label = 'products.tab_fallback' | t: number: forloop.index
-                  endif
-                -%}
-                <button
-                  type="button"
-                  class="product-list__tab"
-                  role="tab"
-                  id="Tab-{{ block.id }}"
-                  aria-controls="Panel-{{ block.id }}"
-                  aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"
-                  {% unless forloop.first %}
-                    tabindex="-1"
-                  {% endunless %}
-                  data-tab
-                  {{ block.shopify_attributes }}
-                >
-                  {{- tab_label | escape -}}
+      {%- comment -%}
+        One content_for blocks tag only (Shopify allows one per file, even in separate if branches), in a wrapper that depends on the
+        layout:
+        - Tabs: every block draws itself in one flow: Heading / Text / Button blocks as the heading area,
+          each Tab block as its tab button + product panel (blocks/_product-tab). The script moves the tab
+          buttons into the empty tab row (role="tablist") and shows one panel. The flow is a grid: the
+          heading area on the left with the tab row on the right from 750px, the tab row under the
+          heading on phones, the panels under both. Before the script runs, only the first panel shows
+          and the tab row keeps its height (no jump). Without JavaScript the tab row is hidden and every
+          panel shows with its tab name as a heading.
+        - Other layouts: the heading area in the top bar (with the strip's arrows), the products under it.
+          Tab blocks draw nothing there.
+      {%- endcomment -%}
+      {%- liquid
+        # Nested ifs: one logical operator per condition (project rule). A top bar that only holds Tab
+        # blocks left over from the Tabs layout (they draw nothing here) is hidden by CSS.
+        assign show_top = false
+        if layout == 'tabs' or layout == 'strip'
+          assign show_top = true
+        endif
+        if section.blocks.size > 0
+          assign show_top = true
+        endif
+      -%}
+      {%- if show_top -%}
+        {%- if layout == 'tabs' -%}
+          <animate-on-scroll class="product-list__flow">
+            <div class="product-list__tablist" role="tablist" aria-label="{{ 'products.tabs_label' | t | escape }}" data-tablist></div>
+            {%- if request.design_mode -%}
+              {%- comment -%} Theme editor only, hidden by CSS once a Tab shows {%- endcomment -%}
+              <p class="product-list__tab-off product-list__editor-note">{{ 'products.tabs_editor_empty' | t }}</p>
+            {%- endif -%}
+        {%- else -%}
+          <div class="product-list__top">
+            <div class="product-list__header">
+        {%- endif -%}
+
+        {% content_for 'blocks' %}
+
+        {%- if layout == 'tabs' -%}
+          </animate-on-scroll>
+        {%- else -%}
+            </div>
+            {%- if layout == 'strip' -%}
+              <div class="product-list__arrows">
+                <button type="button" class="product-list__arrow" data-strip-prev disabled>
+                  <span class="visually-hidden">{{ 'products.previous' | t }}</span>
+                  {{- 'icon-arrow.svg' | inline_asset_content -}}
                 </button>
-              {%- endfor -%}
-            </div>
-          {%- elsif layout == 'strip' -%}
-            <div class="product-list__arrows">
-              <button type="button" class="product-list__arrow" data-strip-prev disabled>
-                <span class="visually-hidden">{{ 'products.previous' | t }}</span>
-                {{- 'icon-arrow.svg' | inline_asset_content -}}
-              </button>
-              <button type="button" class="product-list__arrow" data-strip-next>
-                <span class="visually-hidden">{{ 'products.next' | t }}</span>
-                {{- 'icon-arrow.svg' | inline_asset_content -}}
-              </button>
-            </div>
-          {%- endif -%}
-        </div>
+                <button type="button" class="product-list__arrow" data-strip-next>
+                  <span class="visually-hidden">{{ 'products.next' | t }}</span>
+                  {{- 'icon-arrow.svg' | inline_asset_content -}}
+                </button>
+              </div>
+            {%- endif -%}
+          </div>
+        {%- endif -%}
       {%- endif -%}
 
-      <animate-on-scroll>
-        {%- if layout == 'tabs' -%}
-          {%- for block in tabs -%}
-            <div
-              class="product-list__panel{% if forloop.first %} is-active{% endif %}"
-              role="tabpanel"
-              id="Panel-{{ block.id }}"
-              aria-labelledby="Tab-{{ block.id }}"
-              data-tab-panel
-            >
-              {% render 'product-list-items',
-                collection: block.settings.collection,
-                limit: limit,
-                layout: 'grid',
-                image_ratio: section.settings.image_ratio,
-                show_secondary_image: section.settings.show_secondary_image,
-                sizes: card_sizes,
-                animation: animation
-              %}
-            </div>
-          {%- endfor -%}
-        {%- else -%}
+      {%- unless layout == 'tabs' -%}
+        <animate-on-scroll>
           {% render 'product-list-items',
             collection: product_collection,
             limit: limit,
@@ -155,8 +149,8 @@
             sizes: card_sizes,
             animation: animation
           %}
-        {%- endif -%}
-      </animate-on-scroll>
+        </animate-on-scroll>
+      {%- endunless -%}
     </product-list-ui>
   </div>
 {%- endif -%}
@@ -220,11 +214,23 @@
     block-size: 100%;
   }
 
-  /* Compact rows: two per row on wide screens (at least 22rem each), one on phones */
+  /* Compact rows: one per row on phones, two per row from 750px (empty-bag mockup "Main") */
   .product-list__items--rows {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(22rem, 100%), 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-md);
+  }
+
+  @media (min-width: 750px) {
+    .product-list__items--rows {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  /* Both cards in a row the same height (a unit price line makes one taller) */
+  .product-list__items--rows .product-list__item,
+  .product-list__items--rows .product-row-card {
+    block-size: 100%;
   }
 
   /*
@@ -297,6 +303,95 @@
     rotate: 180deg;
   }
 
+  /* Right-to-left pages: "next" goes to the left, so both arrows point the other way */
+  .product-list__arrows:dir(rtl) svg {
+    scale: -1 1;
+  }
+
+  /*
+    Tabs layout: one grid for the heading blocks, the tab row and the Tab blocks' panels (all drawn in one
+    flow, see the markup). Phones: one column (heading, tab row, panels). From 750px: the heading blocks on
+    the left, the tab row on the right of the first row (empty-bag mockup "Tabs"), the panels under both.
+    <product-tab> (one per Tab block) has no box of its own: its button and panel are grid items.
+    No Tab shows (all off, or no products on the store): the section shows nothing.
+  */
+  .product-list--tabs.product-list--live:not(:has(product-tab)) {
+    display: none;
+  }
+
+  /* Theme editor: the note "Add a Tab block..." shows only while no Tab shows */
+  .product-list__flow:has(product-tab) .product-list__editor-note {
+    display: none;
+  }
+
+  /* The hidden h2 goes when the heading area has its own h1 / h2 (display: none = not read either) */
+  .product-list:has(:is(.product-list__header, .product-list__flow) :is(h1, h2)) .product-list__fallback-heading {
+    display: none;
+  }
+
+  /* Top bar with nothing in it (only Tab blocks left over from the Tabs layout): no empty gap */
+  .product-list__top:not(:has(.product-list__arrows, .product-list__header > :not(.shopify-block), .product-list__header > .shopify-block > *)) {
+    display: none;
+  }
+
+  .product-list__flow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: end;
+    gap: var(--space-md) var(--space-lg);
+  }
+
+  /*
+    Shopify puts each theme block in a wrapper (<div class="shopify-block">); without a box of its own,
+    the block's content (heading, text, tab button, panel) takes part in this grid. The rules below also
+    work when there is no wrapper.
+  */
+  .product-list__flow > .shopify-block,
+  .product-list__tab-item {
+    display: contents;
+  }
+
+  .product-list__flow > *,
+  .product-list__flow > .shopify-block > *,
+  .product-list__tab-item > .product-list__panel {
+    grid-column: 1 / -1;
+  }
+
+  .product-list__tablist {
+    order: 1;
+    justify-self: start;
+  }
+
+  .product-list__tab-item > .product-list__panel {
+    order: 2;
+    margin-block-start: var(--space-lg);
+  }
+
+  .product-list__tab-off {
+    order: 2;
+    margin: 0;
+    font-style: italic;
+    opacity: 0.7;
+  }
+
+  @media (min-width: 750px) {
+    .product-list__flow {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    /* The heading blocks in the first column (not the tab row, Tab blocks or the editor note) */
+    .product-list__flow > :not(.product-list__tablist, .product-list__tab-item, .product-list__tab-off, .shopify-block),
+    .product-list__flow > .shopify-block > :not(.product-list__tab-item, .product-list__tab-off) {
+      grid-column: 1;
+    }
+
+    .product-list__flow > .product-list__tablist {
+      grid-column: 2;
+      grid-row: 1;
+      justify-self: end;
+    }
+  }
+
   /* Tabs: a glass pill holding the tab buttons; the chosen tab is the solid button colour */
   .product-list__tablist {
     display: flex;
@@ -306,6 +401,12 @@
     border-radius: var(--radius-pill);
     background-color: var(--color-glass-strong);
     box-shadow: var(--glass-shadow), var(--glass-rim);
+  }
+
+  /* With JavaScript, before the script moves the buttons in: the row keeps its height (no jump) */
+  .js .product-list__tablist:empty {
+    min-block-size: 3rem;
+    min-inline-size: 12rem;
   }
 
   .product-list .product-list__tab {
@@ -328,40 +429,103 @@
     color: var(--color-button-text);
   }
 
-  /* With JavaScript only the chosen tab's panel shows; without it, every panel shows (no tab buttons) */
-  .js .product-list__panel:not(.is-active),
+  /* A button still in its Tab block (no script yet, or none) is hidden; the tab row shows the moved ones */
+  .product-list__tab-item > .product-list__tab {
+    display: none;
+  }
+
+  /*
+    With JavaScript only the chosen tab's panel shows. Before the script runs, only the first Tab's panel
+    shows: a Tab block that comes after another Tab block hides its panel (with the Shopify block wrapper,
+    and without it). Without JavaScript every panel shows with its tab name, and there is no tab row.
+  */
+  .js product-list-ui:defined .product-list__panel:not(.is-active),
+  .js product-list-ui:not(:defined) .shopify-block:has(product-tab) ~ .shopify-block .product-list__panel,
+  .js product-list-ui:not(:defined) .product-list__tab-item ~ .product-list__tab-item > .product-list__panel,
   .no-js .product-list__tablist {
     display: none;
   }
 
-  .no-js .product-list__panel + .product-list__panel {
-    margin-block-start: var(--space-2xl);
+  /*
+    With JavaScript the tab row shows the tab names, so the panel's h3 title is visually hidden; screen
+    readers still get it, so the outline stays h2 section, h3 tab, h4 products (as without JavaScript).
+  */
+  .js .product-list__panel-title {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .product-list__panel-title {
+    margin: 0 0 var(--space-md);
+    font-size: var(--font-size-h3);
   }
 {% endstylesheet %}
 
 {% javascript %}
   /**
    * <product-list-ui>: the Product list's two interactive layouts.
-   * - Tabs: clicking a tab (or ← / → / Home / End on the tab row) shows its panel.
-   * - Scrolling strip: the arrows scroll by about one screen of cards and turn off at either end.
+   * - Tabs: each Tab block draws its button + panel (blocks/_product-tab); the buttons are moved into the
+   *   tab row here. Clicking a tab (or ← / → / Home / End on the tab row) shows its panel. In the theme
+   *   editor, selecting a Tab block shows its panel.
+   * - Scrolling strip: the arrows scroll by about one screen of cards and turn off at either end (checked
+   *   again on scroll and on resize; right-to-left pages too).
+   * All listeners on one AbortController: the editor can attach the element again (a moved section).
    */
   class ProductListUI extends HTMLElement {
     connectedCallback() {
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+
+      // Tabs: each Tab block drew its own button (hidden in the block); move them into the tab row, in
+      // block order, and show one panel (the one already chosen after an editor re-attach, else the first)
+      this.tablist = this.querySelector('[data-tablist]');
       this.tabs = [...this.querySelectorAll('[data-tab]')];
+      if (this.tablist && this.tabs.length) {
+        this.tablist.append(...this.tabs);
+        // The tab row is named after the heading block (its h2), else it keeps "Product tabs"
+        const heading = this.querySelector('.product-list__flow h2')?.textContent.trim();
+        if (heading) this.tablist.setAttribute('aria-label', heading);
+        this.select(this.tabs.find((tab) => tab.getAttribute('aria-selected') === 'true') || this.tabs[0]);
+      }
       this.tabs.forEach((tab) => {
-        tab.addEventListener('click', () => this.select(tab));
-        tab.addEventListener('keydown', (event) => this.onTabKey(event, tab));
+        tab.addEventListener('click', () => this.select(tab), { signal });
+        tab.addEventListener('keydown', (event) => this.onTabKey(event, tab), { signal });
       });
+      // Theme editor: selecting a Tab block (its panel carries the block's editor attributes) shows it
+      if (this.tabs.length && window.Shopify?.designMode) {
+        document.addEventListener(
+          'shopify:block:select',
+          (event) => {
+            const tab = this.tabs.find((item) => item.getAttribute('aria-controls') === event.target.id);
+            if (tab) this.select(tab);
+          },
+          { signal }
+        );
+      }
 
       this.track = this.querySelector('[data-strip-track]');
       this.prev = this.querySelector('[data-strip-prev]');
       this.next = this.querySelector('[data-strip-next]');
       if (this.track && this.prev && this.next) {
-        this.prev.addEventListener('click', () => this.scrollStrip(-1));
-        this.next.addEventListener('click', () => this.scrollStrip(1));
-        this.track.addEventListener('scroll', () => this.updateArrows(), { passive: true });
+        this.prev.addEventListener('click', () => this.scrollStrip(-1), { signal });
+        this.next.addEventListener('click', () => this.scrollStrip(1), { signal });
+        this.track.addEventListener('scroll', () => this.updateArrows(), { passive: true, signal });
+        // A resize, or pictures that load, change how much there is to scroll
+        this.resizeObserver = new ResizeObserver(() => this.updateArrows());
+        this.resizeObserver.observe(this.track);
+        if (this.track.firstElementChild) this.resizeObserver.observe(this.track.firstElementChild);
         this.updateArrows();
       }
+    }
+
+    disconnectedCallback() {
+      this.controller?.abort();
+      this.resizeObserver?.disconnect();
     }
 
     select(tab, focus = false) {
@@ -377,21 +541,27 @@
     onTabKey(event, tab) {
       const index = this.tabs.indexOf(tab);
       const last = this.tabs.length - 1;
-      const moves = { ArrowRight: index === last ? 0 : index + 1, ArrowLeft: index === 0 ? last : index - 1, Home: 0, End: last };
+      const rtl = getComputedStyle(this).direction === 'rtl';
+      const forward = rtl ? 'ArrowLeft' : 'ArrowRight';
+      const back = rtl ? 'ArrowRight' : 'ArrowLeft';
+      const moves = { [forward]: index === last ? 0 : index + 1, [back]: index === 0 ? last : index - 1, Home: 0, End: last };
       if (!(event.key in moves)) return;
       event.preventDefault();
       this.select(this.tabs[moves[event.key]], true);
     }
 
-    scrollStrip(direction) {
-      this.track.scrollBy({ left: direction * this.track.clientWidth * 0.8 });
+    /** "Next" goes along the reading direction (to the left on right-to-left pages) */
+    scrollStrip(step) {
+      const rtl = getComputedStyle(this.track).direction === 'rtl';
+      this.track.scrollBy({ left: step * (rtl ? -1 : 1) * this.track.clientWidth * 0.8 });
     }
 
-    /** Arrows turn off at either end (1px slack for rounding) */
+    /** Arrows turn off at either end (1px slack for rounding). scrollLeft is 0 or negative in RTL. */
     updateArrows() {
       const { scrollLeft, scrollWidth, clientWidth } = this.track;
-      this.prev.disabled = scrollLeft <= 1;
-      this.next.disabled = scrollLeft + clientWidth >= scrollWidth - 1;
+      const position = Math.abs(scrollLeft);
+      this.prev.disabled = position <= 1;
+      this.next.disabled = position + clientWidth >= scrollWidth - 1;
     }
   }
 
@@ -411,15 +581,31 @@
   ],
   "settings": [
     {
+      "type": "header",
+      "content": "t:labels.content"
+    },
+    {
       "type": "select",
       "id": "layout",
       "label": "t:labels.product_list_layout",
       "info": "t:labels.product_list_layout_info",
       "options": [
-        { "value": "grid", "label": "t:options.product_list_layout.grid" },
-        { "value": "rows", "label": "t:options.product_list_layout.rows" },
-        { "value": "strip", "label": "t:options.product_list_layout.strip" },
-        { "value": "tabs", "label": "t:options.product_list_layout.tabs" }
+        {
+          "value": "grid",
+          "label": "t:options.product_list_layout.grid"
+        },
+        {
+          "value": "rows",
+          "label": "t:options.product_list_layout.rows"
+        },
+        {
+          "value": "strip",
+          "label": "t:options.product_list_layout.strip"
+        },
+        {
+          "value": "tabs",
+          "label": "t:options.product_list_layout.tabs"
+        }
       ],
       "default": "grid"
     },
@@ -446,75 +632,12 @@
       "type": "checkbox",
       "id": "show_only_empty_cart",
       "label": "t:labels.product_list_only_empty_cart",
-      "info": "t:labels.product_list_only_empty_cart_info",
+      "info": "t:labels.product_list_empty_cart_info",
       "default": false
     },
     {
       "type": "header",
       "content": "t:labels.layout"
-    },
-    {
-      "type": "range",
-      "id": "columns_desktop",
-      "label": "t:labels.columns_desktop",
-      "min": 2,
-      "max": 5,
-      "step": 1,
-      "default": 4,
-      "visible_if": "{{ section.settings.layout == 'grid' or section.settings.layout == 'tabs' }}"
-    },
-    {
-      "type": "select",
-      "id": "columns_mobile",
-      "label": "t:labels.columns_mobile",
-      "options": [
-        {
-          "value": "1",
-          "label": "t:options.columns.one"
-        },
-        {
-          "value": "2",
-          "label": "t:options.columns.two"
-        }
-      ],
-      "default": "2",
-      "visible_if": "{{ section.settings.layout == 'grid' or section.settings.layout == 'tabs' }}"
-    },
-    {
-      "type": "select",
-      "id": "image_ratio",
-      "label": "t:labels.image_ratio",
-      "options": [
-        {
-          "value": "portrait",
-          "label": "t:options.image_shape.portrait"
-        },
-        {
-          "value": "square",
-          "label": "t:options.image_shape.square"
-        },
-        {
-          "value": "landscape",
-          "label": "t:options.image_shape.landscape"
-        },
-        {
-          "value": "original",
-          "label": "t:options.image_shape.original"
-        }
-      ],
-      "default": "portrait",
-      "visible_if": "{{ section.settings.layout != 'rows' }}"
-    },
-    {
-      "type": "checkbox",
-      "id": "show_secondary_image",
-      "label": "t:labels.show_secondary_image",
-      "default": true,
-      "visible_if": "{{ section.settings.layout != 'rows' }}"
-    },
-    {
-      "type": "header",
-      "content": "t:labels.style"
     },
     {
       "type": "select",
@@ -542,10 +665,75 @@
       "default": "wide"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-1"
+      "type": "range",
+      "id": "columns_desktop",
+      "label": "t:labels.columns_desktop",
+      "min": 2,
+      "max": 5,
+      "step": 1,
+      "default": 4,
+      "visible_if": "{{ section.settings.layout == 'grid' or section.settings.layout == 'tabs' }}",
+      "info": "t:labels.product_list_columns_info"
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "t:labels.image_ratio",
+      "options": [
+        {
+          "value": "portrait",
+          "label": "t:options.image_shape.portrait"
+        },
+        {
+          "value": "square",
+          "label": "t:options.image_shape.square"
+        },
+        {
+          "value": "landscape",
+          "label": "t:options.image_shape.landscape"
+        },
+        {
+          "value": "original",
+          "label": "t:options.image_shape.original"
+        }
+      ],
+      "default": "portrait",
+      "visible_if": "{{ section.settings.layout != 'rows' }}",
+      "info": "t:labels.product_list_card_info"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_secondary_image",
+      "label": "t:labels.show_secondary_image",
+      "default": true,
+      "visible_if": "{{ section.settings.layout != 'rows' }}",
+      "info": "t:labels.product_list_card_info"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.phones"
+    },
+    {
+      "type": "select",
+      "id": "columns_mobile",
+      "label": "t:labels.columns_mobile",
+      "options": [
+        {
+          "value": "1",
+          "label": "t:options.columns.one"
+        },
+        {
+          "value": "2",
+          "label": "t:options.columns.two"
+        }
+      ],
+      "default": "2",
+      "visible_if": "{{ section.settings.layout == 'grid' or section.settings.layout == 'tabs' }}",
+      "info": "t:labels.product_list_columns_info"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.animation"
     },
     {
       "type": "select",
@@ -585,6 +773,10 @@
       "default": "fade-up"
     },
     {
+      "type": "header",
+      "content": "t:labels.spacing"
+    },
+    {
       "type": "range",
       "id": "padding_top",
       "label": "t:labels.padding_top",
@@ -603,6 +795,16 @@
       "step": 8,
       "unit": "px",
       "default": 64
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
     }
   ],
   "presets": [

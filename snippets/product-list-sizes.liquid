@@ -1,0 +1,45 @@
+{% doc %}
+  Outputs the `sizes` attribute for the big product cards of the Product list section, from its settings
+  (Layout, Section width, Columns). Used by the section and by its Tab blocks (blocks can't read the
+  section's variables, only its settings), so both give the same value.
+
+  Each card is about (content width / columns) wide. Content width from "Section width": about 92vw of
+  the screen (100vw with Full width), at most 1200px (Narrow) or 1650px (Wide). The Scrolling strip has
+  fixed card widths (14–20rem).
+
+  Use it inside a capture, then strip the result (the capture can start with a newline).
+
+  @example
+  {% capture card_sizes %}{% render 'product-list-sizes' %}{% endcapture %}
+  {% assign card_sizes = card_sizes | strip %}
+{% enddoc %}
+
+{%- liquid
+  if section.settings.layout == 'strip'
+    echo '(min-width: 750px) 20rem, 70vw'
+  else
+    # Each number on its own line first: in one long filter chain, divided_by would apply to the text
+    assign columns_desktop = section.settings.columns_desktop | default: 4
+    assign columns_mobile = section.settings.columns_mobile | plus: 0
+    if columns_mobile < 1
+      assign columns_mobile = 2
+    endif
+    assign base_vw = 92
+    if section.settings.section_width == 'full'
+      assign base_vw = 100
+    endif
+    assign max_px = 0
+    if section.settings.section_width == 'narrow'
+      assign max_px = 1200
+    elsif section.settings.section_width == 'wide'
+      assign max_px = 1650
+    endif
+    assign desktop_vw = base_vw | divided_by: columns_desktop
+    assign mobile_vw = base_vw | divided_by: columns_mobile
+    if max_px > 0
+      assign desktop_card = max_px | divided_by: columns_desktop
+      echo '(min-width: ' | append: max_px | append: 'px) ' | append: desktop_card | append: 'px, '
+    endif
+    echo '(min-width: 750px) ' | append: desktop_vw | append: 'vw, ' | append: mobile_vw | append: 'vw'
+  endif
+-%}

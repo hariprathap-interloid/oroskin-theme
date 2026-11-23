@@ -16,6 +16,7 @@
   @param {boolean} [show_secondary_image] - Second image on hover (big cards)
   @param {string} [sizes] - The big cards' image sizes attribute
   @param {string} [animation] - Scroll animation for each card, or 'none'
+  @param {string} [heading_tag] - Tag for the big cards' titles, default 'h3' ('h4' in a tab panel)
 
   @example
   {% render 'product-list-items', collection: section.settings.collection, limit: 8, layout: 'rows' %}
@@ -57,7 +58,8 @@
             product: product,
             image_ratio: image_ratio,
             show_secondary_image: show_secondary_image,
-            sizes: sizes
+            sizes: sizes,
+            heading_tag: heading_tag
           %}
         {%- endif -%}
       </li>
@@ -68,7 +70,7 @@
         {%- if layout == 'rows' -%}
           {% render 'product-row-card' %}
         {%- else -%}
-          {% render 'product-card', image_ratio: image_ratio %}
+          {% render 'product-card', image_ratio: image_ratio, heading_tag: heading_tag %}
         {%- endif -%}
       </li>
     {%- endfor -%}

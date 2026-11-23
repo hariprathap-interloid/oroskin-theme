@@ -406,7 +406,6 @@
     "deck": {
       "show": "Show {{ title }}"
     },
-    "tab_fallback": "Tab {{ number }}",
     "previous": "Previous products",
     "next": "Next products",
     "placeholder_title": "Product title",
@@ -547,7 +546,12 @@
     "description_read_more": "Read more",
     "features": {
       "empty": "Add a feature with a label. A feature with no label does not show in the store."
-    }
+    },
+    "list_heading": "Products",
+    "tabs_label": "Product tabs",
+    "tab_off": "Tab \"{{ label }}\" is off (Show this tab). Visitors do not see it.",
+    "tab_untitled": "Untitled tab",
+    "tabs_editor_empty": "No tab shows. Add a Tab block, or turn on \"Show this tab\" in a Tab block."
   },
   "contact": {
     "form": {
