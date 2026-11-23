@@ -630,6 +630,7 @@
     "steps_empty": "Add Return step blocks: one per step, numbered automatically."
   },
   "page": {
-    "empty": "This page has no content yet. Write it in Online Store > Pages."
+    "empty": "This page has no content yet. Write it in Online Store > Pages.",
+    "table_label": "Table, scroll sideways to see all of it"
   }
 }

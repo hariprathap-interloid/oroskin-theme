@@ -937,9 +937,9 @@
     "not_found_menu_info": "Optional: a menu whose links show as pills (e.g. your main categories).",
     "not_found_links_heading": "Links heading",
     "page_heading_info": "Italic words show in the accent color. Empty = the page title.",
-    "page_align": "Header alignment",
+    "page_align": "Heading alignment",
     "page_text_width": "Text width",
-    "page_text_width_info": "The widest the page text gets, for comfortable reading.",
+    "page_text_width_info": "The maximum width of the page text. Long lines are hard to read: 700–800px is good.",
     "password_heading_info": "Italic words show in the accent color. The message under it comes from Online Store > Preferences.",
     "buy_buttons_layout": "Layout",
     "add_to_cart_style": "Add to cart style",
@@ -1308,7 +1308,12 @@
     "collection_list_card_style_info": "Tiles = the name on a glass bar on the photo. Cards = the name under the photo. Overlay = the name on a dark photo. Bento = tiles in mixed sizes.",
     "collection_list_columns_info": "From 1200px. Phones show 1, tablets 2, small laptops (990–1199px) not more than 3. Not used when Card style = Bento.",
     "collection_list_shape_info": "Not used when Card style = Bento.",
-    "collection_list_animation_info": "When this is the first section of the page, the first row shows at once. The other rows come in when the visitor scrolls to them."
+    "collection_list_animation_info": "When this is the first section of the page, the first row shows at once. The other rows come in when the visitor scrolls to them.",
+    "page_breadcrumb_info": "Home › page title, above the heading.",
+    "page_eyebrow_info": "Small uppercase text above the heading. Empty = no text.",
+    "page_align_info": "Centre also puts the text column in the middle.",
+    "page_scale_screen_info": "On: the heading and the spaces grow and shrink with the screen width and height (as on the contact and policy pages). Off: they grow with the screen width only, not more than the desktop size.",
+    "page_text_scale_info": "Makes the heading and the page text bigger. 100% = normal. Shows only when Scale with the screen is on."
   },
   "options": {
     "panels_mobile_layout": {

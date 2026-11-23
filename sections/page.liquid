@@ -8,13 +8,37 @@
 
 {%- liquid
   assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+
+  # The page's text (written in the admin), changed in two ways:
+  # - images: the first one can be on the first screen (left as is), the later ones load lazily
+  # - tables: each one in a box that scrolls sideways when the table is too wide (phones). The box
+  #   can take keyboard focus (tabindex), so a keyboard user can scroll it with the arrow keys.
+  assign content = page.content
+  if content contains '<img'
+    assign img_parts = content | split: '<img '
+    assign content = ''
+    for part in img_parts
+      if forloop.first
+        assign content = part
+      elsif forloop.index == 2
+        assign content = content | append: '<img ' | append: part
+      else
+        assign content = content | append: '<img loading="lazy" decoding="async" ' | append: part
+      endif
+    endfor
+  endif
+  if content contains '<table'
+    assign table_label = 'page.table_label' | t | escape
+    assign table_open = '<div class="page-main__table" tabindex="0" role="region" aria-label="' | append: table_label | append: '"><table'
+    assign content = content | replace: '<table', table_open | replace: '</table>', '</table></div>'
+  endif
 -%}
 
 {% render 'screen-scale' %}
 
 <div
   class="page-main full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
-  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 100 | divided_by: 100.0 }}; --page-text-width: {{ section.settings.text_width | default: 760 }}px;"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;{% if section.settings.scale_screen %} --text-boost: {{ section.settings.text_scale | default: 100 | divided_by: 100.0 }};{% endif %} --page-text-width: {{ section.settings.text_width | default: 760 }}px;"
 >
   <div class="page-main__inner">
     {%- if section.settings.show_breadcrumb -%}
@@ -36,7 +60,7 @@
 
     {%- if page.content != blank -%}
       <div class="page-main__content rte">
-        {{ page.content }}
+        {{ content }}
       </div>
     {%- elsif request.design_mode -%}
       <p class="page-main__empty">{{ 'page.empty' | t }}</p>
@@ -49,10 +73,20 @@
     No Figma frame: the M5 pages' header (breadcrumb, eyebrow, heading-font h1 ~64px with an accent
     word, a 3px rule under it, as the policy pages) and a reading column for the text (~760px).
   */
+  /*
+    --px = one Figma pixel. With "Scale with the screen" the screen-scale class sets it from the screen
+    width and height; without it, from the width only and never more than 1px, so the sizes below
+    shrink on small screens and stop at the Figma size (a 64px title on a phone was the old bug).
+  */
   .page-main {
+    --px: min(calc(100vw / 1920), 0.0625rem);
     display: block;
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
     background-color: var(--color-background);
+  }
+
+  .page-main.section--screen-scale {
+    --px: min(calc(100vw / 1920), calc(100svh / 1031));
   }
 
   .page-main__inner {
@@ -75,7 +109,8 @@
 
   .page-main__title {
     margin: max(var(--space-lg), calc(42 * var(--px, 0.0625rem))) 0 0;
-    font-size: max(2.25rem, calc(64 * var(--px, 0.0625rem)));
+    /* --text-boost = the Text size setting (only with Scale with the screen), as the page text */
+    font-size: calc(max(2.25rem, calc(64 * var(--px))) * var(--text-boost, 1));
     font-weight: 400;
     line-height: 1.1;
   }
@@ -124,9 +159,29 @@
     border-radius: var(--radius-sm);
   }
 
+  /* Videos added in the text editor (YouTube / Vimeo iframes): full column width, 16:9 */
+  .page-main__content iframe {
+    inline-size: 100%;
+    block-size: auto;
+    aspect-ratio: 16 / 9;
+    border: 0;
+    border-radius: var(--radius-sm);
+  }
+
+  /* The scroll box around each table (added in Liquid): scrolls sideways when the table is too wide */
+  .page-main__table {
+    max-inline-size: 100%;
+    overflow-x: auto;
+    border-radius: var(--radius-sm);
+  }
+
   .page-main__content table {
     inline-size: 100%;
     border-collapse: collapse;
+  }
+
+  .page-main__content table :is(th, td) {
+    min-inline-size: 7rem;
   }
 
   .page-main__content :is(th, td) {
@@ -145,11 +200,6 @@
       font-size: var(--font-size-body-sm);
       line-height: 1.7;
     }
-
-    .page-main__content table {
-      display: block;
-      overflow-x: auto;
-    }
   }
 {% endstylesheet %}
 
@@ -157,18 +207,23 @@
 {
   "name": "t:general.page",
   "tag": "section",
-  "class": "page-main-section",
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
     {
       "type": "checkbox",
       "id": "show_breadcrumb",
       "label": "t:labels.show_breadcrumb",
+      "info": "t:labels.page_breadcrumb_info",
       "default": true
     },
     {
       "type": "text",
       "id": "eyebrow",
-      "label": "t:labels.eyebrow"
+      "label": "t:labels.eyebrow",
+      "info": "t:labels.page_eyebrow_info"
     },
     {
       "type": "inline_richtext",
@@ -177,14 +232,25 @@
       "info": "t:labels.page_heading_info"
     },
     {
+      "type": "header",
+      "content": "t:labels.layout"
+    },
+    {
       "type": "select",
       "id": "align",
       "label": "t:labels.page_align",
+      "info": "t:labels.page_align_info",
       "options": [
-        { "value": "start", "label": "t:options.page_align.start" },
-        { "value": "center", "label": "t:options.page_align.center" }
+        {
+          "value": "start",
+          "label": "t:options.page_align.start"
+        },
+        {
+          "value": "center",
+          "label": "t:options.page_align.center"
+        }
       ],
-      "default": "start"
+      "default": "center"
     },
     {
       "type": "range",
@@ -196,10 +262,6 @@
       "step": 20,
       "unit": "px",
       "default": 760
-    },
-    {
-      "type": "header",
-      "content": "t:labels.style"
     },
     {
       "type": "select",
@@ -230,14 +292,14 @@
       "type": "checkbox",
       "id": "scale_screen",
       "label": "t:labels.scale_screen",
-      "info": "t:labels.scale_screen_info",
+      "info": "t:labels.page_scale_screen_info",
       "default": true
     },
     {
       "type": "range",
       "id": "text_scale",
       "label": "t:labels.text_scale",
-      "info": "t:labels.text_scale_info",
+      "info": "t:labels.page_text_scale_info",
       "min": 100,
       "max": 130,
       "step": 5,
@@ -246,10 +308,8 @@
       "visible_if": "{{ section.settings.scale_screen }}"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -270,6 +330,16 @@
       "step": 8,
       "unit": "px",
       "default": 96
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ]
 }
