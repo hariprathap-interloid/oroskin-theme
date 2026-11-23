@@ -6,7 +6,6 @@
     "cart": "Cart",
     "collection": "Collection",
     "collections": "Collections",
-    "collections_grid": "Collections grid",
     "colors": "Colors",
     "column": "Group (column)",
     "custom_section": "Custom section",
@@ -141,7 +140,8 @@
     "countdown": "Countdown",
     "product_grid": "Product grid",
     "collection_tiles_promo": "Promo cards",
-    "search_results": "Search results"
+    "search_results": "Search results",
+    "collection_list": "Collection list"
   },
   "labels": {
     "alignment": "Alignment",
@@ -461,7 +461,7 @@
     "panels_cart_overlay_info": "A soft dark circle behind the cart button. It keeps the button visible on white photos. 0% = off.",
     "fill_screen": "Fill the screen height",
     "panels_fill_screen_info": "Tablets and computers. The section is at least one screen tall, with the content in the middle. On monitors (1600px and up) the strips also grow on tall screens. They are never shorter than the strip height.",
-    "card_radius": "Card corner size",
+    "card_radius": "Corner size",
     "panels_card_radius_info": "Corners of the product details card on the open strip. 0 = square corners.",
     "panels_card_radius": "Details card corners",
     "cart_button": "Cart button",
@@ -623,13 +623,12 @@
     "search_placeholder": "Search box placeholder",
     "search_categories_heading": "Categories heading",
     "results_per_page": "Results per page",
-    "collections_per_page": "Collections per page",
-    "collections_per_page_info": "Bento repeats every 12 collections, so 12 or 24 fill its pattern exactly.",
-    "collection_list_header_group": "Header",
-    "card_radius_info": "Rounds the photo of each collection and the banner.",
-    "collection_list_header_style": "Header style",
+    "collections_per_page": "Collections on each page",
+    "collections_per_page_info": "More collections go to the next page. Bento repeats each 12 collections: use 12, 24 or 36 to fill the pattern.",
+    "card_radius_info": "Rounds the photo of each collection and the banner. 0 = square corners.",
+    "collection_list_header_style": "Top of the page",
     "show_empty_collections": "Show empty collections",
-    "show_empty_collections_info": "Hidden empty collections still take a place when the pages are counted, so a page can show fewer. To keep every page full, remove empty collections from the Online Store sales channel.",
+    "show_empty_collections_info": "An empty collection has no products. Hidden empty collections still count when the pages are made, so a page can show fewer. To keep each page full, remove empty collections from the Online Store sales channel.",
     "search_suggestions_group": "Suggestions",
     "search_suggestions_menu": "Popular categories menu",
     "search_suggestions_menu_info": "Shown as pills when nothing has been searched yet and under \"No results\".",
@@ -655,7 +654,7 @@
     "banner_image_width": "Large image width (% of the screen)",
     "banner_highlight_info": "Breadcrumb, small title and italic words. Leave empty to use the color scheme's accent.",
     "tile_label": "Label",
-    "tile_shape": "Tile shape",
+    "tile_shape": "Photo shape",
     "contact_heading_info": "Italic words show in the accent color. Empty: the page title.",
     "contact_text_info": "Empty: the page's own content (Online Store > Pages).",
     "contact_media": "Photo and highlights",
@@ -1298,7 +1297,18 @@
     "search_suggestions_help": "The suggestions show before the visitor searches and when a search finds nothing.",
     "search_suggestions_heading_info": "The heading above the suggested products. Italic words show in the accent color. If it is empty, screen readers still get a hidden heading.",
     "search_card_style_info": "Card: the details show under the photo. Phones show 2 cards in each row. Photo tile: the photo fills the tile and the details show when the pointer is on it. Phones show 1 tile in each row.",
-    "search_columns_info": "For screens that are 1200px or wider. Tablets show 3 products in each row."
+    "search_columns_info": "For screens that are 1200px or wider. Tablets show 3 products in each row.",
+    "collection_list_header_style_info": "Centred title = a small label and the heading. Banner = the heading on a large image, with a breadcrumb under it.",
+    "collection_list_heading_info": "Empty = \"Shop by category\".",
+    "collection_list_text_info": "Short text under the heading. Empty = no text.",
+    "collection_list_banner_image": "Banner image",
+    "collection_list_banner_image_info": "Shows only when Top of the page = Banner. Empty = a tinted panel.",
+    "collection_list_breadcrumb_info": "Shows only when Top of the page = Banner.",
+    "collection_list_card_style": "Card style",
+    "collection_list_card_style_info": "Tiles = the name on a glass bar on the photo. Cards = the name under the photo. Overlay = the name on a dark photo. Bento = tiles in mixed sizes.",
+    "collection_list_columns_info": "From 1200px. Phones show 1, tablets 2, small laptops (990–1199px) not more than 3. Not used when Card style = Bento.",
+    "collection_list_shape_info": "Not used when Card style = Bento.",
+    "collection_list_animation_info": "When this is the first section of the page, the first row shows at once. The other rows come in when the visitor scrolls to them."
   },
   "options": {
     "panels_mobile_layout": {
@@ -1311,9 +1321,9 @@
       "banner": "Banner with image"
     },
     "collection_list_layout": {
-      "tiles": "Tiles (glass bar on the photo)",
-      "cards": "Cards (name under the photo)",
-      "overlay": "Overlay (name on the photo)",
+      "tiles": "Tiles",
+      "cards": "Cards",
+      "overlay": "Overlay",
       "bento": "Bento (mixed sizes)"
     },
     "pill_image_animation": {
