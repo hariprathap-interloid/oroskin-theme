@@ -6,12 +6,12 @@
 
   - Below 1440px (phones, tablets, small laptops): the phone design. Centred intro, counters in one
     row, cards 2 per row in the zig-zag. From 1440px: intro left, cards right (the Figma desktop).
-  - Page 2 and later, and tag pages (/tagged/…): a small version. No Fill the screen, no intro text,
-    no cards, so the articles come first. A tag page also names the tag in the H1 ("Topic: …")
-    and shows no counters (Shopify filters some blog numbers by the tag, not others).
-  - Counters: the typed value when filled in, otherwise counted from the blog: articles =
-    blog.articles_count, topics = the number of tags, authors = the different author names among the
+  - Every page of the blog looks the same (page 2, topic pages): only the Article list changes.
+  - Counters: the typed value when filled in, otherwise counted from the whole blog: articles =
+    articles_count, topics = the number of tags, authors = the different author names among the
     50 newest articles (Liquid reads at most 50 articles here). Shopify has no "authors" number.
+    They read blogs[blog.handle], not blog: on a topic page Shopify filters blog.articles and
+    blog.articles_count by the tag (3 instead of 17), blogs[handle] gives the whole blog.
   - The first section of the page, so no scroll animation (project rule); the cards may float slowly
     instead (needs "Reveal sections on scroll", off with reduced motion).
   - Sized to the screen like the hero (snippets/screen-scale.liquid), with the section's settings.
@@ -25,75 +25,54 @@
     assign animation = 'none'
   endif
 
-  assign is_compact = false
-  if current_page > 1
-    assign is_compact = true
-  endif
-  if current_tags.size > 0
-    assign is_compact = true
-  endif
-
   assign heading = section.settings.heading
   if heading == blank
     assign heading = blog.title | escape
   endif
 
-  # A tag page names its tag in the H1 (each tag page gets its own main heading) and shows no
-  # counters: Shopify filters some blog numbers by the tag and not others, so they would not agree.
-  assign is_tag_page = false
-  if current_tags.size > 0
-    assign is_tag_page = true
-    assign tags_title = current_tags | join: ', '
-    assign heading = 'blog.tag_heading' | t: tags: tags_title | escape
-  endif
+  assign whole_blog = blogs[blog.handle]
 
   assign articles_value = section.settings.articles_value
   if articles_value == blank
-    assign articles_value = blog.articles_count
+    assign articles_value = whole_blog.articles_count
   endif
 
   assign authors_value = section.settings.authors_value
   if authors_value == blank
-    assign authors_value = blog.articles | map: 'author' | uniq | size
+    assign authors_value = whole_blog.articles | map: 'author' | uniq | size
   endif
 
   assign topics_value = section.settings.topics_value
   if topics_value == blank
-    assign topics_value = blog.all_tags.size
+    assign topics_value = whole_blog.all_tags.size
   endif
 
   assign counter_count = 0
-  unless is_tag_page
-    if articles_value != blank and articles_value != 0
-      assign counter_count = counter_count | plus: 1
-    endif
-    if authors_value != blank and authors_value != 0
-      assign counter_count = counter_count | plus: 1
-    endif
-    if topics_value != blank and topics_value != 0
-      assign counter_count = counter_count | plus: 1
-    endif
-  endunless
+  if articles_value != blank and articles_value != 0
+    assign counter_count = counter_count | plus: 1
+  endif
+  if authors_value != blank and authors_value != 0
+    assign counter_count = counter_count | plus: 1
+  endif
+  if topics_value != blank and topics_value != 0
+    assign counter_count = counter_count | plus: 1
+  endif
 
   # Cards show when at least one Stat card writes something (an empty card writes nothing on the
   # store, a note in the editor). The section can't read its theme blocks' settings
   # (section.blocks gives empty settings), so the blocks are rendered first and their HTML checked.
   assign show_cards = false
-  unless is_compact
-    capture cards_html
-      content_for 'blocks'
-    endcapture
-    if cards_html contains 'class="blog-stat-card'
-      assign show_cards = true
-    endif
-  endunless
+  capture cards_html
+    content_for 'blocks'
+  endcapture
+  if cards_html contains 'class="blog-stat-card'
+    assign show_cards = true
+  endif
 
   assign section_width = section.settings.section_width | default: 'widest'
   assign hero_classes = 'section-width--' | append: section_width
   if section.settings.fill_screen
-    unless is_compact
-      assign hero_classes = hero_classes | append: ' section--fill-screen'
-    endunless
+    assign hero_classes = hero_classes | append: ' section--fill-screen'
   endif
   if section.settings.scale_screen
     assign hero_classes = hero_classes | append: ' section--screen-scale'
@@ -111,16 +90,7 @@
 >
   <animate-on-scroll class="blog-hero__inner">
     {%- if section.settings.show_breadcrumb -%}
-      {%- if is_tag_page -%}
-        {% render 'breadcrumb',
-          current: tags_title,
-          parent_title: blog.title,
-          parent_url: blog.url,
-          class: 'blog-hero__breadcrumb'
-        %}
-      {%- else -%}
-        {% render 'breadcrumb', current: blog.title, class: 'blog-hero__breadcrumb' %}
-      {%- endif -%}
+      {% render 'breadcrumb', current: blog.title, class: 'blog-hero__breadcrumb' %}
     {%- endif -%}
 
     <div class="blog-hero__grid{% if show_cards %} blog-hero__grid--split{% endif %}">
@@ -137,9 +107,7 @@
         <h1 class="blog-hero__heading">{{ heading }}</h1>
 
         {%- if section.settings.text != blank -%}
-          {%- unless is_compact -%}
-            <div class="blog-hero__text rte">{{ section.settings.text }}</div>
-          {%- endunless -%}
+          <div class="blog-hero__text rte">{{ section.settings.text }}</div>
         {%- endif -%}
 
         {%- if counter_count > 0 -%}

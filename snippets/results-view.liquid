@@ -37,32 +37,49 @@
     connectedCallback() {
       this.sectionId = this.dataset.sectionId;
 
-      this.addEventListener('results:load', () => this.load(this.buildUrl(), true));
+      // Every listener on one AbortController: the theme editor attaches a moved section again, and a
+      // second set of listeners loaded the results two times for one click
+      this.listeners?.abort();
+      this.listeners = new AbortController();
+      const { signal } = this.listeners;
 
-      this.addEventListener('change', (event) => {
-        if (event.target.form?.hasAttribute('data-results-autoload')) this.load(this.buildUrl(), true);
-      });
+      this.addEventListener('results:load', () => this.load(this.buildUrl(), true), { signal });
 
-      this.addEventListener('submit', (event) => {
-        if (!event.target.hasAttribute('data-results-autoload')) return;
-        event.preventDefault();
-        this.load(this.buildUrl(), true);
-      });
+      this.addEventListener(
+        'change',
+        (event) => {
+          if (event.target.form?.hasAttribute('data-results-autoload')) this.load(this.buildUrl(), true);
+        },
+        { signal }
+      );
 
-      this.addEventListener('click', (event) => {
-        const link = event.target.closest('a[data-results-link]');
-        if (!link) return;
-        event.preventDefault();
-        // Page links (data-results-scroll): the new page starts at the top of the results, not at the pagination
-        this.load(link.href, true, link.hasAttribute('data-results-scroll'));
-      });
+      this.addEventListener(
+        'submit',
+        (event) => {
+          if (!event.target.hasAttribute('data-results-autoload')) return;
+          event.preventDefault();
+          this.load(this.buildUrl(), true);
+        },
+        { signal }
+      );
 
-      this.onPopState = () => this.load(window.location.href, false);
-      window.addEventListener('popstate', this.onPopState);
+      this.addEventListener(
+        'click',
+        (event) => {
+          const link = event.target.closest('a[data-results-link]');
+          if (!link) return;
+          event.preventDefault();
+          // Page links (data-results-scroll): the new page starts at the top of the results, not at the pagination
+          this.load(link.href, true, link.hasAttribute('data-results-scroll'));
+        },
+        { signal }
+      );
+
+      window.addEventListener('popstate', () => this.load(window.location.href, false), { signal });
     }
 
     disconnectedCallback() {
-      window.removeEventListener('popstate', this.onPopState);
+      this.listeners?.abort();
       this.controller?.abort();
     }
 

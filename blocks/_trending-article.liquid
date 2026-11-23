@@ -10,7 +10,8 @@
 
 {%- liquid
   assign row_animation = 'none'
-  if section.settings.animation != 'none'
+  # No animation when the section is the first on the page (as in the section)
+  if section.settings.animation != 'none' and section.index != 1
     assign row_animation = 'fade-up'
   endif
 -%}

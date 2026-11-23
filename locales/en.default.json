@@ -8,7 +8,6 @@
     "links": "Popular links"
   },
   "blog": {
-    "tag_heading": "Topic: {{ tags }}",
     "stat_card_empty": "Empty card: type a Value or a Text. It does not show on the store.",
     "related": {
       "empty_editor": "No other articles in this blog yet, so this section is hidden on the store."
@@ -42,7 +41,9 @@
     "trending": {
       "placeholder_title": "Choose an article for this row",
       "placeholder_topic": "Topic",
-      "placeholder_meta": "Author • 5 min"
+      "placeholder_meta": "Author • 5 min",
+      "heading_hidden": "Trending articles",
+      "video_empty": "Add a video or a YouTube or Vimeo link. Without a video, the store does not show this card."
     },
     "read_time": "{{ minutes }} min read",
     "search_label": "Search the blog",
@@ -64,7 +65,8 @@
       "products_heading": "Products in this ritual",
       "tags": "Tags",
       "share": "Share"
-    }
+    },
+    "play_video_plain": "Play video"
   },
   "cart": {
     "checkout": "Checkout",

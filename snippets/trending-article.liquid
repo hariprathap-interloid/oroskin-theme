@@ -227,23 +227,51 @@
     opacity: 0.6;
   }
 
-  /* Phones: no design yet (decision 7). The views column drops; the pill goes under the title */
+  /*
+    Phones (design/inbox/blog-list/Variant14): a compact row. Number | title + meta | pill | arrow, with
+    the views text under the arrow. The section removes the views row when no row has views.
+  */
   @media (max-width: 749px) {
     .trending-article {
-      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-columns: 1.75rem minmax(0, 1fr) auto auto;
       grid-template-areas:
-        "number text arrow"
-        "number tag arrow";
-      row-gap: var(--space-sm);
-      padding: var(--space-md);
+        "number text tag arrow"
+        "number text tag views";
+      column-gap: var(--space-xs);
+      row-gap: 0.25rem;
+      min-block-size: 0;
+      padding: 0.625rem var(--space-sm);
+    }
+
+    .trending-article__number {
+      align-self: center;
+      font-size: 1.75rem;
+    }
+
+    .trending-article__title {
+      font-size: 0.8125rem;
+    }
+
+    .trending-article__meta {
+      margin-block-start: 0.25rem;
+      font-size: 0.6875rem;
     }
 
     .trending-article__tag {
-      justify-self: start;
+      align-self: center;
+      font-size: 0.6875rem;
+    }
+
+    .trending-article__arrow {
+      align-self: end;
+      justify-self: center;
+      inline-size: 1.5rem;
     }
 
     .trending-article__views {
-      display: none;
+      align-self: start;
+      justify-self: center;
+      font-size: 0.625rem;
     }
   }
 {% endstylesheet %}

@@ -6,6 +6,7 @@
   - Featured: a wide card, image on the left and on the right a "Featured story" pill, the title as an
     <h2>, a 3-line excerpt, then author, date, read time and a red ↗ button.
 
+  No image: no photo box on the store (the topic pill goes above the title); a placeholder in the editor.
   Topic = the article's first tag. Avatar = the staff account's photo (article.user.image), else the
   author's initials. Read time = snippets/read-time.liquid.
 
@@ -16,6 +17,8 @@
   @param {string} [animation] - Scroll reveal ('none' or 'fade-up'), default 'none'
   @param {string} [topic_scheme] - Colour scheme id for the topic badge (its background + accent text), default 'scheme-2'
   @param {string} [arrow_scheme] - Colour scheme id for the ↗ button (its button colours), default 'scheme-2'
+  @param {string} [sizes] - The image's sizes attribute, worked out by the caller from its layout. Default: a rough value
+  @param {string} [loading] - 'eager' or 'lazy' (default) for the image
 
   @example
   {% render 'article-card', article: article, size: 'featured', pill_label: 'Featured story' %}
@@ -49,20 +52,30 @@
   else
     assign image_sizes = '(min-width: 1200px) 50vw, (min-width: 750px) 50vw, 100vw'
   endif
+  if sizes != blank
+    assign image_sizes = sizes
+  endif
+  assign image_loading = loading | default: 'lazy'
+
+  assign has_media = false
+  if article.image != blank or request.design_mode
+    assign has_media = true
+  endif
 -%}
 
 <article
-  class="article-card{% if featured %} article-card--featured{% endif %}"
+  class="article-card{% if featured %} article-card--featured{% endif %}{% unless has_media %} article-card--no-media{% endunless %}"
   {% if card_animation != 'none' %}
     data-animate="{{ card_animation }}"
   {% endif %}
 >
+  {%- if has_media -%}
   <div class="article-card__media">
     {%- if article.image != blank -%}
       {{
         article.image
         | image_url: width: 1600
-        | image_tag: widths: '400, 600, 800, 1000, 1200, 1600', sizes: image_sizes, alt: '', loading: 'lazy'
+        | image_tag: widths: '400, 600, 800, 1000, 1200, 1600', sizes: image_sizes, alt: '', loading: image_loading
       }}
     {%- elsif request.design_mode -%}
       {{ 'lifestyle-2' | placeholder_svg_tag: 'article-card__placeholder' }}
@@ -79,8 +92,12 @@
       </span>
     {%- endunless -%}
   </div>
+  {%- endif -%}
 
   <div class="article-card__body">
+    {%- if has_media == false and topic != blank -%}
+      <span class="article-card__topic article-card__topic--inline {{ topic_class }}">{{ topic | escape }}</span>
+    {%- endif -%}
     {%- if featured and pill_label != blank -%}
       <span class="article-card__pill">{{ pill_label | escape }}</span>
     {%- endif -%}
@@ -182,6 +199,13 @@
     color: var(--color-accent);
     font-size: var(--font-size-body-sm);
     line-height: 1.4;
+  }
+
+  /* No image: the topic pill sits above the title, in the text flow */
+  .article-card .article-card__topic--inline {
+    position: static;
+    align-self: flex-start;
+    border: 1px solid color-mix(in srgb, var(--color-accent) 30%, transparent);
   }
 
   .article-card__body {
@@ -402,6 +426,11 @@
 
     .article-card--featured .article-card__body {
       padding-block: var(--space-xs);
+    }
+
+    /* No image: the text uses the full card */
+    .article-card--featured.article-card--no-media {
+      display: flex;
     }
 
     /* Read time and date grouped in the middle, the arrow on the far right (Figma) */
