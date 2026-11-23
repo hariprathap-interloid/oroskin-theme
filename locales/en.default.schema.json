@@ -879,7 +879,7 @@
     "marquee_speed": "Time for one loop",
     "marquee_speed_info": "Higher = slower. It pauses on hover and has a pause button; it never moves for visitors who reduce motion or when animations are off.",
     "announcement_speed": "Speed",
-    "announcement_speed_info": "Pixels per second: higher = faster, the same pace for short and long messages. It pauses on hover and has a pause button. It stays still in the theme editor and for visitors who reduce motion.",
+    "announcement_speed_info": "Shows when \"How messages show\" is Moving line. Pixels per second: a higher value is faster, at the same speed for short and long messages. The line stops when the pointer is on it, and a pause button shows. It does not move in the theme editor or for visitors who reduce motion.",
     "marquee_text_size": "Text size",
     "marquee_text_size_info": "At a 1920px screen; it scales with the screen.",
     "marquee_outline": "Alternate with outline text",
@@ -1097,18 +1097,18 @@
     "autoplay_messages": "Change messages automatically",
     "message_interval": "Time per message",
     "show_arrows": "Show arrows",
-    "announcement_direction_info": "With Position = Right side, Left moves the text up and Right moves it down.",
+    "announcement_direction_info": "Shows when \"How messages show\" is Moving line. With Position = Right side, Left moves the text up and Right moves it down.",
     "announcement_position": "Position",
     "announcement_position_info": "Right side: a vertical band fixed to the right edge of the screen, on large screens; the page leaves room for it. Below 990px it shows above the header.",
     "show_close": "Show close button",
     "show_close_info": "A closed bar stays hidden while the visitor browses in that tab. A new tab or a new visit shows it again. Always shown in the theme editor.",
-    "announcement_link_info": "Without a link label, the whole message is clickable (unless a word in the text is already linked).",
+    "announcement_link_info": "If Link label is empty, the full message is the link (but not when a word in the text has a link).",
     "announcement_text_info": "To link a word anywhere in the message, select it and use the link button.",
     "announcement_align": "Text alignment",
     "announcement_align_info": "Places the message and its arrows. Right side: Start = top, End = bottom.",
     "hide_on_scroll": "Slide away while scrolling down",
-    "hide_on_scroll_info": "The band slides out when visitors scroll down and comes back when they return to the top of the page.",
-    "announcement_link_label_info": "An underlined link after the text, e.g. \"Shop now\".",
+    "hide_on_scroll_info": "Shows when Position is Right side. The band slides out when visitors scroll down, and comes back when they go back to the top of the page.",
+    "announcement_link_label_info": "Shows when Link has a value. An underlined link after the text, for example \"Shop now\".",
     "product_image_size": "Size",
     "product_image_size_info": "Share of the product area's width. The height follows.",
     "content_gap": "Gap",
@@ -1244,7 +1244,15 @@
     "cart_coupons_group": "Coupons",
     "cart_gift_heading": "Heading before a wrap is added",
     "cart_gift_text": "Text before a wrap is added",
-    "cart_gift_visible_info": "Shows when \"Show the gift wrap card\" is on."
+    "cart_gift_visible_info": "Shows when \"Show the gift wrap card\" is on.",
+    "announcement_mode": "How messages show",
+    "announcement_mode_info": "One message: only the first message shows. Slideshow: one message at a time. Moving line: all messages move along the bar.",
+    "announcement_text_group": "Text",
+    "announcement_text_size_info": "On phones the text can be smaller (it follows the screen width), but never larger than this size.",
+    "announcement_close_group": "Close button",
+    "announcement_autoplay_info": "Shows when \"How messages show\" is Slideshow. The messages change on their own, and a pause button shows. The messages fade only when \"Enable animations\" is on and the visitor does not reduce motion.",
+    "announcement_interval_info": "Shows when \"Change messages automatically\" is on.",
+    "announcement_arrows_info": "Shows when \"Change messages automatically\" is on. When it is off, the arrows always show, so visitors can see all messages."
   },
   "options": {
     "panels_mobile_layout": {
@@ -1717,9 +1725,9 @@
       "portrait": "Portrait (4:5)"
     },
     "announcement_mode": {
-      "static": "Static (first message only)",
+      "static": "One message (the first)",
       "slideshow": "Slideshow",
-      "marquee": "Marquee"
+      "marquee": "Moving line (marquee)"
     },
     "announcement_position": {
       "top": "Above the header",

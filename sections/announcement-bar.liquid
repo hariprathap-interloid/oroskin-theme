@@ -6,7 +6,8 @@
     page scrolls down and comes back only at the top of the page.
     Large screens only: below 990px it is a bar above the header.
   - Movement: Static (first message only), Slideshow (one at a time, arrows, optional autoplay) or Marquee.
-    Anything that moves has a pause button (WCAG 2.2.2) and never moves with reduced motion. The marquee moves
+    Anything that moves or changes on its own has a pause button (WCAG 2.2.2). With reduced motion the
+    marquee stands still and the slideshow changes its message without the fade. The marquee moves
     whenever Marquee is chosen (not tied to the theme's "Enable animations"), except in the theme editor.
   - Close button: hides the bar in this browser tab only (sessionStorage: a new tab or a new visit shows it
     again), and only until the messages change (keyed by a fingerprint of the
@@ -51,6 +52,19 @@
   elsif mode == 'slideshow' and section.settings.autoplay
     assign moves = true
   endif
+
+  # Slideshow arrows: when the merchant shows them, and always without autoplay (else the visitor could
+  # never reach message 2)
+  assign arrows = false
+  if mode == 'slideshow'
+    if section.settings.show_arrows
+      assign arrows = true
+    endif
+    # unless: a missing (nil) value counts as off too (nil == false is false in Liquid)
+    unless section.settings.autoplay
+      assign arrows = true
+    endunless
+  endif
 -%}
 
 {%- if count > 0 -%}
@@ -73,7 +87,7 @@
     data-speed="{{ section.settings.speed }}"
   >
     <div class="announcement-bar__inner">
-      {%- if mode == 'slideshow' and section.settings.show_arrows -%}
+      {%- if arrows -%}
         <button type="button" class="announcement-bar__button announcement-bar__prev" data-step="-1">
           <span class="visually-hidden">{{ 'sections.announcement_bar.previous' | t }}</span>
           <svg class="announcement-bar__arrow" aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="16" height="16"><path d="M13 8H3m4-4L3 8l4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -130,7 +144,9 @@
           long message stays on one line and this line scrolls sideways (swipe), with fades on the side that
           still has text. tabindex: keyboard users can focus it (and scroll it with the arrow keys); the focus
           ring is drawn on the inner text span, so it hugs the message. Hidden slides (visibility: hidden) are
-          skipped by Tab. No aria-label: the parent <announcement-bar role="region"> already names it.
+          skipped by Tab. Every line has a Tab stop in the markup (without JavaScript the keyboard must be
+          able to scroll a long line); the script removes it from a line whose text fits. No aria-label: the parent
+          <announcement-bar role="region"> already names it.
         {%- endcomment -%}
         {%- when 'slideshow' -%}
           <div class="announcement-bar__messages" aria-live="{% if moves %}off{% else %}polite{% endif %}">
@@ -166,7 +182,7 @@
           </div>
       {%- endcase -%}
 
-      {%- if mode == 'slideshow' and section.settings.show_arrows -%}
+      {%- if arrows -%}
         <button type="button" class="announcement-bar__button announcement-bar__next" data-step="1">
           <span class="visually-hidden">{{ 'sections.announcement_bar.next' | t }}</span>
           <svg class="announcement-bar__arrow" aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="16" height="16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -334,10 +350,19 @@
     opacity: 0;
   }
 
-  .animations-on .announcement-bar--slideshow .announcement-bar__message {
-    transition:
-      opacity var(--duration-base) var(--ease-out),
-      visibility var(--duration-base);
+  /* The fade between messages; with reduced motion the text just changes (autoplay still runs) */
+  @media (prefers-reduced-motion: no-preference) {
+    .animations-on .announcement-bar--slideshow .announcement-bar__message {
+      transition:
+        opacity var(--duration-base) var(--ease-out),
+        visibility var(--duration-base);
+    }
+  }
+
+  /* Without JavaScript the arrows can't change the message: hidden (the first message shows) */
+  .no-js .announcement-bar__prev,
+  .no-js .announcement-bar__next {
+    display: none;
   }
 
   /* Small round buttons: arrows, pause / play, close (24px targets, WCAG 2.5.8) */
@@ -738,9 +763,10 @@
   /**
    * <announcement-bar>
    * - Close: hides the bar and remembers it for the visit (not in the theme editor).
-   * - Slideshow: arrows, autoplay (paused on hover, focus on a message, and by the pause button; off with
-   *   reduced motion, re-checked live). Screen readers hear the
-   *   new message only when the visitor changed it (aria-live polite), not every few seconds.
+   * - Slideshow: arrows, autoplay (paused on hover, focus on a message, and by the pause button). With
+   *   reduced motion it still changes the message, without the fade (a text change is not movement), so a
+   *   bar without arrows never gets stuck on message 1. Screen readers hear the new message only when the
+   *   visitor changed it (aria-live polite), not every few seconds.
    * - Marquee: shows the pause button when it really moves.
    * Listeners are removed when the editor re-renders the section (AbortController).
    */
@@ -757,8 +783,7 @@
       motionQuery.addEventListener(
         'change',
         () => {
-          this.motion = motionQuery.matches;
-          if (this.dataset.mode === 'slideshow') this.updateAutoplay();
+          this.motion = motionQuery.matches; // the close animation reads it
         },
         { signal }
       );
@@ -808,6 +833,7 @@
         this.classList.toggle('is-moving', moving);
         if (this.pauseButton) this.pauseButton.hidden = !moving;
         if (moving) this.buildMarquee();
+        this.refreshScrollers?.(); // the real line's Tab stop depends on is-moving
       };
       reduced.addEventListener('change', apply, { signal });
 
@@ -828,7 +854,7 @@
 
       // The web font changes the messages' width once it has loaded
       document.fonts?.ready.then(() => {
-        if (this.classList.contains('is-moving')) this.buildMarquee();
+        if (!signal.aborted && this.classList.contains('is-moving')) this.buildMarquee();
       });
 
       document.addEventListener(
@@ -886,11 +912,19 @@
         const position = vertical ? scroller.scrollTop : scroller.scrollLeft;
         scroller.classList.toggle('has-overflow-start', position > 1);
         scroller.classList.toggle('has-overflow-end', position < max - 1);
+        // A Tab stop only while the text is too long (the keyboard can then scroll it). The marquee's line
+        // keeps it while the marquee moves: focusing it shows the still line. Never removed from a line that
+        // has focus (focus would jump to the page): it is checked again when focus leaves.
+        const needed =
+          max > 1 || (scroller.classList.contains('announcement-bar__marquee-line') && this.classList.contains('is-moving'));
+        if (needed) scroller.setAttribute('tabindex', '0');
+        else if (scroller !== document.activeElement) scroller.removeAttribute('tabindex');
       };
       // Watch each line and its text: when the web font swaps in, the text's width changes, not the line's
       this.resizeObserver = new ResizeObserver((entries) => {
         entries.forEach((entry) => update(entry.target.closest('.announcement-bar__scroller')));
       });
+      this.refreshScrollers = () => scrollers.forEach(update);
       scrollers.forEach((scroller) => {
         let ticking = false;
         scroller.addEventListener(
@@ -906,6 +940,7 @@
           },
           { passive: true, signal }
         );
+        scroller.addEventListener('blur', () => update(scroller), { signal });
         this.resizeObserver.observe(scroller);
         if (scroller.firstElementChild) this.resizeObserver.observe(scroller.firstElementChild);
         update(scroller);
@@ -1070,15 +1105,13 @@
     }
 
     /*
-      Slideshow autoplay runs only with motion allowed; called at start and whenever the reduced-motion
-      preference changes. The pause button shows only while it can play, and screen readers hear changes
-      (polite) whenever it isn't auto-advancing.
+      Slideshow autoplay: shows the pause button (WCAG 2.2.2) and starts the timer. It runs with reduced
+      motion too (the fade is off then, in CSS). Screen readers hear changes (polite) only while it is paused.
     */
     updateAutoplay() {
       if (!this.region || this.dataset.autoplay !== 'true' || this.messages.length < 2) return;
-      const plays = this.motion;
-      if (this.pauseButton) this.pauseButton.hidden = !plays;
-      this.region.setAttribute('aria-live', plays && !this.userPaused ? 'off' : 'polite');
+      if (this.pauseButton) this.pauseButton.hidden = false;
+      this.region.setAttribute('aria-live', this.userPaused ? 'polite' : 'off');
       this.restart();
     }
 
@@ -1093,7 +1126,7 @@
 
     restart() {
       clearInterval(this.timer);
-      if (this.dataset.mode !== 'slideshow' || this.dataset.autoplay !== 'true' || !this.motion) return;
+      if (this.dataset.mode !== 'slideshow' || this.dataset.autoplay !== 'true') return;
       if (this.userPaused || this.hoverPaused || this.focusPaused || this.editorPaused) return;
       this.timer = setInterval(() => {
         // Auto-advance is silent to screen readers; only a change the visitor makes is announced (polite)
@@ -1119,7 +1152,6 @@
 {% schema %}
 {
   "name": "t:general.announcement_bar",
-  "class": "announcement-bar-section",
   "enabled_on": {
     "groups": [
       "header"
@@ -1148,91 +1180,13 @@
           "type": "text",
           "id": "link_label",
           "label": "t:labels.link_label",
-          "info": "t:labels.announcement_link_label_info"
+          "info": "t:labels.announcement_link_label_info",
+          "visible_if": "{{ block.settings.link != blank }}"
         }
       ]
     }
   ],
   "settings": [
-    {
-      "type": "header",
-      "content": "t:labels.movement"
-    },
-    {
-      "type": "select",
-      "id": "mode",
-      "label": "t:labels.style",
-      "options": [
-        {
-          "value": "static",
-          "label": "t:options.announcement_mode.static"
-        },
-        {
-          "value": "slideshow",
-          "label": "t:options.announcement_mode.slideshow"
-        },
-        {
-          "value": "marquee",
-          "label": "t:options.announcement_mode.marquee"
-        }
-      ],
-      "default": "static"
-    },
-    {
-      "type": "checkbox",
-      "id": "autoplay",
-      "label": "t:labels.autoplay_messages",
-      "default": true,
-      "visible_if": "{{ section.settings.mode == 'slideshow' }}"
-    },
-    {
-      "type": "range",
-      "id": "interval",
-      "label": "t:labels.message_interval",
-      "min": 3,
-      "max": 10,
-      "step": 1,
-      "unit": "s",
-      "default": 5,
-      "visible_if": "{{ section.settings.mode == 'slideshow' and section.settings.autoplay }}"
-    },
-    {
-      "type": "checkbox",
-      "id": "show_arrows",
-      "label": "t:labels.show_arrows",
-      "default": true,
-      "visible_if": "{{ section.settings.mode == 'slideshow' }}"
-    },
-    {
-      "type": "range",
-      "id": "speed",
-      "label": "t:labels.announcement_speed",
-      "info": "t:labels.announcement_speed_info",
-      "min": 20,
-      "max": 200,
-      "step": 10,
-      "unit": "px",
-      "default": 50,
-      "visible_if": "{{ section.settings.mode == 'marquee' }}"
-    },
-    {
-      "type": "select",
-      "id": "direction",
-      "label": "t:labels.marquee_direction",
-      "info": "t:labels.announcement_direction_info",
-      "options": [
-        {
-          "value": "left",
-          "label": "t:options.marquee_direction.left"
-        },
-        {
-          "value": "right",
-          "label": "t:options.marquee_direction.right"
-        }
-      ],
-      "default": "left",
-      "visible_if": "{{ section.settings.mode == 'marquee' }}"
-    },
     {
       "type": "header",
       "content": "t:labels.layout"
@@ -1253,6 +1207,17 @@
         }
       ],
       "default": "top"
+    },
+    {
+      "type": "range",
+      "id": "bar_size",
+      "label": "t:labels.announcement_size",
+      "info": "t:labels.announcement_size_info",
+      "min": 28,
+      "max": 72,
+      "step": 2,
+      "unit": "px",
+      "default": 36
     },
     {
       "type": "select",
@@ -1284,6 +1249,10 @@
       "visible_if": "{{ section.settings.position == 'right' }}"
     },
     {
+      "type": "header",
+      "content": "t:labels.announcement_text_group"
+    },
+    {
       "type": "select",
       "id": "text_style",
       "label": "t:labels.text_style",
@@ -1303,22 +1272,12 @@
       "type": "range",
       "id": "text_size",
       "label": "t:labels.text_size",
+      "info": "t:labels.announcement_text_size_info",
       "min": 11,
       "max": 20,
       "step": 1,
       "unit": "px",
       "default": 14
-    },
-    {
-      "type": "range",
-      "id": "bar_size",
-      "label": "t:labels.announcement_size",
-      "info": "t:labels.announcement_size_info",
-      "min": 28,
-      "max": 72,
-      "step": 2,
-      "unit": "px",
-      "default": 36
     },
     {
       "type": "select",
@@ -1361,11 +1320,98 @@
       "default": "body"
     },
     {
+      "type": "header",
+      "content": "t:labels.announcement_close_group"
+    },
+    {
       "type": "checkbox",
       "id": "show_close",
       "label": "t:labels.show_close",
       "info": "t:labels.show_close_info",
       "default": false
+    },
+    {
+      "type": "header",
+      "content": "t:labels.movement"
+    },
+    {
+      "type": "select",
+      "id": "mode",
+      "label": "t:labels.announcement_mode",
+      "info": "t:labels.announcement_mode_info",
+      "options": [
+        {
+          "value": "static",
+          "label": "t:options.announcement_mode.static"
+        },
+        {
+          "value": "slideshow",
+          "label": "t:options.announcement_mode.slideshow"
+        },
+        {
+          "value": "marquee",
+          "label": "t:options.announcement_mode.marquee"
+        }
+      ],
+      "default": "static"
+    },
+    {
+      "type": "checkbox",
+      "id": "autoplay",
+      "label": "t:labels.autoplay_messages",
+      "info": "t:labels.announcement_autoplay_info",
+      "default": true,
+      "visible_if": "{{ section.settings.mode == 'slideshow' }}"
+    },
+    {
+      "type": "range",
+      "id": "interval",
+      "label": "t:labels.message_interval",
+      "info": "t:labels.announcement_interval_info",
+      "min": 3,
+      "max": 10,
+      "step": 1,
+      "unit": "s",
+      "default": 5,
+      "visible_if": "{{ section.settings.mode == 'slideshow' and section.settings.autoplay }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_arrows",
+      "label": "t:labels.show_arrows",
+      "info": "t:labels.announcement_arrows_info",
+      "default": true,
+      "visible_if": "{{ section.settings.mode == 'slideshow' and section.settings.autoplay }}"
+    },
+    {
+      "type": "range",
+      "id": "speed",
+      "label": "t:labels.announcement_speed",
+      "info": "t:labels.announcement_speed_info",
+      "min": 20,
+      "max": 200,
+      "step": 10,
+      "unit": "px",
+      "default": 50,
+      "visible_if": "{{ section.settings.mode == 'marquee' }}"
+    },
+    {
+      "type": "select",
+      "id": "direction",
+      "label": "t:labels.marquee_direction",
+      "info": "t:labels.announcement_direction_info",
+      "options": [
+        {
+          "value": "left",
+          "label": "t:options.marquee_direction.left"
+        },
+        {
+          "value": "right",
+          "label": "t:options.marquee_direction.right"
+        }
+      ],
+      "default": "left",
+      "visible_if": "{{ section.settings.mode == 'marquee' }}"
     },
     {
       "type": "header",
@@ -1385,8 +1431,7 @@
         {
           "type": "announcement",
           "settings": {
-            "text": "Complimentary express delivery on all orders.",
-            "link_label": "Shop now"
+            "text": "Complimentary express delivery on all orders."
           }
         },
         {
