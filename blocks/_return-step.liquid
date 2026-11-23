@@ -1,24 +1,30 @@
 {%- comment -%}
   One step of the returns steps (Figma 1:18125): a numbered circle (01 …, a CSS counter from the
   section) with a line towards the next step, a title, a text and an accent label ("Within 60 days").
-  A div with role="listitem" (Shopify wraps each block in a div, which a real <ol> can't hold). The
-  line to the next step is drawn by the section, which can tell the last step (the wrappers).
+  A div with role="listitem" and no Shopify wrapper ("tag": null), so it is a direct child of the
+  section's list. The line to the next step is drawn by the section, which can tell the last step.
+  No title, text and label = nothing on the store; the editor shows a note (the section checks for
+  class="return-step, so the note must not use that class).
 {%- endcomment -%}
 
-<div class="return-step" role="listitem" data-animate="fade-up" {{ block.shopify_attributes }}>
-  <span class="return-step__marker" aria-hidden="true"></span>
-  <div class="return-step__body">
-    {%- if block.settings.title != blank -%}
-      <h3 class="return-step__title">{{ block.settings.title | escape }}</h3>
-    {%- endif -%}
-    {%- if block.settings.text != blank -%}
-      <div class="return-step__text">{{ block.settings.text }}</div>
-    {%- endif -%}
-    {%- if block.settings.label != blank -%}
-      <p class="return-step__label">{{ block.settings.label | escape }}</p>
-    {%- endif -%}
+{%- if block.settings.title != blank or block.settings.text != blank or block.settings.label != blank -%}
+  <div class="return-step" role="listitem" data-animate="fade-up" {{ block.shopify_attributes }}>
+    <span class="return-step__marker" aria-hidden="true"></span>
+    <div class="return-step__body">
+      {%- if block.settings.title != blank -%}
+        <h3 class="return-step__title">{{ block.settings.title | escape }}</h3>
+      {%- endif -%}
+      {%- if block.settings.text != blank -%}
+        <div class="return-step__text">{{ block.settings.text }}</div>
+      {%- endif -%}
+      {%- if block.settings.label != blank -%}
+        <p class="return-step__label">{{ block.settings.label | escape }}</p>
+      {%- endif -%}
+    </div>
   </div>
-</div>
+{%- elsif request.design_mode -%}
+  <p class="returns-steps__note" {{ block.shopify_attributes }}>{{ 'returns.step_empty' | t }}</p>
+{%- endif -%}
 
 {% stylesheet %}
   /*
@@ -38,7 +44,7 @@
     position: relative;
     display: grid;
     place-items: center;
-    inline-size: var(--step-marker, max(3.25rem, calc(73 * var(--px, 0.0625rem))));
+    inline-size: var(--step-marker, max(3.25rem, calc(73 * var(--px))));
     aspect-ratio: 1;
     box-sizing: border-box;
     border: 1px solid var(--color-accent);
@@ -54,18 +60,18 @@
   }
 
   .return-step__body {
-    max-inline-size: max(16rem, calc(320 * var(--px, 0.0625rem)));
+    max-inline-size: max(16rem, calc(320 * var(--px)));
   }
 
   .return-step__title {
-    margin: max(var(--space-lg), calc(40 * var(--px, 0.0625rem))) 0 0;
-    font-size: max(1.375rem, calc(30 * var(--px, 0.0625rem)));
+    margin: max(var(--space-lg), calc(40 * var(--px))) 0 0;
+    font-size: max(1.375rem, calc(30 * var(--px)));
     font-weight: 400;
     line-height: 1.25;
   }
 
   .return-step__text {
-    margin-block-start: max(var(--space-sm), calc(16 * var(--px, 0.0625rem)));
+    margin-block-start: max(var(--space-sm), calc(16 * var(--px)));
     font-size: var(--font-size-body);
     line-height: 1.75;
   }
@@ -74,8 +80,14 @@
     margin: 0;
   }
 
+  .returns-steps__note {
+    margin: 0;
+    font-style: italic;
+    opacity: 0.7;
+  }
+
   .return-step__label {
-    margin: max(var(--space-md), calc(21 * var(--px, 0.0625rem))) 0 0;
+    margin: max(var(--space-md), calc(21 * var(--px))) 0 0;
     color: var(--color-accent);
     font-size: var(--font-size-small);
     letter-spacing: var(--letter-spacing-label);
@@ -115,11 +127,13 @@
 {% schema %}
 {
   "name": "t:general.return_step",
+  "tag": null,
   "settings": [
     {
       "type": "text",
       "id": "title",
       "label": "t:labels.title",
+      "info": "t:labels.returns_step_title_info",
       "default": "Open the order"
     },
     {
@@ -132,6 +146,7 @@
       "type": "text",
       "id": "label",
       "label": "t:labels.returns_step_label",
+      "info": "t:labels.returns_step_label_info",
       "default": "Within 60 days"
     }
   ],

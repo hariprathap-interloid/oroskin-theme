@@ -105,7 +105,6 @@
         "show_breadcrumb": false,
         "eyebrow": "Refund policy",
         "heading": "The full refund <em>policy</em>",
-        "heading_tag": "h2",
         "intro": "<p>The exact terms, as they apply to every order.</p>",
         "in_force_label": "",
         "in_force_date": "",

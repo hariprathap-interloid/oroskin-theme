@@ -1,40 +1,65 @@
 {%- comment -%}
   Returns steps (M8.6 part 2, Figma 1:18125): one Return step block per step, numbered 01 … by a
   CSS counter and joined by a line (a row on desktop, a vertical timeline on phones). The steps fade
-  up one after another.
+  up one after another. The Step block has no Shopify wrapper ("tag": null), so each step is a
+  direct child of the list (list items, the :nth-child rules) and an empty step writes nothing.
+  No heading = a hidden h2 (the step titles are h3). No visible step and no heading = no section on
+  the store (the editor shows a note).
 {%- endcomment -%}
 
 {%- liquid
   assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+  capture steps_html
+    content_for 'blocks'
+  endcapture
+  assign has_steps = false
+  if steps_html contains 'class="return-step'
+    assign has_steps = true
+  endif
 -%}
 
+{%- if has_steps or section.settings.heading != blank or request.design_mode -%}
 {% render 'screen-scale' %}
 
 <div
   class="returns-steps full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
-  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 100 | divided_by: 100.0 }};"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;{% if section.settings.scale_screen %} --text-boost: {{ section.settings.text_scale | default: 100 | divided_by: 100.0 }};{% endif %}"
 >
   <div class="returns-steps__inner">
     {%- if section.settings.heading != blank -%}
       <h2 class="returns-steps__heading">{{ section.settings.heading | escape }}</h2>
+    {%- else -%}
+      <h2 class="visually-hidden">{{ 'returns.steps_heading_hidden' | t }}</h2>
     {%- endif -%}
 
-    {%- if section.blocks.size > 0 -%}
+    {%- if has_steps -%}
       <animate-on-scroll class="returns-steps__list" role="list">
-        {% content_for 'blocks' %}
+        {{ steps_html }}
       </animate-on-scroll>
     {%- elsif request.design_mode -%}
-      <p class="returns-steps__empty">{{ 'returns.steps_empty' | t }}</p>
+      {%- comment -%} Editor: the empty steps' notes, or the note to add steps {%- endcomment -%}
+      {%- if steps_html != blank -%}
+        <div class="returns-steps__list">{{ steps_html }}</div>
+      {%- else -%}
+        <p class="returns-steps__empty">{{ 'returns.steps_empty' | t }}</p>
+      {%- endif -%}
     {%- endif -%}
   </div>
 </div>
+{%- endif -%}
 
 {% stylesheet %}
   /* Figma 1920: 4 steps from x 135, one every 410px (text 318 wide), from y 617 */
   .returns-steps {
+    --px: min(calc(100vw / 1920), 0.0625rem);
+
     display: block;
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
     background-color: var(--color-background);
+  }
+
+  .returns-steps.section--screen-scale {
+    --px: min(calc(100vw / 1920), calc(100svh / 1031));
   }
 
   .returns-steps__inner {
@@ -52,8 +77,8 @@
   }
 
   .returns-steps__list {
-    --step-marker: max(3.25rem, calc(73 * var(--px, 0.0625rem)));
-    --steps-gap: max(var(--space-lg), calc(92 * var(--px, 0.0625rem)));
+    --step-marker: max(3.25rem, calc(73 * var(--px)));
+    --steps-gap: max(var(--space-lg), calc(92 * var(--px)));
 
     counter-reset: return-step;
     display: grid;
@@ -63,10 +88,9 @@
 
   /*
     The line from each circle to the next one (Figma: 8px after the circle, 8px before the next),
-    measured from the step, so it fits at any width. Drawn here: Shopify wraps each block in a div,
-    so only the wrappers (the list's children) tell which step is the last one.
+    measured from the step, so it fits at any width. Drawn here, where the list knows the last step.
   */
-  .returns-steps__list > :not(:last-child) .return-step::before {
+  .returns-steps__list > .return-step:not(:last-child)::before {
     content: "";
     position: absolute;
     inset-block-start: calc(var(--step-marker) / 2);
@@ -76,20 +100,20 @@
   }
 
   /* 4 per row: no line at the end of a row (with 5 or 6 steps, the 4th starts no line into nothing) */
-  .returns-steps__list > :nth-child(4n) .return-step::before {
+  .returns-steps__list > .return-step:nth-child(4n)::before {
     content: none;
   }
 
-  /* The steps fade up one after another */
-  .returns-steps__list > :nth-child(2) .return-step {
+  /* The steps in a row fade up one after another (also in the second row) */
+  .returns-steps__list > .return-step:nth-child(4n + 2) {
     --animate-delay: 100ms;
   }
 
-  .returns-steps__list > :nth-child(3) .return-step {
+  .returns-steps__list > .return-step:nth-child(4n + 3) {
     --animate-delay: 200ms;
   }
 
-  .returns-steps__list > :nth-child(4) .return-step {
+  .returns-steps__list > .return-step:nth-child(4n) {
     --animate-delay: 300ms;
   }
 
@@ -103,8 +127,16 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .returns-steps__list > :nth-child(even) .return-step::before {
+    .returns-steps__list > .return-step:nth-child(even)::before {
       content: none;
+    }
+
+    .returns-steps__list > .return-step:nth-child(n) {
+      --animate-delay: 0ms;
+    }
+
+    .returns-steps__list > .return-step:nth-child(even) {
+      --animate-delay: 100ms;
     }
   }
 
@@ -115,11 +147,11 @@
       gap: 0;
     }
 
-    .returns-steps__list > :not(:last-child) .return-step::before {
+    .returns-steps__list > .return-step:not(:last-child)::before {
       content: none;
     }
 
-    .returns-steps__list > :not(:last-child) .return-step::after {
+    .returns-steps__list > .return-step:not(:last-child)::after {
       content: "";
       position: absolute;
       inset-block: calc(3rem + var(--space-xs)) var(--space-xs);
@@ -128,7 +160,7 @@
       background-color: color-mix(in srgb, var(--color-accent) 25%, transparent);
     }
 
-    .returns-steps__list > :nth-child(n) .return-step {
+    .returns-steps__list > .return-step:nth-child(n) {
       --animate-delay: 0ms;
     }
   }
@@ -138,13 +170,16 @@
 {
   "name": "t:general.returns_steps",
   "tag": "section",
-  "class": "returns-steps-section",
   "enabled_on": {
     "templates": ["page"]
   },
   "blocks": [{ "type": "_return-step" }],
   "max_blocks": 6,
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
     {
       "type": "text",
       "id": "heading",
@@ -153,7 +188,7 @@
     },
     {
       "type": "header",
-      "content": "t:labels.style"
+      "content": "t:labels.layout"
     },
     {
       "type": "select",
@@ -161,22 +196,10 @@
       "label": "t:labels.section_width",
       "info": "t:labels.section_width_info",
       "options": [
-        {
-          "value": "narrow",
-          "label": "t:options.section_width.narrow"
-        },
-        {
-          "value": "wide",
-          "label": "t:options.section_width.wide"
-        },
-        {
-          "value": "widest",
-          "label": "t:options.section_width.widest"
-        },
-        {
-          "value": "full",
-          "label": "t:options.section_width.full"
-        }
+        { "value": "narrow", "label": "t:options.section_width.narrow" },
+        { "value": "wide", "label": "t:options.section_width.wide" },
+        { "value": "widest", "label": "t:options.section_width.widest" },
+        { "value": "full", "label": "t:options.section_width.full" }
       ],
       "default": "widest"
     },
@@ -184,14 +207,14 @@
       "type": "checkbox",
       "id": "scale_screen",
       "label": "t:labels.scale_screen",
-      "info": "t:labels.scale_screen_info",
+      "info": "t:labels.policy_pages_scale_screen_info",
       "default": true
     },
     {
       "type": "range",
       "id": "text_scale",
       "label": "t:labels.text_scale",
-      "info": "t:labels.text_scale_info",
+      "info": "t:labels.policy_pages_text_scale_info",
       "min": 100,
       "max": 130,
       "step": 5,
@@ -200,10 +223,8 @@
       "visible_if": "{{ section.settings.scale_screen }}"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -224,6 +245,16 @@
       "step": 8,
       "unit": "px",
       "default": 56
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ],
   "presets": [

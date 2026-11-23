@@ -8,6 +8,9 @@
   The section's script shows one view at a time; without JS the cards and all panels show.
   The questions are captured first and counted (only complete ones show): a topic with no question
   shows nothing on the store; in the theme editor it shows with a note.
+  "tag": null: Shopify writes no wrapper div around the block, so a hidden topic leaves nothing in the
+  grid (the section's :nth-child centring rules count only real topics); the block attributes are on
+  .faq-topic.
   Icon: the Custom icon image when set (it keeps its own colours), else the chosen built-in icon (in
   the accent colour). The same badge shows on the card, in the topic heading and in the search results.
 {%- endcomment -%}
@@ -562,6 +565,7 @@
 {% schema %}
 {
   "name": "t:general.faq_topic",
+  "tag": null,
   "blocks": [{ "type": "_faq-question" }],
   "settings": [
     {

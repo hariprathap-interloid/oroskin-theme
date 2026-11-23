@@ -647,13 +647,19 @@
   },
   "policy": {
     "contents": "Contents",
-    "empty": "This policy is empty. Write it in Settings > Policies: use Heading 2 for each numbered item, a table for the register, and Heading 4 for a group label such as \"Your rights\"."
+    "empty": "This policy is empty, so this section does not show on your store. Write the policy in Settings > Policies: use Heading 2 for each numbered item, a table for the register and Heading 4 for a group label (for example \"Your rights\")."
   },
   "returns": {
-    "steps_empty": "Add Return step blocks: one per step, numbered automatically."
+    "steps_empty": "Add Step blocks: one for each step. They get the numbers 01, 02… in their order.",
+    "steps_heading_hidden": "How to return",
+    "step_empty": "This step is empty: add a title, a text or a label. It does not show on your store.",
+    "lists_empty": "Add a card title or items. With no cards, this section does not show on your store."
   },
   "page": {
     "empty": "This page has no content yet. Write it in Online Store > Pages.",
     "table_label": "Table, scroll sideways to see all of it"
+  },
+  "cta_card": {
+    "editor_empty": "Add a heading, a text or a button label. With no content, this section does not show on your store."
   }
 }

@@ -100,7 +100,7 @@
     {%- comment -%} Screen readers hear the result count while the visitor types {%- endcomment -%}
     <p class="visually-hidden" role="status" data-faq-status></p>
 
-    {%- if section.blocks.size > 0 -%}
+    {%- if topics_html contains 'data-faq-topic' -%}
       <div class="faq__topics">
         {{ topics_html }}
       </div>
@@ -292,8 +292,8 @@
   }
 
   /*
-    Shopify wraps each block in a div: the wrappers (and the topic blocks, see _faq-topic) step out
-    of the layout, so each topic's card and panel are the grid items.
+    The topic blocks have no Shopify wrapper ("tag": null): each .faq-topic steps out of the layout
+    (display: contents), so each topic's card and panel are the grid items.
   */
   .faq__topics > * {
     display: contents;
@@ -750,6 +750,7 @@
         questions: [...element.querySelectorAll('[data-faq-question]')],
       }));
       if (!this.topics.length) return;
+      this.uniqueHandles();
 
       this.controller?.abort();
       this.controller = new AbortController();
@@ -839,6 +840,25 @@
     disconnectedCallback() {
       this.controller?.abort();
       clearTimeout(this.searchTimer);
+    }
+
+    /**
+     * Two topics with the same handle (e.g. a topic duplicated in the editor) would share one #link and
+     * one panel id, and the second could never open: the later ones get a number (order-shipping-2).
+     * The new handle is saved on the element, so a re-attach reads the same value.
+     */
+    uniqueHandles() {
+      const used = new Set();
+      this.topics.forEach((topic) => {
+        let handle = topic.handle;
+        for (let n = 2; used.has(handle); n += 1) handle = `${topic.handle}-${n}`;
+        used.add(handle);
+        if (handle === topic.handle) return;
+        topic.handle = handle;
+        topic.element.dataset.handle = handle;
+        topic.panel.id = handle;
+        topic.element.querySelector('.faq-topic__card')?.setAttribute('href', `#${handle}`);
+      });
     }
 
     /** The "All subjects" pill and one pill per topic (only one time: a re-attach keeps them) */

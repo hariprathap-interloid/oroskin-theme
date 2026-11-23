@@ -1,60 +1,73 @@
 {%- comment -%}
   Returns lists (M8.6 part 2, Figma 1:18125): two cards side by side, "Always returnable" (a solid
   tick circle, ✓ items) and "The few exceptions" (a pale "!" circle, ✕ items, dashed border). Each
-  card's items come from a textarea, one per line.
+  card's items come from a textarea, one per line. A card with no title and no items is left out
+  (one card keeps its half width: the design has no one-card case); no card = no section on the store (the editor
+  shows a note).
 {%- endcomment -%}
 
 {%- liquid
   assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
 -%}
 
+{%- capture cards_html -%}
+  {%- for card in (1..2) -%}
+    {%- liquid
+      if card == 1
+        assign card_title = section.settings.yes_title
+        assign card_items = section.settings.yes_items | newline_to_br | split: '<br />'
+        assign card_icon = 'icon-check.svg'
+        assign item_icon = 'icon-check.svg'
+        assign card_class = 'returns-lists__card--yes'
+      else
+        assign card_title = section.settings.no_title
+        assign card_items = section.settings.no_items | newline_to_br | split: '<br />'
+        assign card_icon = 'icon-exclamation.svg'
+        assign item_icon = 'icon-close.svg'
+        assign card_class = 'returns-lists__card--no'
+      endif
+    -%}
+    {%- capture items_html -%}
+      {%- for item in card_items -%}
+        {%- assign item_text = item | strip -%}
+        {%- if item_text != blank -%}
+          <li class="returns-lists__item">
+            <span class="returns-lists__mark" aria-hidden="true">{{ item_icon | inline_asset_content }}</span>
+            <span>{{ item_text | escape }}</span>
+          </li>
+        {%- endif -%}
+      {%- endfor -%}
+    {%- endcapture -%}
+    {%- if card_title != blank or items_html != blank -%}
+      <div class="returns-lists__card {{ card_class }}" data-animate="fade-up">
+        {%- if card_title != blank -%}
+          <h2 class="returns-lists__title">
+            <span class="returns-lists__icon" aria-hidden="true">{{ card_icon | inline_asset_content }}</span>
+            {{- card_title | escape -}}
+          </h2>
+        {%- endif -%}
+        {%- if items_html != blank -%}
+          <ul class="returns-lists__items" role="list">{{ items_html }}</ul>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+  {%- endfor -%}
+{%- endcapture -%}
+
+{%- if cards_html != blank or request.design_mode -%}
 {% render 'screen-scale' %}
 
 <div
   class="returns-lists full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
-  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 100 | divided_by: 100.0 }};"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;{% if section.settings.scale_screen %} --text-boost: {{ section.settings.text_scale | default: 100 | divided_by: 100.0 }};{% endif %}"
 >
-  <animate-on-scroll class="returns-lists__inner">
-    {%- for card in (1..2) -%}
-      {%- liquid
-        if card == 1
-          assign card_title = section.settings.yes_title
-          assign card_items = section.settings.yes_items | newline_to_br | split: '<br />'
-          assign card_icon = 'icon-check.svg'
-          assign item_icon = 'icon-check.svg'
-          assign card_class = 'returns-lists__card--yes'
-        else
-          assign card_title = section.settings.no_title
-          assign card_items = section.settings.no_items | newline_to_br | split: '<br />'
-          assign card_icon = 'icon-exclamation.svg'
-          assign item_icon = 'icon-close.svg'
-          assign card_class = 'returns-lists__card--no'
-        endif
-      -%}
-      {%- if card_title != blank or card_items.size > 0 -%}
-        <div class="returns-lists__card {{ card_class }}" data-animate="fade-up">
-          {%- if card_title != blank -%}
-            <h2 class="returns-lists__title">
-              <span class="returns-lists__icon" aria-hidden="true">{{ card_icon | inline_asset_content }}</span>
-              {{- card_title | escape -}}
-            </h2>
-          {%- endif -%}
-          <ul class="returns-lists__items" role="list">
-            {%- for item in card_items -%}
-              {%- assign item_text = item | strip -%}
-              {%- if item_text != blank -%}
-                <li class="returns-lists__item">
-                  <span class="returns-lists__mark" aria-hidden="true">{{ item_icon | inline_asset_content }}</span>
-                  <span>{{ item_text | escape }}</span>
-                </li>
-              {%- endif -%}
-            {%- endfor -%}
-          </ul>
-        </div>
-      {%- endif -%}
-    {%- endfor -%}
-  </animate-on-scroll>
+  {%- if cards_html != blank -%}
+    <animate-on-scroll class="returns-lists__inner">{{ cards_html }}</animate-on-scroll>
+  {%- else -%}
+    <p class="returns-lists__inner returns-lists__empty">{{ 'returns.lists_empty' | t }}</p>
+  {%- endif -%}
 </div>
+{%- endif -%}
 
 {% stylesheet %}
   /*
@@ -63,15 +76,21 @@
     a 24px tick / cross.
   */
   .returns-lists {
+    --px: min(calc(100vw / 1920), 0.0625rem);
+
     display: block;
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
     background-color: var(--color-background);
   }
 
+  .returns-lists.section--screen-scale {
+    --px: min(calc(100vw / 1920), calc(100svh / 1031));
+  }
+
   .returns-lists__inner {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: max(var(--space-lg), calc(60 * var(--px, 0.0625rem)));
+    gap: max(var(--space-lg), calc(60 * var(--px)));
     inline-size: min(
       calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
       calc(100% - var(--page-margin) * 2)
@@ -79,11 +98,16 @@
     margin-inline: auto;
   }
 
+  .returns-lists__empty {
+    display: block;
+    margin-block: 0;
+  }
+
   .returns-lists__card {
     box-sizing: border-box;
-    padding: max(var(--space-lg), calc(44 * var(--px, 0.0625rem))) max(var(--space-lg), calc(33 * var(--px, 0.0625rem)));
+    padding: max(var(--space-lg), calc(44 * var(--px))) max(var(--space-lg), calc(33 * var(--px)));
     border: 1px solid var(--color-card-border);
-    border-radius: max(0.75rem, calc(16 * var(--px, 0.0625rem)));
+    border-radius: max(0.75rem, calc(16 * var(--px)));
     background-color: color-mix(in srgb, var(--color-accent) 1%, var(--color-background));
   }
 
@@ -99,9 +123,9 @@
   .returns-lists__title {
     display: flex;
     align-items: center;
-    gap: max(var(--space-sm), calc(18 * var(--px, 0.0625rem)));
+    gap: max(var(--space-sm), calc(18 * var(--px)));
     margin: 0;
-    font-size: max(1.375rem, calc(30 * var(--px, 0.0625rem)));
+    font-size: max(1.375rem, calc(30 * var(--px)));
     font-weight: 400;
     line-height: 1.25;
   }
@@ -111,7 +135,7 @@
     display: grid;
     flex-shrink: 0;
     place-items: center;
-    inline-size: max(2.25rem, calc(40 * var(--px, 0.0625rem)));
+    inline-size: max(2.25rem, calc(40 * var(--px)));
     aspect-ratio: 1;
     border-radius: 50%;
     background-color: var(--color-accent);
@@ -131,8 +155,8 @@
   .returns-lists__items {
     display: flex;
     flex-direction: column;
-    gap: max(var(--space-xs), calc(10 * var(--px, 0.0625rem)));
-    margin: max(var(--space-lg), calc(34 * var(--px, 0.0625rem))) 0 0;
+    gap: max(var(--space-xs), calc(10 * var(--px)));
+    margin: max(var(--space-lg), calc(34 * var(--px))) 0 0;
     padding: 0;
     list-style: none;
   }
@@ -140,7 +164,7 @@
   .returns-lists__item {
     display: flex;
     align-items: baseline;
-    gap: max(var(--space-md), calc(26 * var(--px, 0.0625rem)));
+    gap: max(var(--space-md), calc(26 * var(--px)));
     font-size: var(--font-size-body);
     line-height: 1.75;
   }
@@ -192,11 +216,14 @@
 {
   "name": "t:general.returns_lists",
   "tag": "section",
-  "class": "returns-lists-section",
   "enabled_on": {
     "templates": ["page"]
   },
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.returns_lists_first_card"
+    },
     {
       "type": "text",
       "id": "yes_title",
@@ -209,6 +236,10 @@
       "label": "t:labels.returns_items",
       "info": "t:labels.returns_items_info",
       "default": "Opened and part-used formulas\nA shade that turned out wrong\nGifts, refunded to the giver or as credit\nAnything damaged in transit, replaced first"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.returns_lists_second_card"
     },
     {
       "type": "text",
@@ -225,7 +256,7 @@
     },
     {
       "type": "header",
-      "content": "t:labels.style"
+      "content": "t:labels.layout"
     },
     {
       "type": "select",
@@ -233,22 +264,10 @@
       "label": "t:labels.section_width",
       "info": "t:labels.section_width_info",
       "options": [
-        {
-          "value": "narrow",
-          "label": "t:options.section_width.narrow"
-        },
-        {
-          "value": "wide",
-          "label": "t:options.section_width.wide"
-        },
-        {
-          "value": "widest",
-          "label": "t:options.section_width.widest"
-        },
-        {
-          "value": "full",
-          "label": "t:options.section_width.full"
-        }
+        { "value": "narrow", "label": "t:options.section_width.narrow" },
+        { "value": "wide", "label": "t:options.section_width.wide" },
+        { "value": "widest", "label": "t:options.section_width.widest" },
+        { "value": "full", "label": "t:options.section_width.full" }
       ],
       "default": "widest"
     },
@@ -256,14 +275,14 @@
       "type": "checkbox",
       "id": "scale_screen",
       "label": "t:labels.scale_screen",
-      "info": "t:labels.scale_screen_info",
+      "info": "t:labels.policy_pages_scale_screen_info",
       "default": true
     },
     {
       "type": "range",
       "id": "text_scale",
       "label": "t:labels.text_scale",
-      "info": "t:labels.text_scale_info",
+      "info": "t:labels.policy_pages_text_scale_info",
       "min": 100,
       "max": 130,
       "step": 5,
@@ -272,10 +291,8 @@
       "visible_if": "{{ section.settings.scale_screen }}"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -296,6 +313,16 @@
       "step": 8,
       "unit": "px",
       "default": 48
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ],
   "presets": [

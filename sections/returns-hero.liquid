@@ -1,7 +1,7 @@
 {%- comment -%}
   Returns hero (M8.6 part 2, design/briefs/policies.md, Figma 1:18125 "returns"): breadcrumb, a round
   badge ("60 / days"), the eyebrow "Returns & refunds", "No questions. Not one." and the intro.
-  The page's first section: no scroll animation.
+  The page's first section: no scroll animation. No badge number = no badge column (the text takes the row).
 {%- endcomment -%}
 
 {%- liquid
@@ -13,14 +13,14 @@
 
 <div
   class="returns-hero full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
-  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 100 | divided_by: 100.0 }};"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;{% if section.settings.scale_screen %} --text-boost: {{ section.settings.text_scale | default: 100 | divided_by: 100.0 }};{% endif %}"
 >
   <div class="returns-hero__inner">
     {%- if section.settings.show_breadcrumb -%}
       {% render 'breadcrumb', current: title, class: 'returns-hero__breadcrumb' %}
     {%- endif -%}
 
-    <div class="returns-hero__grid">
+    <div class="returns-hero__grid{% if section.settings.badge_number == blank %} returns-hero__grid--no-badge{% endif %}">
       {%- if section.settings.badge_number != blank -%}
         <div class="returns-hero__badge">
           <span class="returns-hero__badge-number">{{ section.settings.badge_number | escape }}</span>
@@ -56,10 +56,17 @@
     from x 593 (eyebrow y 212, heading ~64px y 278, 629 wide; intro ~20 / 35 under it); the badge
     column is 135–593 (458 wide), the badge centred in it at the right.
   */
+  /* --px = one Figma pixel (from the width only and never more than 1px with Scale with the screen off) */
   .returns-hero {
+    --px: min(calc(100vw / 1920), 0.0625rem);
+
     display: block;
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
     background-color: var(--color-background);
+  }
+
+  .returns-hero.section--screen-scale {
+    --px: min(calc(100vw / 1920), calc(100svh / 1031));
   }
 
   .returns-hero__inner {
@@ -72,9 +79,13 @@
 
   .returns-hero__grid {
     display: grid;
-    grid-template-columns: max(12rem, calc(458 * var(--px, 0.0625rem))) minmax(0, 1fr);
+    grid-template-columns: max(12rem, calc(458 * var(--px))) minmax(0, 1fr);
     align-items: start;
-    margin-block-start: max(var(--space-xl), calc(45 * var(--px, 0.0625rem)));
+    margin-block-start: max(var(--space-xl), calc(45 * var(--px)));
+  }
+
+  .returns-hero__grid--no-badge {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .returns-hero__badge {
@@ -83,10 +94,10 @@
     align-items: center;
     justify-content: center;
     justify-self: center;
-    inline-size: max(9rem, calc(223 * var(--px, 0.0625rem)));
+    inline-size: max(9rem, calc(223 * var(--px)));
     aspect-ratio: 1;
     box-sizing: border-box;
-    margin-block-start: max(0rem, calc(19 * var(--px, 0.0625rem)));
+    margin-block-start: max(0rem, calc(19 * var(--px)));
     border: 1px solid color-mix(in srgb, var(--color-accent) 15%, transparent);
     border-radius: 50%;
     background-color: color-mix(in srgb, var(--color-accent) 7%, var(--color-background));
@@ -96,7 +107,7 @@
 
   .returns-hero__badge-number {
     font-family: var(--font-heading--family);
-    font-size: max(4rem, calc(115 * var(--px, 0.0625rem)));
+    font-size: max(4rem, calc(115 * var(--px)));
     line-height: 0.95;
   }
 
@@ -108,8 +119,9 @@
   }
 
   .returns-hero__heading {
-    margin: max(var(--space-lg), calc(42 * var(--px, 0.0625rem))) 0 0;
-    font-size: max(2.25rem, calc(64 * var(--px, 0.0625rem)));
+    margin: max(var(--space-lg), calc(42 * var(--px))) 0 0;
+    /* --text-boost = the Text size setting (only with Scale with the screen) */
+    font-size: calc(max(2.25rem, calc(64 * var(--px))) * var(--text-boost, 1));
     font-weight: 400;
     line-height: 1.1;
   }
@@ -120,8 +132,8 @@
   }
 
   .returns-hero__text {
-    max-inline-size: max(20rem, calc(640 * var(--px, 0.0625rem)));
-    margin-block-start: max(var(--space-lg), calc(40 * var(--px, 0.0625rem)));
+    max-inline-size: max(20rem, calc(640 * var(--px)));
+    margin-block-start: max(var(--space-lg), calc(40 * var(--px)));
     font-size: var(--font-size-body);
     line-height: 1.75;
   }
@@ -164,11 +176,14 @@
 {
   "name": "t:general.returns_hero",
   "tag": "section",
-  "class": "returns-hero-section",
   "enabled_on": {
     "templates": ["page"]
   },
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
     {
       "type": "checkbox",
       "id": "show_breadcrumb",
@@ -186,7 +201,9 @@
       "type": "text",
       "id": "badge_label",
       "label": "t:labels.returns_badge_label",
-      "default": "Days"
+      "info": "t:labels.returns_badge_label_info",
+      "default": "Days",
+      "visible_if": "{{ section.settings.badge_number != blank }}"
     },
     {
       "type": "text",
@@ -198,7 +215,7 @@
       "type": "inline_richtext",
       "id": "heading",
       "label": "t:labels.heading",
-      "info": "t:labels.italic_accent_info",
+      "info": "t:labels.returns_hero_heading_info",
       "default": "No questions. Not <em>one.</em>"
     },
     {
@@ -209,7 +226,7 @@
     },
     {
       "type": "header",
-      "content": "t:labels.style"
+      "content": "t:labels.layout"
     },
     {
       "type": "select",
@@ -217,22 +234,10 @@
       "label": "t:labels.section_width",
       "info": "t:labels.section_width_info",
       "options": [
-        {
-          "value": "narrow",
-          "label": "t:options.section_width.narrow"
-        },
-        {
-          "value": "wide",
-          "label": "t:options.section_width.wide"
-        },
-        {
-          "value": "widest",
-          "label": "t:options.section_width.widest"
-        },
-        {
-          "value": "full",
-          "label": "t:options.section_width.full"
-        }
+        { "value": "narrow", "label": "t:options.section_width.narrow" },
+        { "value": "wide", "label": "t:options.section_width.wide" },
+        { "value": "widest", "label": "t:options.section_width.widest" },
+        { "value": "full", "label": "t:options.section_width.full" }
       ],
       "default": "widest"
     },
@@ -240,14 +245,14 @@
       "type": "checkbox",
       "id": "scale_screen",
       "label": "t:labels.scale_screen",
-      "info": "t:labels.scale_screen_info",
+      "info": "t:labels.policy_pages_scale_screen_info",
       "default": true
     },
     {
       "type": "range",
       "id": "text_scale",
       "label": "t:labels.text_scale",
-      "info": "t:labels.text_scale_info",
+      "info": "t:labels.policy_pages_text_scale_info",
       "min": 100,
       "max": 130,
       "step": 5,
@@ -256,10 +261,8 @@
       "visible_if": "{{ section.settings.scale_screen }}"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -280,6 +283,16 @@
       "step": 8,
       "unit": "px",
       "default": 80
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ],
   "presets": [

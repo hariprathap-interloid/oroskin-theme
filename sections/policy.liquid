@@ -7,8 +7,11 @@
   - a <table> is "The register"; a small heading (H4–H6) is an accent group label ("In detail",
     "Your rights") that restarts the numbering.
   Above: breadcrumb, eyebrow, heading, the "In force" block, the intro. Below: a "write to us" call.
-  Templates: page.privacy.json and page.terms.json (a template's settings are shared by all the
-  pages that use it, so each policy has its own).
+  Templates: page.privacy.json, page.terms.json and page.returns.json (a template's settings are
+  shared by all the pages that use it, so each policy has its own).
+  Phones (design/inbox: terms + privacy phone PNGs, 375px): the heading and the "In force" block
+  stay on one row, the contents is a normal list above the clauses, the register rows are label /
+  value stacks.
 {%- endcomment -%}
 
 {%- liquid
@@ -27,16 +30,28 @@
   assign title = page.title | default: policy.title
   assign shop_mail = 'mailto:' | append: shop.email
   assign cta_url = section.settings.cta_link | default: shop_mail
-  # h1 on its own page; h2 when it sits under another section's h1 (e.g. on the returns page)
-  assign heading_tag = section.settings.heading_tag | default: 'h1'
+
+  # h1 when this is the page's first section (its own page); h2 under another section's h1 (the returns page)
+  assign heading_tag = 'h2'
+  if section.index == 1
+    assign heading_tag = 'h1'
+  endif
+
+  # A Heading 4–6 in the policy is a group label ("The register", "In detail"), not a heading: as a
+  # heading it skipped levels (h1 → h4). It becomes a div with the same look.
+  assign policy_body = policy.body
+  if policy_body != blank
+    assign policy_body = policy_body | replace: '<h4', '<div data-policy-group' | replace: '</h4>', '</div>' | replace: '<h5', '<div data-policy-group' | replace: '</h5>', '</div>' | replace: '<h6', '<div data-policy-group' | replace: '</h6>', '</div>'
+  endif
 -%}
 
+{%- comment -%} No policy text on the store = no section (the editor shows the header and a note) {%- endcomment -%}
+{%- if policy_body != blank or request.design_mode -%}
 {% render 'screen-scale' %}
 
 <policy-page
   class="policy policy--{{ policy_layout }} full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
-  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};"
-  data-label-contents="{{ 'policy.contents' | t | escape }}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;{% if section.settings.scale_screen %} --text-boost: {{ section.settings.text_scale | default: 100 | divided_by: 100.0 }};{% endif %}"
 >
   <div class="policy__inner">
     {%- if section.settings.show_breadcrumb -%}
@@ -74,7 +89,7 @@
       <div class="policy__intro">{{ section.settings.intro }}</div>
     {%- endif -%}
 
-    {%- if policy.body != blank -%}
+    {%- if policy_body != blank -%}
       <div class="policy__layout">
         {%- if policy_layout == 'contents' -%}
           {%- comment -%} Built by the script from the policy's headings (01 …); hidden without JS {%- endcomment -%}
@@ -84,7 +99,7 @@
           </nav>
         {%- endif -%}
         <div class="policy__body rte" data-policy-body>
-          {{ policy.body }}
+          {{ policy_body }}
         </div>
       </div>
     {%- elsif request.design_mode -%}
@@ -111,6 +126,7 @@
     {%- endif -%}
   </div>
 </policy-page>
+{%- endif -%}
 
 {% stylesheet %}
   /*
@@ -123,14 +139,24 @@
     Contents (terms): a 466px contents column (rows 70 tall, 3px rail), clauses 1107 wide, gap 77.
     CTA: a 3px rule ~100px under the last row, heading ~40px, text, button 259 x 50 at the right.
   */
+  /*
+    --px = one Figma pixel: from the screen width and height with Scale with the screen on, else from the
+    width only and never more than 1px (without it the 1920px sizes showed on phones: a 64px title).
+  */
   .policy {
+    --px: min(calc(100vw / 1920), 0.0625rem);
+
     display: block;
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
     background-color: var(--color-background);
   }
 
+  .policy.section--screen-scale {
+    --px: min(calc(100vw / 1920), calc(100svh / 1031));
+  }
+
   .policy__inner {
-    --policy-title-column: max(14rem, calc(418 * var(--px, 0.0625rem)));
+    --policy-title-column: max(14rem, calc(418 * var(--px)));
 
     inline-size: min(
       calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
@@ -146,15 +172,16 @@
     align-items: flex-end;
     justify-content: space-between;
     gap: var(--space-lg) var(--space-2xl);
-    margin-block-start: max(var(--space-xl), calc(45 * var(--px, 0.0625rem)));
-    padding-block-end: max(var(--space-xl), calc(39 * var(--px, 0.0625rem)));
+    margin-block-start: max(var(--space-xl), calc(45 * var(--px)));
+    padding-block-end: max(var(--space-xl), calc(39 * var(--px)));
     border-block-end: 3px solid var(--color-card-border);
   }
 
   .policy__heading {
     max-inline-size: 16em;
-    margin: max(var(--space-lg), calc(42 * var(--px, 0.0625rem))) 0 0;
-    font-size: max(2.25rem, calc(64 * var(--px, 0.0625rem)));
+    margin: max(var(--space-lg), calc(42 * var(--px))) 0 0;
+    /* --text-boost = the Text size setting (only with Scale with the screen) */
+    font-size: calc(max(2.25rem, calc(64 * var(--px))) * var(--text-boost, 1));
     font-weight: 400;
     line-height: 1.1;
   }
@@ -183,7 +210,7 @@
   .policy__in-force-date {
     margin-block-start: var(--space-sm);
     font-family: var(--font-heading--family);
-    font-size: max(1.25rem, calc(24 * var(--px, 0.0625rem)));
+    font-size: max(1.25rem, calc(24 * var(--px)));
   }
 
   .policy__in-force-meta {
@@ -192,8 +219,8 @@
   }
 
   .policy__intro {
-    max-inline-size: max(20rem, calc(954 * var(--px, 0.0625rem)));
-    margin-block-start: max(var(--space-lg), calc(37 * var(--px, 0.0625rem)));
+    max-inline-size: max(20rem, calc(954 * var(--px)));
+    margin-block-start: max(var(--space-lg), calc(37 * var(--px)));
     font-size: var(--font-size-body);
     line-height: 1.75;
   }
@@ -204,7 +231,7 @@
 
   /* ---------- The policy text (Settings > Policies) ---------- */
   .policy__layout {
-    margin-block-start: max(var(--space-xl), calc(48 * var(--px, 0.0625rem)));
+    margin-block-start: max(var(--space-xl), calc(48 * var(--px)));
   }
 
   .policy__body {
@@ -214,7 +241,7 @@
   }
 
   /* Shopify's generated policies wrap the text in one <div>: let its children join the layout */
-  .policy__body > div {
+  .policy__body > div:not([data-policy-group]) {
     display: contents;
   }
 
@@ -222,10 +249,10 @@
     margin: 0;
   }
 
-  /* An H4–H6: the accent group label ("The register", "In detail"); the numbering restarts */
-  .policy__body :is(h4, h5, h6) {
+  /* An H4–H6 (a div in Liquid): the accent group label ("The register", "In detail"); the numbering restarts */
+  .policy__body [data-policy-group] {
     counter-reset: policy-item;
-    margin: max(var(--space-2xl), calc(72 * var(--px, 0.0625rem))) 0 0;
+    margin: max(var(--space-2xl), calc(72 * var(--px))) 0 0;
     color: var(--color-accent);
     font-family: var(--font-body--family);
     font-size: var(--font-size-label);
@@ -243,12 +270,12 @@
   .policy__body h2 {
     counter-increment: policy-item;
     display: flex;
-    gap: max(var(--space-sm), calc(30 * var(--px, 0.0625rem)));
+    gap: max(var(--space-sm), calc(30 * var(--px)));
     margin: 0;
-    font-size: max(1.25rem, calc(26 * var(--px, 0.0625rem)));
+    font-size: max(1.25rem, calc(26 * var(--px)));
     font-weight: 400;
     line-height: 1.35;
-    scroll-margin-block-start: 8rem;
+    scroll-margin-block-start: calc(var(--header-space, 6.0625rem) + var(--space-lg));
   }
 
   .policy__body h2::before {
@@ -283,7 +310,7 @@
   }
 
   .policy__body th {
-    padding: 0 var(--space-md) max(var(--space-md), calc(22 * var(--px, 0.0625rem))) 0;
+    padding: 0 var(--space-md) max(var(--space-md), calc(22 * var(--px))) 0;
     border-block-end: 1px solid var(--color-card-border);
     color: var(--color-accent);
     font-size: var(--font-size-small);
@@ -294,14 +321,14 @@
   }
 
   .policy__body td {
-    padding: max(var(--space-lg), calc(33 * var(--px, 0.0625rem))) var(--space-md) max(var(--space-lg), calc(33 * var(--px, 0.0625rem))) 0;
+    padding: max(var(--space-lg), calc(33 * var(--px))) var(--space-md) max(var(--space-lg), calc(33 * var(--px))) 0;
     border-block-end: 1px solid var(--color-card-border);
     vertical-align: top;
   }
 
   .policy__body td:first-child {
     font-family: var(--font-heading--family);
-    font-size: max(1.25rem, calc(26 * var(--px, 0.0625rem)));
+    font-size: max(1.25rem, calc(26 * var(--px)));
     line-height: 1.35;
   }
 
@@ -327,7 +354,7 @@
 
   .policy--rows .policy__body h2 {
     grid-column: 1;
-    padding-block-start: max(var(--space-lg), calc(33 * var(--px, 0.0625rem)));
+    padding-block-start: max(var(--space-lg), calc(33 * var(--px)));
     padding-inline-end: var(--space-lg);
     border-block-start: 1px solid var(--color-card-border);
   }
@@ -338,7 +365,7 @@
   }
 
   .policy--rows .policy__body h2 + :is(p, ul, ol, h3) {
-    padding-block-start: max(var(--space-lg), calc(33 * var(--px, 0.0625rem)));
+    padding-block-start: max(var(--space-lg), calc(33 * var(--px)));
     border-block-start: 1px solid var(--color-card-border);
   }
 
@@ -348,15 +375,15 @@
 
   /* The row ends with space before the next one */
   .policy--rows .policy__body h2 ~ :is(p, ul, ol):has(+ h2) {
-    padding-block-end: max(var(--space-lg), calc(33 * var(--px, 0.0625rem)));
+    padding-block-end: max(var(--space-lg), calc(33 * var(--px)));
   }
 
   /* Contents (terms): the contents column (sticky) + the clauses, each with a rule under it */
   .policy--contents .policy__layout {
     display: grid;
-    grid-template-columns: max(14rem, calc(466 * var(--px, 0.0625rem))) minmax(0, 1fr);
+    grid-template-columns: max(14rem, calc(466 * var(--px))) minmax(0, 1fr);
     align-items: start;
-    gap: max(var(--space-xl), calc(77 * var(--px, 0.0625rem)));
+    gap: max(var(--space-xl), calc(77 * var(--px)));
   }
 
   .policy--contents .policy__layout:not(:has(.policy__contents:not([hidden]))) {
@@ -364,9 +391,9 @@
   }
 
   .policy--contents .policy__body h2 {
-    padding-block-start: max(var(--space-lg), calc(38 * var(--px, 0.0625rem)));
+    padding-block-start: max(var(--space-lg), calc(38 * var(--px)));
     border-block-start: 1px solid var(--color-card-border);
-    font-size: max(1.375rem, calc(30 * var(--px, 0.0625rem)));
+    font-size: max(1.375rem, calc(30 * var(--px)));
   }
 
   .policy--contents .policy__body > h2:first-child,
@@ -376,7 +403,7 @@
   }
 
   .policy--contents .policy__body h2 + * {
-    margin-block-start: max(var(--space-md), calc(22 * var(--px, 0.0625rem)));
+    margin-block-start: max(var(--space-md), calc(22 * var(--px)));
   }
 
   .policy--contents .policy__body :is(p, ul, ol) + :is(p, ul, ol) {
@@ -384,12 +411,12 @@
   }
 
   .policy--contents .policy__body :is(p, ul, ol):has(+ h2) {
-    padding-block-end: max(var(--space-lg), calc(38 * var(--px, 0.0625rem)));
+    padding-block-end: max(var(--space-lg), calc(38 * var(--px)));
   }
 
   .policy__contents {
     position: sticky;
-    inset-block-start: 8rem;
+    inset-block-start: calc(var(--header-space, 6.0625rem) + var(--space-md));
   }
 
   .policy__contents[hidden] {
@@ -397,7 +424,7 @@
   }
 
   .policy__contents-list {
-    margin: max(var(--space-lg), calc(38 * var(--px, 0.0625rem))) 0 0;
+    margin: max(var(--space-lg), calc(38 * var(--px))) 0 0;
     padding: 0;
     border-inline-start: 3px solid var(--color-card-border);
     list-style: none;
@@ -407,7 +434,7 @@
     display: flex;
     align-items: center;
     gap: var(--space-sm);
-    min-block-size: max(2.75rem, calc(70 * var(--px, 0.0625rem)));
+    min-block-size: max(2.75rem, calc(70 * var(--px)));
     box-sizing: border-box;
     margin-inline-start: -3px;
     padding: var(--space-xs) var(--space-md);
@@ -440,19 +467,19 @@
     align-items: flex-end;
     justify-content: space-between;
     gap: var(--space-lg) var(--space-2xl);
-    margin-block-start: max(var(--space-2xl), calc(100 * var(--px, 0.0625rem)));
-    padding-block-start: max(var(--space-xl), calc(76 * var(--px, 0.0625rem)));
+    margin-block-start: max(var(--space-2xl), calc(100 * var(--px)));
+    padding-block-start: max(var(--space-xl), calc(76 * var(--px)));
     border-block-start: 3px solid var(--color-card-border);
   }
 
   .policy__cta-copy {
     flex: 1 1 24rem;
-    max-inline-size: max(24rem, calc(855 * var(--px, 0.0625rem)));
+    max-inline-size: max(24rem, calc(855 * var(--px)));
   }
 
   .policy__cta-heading {
     margin: 0;
-    font-size: max(1.75rem, calc(40 * var(--px, 0.0625rem)));
+    font-size: max(1.75rem, calc(40 * var(--px)));
     font-weight: 400;
     line-height: 1.2;
   }
@@ -468,9 +495,9 @@
   }
 
   .policy__cta-button {
-    min-block-size: max(2.75rem, calc(50 * var(--px, 0.0625rem)));
-    padding-inline: max(1.25rem, calc(35 * var(--px, 0.0625rem)));
-    font-size: max(var(--font-size-caption), calc(16.5 * var(--px, 0.0625rem)));
+    min-block-size: max(2.75rem, calc(50 * var(--px)));
+    padding-inline: max(1.25rem, calc(35 * var(--px)));
+    font-size: max(var(--font-size-caption), calc(16.5 * var(--px)));
   }
 
   .policy__cta-icon {
@@ -478,7 +505,7 @@
   }
 
   .policy__cta-icon svg {
-    inline-size: max(1.125rem, calc(19 * var(--px, 0.0625rem)));
+    inline-size: max(1.125rem, calc(19 * var(--px)));
     block-size: auto;
   }
 
@@ -486,74 +513,101 @@
     margin: var(--space-xl) 0 0;
   }
 
-  /* ---------- Tablets: one column for the contents layout, the contents as chips ---------- */
+  /* ---------- Below 990px: one column for the contents layout; the contents is a normal list above the clauses ---------- */
   @media (max-width: 989px) {
     .policy--contents .policy__layout {
       grid-template-columns: minmax(0, 1fr);
-      gap: var(--space-lg);
+      gap: var(--space-xl);
     }
 
-    /*
-      The contents become a row of chips that scrolls sideways and stays under the header while
-      reading (touch targets 44px).
-    */
     .policy__contents {
-      z-index: 2;
-      inset-block-start: 5.5rem;
-      margin-inline: calc(var(--page-margin) * -1);
-      padding: var(--space-sm) var(--page-margin);
-      background-color: color-mix(in srgb, var(--color-background) 92%, transparent);
-      -webkit-backdrop-filter: blur(12px);
-      backdrop-filter: blur(12px);
-    }
-
-    .policy__contents .policy__label {
-      display: none;
+      position: static;
     }
 
     .policy__contents-list {
-      display: flex;
-      gap: var(--space-xs);
-      margin: 0;
-      overflow-x: auto;
-      border: 0;
-      scroll-snap-type: x proximity;
-      scrollbar-width: none;
-    }
-
-    .policy__contents-list::-webkit-scrollbar {
-      display: none;
-    }
-
-    .policy__contents-list li {
-      flex-shrink: 0;
-      scroll-snap-align: start;
+      margin-block-start: var(--space-md);
     }
 
     .policy__contents-link {
-      min-block-size: 2.75rem;
-      margin: 0;
-      padding: 0 var(--space-md);
-      border: 1px solid var(--color-card-border);
-      border-radius: var(--radius-pill);
-      font-size: var(--font-size-caption);
-      white-space: nowrap;
-    }
-
-    .policy__contents-link[aria-current="true"] {
-      border-color: var(--color-accent);
+      min-block-size: 2.5rem;
     }
   }
 
-  /* ---------- Phones: rows stack, the register becomes labelled cards ---------- */
+  /*
+    ---------- Phones (phone PNGs, 375px): heading and "In force" on one row, smaller type,
+    the register as label / value rows, the button at its own width ----------
+  */
   @media (max-width: 749px) {
+    /* A grid: the eyebrow on its own row, then the heading and the "In force" block side by side */
     .policy__header {
-      align-items: flex-start;
-      flex-direction: column;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: end;
+      gap: 0 var(--space-md);
+      margin-block-start: var(--space-lg);
+      padding-block-end: var(--space-lg);
+    }
+
+    .policy__title-block {
+      display: contents;
+    }
+
+    .policy__eyebrow {
+      grid-column: 1 / -1;
     }
 
     .policy__in-force {
-      text-align: start;
+      max-inline-size: 11rem;
+    }
+
+    .policy__heading {
+      margin-block-start: var(--space-md);
+      font-size: calc(1.75rem * var(--text-boost, 1));
+      line-height: 1.3;
+    }
+
+    .policy__in-force-label,
+    .policy__in-force-meta {
+      font-size: 0.75rem;
+    }
+
+    .policy__in-force-date {
+      margin-block-start: var(--space-xs);
+      font-size: 1rem;
+    }
+
+    .policy__intro {
+      margin-block-start: var(--space-lg);
+    }
+
+    .policy__layout {
+      margin-block-start: var(--space-xl);
+    }
+
+    .policy__body,
+    .policy__intro,
+    .policy__cta-text {
+      font-size: 0.8125rem;
+      line-height: 1.65;
+    }
+
+    .policy__body h2,
+    .policy--contents .policy__body h2 {
+      gap: var(--space-sm);
+      font-size: 1.0625rem;
+    }
+
+    /* Not the first one: the first label sits under the intro with only the layout's space */
+    .policy__body [data-policy-group]:not(:first-child) {
+      margin-block-start: var(--space-xl);
+    }
+
+    .policy__body [data-policy-group] {
+      font-size: 0.8125rem;
+    }
+
+    .policy__contents-link {
+      font-size: 0.875rem;
     }
 
     .policy--rows .policy__body {
@@ -574,71 +628,82 @@
       border-block-start: 0;
     }
 
-    .policy__body,
-    .policy__intro,
-    .policy__cta-text {
-      font-size: var(--font-size-body-sm);
-      line-height: 1.7;
+    /* A table scrolls sideways (no JS: no column labels for the rows below) */
+    .policy__body table {
+      display: block;
+      overflow-x: auto;
     }
 
-    /* The register: one card per row, each value with its column's label (the script adds data-label) */
-    .policy__body table,
-    .policy__body tbody,
-    .policy__body tr,
-    .policy__body td {
+    /* The register: each row a stack of label / value (the script copies the column labels to data-label) */
+    .policy__body table:has(td[data-label]) :is(tbody, tr, td) {
       display: block;
     }
 
-    .policy__body thead {
+    .policy__body table:has(td[data-label]) :is(thead, tr:has(th)) {
       display: none;
     }
 
-    .policy__body tbody {
-      display: grid;
-      gap: var(--space-sm);
+    .policy__body table:has(td[data-label]) {
+      margin-block-start: 0;
     }
 
-    .policy__body tr {
-      padding: var(--space-md);
-      border: 1px solid var(--color-card-border);
-      border-radius: var(--radius-sm);
-      background-color: color-mix(in srgb, var(--color-accent) 2%, var(--color-background));
+    .policy__body table:has(td[data-label]) tr {
+      padding-block: var(--space-lg);
+      border-block-end: 1px solid var(--color-card-border);
     }
 
-    .policy__body tr:has(th) {
-      display: none;
-    }
-
-    .policy__body td {
+    .policy__body table:has(td[data-label]) td {
       padding: 0;
       border: 0;
     }
 
-    .policy__body td + td {
-      margin-block-start: var(--space-sm);
+    .policy__body table:has(td[data-label]) td + td {
+      margin-block-start: var(--space-md);
+    }
+
+    .policy__body table:has(td[data-label]) td:first-child {
+      font-size: 1.0625rem;
     }
 
     .policy__body td[data-label]::before {
       content: attr(data-label);
       display: block;
+      margin-block-end: var(--space-xs);
       color: var(--color-accent);
       font-family: var(--font-body--family);
       font-size: 0.6875rem;
       letter-spacing: var(--letter-spacing-label);
+      line-height: 1.5;
       text-transform: uppercase;
     }
 
-    .policy__body td:first-child[data-label]::before {
-      display: none;
-    }
-
     .policy__cta {
-      align-items: stretch;
+      align-items: flex-start;
       flex-direction: column;
+      gap: var(--space-md);
+      margin-block-start: var(--space-xl);
+      padding-block-start: var(--space-lg);
     }
 
-    .policy__cta-button {
-      inline-size: 100%;
+    .policy__cta-copy {
+      flex: none;
+    }
+
+    .policy__cta-heading {
+      font-size: 1.125rem;
+    }
+  }
+
+  /* Very small phones: the "In force" block goes under the heading (else "Everything" has no room) */
+  @media (max-width: 374px) {
+    .policy__header {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .policy__in-force {
+      max-inline-size: none;
+      margin-block-start: var(--space-md);
+      text-align: start;
     }
   }
 {% endstylesheet %}
@@ -646,22 +711,30 @@
 {% javascript %}
   /**
    * <policy-page>:
-   * - Contents layout: builds the contents list from the policy's H2s (01 …, each with an id), marks
-   *   the clause being read (IntersectionObserver with a thin band near the top) and keeps the
-   *   current chip in view on phones.
+   * - Contents layout: builds the contents list from the policy's H2s (01 …, each with an id) one
+   *   time, and marks the clause being read: the last heading at or above the place where a
+   *   contents link stops it (its scroll-margin, + 8px), else the first. Read on scroll, so a fast
+   *   scroll never leaves an old mark. A click on a contents link marks that clause and holds it
+   *   until the visitor scrolls (wheel, touch, keys): a short clause must not pass the mark to the
+   *   next one, and near the end of the page the last headings can't reach the line.
    * - The register on phones: gives each cell its column's label (data-label, from the table's
-   *   header row), so a row can be shown as a labelled card.
+   *   header row), so a row can be shown as label / value lines.
+   * The editor can attach the section again (connectedCallback runs again): the listeners are on one
+   * AbortController and the list is built only when it is empty.
    */
   class PolicyPage extends HTMLElement {
     connectedCallback() {
       this.body = this.querySelector('[data-policy-body]');
       if (!this.body) return;
+      this.controller?.abort();
+      this.controller = new AbortController();
       this.labelTables();
       this.buildContents();
     }
 
     disconnectedCallback() {
-      this.observer?.disconnect();
+      this.controller?.abort();
+      cancelAnimationFrame(this.frame);
     }
 
     labelTables() {
@@ -679,44 +752,75 @@
     buildContents() {
       const nav = this.querySelector('.policy__contents');
       const list = this.querySelector('[data-policy-contents]');
-      const headings = [...this.body.querySelectorAll('h2')];
-      if (!nav || !list || !headings.length) return;
+      this.headings = [...this.body.querySelectorAll('h2')];
+      if (!nav || !list || !this.headings.length) return;
 
-      const links = headings.map((heading, index) => {
-        const number = String(index + 1).padStart(2, '0');
-        heading.id ||= `PolicyClause-${number}`;
-        const item = document.createElement('li');
-        const link = document.createElement('a');
-        link.className = 'policy__contents-link';
-        link.href = `#${heading.id}`;
-        const numberSpan = document.createElement('span');
-        numberSpan.className = 'policy__contents-number';
-        numberSpan.textContent = number;
-        link.append(numberSpan, heading.textContent.trim());
-        item.append(link);
-        list.append(item);
-        return link;
-      });
+      if (!list.children.length) {
+        this.headings.forEach((heading, index) => {
+          const number = String(index + 1).padStart(2, '0');
+          heading.id ||= `PolicyClause-${number}`;
+          const item = document.createElement('li');
+          const link = document.createElement('a');
+          link.className = 'policy__contents-link';
+          link.href = `#${heading.id}`;
+          const numberSpan = document.createElement('span');
+          numberSpan.className = 'policy__contents-number';
+          numberSpan.textContent = number;
+          link.append(numberSpan, heading.textContent.trim());
+          item.append(link);
+          list.append(item);
+        });
+      }
+      this.links = [...list.querySelectorAll('.policy__contents-link')];
       nav.hidden = false;
 
-      // The clause whose heading has passed a band 25–30% down the screen is the current one
-      this.observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (!entry.isIntersecting) return;
-            const index = headings.indexOf(entry.target);
-            links.forEach((link, i) => link.setAttribute('aria-current', String(i === index)));
-            // Phones: keep the current chip in view in the sideways list
-            const link = links[index];
-            if (list.scrollWidth > list.clientWidth) {
-              list.scrollTo({ left: link.parentElement.offsetLeft - 16, behavior: 'smooth' });
-            }
-          });
+      const { signal } = this.controller;
+      const queue = () => {
+        cancelAnimationFrame(this.frame);
+        this.frame = requestAnimationFrame(() => this.markCurrent());
+      };
+      window.addEventListener('scroll', queue, { passive: true, signal });
+      window.addEventListener('resize', queue, { signal });
+
+      list.addEventListener(
+        'click',
+        (event) => {
+          const link = event.target.closest('.policy__contents-link');
+          if (!link) return;
+          this.held = this.links.indexOf(link);
+          this.markCurrent();
         },
-        { rootMargin: '-25% 0px -70% 0px' }
+        { signal }
       );
-      headings.forEach((heading) => this.observer.observe(heading));
-      links[0].setAttribute('aria-current', 'true');
+      // The visitor scrolls again: the scroll position decides again
+      const release = () => {
+        if (this.held == null) return;
+        this.held = null;
+        queue();
+      };
+      ['wheel', 'touchstart', 'keydown'].forEach((type) =>
+        window.addEventListener(type, release, { passive: true, signal })
+      );
+      this.markCurrent();
+    }
+
+    markCurrent() {
+      let current = 0;
+      if (this.held != null) {
+        current = this.held;
+      } else {
+        // Where a contents link stops a heading (scroll-margin), + 8px for rounding
+        const line = parseFloat(getComputedStyle(this.headings[0]).scrollMarginBlockStart || 0) + 8;
+        this.headings.forEach((heading, index) => {
+          if (heading.getBoundingClientRect().top <= line) current = index;
+        });
+      }
+      if (current === this.current) return;
+      this.current = current;
+      this.links.forEach((link, index) => {
+        if (index === current) link.setAttribute('aria-current', 'true');
+        else link.removeAttribute('aria-current');
+      });
     }
   }
 
@@ -727,11 +831,14 @@
 {
   "name": "t:general.policy",
   "tag": "section",
-  "class": "policy-section",
   "enabled_on": {
     "templates": ["page"]
   },
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
     {
       "type": "select",
       "id": "policy",
@@ -744,17 +851,6 @@
         { "value": "shipping", "label": "t:options.policy_source.shipping" }
       ],
       "default": "privacy"
-    },
-    {
-      "type": "select",
-      "id": "layout",
-      "label": "t:labels.policy_layout",
-      "info": "t:labels.policy_layout_info",
-      "options": [
-        { "value": "rows", "label": "t:options.policy_layout.rows" },
-        { "value": "contents", "label": "t:options.policy_layout.contents" }
-      ],
-      "default": "rows"
     },
     {
       "type": "checkbox",
@@ -776,30 +872,60 @@
       "default": "Everything we hold, <em>and why.</em>"
     },
     {
-      "type": "select",
-      "id": "heading_tag",
-      "label": "t:labels.heading_tag",
-      "info": "t:labels.policy_heading_tag_info",
-      "options": [
-        { "value": "h1", "label": "t:options.heading_tag.h1" },
-        { "value": "h2", "label": "t:options.heading_tag.h2" }
-      ],
-      "default": "h1"
-    },
-    {
       "type": "richtext",
       "id": "intro",
       "label": "t:labels.policy_intro"
     },
     {
       "type": "header",
-      "content": "t:labels.policy_in_force"
+      "content": "t:labels.layout"
     },
     {
-      "type": "text",
-      "id": "in_force_label",
-      "label": "t:labels.policy_in_force_label",
-      "default": "In force"
+      "type": "select",
+      "id": "layout",
+      "label": "t:labels.policy_layout",
+      "info": "t:labels.policy_layout_info",
+      "options": [
+        { "value": "rows", "label": "t:options.policy_layout.rows" },
+        { "value": "contents", "label": "t:options.policy_layout.contents" }
+      ],
+      "default": "rows"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        { "value": "narrow", "label": "t:options.section_width.narrow" },
+        { "value": "wide", "label": "t:options.section_width.wide" },
+        { "value": "widest", "label": "t:options.section_width.widest" },
+        { "value": "full", "label": "t:options.section_width.full" }
+      ],
+      "default": "widest"
+    },
+    {
+      "type": "checkbox",
+      "id": "scale_screen",
+      "label": "t:labels.scale_screen",
+      "info": "t:labels.policy_pages_scale_screen_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "text_scale",
+      "label": "t:labels.text_scale",
+      "info": "t:labels.policy_pages_text_scale_info",
+      "min": 100,
+      "max": 130,
+      "step": 5,
+      "unit": "%",
+      "default": 100,
+      "visible_if": "{{ section.settings.scale_screen }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.policy_in_force"
     },
     {
       "type": "text",
@@ -809,8 +935,18 @@
     },
     {
       "type": "text",
+      "id": "in_force_label",
+      "label": "t:labels.policy_in_force_label",
+      "info": "t:labels.policy_in_force_visible_info",
+      "default": "In force",
+      "visible_if": "{{ section.settings.in_force_date != blank }}"
+    },
+    {
+      "type": "text",
       "id": "in_force_meta",
-      "label": "t:labels.policy_in_force_meta"
+      "label": "t:labels.policy_in_force_meta",
+      "info": "t:labels.policy_in_force_visible_info",
+      "visible_if": "{{ section.settings.in_force_date != blank }}"
     },
     {
       "type": "header",
@@ -839,6 +975,7 @@
       "type": "text",
       "id": "cta_label",
       "label": "t:labels.button_label",
+      "info": "t:labels.policy_cta_label_info",
       "default": "Write message",
       "visible_if": "{{ section.settings.show_cta }}"
     },
@@ -846,61 +983,12 @@
       "type": "url",
       "id": "cta_link",
       "label": "t:labels.button_link",
-      "info": "t:labels.faq_contact_link_info"
+      "info": "t:labels.policy_cta_link_info",
+      "visible_if": "{{ section.settings.show_cta }}"
     },
     {
       "type": "header",
-      "content": "t:labels.style"
-    },
-    {
-      "type": "select",
-      "id": "section_width",
-      "label": "t:labels.section_width",
-      "info": "t:labels.section_width_info",
-      "options": [
-        {
-          "value": "narrow",
-          "label": "t:options.section_width.narrow"
-        },
-        {
-          "value": "wide",
-          "label": "t:options.section_width.wide"
-        },
-        {
-          "value": "widest",
-          "label": "t:options.section_width.widest"
-        },
-        {
-          "value": "full",
-          "label": "t:options.section_width.full"
-        }
-      ],
-      "default": "widest"
-    },
-    {
-      "type": "checkbox",
-      "id": "scale_screen",
-      "label": "t:labels.scale_screen",
-      "info": "t:labels.scale_screen_info",
-      "default": true
-    },
-    {
-      "type": "range",
-      "id": "text_scale",
-      "label": "t:labels.text_scale",
-      "info": "t:labels.text_scale_info",
-      "min": 100,
-      "max": 130,
-      "step": 5,
-      "unit": "%",
-      "default": 100,
-      "visible_if": "{{ section.settings.scale_screen }}"
-    },
-    {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -921,6 +1009,16 @@
       "step": 8,
       "unit": "px",
       "default": 96
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ],
   "presets": [

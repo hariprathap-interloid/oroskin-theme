@@ -3,20 +3,31 @@
   a title and a line on the left and one or two buttons on the right. Reusable on any page; it draws
   the same card as the FAQ's "Still unanswered?" (snippets/faq-contact.liquid), in the glass or the
   tinted style. The first button's link: empty = the customer account (orders, returns).
+  No heading, text and button labels = no section on the store (the editor shows a note).
 {%- endcomment -%}
 
 {%- liquid
   assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
   assign first_link = section.settings.button_link | default: routes.account_url
+  assign has_content = false
+  if section.settings.heading != blank or section.settings.text != blank
+    assign has_content = true
+  elsif section.settings.button_label != blank or section.settings.second_label != blank
+    assign has_content = true
+  endif
 -%}
 
+{%- if has_content or request.design_mode -%}
 {% render 'screen-scale' %}
 
 <div
   class="cta-card full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
-  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 100 | divided_by: 100.0 }};"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;{% if section.settings.scale_screen %} --text-boost: {{ section.settings.text_scale | default: 100 | divided_by: 100.0 }};{% endif %}"
 >
   <div class="cta-card__inner">
+    {%- unless has_content -%}
+      <p class="cta-card__empty">{{ 'cta_card.editor_empty' | t }}</p>
+    {%- else -%}
     {% render 'faq-contact',
       heading: section.settings.heading,
       text: section.settings.text,
@@ -27,15 +38,28 @@
       style: section.settings.style,
       class: 'cta-card__card'
     %}
+    {%- endunless -%}
   </div>
 </div>
+{%- endif -%}
 
 {% stylesheet %}
   /* Figma 1920: the card 1649 x 136 at x 136, the page column's full width */
+  /* --px = one Figma pixel (from the width only and never more than 1px with Scale with the screen off) */
   .cta-card {
+    --px: min(calc(100vw / 1920), 0.0625rem);
+
     display: block;
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
     background-color: var(--color-background);
+  }
+
+  .cta-card.section--screen-scale {
+    --px: min(calc(100vw / 1920), calc(100svh / 1031));
+  }
+
+  .cta-card__empty {
+    margin: 0;
   }
 
   .cta-card__inner {
@@ -64,8 +88,11 @@
 {
   "name": "t:general.cta_card",
   "tag": "section",
-  "class": "cta-card-section",
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
     {
       "type": "text",
       "id": "heading",
@@ -79,9 +106,14 @@
       "default": "Open the order in your archive and we will book the courier — no printer, no queue."
     },
     {
+      "type": "header",
+      "content": "t:labels.cta_card_buttons"
+    },
+    {
       "type": "text",
       "id": "button_label",
       "label": "t:labels.button_label",
+      "info": "t:labels.cta_card_label_info",
       "default": "Start a return"
     },
     {
@@ -93,17 +125,19 @@
     {
       "type": "text",
       "id": "second_label",
-      "label": "t:labels.faq_second_label"
+      "label": "t:labels.faq_second_label",
+      "info": "t:labels.cta_card_label_info"
     },
     {
       "type": "url",
       "id": "second_link",
       "label": "t:labels.faq_second_link",
-      "info": "t:labels.faq_second_link_info"
+      "info": "t:labels.cta_card_second_link_info",
+      "visible_if": "{{ section.settings.second_label != blank }}"
     },
     {
       "type": "header",
-      "content": "t:labels.style"
+      "content": "t:labels.layout"
     },
     {
       "type": "select",
@@ -121,22 +155,10 @@
       "label": "t:labels.section_width",
       "info": "t:labels.section_width_info",
       "options": [
-        {
-          "value": "narrow",
-          "label": "t:options.section_width.narrow"
-        },
-        {
-          "value": "wide",
-          "label": "t:options.section_width.wide"
-        },
-        {
-          "value": "widest",
-          "label": "t:options.section_width.widest"
-        },
-        {
-          "value": "full",
-          "label": "t:options.section_width.full"
-        }
+        { "value": "narrow", "label": "t:options.section_width.narrow" },
+        { "value": "wide", "label": "t:options.section_width.wide" },
+        { "value": "widest", "label": "t:options.section_width.widest" },
+        { "value": "full", "label": "t:options.section_width.full" }
       ],
       "default": "widest"
     },
@@ -144,14 +166,14 @@
       "type": "checkbox",
       "id": "scale_screen",
       "label": "t:labels.scale_screen",
-      "info": "t:labels.scale_screen_info",
+      "info": "t:labels.policy_pages_scale_screen_info",
       "default": true
     },
     {
       "type": "range",
       "id": "text_scale",
       "label": "t:labels.text_scale",
-      "info": "t:labels.text_scale_info",
+      "info": "t:labels.policy_pages_text_scale_info",
       "min": 100,
       "max": 130,
       "step": 5,
@@ -160,10 +182,8 @@
       "visible_if": "{{ section.settings.scale_screen }}"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -184,6 +204,16 @@
       "step": 8,
       "unit": "px",
       "default": 96
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ],
   "presets": [

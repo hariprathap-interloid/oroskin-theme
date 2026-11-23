@@ -47,7 +47,8 @@
     section's "Question corner radius" setting, --faq-row-radius, default 19px). Open / active: fill
     accent ~5%, radius on the right too, accent edge, accent question.
   */
-  .faq-question {
+  /* Only real questions are numbered (not the editor's note row for an incomplete one) */
+  .faq-question:not(.faq-question--empty) {
     counter-increment: faq-question;
   }
 
@@ -146,6 +147,7 @@
 {% schema %}
 {
   "name": "t:general.faq_question",
+  "tag": null,
   "settings": [
     {
       "type": "text",
