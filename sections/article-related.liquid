@@ -24,6 +24,14 @@
   assign topic = article.tags.first
   assign view_all_url = section.settings.link | default: blog.url
 
+  # sizes: from 750px a card is max(20rem, 484 Figma px) wide. With "Scale with the screen" a Figma px
+  # is 1/1920 of the screen, so 484px only at 1920px, 25.2vw down to 1270px, then 320px. Phones from
+  # 375px have 2 cards per row, smaller phones 1.
+  assign card_sizes = '(min-width: 750px) 484px, (min-width: 375px) 46vw, 92vw'
+  if section.settings.scale_screen
+    assign card_sizes = '(min-width: 1920px) 484px, (min-width: 1270px) 25.2vw, (min-width: 750px) 320px, (min-width: 375px) 46vw, 92vw'
+  endif
+
   # Ids shown so far, as ",12,34," so "contains ',12,'" can't match 123
   assign shown_ids = ','
   assign shown_count = 0
@@ -39,7 +47,7 @@
         endif
         if related.tags contains topic
           echo '<li class="article-related__item">'
-          render 'article-card', article: related, animation: card_animation, topic_scheme: topic_scheme, arrow_scheme: arrow_scheme
+          render 'article-card', article: related, animation: card_animation, topic_scheme: topic_scheme, arrow_scheme: arrow_scheme, sizes: card_sizes
           echo '</li>'
           assign shown_ids = shown_ids | append: related.id | append: ','
           assign shown_count = shown_count | plus: 1
@@ -59,7 +67,7 @@
         continue
       endif
       echo '<li class="article-related__item">'
-      render 'article-card', article: related, animation: card_animation, topic_scheme: topic_scheme, arrow_scheme: arrow_scheme
+      render 'article-card', article: related, animation: card_animation, topic_scheme: topic_scheme, arrow_scheme: arrow_scheme, sizes: card_sizes
       echo '</li>'
       assign shown_ids = shown_ids | append: related.id | append: ','
       assign shown_count = shown_count | plus: 1
@@ -83,6 +91,9 @@
           <div class="article-related__title-row">
             {%- if section.settings.heading != blank -%}
               <h2 class="article-related__heading">{{ section.settings.heading }}</h2>
+            {%- else -%}
+              {%- comment -%} No heading: a hidden one, so the cards' titles still have a parent heading {%- endcomment -%}
+              <h2 class="visually-hidden">{{ 'blog.related.heading_hidden' | t }}</h2>
             {%- endif -%}
             {%- if section.settings.link_label != blank -%}
               <a class="article-related__view-all" href="{{ view_all_url }}">
@@ -230,17 +241,105 @@
     border-radius: var(--radius-sm);
     text-align: center;
   }
+
+  /* Phones: a smaller heading and "View all articles" link */
+  @media (max-width: 749px) {
+    .article-related .article-related__heading {
+      font-size: 1.375rem;
+    }
+
+    .article-related .article-related__view-all {
+      font-size: 0.75rem;
+    }
+  }
+
+  /*
+    Phones from 375px (design BLOG details): 2 compact cards per row, the same card as the Article list
+    (sections/blog.liquid): short photo box, 3-line title, small author + read time. Below 375px: one
+    card per row in the normal sizes. Three classes, so these win over the card snippet's own rules.
+  */
+  @media (min-width: 375px) and (max-width: 749px) {
+    .article-related .article-related__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-sm);
+    }
+
+    .article-related .article-related__item .article-card {
+      gap: 0.625rem;
+      padding: var(--space-xs);
+      border-radius: var(--space-sm);
+    }
+
+    .article-related .article-card .article-card__media {
+      block-size: auto;
+      aspect-ratio: 1.43 / 1;
+      border-radius: var(--space-xs);
+    }
+
+    .article-related .article-card .article-card__media img,
+    .article-related .article-card .article-card__placeholder {
+      position: absolute;
+      inset: 0;
+    }
+
+    .article-related .article-card .article-card__topic {
+      inset: 0.375rem auto auto 0.375rem;
+      font-size: 0.6875rem;
+    }
+
+    .article-related .article-card .article-card__body {
+      gap: var(--space-xs);
+    }
+
+    .article-related .article-card .article-card__title {
+      -webkit-line-clamp: 3;
+      line-clamp: 3;
+      font-size: 0.9375rem;
+    }
+
+    .article-related .article-card .article-card__meta {
+      gap: 0.25rem var(--space-xs);
+      font-size: 0.625rem;
+    }
+
+    .article-related .article-card .article-card__author {
+      gap: 0.375rem;
+    }
+
+    .article-related .article-card .article-card__avatar {
+      inline-size: 1.125rem;
+      font-size: 0.4375rem;
+    }
+
+    .article-related .article-card .article-card__facts {
+      gap: 0.25rem var(--space-xs);
+    }
+
+    .article-related .article-card .article-card__fact {
+      gap: 0.25rem;
+      font-size: 0.625rem;
+    }
+
+    .article-related .article-card .article-card__fact svg {
+      inline-size: 0.75rem;
+    }
+  }
 {% endstylesheet %}
 
 {% schema %}
 {
   "name": "t:general.article_related",
   "tag": "section",
-  "class": "article-related-section",
   "enabled_on": {
-    "templates": ["article"]
+    "templates": [
+      "article"
+    ]
   },
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
     {
       "type": "paragraph",
       "content": "t:labels.article_related_help"
@@ -255,7 +354,7 @@
       "type": "text",
       "id": "heading",
       "label": "t:labels.heading",
-      "info": "t:labels.italic_accent_info",
+      "info": "t:labels.article_related_heading_info",
       "default": "More from the <em>Journal</em>"
     },
     {
@@ -271,17 +370,22 @@
       "info": "t:labels.article_related_link_info"
     },
     {
+      "type": "header",
+      "content": "t:labels.article_related_articles"
+    },
+    {
       "type": "range",
       "id": "articles_to_show",
       "label": "t:labels.articles_to_show",
       "min": 2,
       "max": 4,
       "step": 1,
-      "default": 2
+      "default": 2,
+      "info": "t:labels.article_related_count_info"
     },
     {
       "type": "header",
-      "content": "t:labels.style"
+      "content": "t:labels.layout"
     },
     {
       "type": "checkbox",
@@ -319,8 +423,12 @@
       "type": "checkbox",
       "id": "scale_screen",
       "label": "t:labels.scale_screen",
-      "info": "t:labels.scale_screen_info",
+      "info": "t:labels.article_related_scale_screen_info",
       "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.animation"
     },
     {
       "type": "select",
@@ -339,24 +447,8 @@
       "default": "fade-up"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
-    },
-    {
-      "type": "color_scheme",
-      "id": "topic_color_scheme",
-      "label": "t:labels.topic_color_scheme",
-      "info": "t:labels.topic_color_scheme_info",
-      "default": "scheme-2"
-    },
-    {
-      "type": "color_scheme",
-      "id": "arrow_color_scheme",
-      "label": "t:labels.arrow_color_scheme",
-      "info": "t:labels.arrow_color_scheme_info",
-      "default": "scheme-2"
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -377,6 +469,30 @@
       "step": 8,
       "unit": "px",
       "default": 96
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "color_scheme",
+      "id": "topic_color_scheme",
+      "label": "t:labels.topic_color_scheme",
+      "info": "t:labels.topic_color_scheme_info",
+      "default": "scheme-2"
+    },
+    {
+      "type": "color_scheme",
+      "id": "arrow_color_scheme",
+      "label": "t:labels.arrow_color_scheme",
+      "info": "t:labels.arrow_color_scheme_info",
+      "default": "scheme-2"
     }
   ],
   "presets": [

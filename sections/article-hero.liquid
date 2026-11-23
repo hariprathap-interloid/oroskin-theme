@@ -5,11 +5,15 @@
 
   - Topic = the article's first tag. Title highlight = the article metafield custom.title_highlight
     (text): those words of the title show in the accent colour ("the Golden Hour").
-  - Author: the name, with the staff account's photo when Shopify has one, else the initials.
+  - Author: the name, with the staff account's photo when Shopify has one, else the initials
+    (snippets/author-avatar.liquid). The date is in the shop's language (abbreviated_date).
   - Share article: the share icons (snippets/share-links.liquid) take the button's place on hover, or
     after a click / tap (phones).
-  - First section of the page, so no scroll animation, and the image loads straight away with high
-    priority (it's the largest thing on screen: the LCP).
+  - First section of the page, so no scroll animation. The image loads by the section-loading rule, with
+    high priority only when the section is first (then it is the LCP). sizes from Section width.
+  - Phones (< 750px, design BLOG details): corners 16px or less, smaller title and text, a lower
+    minimum height. From 990px the card has the Figma shape and the title uses about 60% of it.
+  - The breadcrumb's article title stays on one line (cut with …).
   - Sized to the screen like the blog hero (snippets/screen-scale.liquid).
 {%- endcomment -%}
 
@@ -33,13 +37,26 @@
   endcapture
   assign minutes = minutes | strip
 
-  assign name_parts = article.author | split: ' '
-  assign initials = name_parts.first | slice: 0
-  if name_parts.size > 1
-    assign last_initial = name_parts.last | slice: 0
-    assign initials = initials | append: last_initial
-  endif
+  # sizes: the content width (about 96vw, 100vw with Full width), at most 1200px (Narrow), 1650px (Wide)
+  # or 1820px (Widest, the Figma card at 1920px)
+  assign hero_sizes = '(min-width: 1920px) 1820px, 96vw'
+  case section.settings.section_width
+    when 'full'
+      assign hero_sizes = '100vw'
+    when 'narrow'
+      assign hero_sizes = '(min-width: 1250px) 1200px, 96vw'
+    when 'wide'
+      assign hero_sizes = '(min-width: 1720px) 1650px, 96vw'
+  endcase
+
 -%}
+
+{%- capture image_loading -%}{% render 'section-loading' %}{%- endcapture -%}
+{%- assign image_loading = image_loading | strip -%}
+{%- assign image_priority = 'auto' -%}
+{%- if section.index == 1 -%}
+  {%- assign image_priority = 'high' -%}
+{%- endif -%}
 
 {% render 'screen-scale' %}
 
@@ -67,10 +84,10 @@
             | image_url: width: 3840
             | image_tag:
               widths: '750, 1100, 1500, 1920, 2560, 3840',
-              sizes: '(min-width: 1920px) 1820px, 96vw',
+              sizes: hero_sizes,
               alt: hero_image_alt,
-              loading: 'eager',
-              fetchpriority: 'high'
+              loading: image_loading,
+              fetchpriority: image_priority
           }}
         </div>
       {%- endif -%}
@@ -90,13 +107,7 @@
         <div class="article-hero__meta">
           {%- if article.author != blank -%}
             <span class="article-hero__author">
-              <span class="article-hero__avatar" aria-hidden="true">
-                {%- if article.user.image != blank -%}
-                  {{ article.user.image | image_url: width: 160, height: 160, crop: 'center' | image_tag: alt: '' }}
-                {%- else -%}
-                  {{ initials | upcase }}
-                {%- endif -%}
-              </span>
+              {% render 'author-avatar', article: article, class: 'article-hero__avatar' %}
               {{ article.author | escape }}
             </span>
           {%- endif -%}
@@ -104,7 +115,7 @@
           <span class="article-hero__facts">
             <span class="article-hero__fact">
               {{- 'icon-calendar.svg' | inline_asset_content -}}
-              {{ article.published_at | time_tag: '%b %-d, %Y' }}
+              {{ article.published_at | time_tag: format: 'abbreviated_date' }}
             </span>
             <span class="article-hero__fact">
               {{- 'icon-clock.svg' | inline_asset_content -}}
@@ -121,8 +132,6 @@
               <button
                 class="button article-hero__share-button article-hero__share-main"
                 type="button"
-                aria-expanded="false"
-                aria-controls="ArticleShare-{{ section.id }}"
               >
                 {{- 'icon-share.svg' | inline_asset_content -}}
                 {{ 'blog.article.share_article' | t }}
@@ -157,6 +166,23 @@
 
   .article-hero__breadcrumb {
     margin-block-end: var(--space-xl);
+  }
+
+  /* The article title in the breadcrumb: one line, cut with … (screen readers get the full text) */
+  .breadcrumb.article-hero__breadcrumb ol {
+    flex-wrap: nowrap;
+  }
+
+  .breadcrumb.article-hero__breadcrumb li {
+    flex: none;
+  }
+
+  .breadcrumb.article-hero__breadcrumb li[aria-current] {
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   /* The card: the photo fills it; the text sits on a dark fade from the bottom left */
@@ -202,10 +228,14 @@
       linear-gradient(to right, #00000099 0%, transparent 55%);
   }
 
-  /* No image: a pale panel with dark text */
+  /* No image: a pale panel with dark text (the topic pill too: its white text was not readable) */
   .article-hero__card--no-image {
     background-color: var(--color-tint-subtle);
     color: var(--color-text);
+  }
+
+  .article-hero__card--no-image .article-hero__topic {
+    color: var(--color-accent);
   }
 
   .article-hero__content {
@@ -238,8 +268,9 @@
     margin-block-start: auto;
   }
 
+  /* Full card width below 990px; from 990px about 60% of the card (Figma: 640px of the text area) */
   .article-hero__title {
-    max-inline-size: max(18rem, calc(640 * var(--px, 0.0625rem)));
+    max-inline-size: 100%;
     margin: 0;
     color: inherit;
     font-size: var(--font-size-h1); /* 60px */
@@ -255,12 +286,24 @@
     font-style: normal;
   }
 
+  @media (min-width: 990px) {
+    .article-hero__title {
+      max-inline-size: 60%;
+    }
+  }
+
   .article-hero__summary {
-    max-inline-size: max(20rem, calc(800 * var(--px, 0.0625rem)));
+    max-inline-size: 100%;
     margin: var(--space-lg) 0 0;
     font-size: var(--font-size-body-sm);
     line-height: 1.5;
     opacity: 0.9;
+  }
+
+  @media (min-width: 990px) {
+    .article-hero__summary {
+      max-inline-size: 70%;
+    }
   }
 
   /* Author on the left, date and read time in the middle, Share on the far right */
@@ -278,24 +321,12 @@
     font-size: var(--font-size-body);
   }
 
-  .article-hero__avatar {
-    display: grid;
-    flex: none;
-    place-items: center;
-    overflow: hidden;
+  /* The author-avatar snippet; two classes, because its own size and colors come later in the CSS file */
+  .author-avatar.article-hero__avatar {
     inline-size: max(3.5rem, calc(77 * var(--px, 0.0625rem)));
-    aspect-ratio: 1;
-    border-radius: 50%;
     background-color: color-mix(in srgb, var(--color-accent) 15%, #ffffff);
     color: var(--color-accent);
     font-size: var(--font-size-body);
-    font-weight: var(--font-weight-medium);
-  }
-
-  .article-hero__avatar img {
-    inline-size: 100%;
-    block-size: 100%;
-    object-fit: cover;
   }
 
   .article-hero__facts {
@@ -426,6 +457,72 @@
       pointer-events: none;
     }
   }
+  /*
+    Phones (design BLOG details): a smaller card. Corners 16px or less (100px made the card a pill), a
+    lower minimum height, smaller text; date and read time beside the author, Share on its own row at
+    the end. Two classes, so these win over the screen-scale sizes.
+  */
+  @media (max-width: 749px) {
+    .article-hero .article-hero__card {
+      min-block-size: 24rem;
+      border-radius: min(var(--hero-radius, 1rem), 1rem);
+    }
+
+    .article-hero .article-hero__content {
+      gap: var(--space-md);
+      padding: var(--space-md);
+    }
+
+    .article-hero .article-hero__topic {
+      padding: 0.1875rem 0.75rem;
+      font-size: 0.8125rem;
+    }
+
+    .article-hero .article-hero__title {
+      font-size: 1.625rem;
+    }
+
+    .article-hero .article-hero__summary {
+      margin-block-start: var(--space-sm);
+      font-size: 0.8125rem;
+    }
+
+    .article-hero .article-hero__meta {
+      gap: var(--space-sm) var(--space-md);
+    }
+
+    .article-hero .article-hero__author {
+      gap: var(--space-sm);
+      font-size: 0.875rem;
+    }
+
+    .article-hero .author-avatar.article-hero__avatar {
+      inline-size: 2.5rem;
+      font-size: 0.75rem;
+    }
+
+    .article-hero .article-hero__facts {
+      gap: var(--space-xs) var(--space-md);
+    }
+
+    .article-hero .article-hero__fact {
+      gap: 0.375rem;
+      font-size: 0.8125rem;
+    }
+
+    .article-hero .article-hero__fact svg {
+      inline-size: 1rem;
+    }
+
+    .article-hero .article-hero__share {
+      flex-basis: 100%;
+    }
+
+    .article-hero .article-hero__share-button {
+      min-block-size: 2.5rem;
+      font-size: 0.75rem;
+    }
+  }
 {% endstylesheet %}
 
 {% javascript %}
@@ -436,34 +533,48 @@
    * icons. Copying and sharing are done by the icons (snippets/share-links.liquid).
    */
   class ShareButton extends HTMLElement {
+    // Every listener on one AbortController: the theme editor attaches a moved section again. The
+    // button has no aria-expanded: it is hidden while the icons show, so it can not close them (no
+    // fake toggle); the focus moves to the first icon instead
     connectedCallback() {
+      this.controller?.abort();
+      this.controller = new AbortController();
+      const { signal } = this.controller;
       this.button = this.querySelector('.article-hero__share-button');
       this.panel = this.querySelector('.share-links');
-      this.button?.addEventListener('click', () => this.open());
+      this.button?.addEventListener('click', () => this.open(), { signal });
 
       // Close on a tap / click outside, or with Escape (focus goes back to the button)
       this.onDocumentClick = (event) => {
         if (!this.contains(event.target)) this.close();
       };
-      this.addEventListener('keydown', (event) => {
-        if (event.key !== 'Escape' || !this.classList.contains('is-open')) return;
-        this.close();
-        this.button.focus();
-      });
+      this.addEventListener(
+        'keydown',
+        (event) => {
+          if (event.key !== 'Escape' || !this.classList.contains('is-open')) return;
+          this.close();
+          this.button.focus();
+        },
+        { signal }
+      );
       // Keyboard: leaving the last icon closes it
-      this.addEventListener('focusout', (event) => {
-        if (!this.contains(event.relatedTarget)) this.close();
-      });
+      this.addEventListener(
+        'focusout',
+        (event) => {
+          if (!this.contains(event.relatedTarget)) this.close();
+        },
+        { signal }
+      );
     }
 
     disconnectedCallback() {
+      this.controller?.abort();
       document.removeEventListener('click', this.onDocumentClick);
     }
 
     // Shows the icons in place of the button and puts the focus on the first one
     open() {
       this.classList.add('is-open');
-      this.button.setAttribute('aria-expanded', 'true');
       document.addEventListener('click', this.onDocumentClick);
       this.panel?.querySelector('a, button')?.focus({ preventScroll: true });
     }
@@ -471,7 +582,6 @@
     close() {
       if (!this.classList.contains('is-open')) return;
       this.classList.remove('is-open');
-      this.button.setAttribute('aria-expanded', 'false');
       document.removeEventListener('click', this.onDocumentClick);
     }
   }
@@ -483,11 +593,16 @@
 {
   "name": "t:general.article_hero",
   "tag": "section",
-  "class": "article-hero-section",
   "enabled_on": {
-    "templates": ["article"]
+    "templates": [
+      "article"
+    ]
   },
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
     {
       "type": "paragraph",
       "content": "t:labels.article_hero_help"
@@ -516,7 +631,7 @@
       "type": "range",
       "id": "reading_speed",
       "label": "t:labels.reading_speed",
-      "info": "t:labels.reading_speed_info",
+      "info": "t:labels.article_hero_reading_speed_info",
       "min": 150,
       "max": 300,
       "step": 10,
@@ -525,17 +640,7 @@
     },
     {
       "type": "header",
-      "content": "t:labels.style"
-    },
-    {
-      "type": "range",
-      "id": "corner_radius",
-      "label": "t:labels.corner_radius",
-      "min": 0,
-      "max": 120,
-      "step": 4,
-      "unit": "px",
-      "default": 100
+      "content": "t:labels.layout"
     },
     {
       "type": "select",
@@ -563,17 +668,28 @@
       "default": "widest"
     },
     {
+      "type": "range",
+      "id": "corner_radius",
+      "label": "t:labels.corner_radius",
+      "min": 0,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "default": 100,
+      "info": "t:labels.article_hero_radius_info"
+    },
+    {
       "type": "checkbox",
       "id": "scale_screen",
       "label": "t:labels.scale_screen",
-      "info": "t:labels.scale_screen_info",
+      "info": "t:labels.article_hero_scale_screen_info",
       "default": true
     },
     {
       "type": "range",
       "id": "text_scale",
       "label": "t:labels.text_scale",
-      "info": "t:labels.text_scale_info",
+      "info": "t:labels.article_hero_text_scale_info",
       "min": 100,
       "max": 130,
       "step": 5,
@@ -582,10 +698,8 @@
       "visible_if": "{{ section.settings.scale_screen }}"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -606,6 +720,16 @@
       "step": 8,
       "unit": "px",
       "default": 48
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ],
   "presets": [

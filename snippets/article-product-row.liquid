@@ -27,7 +27,7 @@
         {{
           product.featured_image
           | image_url: width: 400
-          | image_tag: widths: '160, 280, 400', sizes: '(min-width: 1200px) 141px, 120px', alt: '', loading: 'lazy'
+          | image_tag: widths: '160, 280, 400', sizes: '(min-width: 1200px) 141px, (min-width: 750px) 120px, 96px', alt: '', loading: 'lazy'
         }}
       {%- else -%}
         {{ 'product-1' | placeholder_svg_tag: 'article-product-row__placeholder' }}
@@ -192,6 +192,79 @@
     .article-product-row__buy {
       grid-column: 1 / -1;
       grid-template-columns: minmax(0, 1fr) auto;
+    }
+  }
+
+  /*
+    Very narrow rows (320px phones): the price and the pill share a line only when both fit; else the
+    pill goes under the price (it sat on top of a long price)
+  */
+  @container (max-width: 22rem) {
+    .article-product-row__buy {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-xs) var(--space-sm);
+    }
+  }
+
+  /* Phones: a smaller "Add to cart" pill and price. Three classes, so they win over quick-add */
+  @media (max-width: 749px) {
+    .article-product-row .article-product-row__add .quick-add__button {
+      block-size: 2.25rem;
+      padding-inline: var(--space-sm);
+      font-size: 0.6875rem;
+    }
+
+    .article-product-row .article-product-row__buy .price {
+      font-size: 0.9375rem;
+    }
+
+    /* Phone design: vendor, title and price only (no description), small text */
+    .article-product-row .article-product-row__description {
+      display: none;
+    }
+
+    .article-product-row .article-product-row__vendor {
+      font-size: 0.6875rem;
+    }
+
+    .article-product-row .article-product-row__title {
+      font-size: 0.8125rem;
+      line-height: 1.4;
+    }
+
+    /*
+      Phone design: photo | vendor + title | price at the top right with the pill under it. Only when
+      the row is 20rem or wider (375px phones and up); a narrower row keeps price and pill below.
+    */
+    @container (min-width: 20rem) {
+      .article-product-row .article-product-row__inner {
+        grid-template-columns: 4.5rem minmax(0, 1fr) fit-content(8rem);
+        align-items: stretch;
+        gap: var(--space-md);
+        padding: var(--space-md);
+      }
+
+      .article-product-row .article-product-row__media {
+        align-self: start;
+      }
+
+      .article-product-row .article-product-row__buy {
+        display: flex;
+        flex-direction: column;
+        grid-column: 3;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: var(--space-sm);
+      }
+
+      /* A long price (sale + old price, "From", unit price) wraps inside its 8rem column */
+      .article-product-row .article-product-row__buy .price {
+        justify-content: flex-end;
+        text-align: end;
+      }
     }
   }
 {% endstylesheet %}

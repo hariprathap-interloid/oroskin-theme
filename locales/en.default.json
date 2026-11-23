@@ -10,7 +10,8 @@
   "blog": {
     "stat_card_empty": "Empty card: type a Value or a Text. It does not show on the store.",
     "related": {
-      "empty_editor": "No other articles in this blog yet, so this section is hidden on the store."
+      "empty_editor": "No other articles in this blog yet, so this section is hidden on the store.",
+      "heading_hidden": "Related articles"
     },
     "comments": {
       "count": {
@@ -34,7 +35,8 @@
         "other": "Load {{ count }} more comments"
       },
       "loaded": "More comments loaded",
-      "off_editor": "Comments are turned off for this blog. Turn them on in Online Store > Blog posts > Manage blogs."
+      "off_editor": "Comments are turned off for this blog. Turn them on in Online Store > Blog posts > Manage blogs.",
+      "heading_hidden": "Comments"
     },
     "read_time_short": "{{ minutes }} min",
     "play_video": "Play video: {{ title }}",
@@ -62,7 +64,7 @@
       "share_on": "Share on {{ network }}",
       "instagram_profile": "Our Instagram",
       "in_this_article": "In this article",
-      "products_heading": "Products in this ritual",
+      "products_heading": "Products in this article",
       "tags": "Tags",
       "share": "Share"
     },
