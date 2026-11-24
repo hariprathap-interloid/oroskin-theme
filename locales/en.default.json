@@ -338,7 +338,8 @@
       "scroll_hint": "Scroll to explore",
       "heading_hidden": "Featured products",
       "card_placeholder": "Product name",
-      "card_empty": "Choose products in the section settings.",
+      "card_empty": "Choose a product or add a title in this Product card block. On the live store, an empty card does not show.",
+      "no_cards": "Add a Product card block to show products here.",
       "video_empty": "Choose a video or a poster image in the section settings."
     },
     "hero": {

@@ -12,7 +12,6 @@
         "tagline": "A signature scent for every you",
         "show_scroll_hint": true,
         "overlay_opacity": 30,
-        "products": ["velvet-amber-parfum", "oud-noir-eau-de-parfum", "rose-eau-de-parfum"],
         "section_width": "full",
         "fill_screen": true,
         "phone_card": true,
@@ -25,8 +24,38 @@
         "color_scheme": "scheme-1",
         "text_color": "#ffffff",
         "highlight_color": ""
-      }
+      },
+      "blocks": {
+        "card_1": {
+          "type": "product_card",
+          "settings": {
+            "product": "velvet-amber-parfum",
+            "show_price": true
+          }
+        },
+        "card_2": {
+          "type": "product_card",
+          "settings": {
+            "product": "oud-noir-eau-de-parfum",
+            "show_price": true
+          }
+        },
+        "card_3": {
+          "type": "product_card",
+          "settings": {
+            "product": "rose-eau-de-parfum",
+            "show_price": true
+          }
+        }
+      },
+      "block_order": [
+        "card_1",
+        "card_2",
+        "card_3"
+      ]
     }
   },
-  "order": ["video_banner"]
+  "order": [
+    "video_banner"
+  ]
 }

@@ -1,7 +1,7 @@
 {%- comment -%}
   Video banner (design/inbox/video/image.png, a 1920 x 1031 screen): a background video that fills the
   section, the text on the left (eyebrow, heading with an accent word, text, button), "Scroll to explore"
-  at the bottom left, a glass product card at the top right (it shows up to 5 products, one at a time)
+  at the bottom left, a glass product card at the top right (one Product card block at a time, up to 8)
   and a tagline at the bottom right.
 
   - Video: a Shopify-hosted video. The script sets its file and starts it (muted, repeats) only when the
@@ -14,13 +14,21 @@
   - First section: the poster is the page's main image (LCP): eager, high priority. The section slides
     under the header pill like the hero (header.liquid lists .video-banner next to .hero) and moves its
     content down by --header-space. Nothing in it animates in.
-  - Product card: one real link per product (the title, its ::after covers the card). The products
-    that do not show are inert. They change every N seconds while the section is on screen; pointer
-    or keyboard focus on the card, a hidden tab and the pause button stop it; reduced motion = no
-    change (as the hero's product rotation). No JS = the first product. 1 product = no counter.
+  - No video and no poster: a light placeholder (also on the store) and the text in the scheme's text
+    colour, with no dark overlay, so the accent word, the button and the scroll hint stay readable.
+  - Product card: one "Product card" block per product (local blocks, so the section reads their
+    settings: the count, "01 / 03", the first shown card). Each block: product, Card image (empty =
+    the product's first image), title, small label, short text, link, price. A block with no product
+    and no title = nothing on the store, a note card in the editor. One real link per card (the title,
+    its ::after covers the card). The cards that do not show are inert. They change every N seconds
+    while the section is on screen; pointer or keyboard focus on the card, a hidden tab, the pause
+    button and an editor block select stop it; reduced motion = no change (as the hero's product
+    rotation). No JS = the first card. 1 card = no counter.
+  - Scroll hint (the Slideshow's look): a 20 x 36 pill with an accent dot that moves down (.motion-on,
+    no reduced motion), the label under it in the text colour; at the bottom left (this design).
   - Phones (below 750px): the video fills the screen height, the text sits at the bottom on a dark
     fade, the card goes under the video; no tagline and no scroll hint. Tablets: the desktop layout,
-    smaller; "Product card position" can put the card under the text.
+    smaller; "Card position on tablets" can put the card under the text.
   - --px = one Figma pixel on this screen width (never more than 1px); sizes have rem minimums.
 {%- endcomment -%}
 
@@ -98,18 +106,38 @@
     assign poster_priority = 'high'
   endif
 
-  # Products: at most 5 (the setting's limit), sold-out ones too (the card only links to them)
-  assign products = section.settings.products
-  assign product_count = products.size | default: 0
+  # No video and no poster: the light placeholder, the text in the scheme's text colour
+  assign is_placeholder = false
+  if has_video == false and poster == blank
+    assign is_placeholder = true
+  endif
+  assign text_color = section.settings.text_color | default: '#ffffff'
+  if is_placeholder
+    assign text_color = 'var(--color-text)'
+  endif
+
+  # Editor and the "Add section" preview: empty cards show as note cards
+  assign is_editor = false
+  if request.design_mode or request.visual_preview_mode
+    assign is_editor = true
+  endif
+
+  # Product card blocks that show: a product or a title (sold-out products too: the card only links to them)
+  assign card_count = 0
+  for block in section.blocks
+    if block.settings.product != blank or block.settings.title != blank or is_editor
+      assign card_count = card_count | plus: 1
+    endif
+  endfor
   assign show_card = false
-  if product_count > 0 or request.design_mode
+  if card_count > 0 or is_editor
     assign show_card = true
   endif
   assign rotates = false
-  if product_count > 1
+  if card_count > 1
     assign rotates = true
   endif
-  assign total_text = product_count | prepend: '0' | slice: -2, 2
+  assign total_text = card_count | prepend: '0' | slice: -2, 2
 
   assign show_button = false
   if section.settings.button_label != blank and section.settings.button_link != blank
@@ -123,7 +151,7 @@
 
   # Nothing to show on the store (no text, no products, no video, no poster) = no section
   assign show_section = true
-  unless has_content or product_count > 0 or has_video or poster != blank or request.design_mode
+  unless has_content or card_count > 0 or has_video or poster != blank or is_editor
     assign show_section = false
   endunless
 
@@ -132,8 +160,8 @@
 
 {%- if show_section -%}
 <video-banner
-  class="video-banner full-width section-width--{{ section.settings.section_width | default: 'full' }} color-{{ scheme_id }}{% if section.settings.fill_screen %} video-banner--fill{% endif %}{% if section.settings.tablet_card == 'below' %} video-banner--tablet-card-below{% endif %}{% unless section.settings.phone_card %} video-banner--no-phone-card{% endunless %}{% unless show_card %} video-banner--no-card{% endunless %}"
-  style="{% if section.settings.highlight_color != blank %}--color-accent: {{ section.settings.highlight_color }}; {% endif %}--video-banner-text: {{ section.settings.text_color | default: '#ffffff' }}; --video-banner-overlay: {{ section.settings.overlay_opacity }}%; --video-banner-pad-top: {{ section.settings.padding_top }}; --video-banner-pad-bottom: {{ section.settings.padding_bottom }};"
+  class="video-banner full-width section-width--{{ section.settings.section_width | default: 'full' }} color-{{ scheme_id }}{% if section.settings.fill_screen %} video-banner--fill{% endif %}{% if section.settings.tablet_card == 'below' %} video-banner--tablet-card-below{% endif %}{% unless section.settings.phone_card %} video-banner--no-phone-card{% endunless %}{% unless show_card %} video-banner--no-card{% endunless %}{% if is_placeholder %} video-banner--placeholder{% endif %}"
+  style="{% if section.settings.highlight_color != blank %}--color-accent: {{ section.settings.highlight_color }}; {% endif %}--video-banner-text: {{ text_color }}; --video-banner-overlay: {{ section.settings.overlay_opacity }}%; --video-banner-pad-top: {{ section.settings.padding_top }}; --video-banner-pad-bottom: {{ section.settings.padding_bottom }};"
   data-interval="{{ interval }}"
   {% if section.settings.autoplay_video %}
     data-autoplay
@@ -153,7 +181,7 @@
           alt: '',
           class: 'video-banner__poster'
       }}
-    {%- elsif request.design_mode and has_video == false -%}
+    {%- elsif is_placeholder -%}
       {{ 'lifestyle-2' | placeholder_svg_tag: 'video-banner__placeholder' }}
     {%- endif -%}
     {%- if has_video -%}
@@ -235,61 +263,136 @@
           {%- endif -%}
 
           <ul class="video-banner-card__list" role="list">
-            {%- for product in products -%}
+            {%- assign card_index = 0 -%}
+            {%- for block in section.blocks -%}
               {%- liquid
-                assign short_text = product.metafields.custom.subtitle.value
-                if short_text == blank
-                  assign short_text = product.description | strip_html | truncatewords: 12
+                assign card_product = block.settings.product
+                assign card_title = block.settings.title | strip
+                if card_title == blank and card_product != blank
+                  assign card_title = card_product.title
                 endif
+                assign card_ok = true
+                if card_title == blank
+                  assign card_ok = false
+                endif
+                unless card_ok or is_editor
+                  continue
+                endunless
+                assign card_index = card_index | plus: 1
+
+                assign card_image = block.settings.image
+                if card_image == blank and card_product != blank
+                  assign card_image = card_product.featured_image
+                endif
+
+                assign card_label = block.settings.label | strip
+                if card_label == blank and card_product != blank
+                  assign card_label = card_product.type
+                endif
+
+                assign card_text = block.settings.text | strip
+                if card_text == blank and card_product != blank
+                  assign card_text = card_product.metafields.custom.subtitle.value
+                  if card_text == blank
+                    assign card_text = card_product.description | strip_html | truncatewords: 12
+                  endif
+                endif
+
+                assign card_link = block.settings.link
+                if card_link == blank and card_product != blank
+                  assign card_link = card_product.url
+                endif
+
+                assign show_price = false
+                if card_product != blank and block.settings.show_price
+                  assign show_price = true
+                endif
+
                 assign item_loading = 'lazy'
-                if forloop.first
+                if card_index == 1
                   assign item_loading = poster_loading
                 endif
+
+                # Image size (60-200%), rotation (-30 to 30 degrees), move across / up or down (-100 to 100% of
+                # the image's own width / height); sizes follows the size
+                assign image_scale = block.settings.image_size | default: 100 | times: 0.01
+                assign image_rotate = block.settings.image_rotation | default: 0
+                assign size_px = 96 | times: image_scale | round
+                assign size_rem = 4.5 | times: image_scale
+                assign size_vw = 5 | times: image_scale
+                capture card_sizes
+                  echo '(min-width: 1920px) ' | append: size_px | append: 'px, (min-width: 750px) max(' | append: size_rem | append: 'rem, ' | append: size_vw | append: 'vw), ' | append: size_rem | append: 'rem'
+                endcapture
               -%}
               <li
-                class="video-banner-card__item{% if forloop.first %} is-active{% endif %}"
-                {% unless forloop.first %}
+                class="video-banner-card__item{% if card_index == 1 %} is-active{% endif %}{% unless card_ok %} video-banner-card__item--empty{% endunless %}"
+                style="--card-image-scale: {{ image_scale }}; --card-image-rotate: {{ image_rotate }}deg; --card-image-x: {{ block.settings.image_x | default: 0 }}%; --card-image-y: {{ block.settings.image_y | default: 0 }}%;"
+                {% if card_index != 1 %}
                   inert aria-hidden="true"
-                {% endunless %}
+                {% endif %}
                 data-card-item
+                {{ block.shopify_attributes }}
               >
-                {%- if product.featured_image != blank -%}
+                {%- if card_image != blank -%}
                   <div class="video-banner-card__media">
                     {{
-                      product.featured_image
+                      card_image
                       | image_url: width: 400
                       | image_tag:
                         widths: '120, 200, 300, 400',
-                        sizes: '(min-width: 1920px) 96px, (min-width: 750px) max(4.5rem, 5vw), 4.5rem',
+                        sizes: card_sizes,
                         loading: item_loading,
                         alt: ''
                     }}
                   </div>
+                {%- elsif card_ok == false -%}
+                  <div class="video-banner-card__media">
+                    {{ 'product-1' | placeholder_svg_tag: 'video-banner-card__placeholder' }}
+                  </div>
                 {%- endif -%}
-                <{{ card_title_tag }} class="video-banner-card__title">
-                  <a class="video-banner-card__link" href="{{ product.url }}">{{ product.title | escape }}</a>
-                </{{ card_title_tag }}>
-                {%- if product.type != blank -%}
-                  <p class="video-banner-card__type">{{ product.type | escape }}</p>
+
+                {%- if card_ok -%}
+                  <{{ card_title_tag }} class="video-banner-card__title">
+                    {%- if card_link != blank -%}
+                      <a class="video-banner-card__link" href="{{ card_link }}">{{ card_title | escape }}</a>
+                    {%- else -%}
+                      {{ card_title | escape }}
+                    {%- endif -%}
+                  </{{ card_title_tag }}>
+                  {%- if card_label != blank -%}
+                    <p class="video-banner-card__type">{{ card_label | escape }}</p>
+                  {%- endif -%}
+                  {%- if card_text != blank -%}
+                    <p class="video-banner-card__text">{{ card_text | escape }}</p>
+                  {%- endif -%}
+                  {%- if show_price or card_link != blank -%}
+                    <div class="video-banner-card__footer">
+                      {%- if show_price -%}
+                        {% render 'price', product: card_product %}
+                      {%- endif -%}
+                      {%- if card_link != blank -%}
+                        <span class="video-banner-card__arrow" aria-hidden="true">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+                      {%- endif -%}
+                    </div>
+                  {%- endif -%}
+                {%- else -%}
+                  {%- comment -%} Theme editor only: a block with no product and no title {%- endcomment -%}
+                  <p class="video-banner-card__title">{{ 'sections.video_banner.card_placeholder' | t }}</p>
+                  <p class="video-banner-card__text">{{ 'sections.video_banner.card_empty' | t }}</p>
                 {%- endif -%}
-                {%- if short_text != blank -%}
-                  <p class="video-banner-card__text">{{ short_text | escape }}</p>
-                {%- endif -%}
-                <div class="video-banner-card__footer">
-                  {% render 'price', product: product %}
-                  <span class="video-banner-card__arrow" aria-hidden="true">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
-                </div>
               </li>
-            {%- else -%}
-              {%- comment -%} Theme editor only: no product chosen yet {%- endcomment -%}
-              <li class="video-banner-card__item is-active">
+            {%- endfor -%}
+
+            {%- if card_count == 0 -%}
+              {%- comment -%} Theme editor only: no Product card block yet {%- endcomment -%}
+              <li class="video-banner-card__item video-banner-card__item--empty is-active">
                 <div class="video-banner-card__media">
                   {{ 'product-1' | placeholder_svg_tag: 'video-banner-card__placeholder' }}
                 </div>
                 <p class="video-banner-card__title">{{ 'sections.video_banner.card_placeholder' | t }}</p>
-                <p class="video-banner-card__text">{{ 'sections.video_banner.card_empty' | t }}</p>
+                <p class="video-banner-card__text">{{ 'sections.video_banner.no_cards' | t }}</p>
               </li>
-            {%- endfor -%}
+            {%- endif -%}
           </ul>
         </div>
       </div>
@@ -396,9 +499,21 @@
     object-fit: cover;
   }
 
+  /*
+    No video and no poster: a light placeholder in the scheme's colours, no dark overlay or fade, and the
+    text in the scheme's text colour (Liquid writes it into --video-banner-text), so the accent word, the
+    button and the scroll hint stay readable.
+  */
+  .video-banner--placeholder .video-banner__media {
+    background-color: color-mix(in srgb, var(--color-text) 6%, var(--color-background));
+  }
+
   .video-banner__placeholder {
-    background-color: var(--color-tint-subtle, #f2ede6);
-    fill: var(--color-tint-border, #d8cfc4);
+    fill: color-mix(in srgb, var(--color-text) 16%, transparent);
+  }
+
+  .video-banner--placeholder .video-banner__media::after {
+    display: none;
   }
 
   /* The video shows only once it plays (until then, and without JS, the sharp poster shows) */
@@ -529,42 +644,71 @@
     font-size: var(--font-size-small);
   }
 
-  /* Scroll hint: a mouse outline with a line under it, then the label (accent) */
+  /*
+    Scroll hint, the Slideshow's look: a 20 x 36 pill with an accent dot, the label under it. The label is in
+    the text colour (the accent on a dark video was hard to read); the dot carries the accent.
+  */
   .video-banner__scroll {
     grid-area: scroll;
     align-self: end;
+    justify-self: start;
     display: flex;
-    align-items: flex-start;
-    gap: max(var(--space-md), calc(20 * var(--px)));
+    flex-direction: column;
+    align-items: center;
+    gap: max(0.5rem, calc(10 * var(--px)));
   }
 
   .video-banner__mouse {
     position: relative;
     flex: none;
-    inline-size: max(1rem, calc(20 * var(--px)));
-    block-size: max(1.75rem, calc(36 * var(--px)));
-    margin-block-end: max(2rem, calc(52 * var(--px)));
-    border: 1px solid currentcolor;
+    inline-size: 1.25rem;
+    block-size: 2.25rem;
+    border: 2px solid color-mix(in srgb, currentcolor 75%, transparent);
     border-radius: var(--radius-pill);
   }
 
   .video-banner__mouse::after {
     content: '';
     position: absolute;
-    inset-block-start: calc(100% + max(0.5rem, calc(10 * var(--px))));
-    inset-inline-start: 50%;
-    inline-size: 1px;
-    block-size: max(1.75rem, calc(42 * var(--px)));
-    background-color: currentcolor;
+    top: 0.3125rem;
+    left: 50%;
+    inline-size: 0.375rem;
+    aspect-ratio: 1;
+    margin-inline-start: -0.1875rem;
+    border-radius: 50%;
+    background-color: var(--color-accent);
   }
 
   .video-banner__scroll-text {
-    margin-block-start: max(0.375rem, calc(10 * var(--px)));
-    color: var(--color-accent);
     font-size: max(0.6875rem, calc(13 * var(--px)));
     font-weight: var(--font-weight-medium);
     letter-spacing: 0.25em;
     text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* The dot moves down and fades, then starts again (looping motion: "Enable animations", no reduced motion) */
+  @media (prefers-reduced-motion: no-preference) {
+    .motion-on .video-banner__mouse::after {
+      animation: video-banner-wheel 1.8s var(--ease-out) infinite;
+    }
+  }
+
+  @keyframes video-banner-wheel {
+    0% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    70% {
+      opacity: 0;
+      transform: translateY(0.875rem);
+    }
+
+    100% {
+      opacity: 0;
+      transform: translateY(0);
+    }
   }
 
   /* Bottom right: line, lotus, italic tagline (two lines), then the video's pause button */
@@ -734,13 +878,24 @@
     }
   }
 
-  /* Product photo: top right, out over the card's top edge (containing block = the card) */
+  /*
+    Product photo: top right, out over the card's top edge (containing block = the card). Each card block sets
+    "Image size" (--card-image-scale), "Image rotation" (--card-image-rotate) and the two moves (--card-image-x /
+    -y, translate in % of the photo's own box, so a move keeps its look at every size); the title and label
+    keep clear of the photo's width (not of a move).
+  */
+  .video-banner-card__item {
+    --card-image-size: calc(var(--card-image-width) * var(--card-image-scale, 1));
+  }
+
   .video-banner-card__media {
     position: absolute;
     inset-block-start: calc(max(1.5rem, calc(28 * var(--px))) * -1);
     inset-inline-end: max(0.875rem, calc(25 * var(--px)));
-    inline-size: var(--card-image-width);
+    inline-size: var(--card-image-size);
     aspect-ratio: 2 / 3;
+    translate: var(--card-image-x, 0%) var(--card-image-y, 0%);
+    rotate: var(--card-image-rotate, 0deg);
     pointer-events: none;
   }
 
@@ -754,7 +909,7 @@
 
   .video-banner-card__title,
   .video-banner-card__type {
-    padding-inline-end: calc(var(--card-image-width) + var(--space-sm));
+    padding-inline-end: calc(var(--card-image-size) + var(--space-sm));
   }
 
   .video-banner-card__title {
@@ -803,6 +958,17 @@
     margin-block-start: max(0.25rem, calc(14 * var(--px)));
     font-size: max(0.9375rem, calc(19 * var(--px)));
     line-height: 1.4;
+  }
+
+  /* Theme editor only: an empty Product card block (or none) */
+  .video-banner-card__item--empty .video-banner-card__text {
+    font-size: var(--font-size-small);
+    font-style: italic;
+    opacity: 0.8;
+  }
+
+  .video-banner-card__item--empty .video-banner-card__placeholder {
+    fill: color-mix(in srgb, var(--color-text) 25%, transparent);
   }
 
   .video-banner-card__footer {
@@ -988,8 +1154,8 @@
    *   pressed play), the section is on screen, the tab shows, and (first section) the page has loaded.
    *   The pause button stops it; aria-pressed = paused, the label stays the same.
    * - Card: shows the next product every data-interval ms while the section is on screen; the pointer
-   *   or keyboard focus on the card, a hidden tab and the pause button stop it; reduced motion = no
-   *   change (the pause button hides). The products that do not show are inert.
+   *   or keyboard focus on the card, a hidden tab, the pause button and an editor block select stop it;
+   *   reduced motion = no change (the pause button hides). The products that do not show are inert.
    * Every listener goes through one AbortController (the theme editor re-attaches a moved section,
    * which runs connectedCallback again).
    */
@@ -1075,6 +1241,31 @@
         );
       }
 
+      /*
+        Theme editor: selecting a Product card block shows it and holds it while the merchant edits it;
+        only the deselect of one of this section's cards releases the hold.
+      */
+      document.addEventListener(
+        'shopify:block:select',
+        (event) => {
+          const index = this.items.indexOf(event.target);
+          if (index < 0) return;
+          this.editorHold = true;
+          this.show(index);
+          this.update();
+        },
+        { signal }
+      );
+      document.addEventListener(
+        'shopify:block:deselect',
+        (event) => {
+          if (!this.items.includes(event.target)) return;
+          this.editorHold = false;
+          this.update();
+        },
+        { signal }
+      );
+
       this.reduced.addEventListener(
         'change',
         () => {
@@ -1134,7 +1325,7 @@
           this.cardButton.hidden = reduced;
           this.cardButton.setAttribute('aria-pressed', String(Boolean(this.cardPaused)));
         }
-        const rotate = shown && !reduced && !this.cardPaused && !this.hovered && !this.focused;
+        const rotate = shown && !reduced && !this.cardPaused && !this.hovered && !this.focused && !this.editorHold;
         if (rotate) {
           this.startTimer();
         } else {
@@ -1191,6 +1382,104 @@
 {
   "name": "t:general.video_banner",
   "tag": "section",
+  "max_blocks": 8,
+  "blocks": [
+    {
+      "type": "product_card",
+      "name": "t:general.video_banner_card",
+      "settings": [
+        { "type": "header", "content": "t:labels.content" },
+        {
+          "type": "product",
+          "id": "product",
+          "label": "t:labels.product",
+          "info": "t:labels.video_banner_card_product_info"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "t:labels.video_banner_card_title",
+          "info": "t:labels.video_banner_card_title_info"
+        },
+        {
+          "type": "text",
+          "id": "label",
+          "label": "t:labels.video_banner_card_label",
+          "info": "t:labels.video_banner_card_label_info"
+        },
+        {
+          "type": "textarea",
+          "id": "text",
+          "label": "t:labels.video_banner_card_text",
+          "info": "t:labels.video_banner_card_text_info"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "t:labels.video_banner_card_link",
+          "info": "t:labels.video_banner_card_link_info"
+        },
+        {
+          "type": "checkbox",
+          "id": "show_price",
+          "label": "t:labels.video_banner_card_show_price",
+          "default": true,
+          "visible_if": "{{ block.settings.product != blank }}"
+        },
+        { "type": "header", "content": "t:labels.video_banner_card_image_group" },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "t:labels.video_banner_card_image",
+          "info": "t:labels.video_banner_card_image_info"
+        },
+        {
+          "type": "range",
+          "id": "image_size",
+          "label": "t:labels.video_banner_card_image_size",
+          "info": "t:labels.video_banner_card_image_size_info",
+          "min": 60,
+          "max": 200,
+          "step": 5,
+          "unit": "%",
+          "default": 100
+        },
+        {
+          "type": "range",
+          "id": "image_x",
+          "label": "t:labels.video_banner_card_image_x",
+          "info": "t:labels.video_banner_card_image_x_info",
+          "min": -100,
+          "max": 100,
+          "step": 5,
+          "unit": "%",
+          "default": 0
+        },
+        {
+          "type": "range",
+          "id": "image_y",
+          "label": "t:labels.video_banner_card_image_y",
+          "info": "t:labels.video_banner_card_image_y_info",
+          "min": -100,
+          "max": 100,
+          "step": 5,
+          "unit": "%",
+          "default": 0
+        },
+        {
+          "type": "range",
+          "id": "image_rotation",
+          "label": "t:labels.video_banner_card_image_rotation",
+          "info": "t:labels.video_banner_card_image_rotation_info",
+          "min": -30,
+          "max": 30,
+          "step": 1,
+          "unit": "°",
+          "default": 0
+        }
+      ]
+    }
+  ],
   "settings": [
     { "type": "header", "content": "t:labels.content" },
     { "type": "text", "id": "eyebrow", "label": "t:labels.eyebrow", "default": "Luxury eau de parfum" },
@@ -1215,25 +1504,16 @@
       "info": "t:labels.video_banner_button_info",
       "default": "/collections/all"
     },
-    { "type": "checkbox", "id": "show_tagline", "label": "t:labels.video_banner_show_tagline", "default": true },
-    {
-      "type": "text",
-      "id": "tagline",
-      "label": "t:labels.tagline",
-      "info": "t:labels.video_banner_tagline_info",
-      "default": "A signature scent for every you",
-      "visible_if": "{{ section.settings.show_tagline }}"
-    },
-    {
-      "type": "checkbox",
-      "id": "show_scroll_hint",
-      "label": "t:labels.video_banner_show_scroll_hint",
-      "info": "t:labels.video_banner_scroll_hint_info",
-      "default": true
-    },
     { "type": "header", "content": "t:labels.video" },
     { "type": "video", "id": "video", "label": "t:labels.video", "info": "t:labels.video_banner_video_info" },
     { "type": "image_picker", "id": "poster", "label": "t:labels.video_banner_poster", "info": "t:labels.video_banner_poster_info" },
+    {
+      "type": "checkbox",
+      "id": "autoplay_video",
+      "label": "t:labels.video_banner_autoplay",
+      "info": "t:labels.video_banner_autoplay_info",
+      "default": true
+    },
     {
       "type": "range",
       "id": "overlay_opacity",
@@ -1245,13 +1525,47 @@
       "unit": "%",
       "default": 30
     },
-    { "type": "header", "content": "t:labels.products" },
+    { "type": "header", "content": "t:labels.video_banner_cards_group" },
+    { "type": "paragraph", "content": "t:labels.video_banner_cards_info" },
     {
-      "type": "product_list",
-      "id": "products",
-      "label": "t:labels.products",
-      "info": "t:labels.video_banner_products_info",
-      "limit": 5
+      "type": "range",
+      "id": "seconds",
+      "label": "t:labels.video_banner_seconds",
+      "info": "t:labels.video_banner_seconds_info",
+      "min": 3,
+      "max": 12,
+      "step": 1,
+      "unit": "s",
+      "default": 6
+    },
+    {
+      "type": "select",
+      "id": "tablet_card",
+      "label": "t:labels.video_banner_tablet_card",
+      "info": "t:labels.video_banner_tablet_card_info",
+      "options": [
+        { "value": "beside", "label": "t:options.video_banner_card.beside" },
+        { "value": "below", "label": "t:options.video_banner_card.below" }
+      ],
+      "default": "beside"
+    },
+    { "type": "checkbox", "id": "phone_card", "label": "t:labels.video_banner_phone_card", "info": "t:labels.video_banner_phone_card_info", "default": true },
+    { "type": "header", "content": "t:labels.video_banner_bottom_group" },
+    {
+      "type": "checkbox",
+      "id": "show_scroll_hint",
+      "label": "t:labels.video_banner_show_scroll_hint",
+      "info": "t:labels.video_banner_scroll_hint_info",
+      "default": true
+    },
+    { "type": "checkbox", "id": "show_tagline", "label": "t:labels.video_banner_show_tagline", "default": true },
+    {
+      "type": "text",
+      "id": "tagline",
+      "label": "t:labels.tagline",
+      "info": "t:labels.video_banner_tagline_info",
+      "default": "A signature scent for every you",
+      "visible_if": "{{ section.settings.show_tagline }}"
     },
     { "type": "header", "content": "t:labels.layout" },
     {
@@ -1267,39 +1581,6 @@
       "default": "full"
     },
     { "type": "checkbox", "id": "fill_screen", "label": "t:labels.fill_screen", "info": "t:labels.video_banner_fill_info", "default": true },
-    { "type": "header", "content": "t:labels.phones" },
-    { "type": "checkbox", "id": "phone_card", "label": "t:labels.video_banner_phone_card", "info": "t:labels.video_banner_phone_card_info", "default": true },
-    { "type": "header", "content": "t:labels.tablets" },
-    {
-      "type": "select",
-      "id": "tablet_card",
-      "label": "t:labels.video_banner_tablet_card",
-      "info": "t:labels.video_banner_tablet_card_info",
-      "options": [
-        { "value": "beside", "label": "t:options.video_banner_card.beside" },
-        { "value": "below", "label": "t:options.video_banner_card.below" }
-      ],
-      "default": "beside"
-    },
-    { "type": "header", "content": "t:labels.autoplay" },
-    {
-      "type": "checkbox",
-      "id": "autoplay_video",
-      "label": "t:labels.video_banner_autoplay",
-      "info": "t:labels.video_banner_autoplay_info",
-      "default": true
-    },
-    {
-      "type": "range",
-      "id": "seconds",
-      "label": "t:labels.video_banner_seconds",
-      "info": "t:labels.video_banner_seconds_info",
-      "min": 3,
-      "max": 12,
-      "step": 1,
-      "unit": "s",
-      "default": 6
-    },
     { "type": "header", "content": "t:labels.animation_header" },
     {
       "type": "select",
@@ -1336,12 +1617,17 @@
     },
     { "type": "header", "content": "t:labels.colors" },
     { "type": "color_scheme", "id": "color_scheme", "label": "t:labels.color_scheme", "info": "t:labels.video_banner_scheme_info", "default": "scheme-1" },
-    { "type": "color", "id": "text_color", "label": "t:labels.video_banner_text_color", "default": "#ffffff" },
+    { "type": "color", "id": "text_color", "label": "t:labels.video_banner_text_color", "info": "t:labels.video_banner_text_color_info", "default": "#ffffff" },
     { "type": "color", "id": "highlight_color", "label": "t:labels.highlight_color", "info": "t:labels.video_banner_highlight_info" }
   ],
   "presets": [
     {
-      "name": "t:general.video_banner"
+      "name": "t:general.video_banner",
+      "blocks": [
+        { "type": "product_card" },
+        { "type": "product_card" },
+        { "type": "product_card" }
+      ]
     }
   ]
 }
