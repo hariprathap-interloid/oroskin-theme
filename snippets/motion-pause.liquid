@@ -1,0 +1,117 @@
+{% doc %}
+  Pause / play button for decoration that moves by itself without end (WCAG 2.2.2: content that
+  moves on its own for more than 5 seconds needs a way to stop it).
+
+  The button pauses every CSS animation inside its target (the class .is-motion-paused freezes them
+  where they are; pseudo-elements too). It is hidden until the script runs, and the script shows it
+  only when something can move: the theme's "Enable animations" setting is on (html.motion-on) and the
+  visitor allows motion. A change of the visitor's motion setting is followed.
+
+  The name stays the same; aria-pressed tells screen readers whether it is on ("pressed" = paused),
+  as the hero's pause button.
+
+  @param {string} label - The button name (translated), for example "Pause the moving photos"
+  @param {string} [target] - CSS selector of the ancestor whose animations stop (default: the parent element)
+  @param {string} [class] - Extra class on the element, to place the button
+
+  @example
+  {% render 'motion-pause', label: 'sections.footer.wordmark_pause', target: '.footer__wordmark-area', class: 'footer__wordmark-pause' %}
+{% enddoc %}
+
+<motion-pause
+  class="motion-pause {{ class }}"
+  {% if target != blank %}
+    data-target="{{ target | escape }}"
+  {% endif %}
+>
+  <button type="button" class="motion-pause__button" aria-pressed="false" hidden>
+    <span class="visually-hidden">{{ label | t }}</span>
+    <svg class="motion-pause__icon motion-pause__icon--pause" aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="16" height="16"><rect x="3.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/><rect x="9.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/></svg>
+    <svg class="motion-pause__icon motion-pause__icon--play" aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="16" height="16"><path d="M4.5 2.8v10.4a.8.8 0 0 0 1.2.7l8.4-5.2a.8.8 0 0 0 0-1.4L5.7 2.1a.8.8 0 0 0-1.2.7z" fill="currentColor"/></svg>
+  </button>
+</motion-pause>
+
+{% stylesheet %}
+  .motion-pause {
+    display: block;
+    inline-size: fit-content;
+  }
+
+  /* A small round button: the hero's pause button without the blur */
+  .motion-pause__button {
+    display: grid;
+    place-items: center;
+    inline-size: 2.75rem;
+    block-size: 2.75rem;
+    margin: 0;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-surface-raised);
+    box-shadow: var(--shadow-header);
+    color: var(--color-text);
+    cursor: pointer;
+  }
+
+  .motion-pause__button[hidden] {
+    display: none;
+  }
+
+  .motion-pause__icon--play,
+  .motion-pause__button[aria-pressed='true'] .motion-pause__icon--pause {
+    display: none;
+  }
+
+  .motion-pause__button[aria-pressed='true'] .motion-pause__icon--play {
+    display: block;
+  }
+
+  /* Paused: every animation inside the target freezes where it is */
+  .is-motion-paused,
+  .is-motion-paused *,
+  .is-motion-paused *::before,
+  .is-motion-paused *::after {
+    animation-play-state: paused !important;
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  class MotionPause extends HTMLElement {
+    connectedCallback() {
+      // The theme editor can attach the section again (a move): one set of listeners only
+      this.controller?.abort();
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+
+      this.button = this.querySelector('.motion-pause__button');
+      if (!this.button) return;
+      this.target = (this.dataset.target && this.closest(this.dataset.target)) || this.parentElement;
+
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const update = () => {
+        const moves = document.documentElement.classList.contains('motion-on') && !reduced.matches;
+        this.button.hidden = !moves;
+        if (!moves) this.setPaused(false);
+      };
+      update();
+      reduced.addEventListener('change', update, { signal });
+
+      this.button.addEventListener(
+        'click',
+        () => this.setPaused(this.button.getAttribute('aria-pressed') !== 'true'),
+        { signal }
+      );
+    }
+
+    disconnectedCallback() {
+      this.controller?.abort();
+    }
+
+    setPaused(paused) {
+      this.button.setAttribute('aria-pressed', String(paused));
+      this.target?.classList.toggle('is-motion-paused', paused);
+    }
+  }
+
+  if (!customElements.get('motion-pause')) customElements.define('motion-pause', MotionPause);
+{% endjavascript %}

@@ -149,6 +149,12 @@
           <div class="blog-hero__cards">
             {{- cards_html -}}
           </div>
+          {%- comment -%} The outlines breathe and the cards float without end: a pause button (WCAG 2.2.2) {%- endcomment -%}
+          {%- render 'motion-pause',
+            label: 'blog.hero_pause',
+            target: '.blog-hero__collage',
+            class: 'blog-hero__pause'
+          -%}
         </div>
       {%- endif -%}
     </div>
@@ -505,6 +511,14 @@
   }
 
   /* Breathing: grows a little and gets a touch stronger, then back */
+  /* Pause button for the float and breathing (snippets/motion-pause.liquid): bottom corner of the collage */
+  .blog-hero__pause {
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline-start: 0;
+    z-index: 2;
+  }
+
   @keyframes blog-hero-breathe {
     0%,
     100% {

@@ -213,6 +213,16 @@
           </li>
         {%- endfor -%}
       </ul>
+
+      {%- comment -%} The promo photos move without end (Photo animation): a pause button (WCAG 2.2.2) {%- endcomment -%}
+      {%- assign photo_animation = section.settings.photo_animation | default: 'none' -%}
+      {%- if tile_style == 'promo' and photo_animation != 'none' -%}
+        {%- render 'motion-pause',
+          label: 'sections.collection_tiles.pause',
+          target: '.collection-tiles',
+          class: 'collection-tiles__pause'
+        -%}
+      {%- endif -%}
     </div>
   </div>
 {%- endif -%}
@@ -234,6 +244,16 @@
       calc(100% - var(--page-margin) * 2)
     );
     margin-inline: auto;
+  }
+
+  /* Pause button for the Photo animation (snippets/motion-pause.liquid): under the cards, at the end */
+  .collection-tiles__pause {
+    margin-inline-start: auto;
+  }
+
+  /* The space on the button, so a hidden button (no motion, no JS) leaves no gap */
+  .collection-tiles__pause .motion-pause__button {
+    margin-block-start: var(--space-sm);
   }
 
   .collection-tiles__heading {

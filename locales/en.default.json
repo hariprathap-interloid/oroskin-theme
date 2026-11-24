@@ -8,6 +8,7 @@
   },
   "blog": {
     "stat_card_empty": "Empty card: type a Value or a Text. It does not show on the store.",
+    "hero_pause": "Pause the floating cards",
     "related": {
       "empty_editor": "No other articles in this blog yet, so this section is hidden on the store.",
       "heading_hidden": "Related articles"
@@ -364,7 +365,11 @@
     "collection_tiles": {
       "shop": "Shop",
       "placeholder": "Choose a collection",
-      "empty": "Add a Tile block and select a collection or a product."
+      "empty": "Add a Tile block and select a collection or a product.",
+      "pause": "Pause the moving photos"
+    },
+    "footer": {
+      "wordmark_pause": "Pause the moving shop name"
     },
     "marquee": {
       "pause": "Pause the scrolling text",

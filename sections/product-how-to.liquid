@@ -381,7 +381,18 @@
       inset: 0;
       border-radius: 50%;
       background-color: var(--color-accent);
-      animation: product-how-to-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+      /* 3 pings (4.8s) when a step opens (WCAG 2.2.2: nothing moves by itself for more than 5s
+         without a pause). The ::after has the dot's size and colour, so it can't be seen when it ends. */
+      animation: product-how-to-ping 1.6s cubic-bezier(0, 0, 0.2, 1) 3;
+    }
+
+    /* While the steps play by themselves, the ping goes on: the pause button stops both */
+    .product-how-to.is-playing .product-how-to__step.is-active .product-how-to__dot::after {
+      animation-iteration-count: infinite;
+    }
+
+    .product-how-to.is-paused .product-how-to__step.is-active .product-how-to__dot::after {
+      animation: none;
     }
 
     .product-how-to__step.is-active .product-how-to__text {
