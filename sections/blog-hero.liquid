@@ -514,7 +514,7 @@
   /* Pause button for the float and breathing (snippets/motion-pause.liquid): bottom corner of the collage */
   .blog-hero__pause {
     position: absolute;
-    inset-block-end: 0;
+    inset-block-end: -1rem; /* phones: clear of the last row of cards (card 3 ends ~11px above the collage's end) */
     inset-inline-start: 0;
     z-index: 2;
   }
