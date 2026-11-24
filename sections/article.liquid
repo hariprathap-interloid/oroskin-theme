@@ -151,10 +151,22 @@
 
   # 7. The lead (the first paragraph, when it has no image) is cut off, so below 1200px the author,
   #    "In this article", tags and share can go between it and the rest of the text (the phone design).
+  #    Only a plain paragraph is the lead: '<p>' or '<p style=…>' / '<p dir=…>' (the editor writes
+  #    those for alignment and direction). A '<p class=…>' is one of ours (the Heading 6 label from
+  #    step 2b, the quote attribution from step 2) and stays in the text.
   assign lead = ''
   assign body_first = body_before | strip
   assign body_first_start = body_first | slice: 0, 3
-  if body_first_start == '<p>' or body_first_start == '<p '
+  assign lead_ok = false
+  if body_first_start == '<p>'
+    assign lead_ok = true
+  elsif body_first_start == '<p '
+    assign lead_tag = body_first | split: '>' | first
+    unless lead_tag contains 'class='
+      assign lead_ok = true
+    endunless
+  endif
+  if lead_ok
     assign lead_html = body_first | split: '</p>' | first | append: '</p>'
     unless lead_html contains '<img'
       assign lead = lead_html
@@ -329,8 +341,15 @@
     on the left is left out, so the text lines up with the other sections). Sizes are Figma px x --px
     (screen-scale) with rem floors, or tokens.
   */
+  /* --px: one Figma pixel, by the width only and never more than 1px (without it the 1920px sizes
+     showed on phones). With "Scale with the screen" on, the rule after it also reads the height. */
   .article {
+    --px: min(calc(100vw / 1920), 0.0625rem);
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  .article.section--screen-scale {
+    --px: min(calc(100vw / 1920), calc(100svh / 1031));
   }
 
   .article__layout {

@@ -354,13 +354,16 @@
       const usedTypes = new Set(
         [...this.querySelectorAll('[data-pin-type]')].flatMap((pin) => pin.dataset.pinType.split(' ').filter(Boolean))
       );
-      if (usedTypes.size < 2) return;
 
+      // Count only the type buttons that show: a pin type with no button in "Location types" does not count
+      const shownTypes = new Set();
       for (const button of this.filters.querySelectorAll('[data-filter]')) {
         const type = button.dataset.filter;
         button.hidden = type !== 'all' && !usedTypes.has(type);
+        if (type !== 'all' && !button.hidden) shownTypes.add(type);
       }
-      this.filters.hidden = false;
+      this.filters.hidden = shownTypes.size < 2;
+      if (this.filters.hidden) return;
       this.filters.addEventListener('click', this, { signal: this.controller.signal });
     }
 

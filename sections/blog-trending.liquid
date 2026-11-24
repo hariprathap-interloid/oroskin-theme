@@ -233,8 +233,18 @@
     Figma 1920 frame: video 489 x 859 at x 49, panel 1276 x 859 at x 594 (56px gap), from y 143.
     Sizes are tokens or Figma px x --px (screen-scale), with the Figma px in comments.
   */
+  /*
+    --px = one Figma pixel: from the screen width and height with Scale with the screen on, else from the
+    width only and never more than 1px (without it the 1920px sizes showed at 1280px: an 859px video card).
+  */
   .blog-trending {
+    --px: min(calc(100vw / 1920), 0.0625rem);
+
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  .blog-trending.section--screen-scale {
+    --px: min(calc(100vw / 1920), calc(100svh / 1031));
   }
 
   /* Phones and tablets: the panel, then the video (HTML order). Two columns from 1200px */

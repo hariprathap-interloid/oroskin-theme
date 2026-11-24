@@ -59,7 +59,13 @@
   style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
 >
   <results-view class="blog-list__inner" data-section-id="{{ section.id }}">
-    {%- if blog.articles_count == 0 -%}
+    {%- comment -%}
+      The whole blog, not this topic: on a /tagged/ page blog.articles_count only counts that topic, so a
+      topic with no articles would hide the toolbar. blogs[blog.handle] is the whole blog (as in the Blog
+      hero); a topic with no articles keeps the toolbar and shows "Show all" below.
+    {%- endcomment -%}
+    {%- assign blog_total = blogs[blog.handle].articles_count | default: blog.articles_count -%}
+    {%- if blog_total == 0 -%}
       <div class="blog-list__empty">
         <p>{{ 'blog.empty' | t }}</p>
       </div>

@@ -122,8 +122,15 @@
     at the text column's right edge), cards 484 x 406, 34px apart, 68px under the heading.
     Sizes are Figma px x --px (screen-scale) with rem floors, or tokens.
   */
+  /* --px: one Figma pixel, by the width only and never more than 1px (without it the 1920px sizes
+     showed on phones). With "Scale with the screen" on, the rule after it also reads the height. */
   .article-related {
+    --px: min(calc(100vw / 1920), 0.0625rem);
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  .article-related.section--screen-scale {
+    --px: min(calc(100vw / 1920), calc(100svh / 1031));
   }
 
   .article-related__inner {

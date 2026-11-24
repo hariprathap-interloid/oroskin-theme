@@ -3,8 +3,10 @@
   heading with red words, then one card per Channel block (Live chat, Email, Phone, WhatsApp).
   Cards (phones: design/inbox/contactpage/contact-mobile/Property 1=Variant12.png): 1 column below
   375px, 2 from 375px (compact on phones), 4 from 1440px, all the same height in a row.
-  No heading: a hidden h2 keeps the h3 card titles under a heading. No cards: no section on the store,
-  a note in the theme editor.
+  No heading: a hidden h2 keeps the h3 card titles under a heading. No card that shows (no blocks,
+  or only channels with no text): no section on the store. The blocks are captured first (only one
+  content_for 'blocks' per file) and the HTML is checked for a real card (class="contact-channel",
+  the editor note card has a second class). Editor: a note with 0 blocks, a note card per empty channel.
 
   Animation (Figma scroll states): the heading slides in from the left; the cards use the
   Scroll animation setting, one after the other (cards 2 and 3 together, as in the Figma).
@@ -17,6 +19,17 @@
   if section.index == 1
     assign animation = 'none'
   endif
+
+  capture channels_html
+    content_for 'blocks'
+  endcapture
+
+  assign show_section = false
+  if channels_html contains 'class="contact-channel"'
+    assign show_section = true
+  elsif request.design_mode and section.blocks.size > 0
+    assign show_section = true
+  endif
 -%}
 
 {% render 'screen-scale' %}
@@ -25,7 +38,7 @@
   <p class="contact-channels__editor-note">{{ 'contact.channels.editor_empty' | t }}</p>
 {%- endif -%}
 
-{%- if section.blocks.size > 0 -%}
+{%- if show_section -%}
   <div
     class="contact-channels full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.fill_screen %} section--fill-screen{% endif %}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
     style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;{% if section.settings.scale_screen %} --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};{% endif %}"
@@ -52,7 +65,7 @@
       {%- endif -%}
 
       <div class="contact-channels__grid">
-        {% content_for 'blocks' %}
+        {{ channels_html }}
       </div>
     </animate-on-scroll>
   </div>

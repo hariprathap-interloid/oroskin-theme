@@ -271,6 +271,7 @@
                 {% if form.errors contains 'email' %}
                   aria-invalid="true"
                   aria-describedby="{{ error_id }}"
+                  data-server-error="{{ error_id }}"
                 {% endif %}
               >
               <p
@@ -340,8 +341,18 @@
     Figma 1920 frame: content from x 49 to 1870, the intro column 886px and the form panel 899px with
     a 36px gap, both starting at the eyebrow (y 212). Sizes below are tokens with the Figma px next to them.
   */
+  /*
+    --px = one Figma pixel. With "Scale with the screen" the screen-scale class sets it from the screen
+    width and height; without it, from the width only and never more than 1px, so the Figma sizes
+    shrink on phones (with no value they fell back to 1px = the 1920px sizes).
+  */
   .contact {
+    --px: min(calc(100vw / 1920), 0.0625rem);
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  .contact.section--screen-scale {
+    --px: min(calc(100vw / 1920), calc(100svh / 1031));
   }
 
   .contact__inner {
@@ -1027,6 +1038,13 @@
         line.hidden = true;
         line.textContent = '';
         field.removeAttribute('aria-invalid');
+        // Shopify's own error (Liquid links it after a server email error) no longer describes a correct field
+        const server = field.dataset.serverError;
+        if (server) {
+          const index = ids.indexOf(server);
+          if (index !== -1) ids.splice(index, 1);
+          delete field.dataset.serverError;
+        }
       }
 
       if (ids.length) field.setAttribute('aria-describedby', ids.join(' '));

@@ -4,7 +4,8 @@
   email. Theme Store: the balance, the code (with a copy button), a QR code of at least 120 x 120px
   (staff scan it in a shop), "Add to Apple Wallet" when Shopify offers a pass, the logo and a way
   back to the shop. A full page of its own ({% layout none %}): the theme's variables and critical
-  CSS, plus the styles and a small script below.
+  CSS, plus the styles and a small script below. The page is on the checkout domain, so links back
+  to the shop use the absolute shop.url.
   https://shopify.dev/docs/storefronts/themes/architecture/templates/gift-card-liquid
 {%- endcomment -%}
 
@@ -15,7 +16,22 @@
     assign expired = true
   endif
   assign formatted_code = gift_card.code | format_code
+
+  # The recipient's name (a gift sent to someone else), else nothing
+  assign recipient_name = gift_card.recipient.nickname | default: gift_card.recipient.name
+
+  # The logo as on the password page: the image (Theme settings > Logo width) and the logo text together
+  assign has_logo_text = false
+  if settings.logo_text != blank or settings.logo_text_accent != blank
+    assign has_logo_text = true
+  endif
+  assign logo_alt = shop.name
+  if has_logo_text
+    assign logo_alt = ''
+  endif
 -%}
+{%- capture logo_text_scale -%}{%- render 'logo-text-scale' -%}{%- endcapture -%}
+{%- assign logo_text_scale = logo_text_scale | strip -%}
 
 <!doctype html>
 <html lang="{{ request.locale.iso_code }}">
@@ -24,9 +40,30 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="robots" content="noindex">
 
+    {%- comment -%}
+      Only a title: the page is private (the URL holds the card), so no canonical or social tags.
+    {%- endcomment -%}
+    <title>{{ 'gift_card.title' | t: shop: shop.name }}</title>
+
+    {%- if settings.favicon != blank -%}
+      <link rel="icon" type="image/png" href="{{ settings.favicon | image_url: width: 32, height: 32 }}">
+    {%- endif -%}
+
     {% render 'css-variables' %}
+
+    {% # Font preloading, as in theme.liquid: the font CDN and the base weight of each font %}
+    {% unless settings.type_heading_font.system? and settings.type_body_font.system? %}
+      <link rel="preconnect" href="https://fonts.shopifycdn.com" crossorigin>
+    {% endunless %}
+
+    {%- unless settings.type_heading_font.system? -%}
+      {{ settings.type_heading_font | font_url | preload_tag: as: 'font', crossorigin: 'anonymous' }}
+    {%- endunless -%}
+    {%- unless settings.type_body_font.system? -%}
+      {{ settings.type_body_font | font_url | preload_tag: as: 'font', crossorigin: 'anonymous' }}
+    {%- endunless -%}
+
     {{ 'critical.css' | asset_url | stylesheet_tag: preload: true }}
-    {% render 'meta-tags' %}
 
     {%- comment -%} Shopify's QR code library (draws the code into a <canvas> / <img>); defer: it doesn't block the page {%- endcomment -%}
     <script src="{{ 'vendor/qrcode.js' | shopify_asset_url }}" defer></script>
@@ -47,21 +84,37 @@
         text-align: center;
       }
 
+      /* .button sets display: inline-flex, which beats the browser's [hidden] rule */
+      .gift-card [hidden] {
+        display: none !important;
+      }
+
+      /* The logo as on the password page: the image and the text together, only the text shrinks */
       .gift-card__logo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-sm);
+        max-inline-size: 100%;
         margin: 0;
         color: inherit;
         text-decoration: none;
       }
 
-      .gift-card__logo img {
+      .gift-card__logo-image {
+        display: block;
+        flex-shrink: 0;
         inline-size: auto;
-        max-inline-size: 11rem;
+        max-inline-size: min(var(--logo-width), 100%);
         block-size: auto;
+        max-block-size: 8rem;
       }
 
       .gift-card__logo-text {
-        font-family: var(--font-heading--family);
-        font-size: 1.75rem;
+        font-family: var(--font-logo--family);
+        font-size: calc(clamp(min(1.75rem, var(--logo-text-size)), 1.4rem + 1.4vw, var(--logo-text-size)) * var(--logo-text-scale, 1));
+        font-weight: var(--font-logo--weight);
+        line-height: 1;
       }
 
       .gift-card__logo-text em {
@@ -78,12 +131,19 @@
         box-shadow: 0 20px 60px 0 #0000000f;
       }
 
+      .gift-card__for {
+        margin: 0 0 var(--space-md);
+        font-size: var(--font-size-body-sm);
+        overflow-wrap: anywhere;
+      }
+
       /* The card: accent, with the balance on it (the brand's red, the heading font) */
       .gift-card__card {
         position: relative;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
+        gap: var(--space-md);
         aspect-ratio: 1.6;
         box-sizing: border-box;
         padding: var(--space-lg);
@@ -93,6 +153,10 @@
           var(--color-accent);
         color: var(--color-background);
         text-align: start;
+        container-type: inline-size;
+        /* Print the card colours too (browsers drop backgrounds: the cream text would vanish) */
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
       }
 
       .gift-card__card-label {
@@ -102,12 +166,14 @@
         text-transform: uppercase;
       }
 
+      /* Sized by the card's width, so a long amount ("Rs. 107,700.00") fits a 320px phone */
       .gift-card__balance {
         margin: 0;
         font-family: var(--font-heading--family);
-        font-size: clamp(2.5rem, 2rem + 2.5vw, 3.5rem);
+        font-size: clamp(1.75rem, 13cqi, 3.5rem);
         font-weight: 400;
-        line-height: 1;
+        line-height: 1.05;
+        overflow-wrap: anywhere;
       }
 
       .gift-card__initial {
@@ -119,6 +185,23 @@
       .gift-card--expired .gift-card__card {
         filter: grayscale(1);
         opacity: 0.6;
+      }
+
+      .gift-card__message {
+        margin: var(--space-lg) 0 0;
+        padding: var(--space-md) var(--space-lg);
+        border-radius: var(--radius-sm);
+        background-color: var(--color-card);
+        font-size: var(--font-size-body-sm);
+        font-style: italic;
+        line-height: 1.6;
+        overflow-wrap: anywhere;
+      }
+
+      /* No browser margins: the blockquote's 40px sides made the text narrow on phones */
+      .gift-card__message blockquote,
+      .gift-card__message p {
+        margin: 0;
       }
 
       .gift-card__status {
@@ -139,18 +222,20 @@
         justify-content: space-between;
         gap: var(--space-sm);
         margin-block-start: var(--space-sm);
-        padding: 0.375rem 0.375rem 0.375rem var(--space-lg);
+        padding-block: 0.375rem;
+        padding-inline: var(--space-lg) 0.375rem;
         border: 1px dashed color-mix(in srgb, var(--color-accent) 35%, transparent);
         border-radius: var(--radius-pill);
         background-color: var(--color-card);
       }
 
       .gift-card__code-value {
+        min-inline-size: 0;
         font-family: var(--font-body--family);
         font-size: var(--font-size-body-lg);
         font-weight: var(--font-weight-medium);
         letter-spacing: 0.12em;
-        word-break: break-all;
+        overflow-wrap: anywhere;
       }
 
       .gift-card__copy {
@@ -174,6 +259,8 @@
         padding: var(--space-sm);
         border-radius: var(--radius-sm);
         background-color: #ffffff;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
       }
 
       .gift-card__qr :is(img, canvas) {
@@ -217,12 +304,21 @@
 
         .gift-card__actions,
         .gift-card__copy,
+        .gift-card__copied,
         .gift-card__wallet {
           display: none;
         }
       }
 
+      /* Phones: the code above a full-width Copy button (as the password field) */
       @media (max-width: 479px) {
+        .gift-card__code {
+          flex-direction: column;
+          align-items: stretch;
+          padding: var(--space-sm);
+          border-radius: var(--radius-md);
+        }
+
         .gift-card__actions > .button {
           flex: 1 1 100%;
         }
@@ -233,22 +329,45 @@
   </head>
 
   <body>
-    <main id="MainContent" class="gift-card color-{{ scheme_id }}{% if expired %} gift-card--expired{% endif %}">
+    <main
+      id="MainContent"
+      class="gift-card color-{{ scheme_id }}{% if expired %} gift-card--expired{% endif %}"
+      style="--logo-width: {{ settings.logo_width }}px; --logo-text-size: {{ settings.logo_text_size }}px; --logo-text-scale: {{ logo_text_scale }};"
+    >
       <a class="gift-card__logo" href="{{ shop.url }}">
         {%- if settings.logo != blank -%}
-          {{ settings.logo | image_url: width: 400 | image_tag: alt: shop.name, loading: 'eager' }}
-        {%- elsif settings.logo_text != blank or settings.logo_text_accent != blank -%}
-          <span class="gift-card__logo-text">
+          {%- liquid
+            assign logo_width_2x = settings.logo_width | times: 2
+            assign logo_widths = settings.logo_width | append: ', ' | append: logo_width_2x
+            assign logo_sizes = settings.logo_width | append: 'px'
+          -%}
+          {{
+            settings.logo
+            | image_url: width: logo_width_2x
+            | image_tag:
+              class: 'gift-card__logo-image',
+              widths: logo_widths,
+              sizes: logo_sizes,
+              loading: 'eager',
+              alt: logo_alt
+          }}
+        {%- endif -%}
+        {%- if has_logo_text -%}
+          <span class="gift-card__logo-text logo-text-fit">
             {{- settings.logo_text | escape -}}
             {%- if settings.logo_text_accent != blank -%}<em>{{ settings.logo_text_accent | escape }}</em>{%- endif -%}
           </span>
-        {%- else -%}
-          <span class="gift-card__logo-text">{{ shop.name | escape }}</span>
+        {%- elsif settings.logo == blank -%}
+          <span class="gift-card__logo-text logo-text-fit">{{ shop.name | escape }}</span>
         {%- endif -%}
       </a>
 
       <div class="gift-card__panel">
         <h1 class="visually-hidden">{{ 'gift_card.title' | t: shop: shop.name }}</h1>
+
+        {%- if recipient_name != blank -%}
+          <p class="gift-card__for">{{ 'gift_card.for' | t: name: recipient_name }}</p>
+        {%- endif -%}
 
         <div class="gift-card__card">
           <p class="gift-card__card-label">{{ 'gift_card.card' | t }}</p>
@@ -262,10 +381,22 @@
           </div>
         </div>
 
-        {%- if expired -%}
+        {%- if gift_card.message != blank -%}
+          <figure class="gift-card__message">
+            <figcaption class="visually-hidden">{{ 'gift_card.message' | t }}</figcaption>
+            <blockquote>
+              <p>{{ gift_card.message | escape | newline_to_br }}</p>
+            </blockquote>
+          </figure>
+        {%- endif -%}
+
+        {%- if gift_card.enabled == false -%}
+          <p class="gift-card__status">{{ 'gift_card.disabled' | t }}</p>
+        {%- elsif gift_card.expired -%}
           <p class="gift-card__status">{{ 'gift_card.expired' | t }}</p>
         {%- elsif gift_card.expires_on -%}
-          {%- assign expires_on = gift_card.expires_on | date: '%B %e, %Y' -%}
+          {%- comment -%} The date in the shop's language (Shopify's built-in "date" format) {%- endcomment -%}
+          {%- assign expires_on = gift_card.expires_on | date: format: 'date' -%}
           <p class="gift-card__status">{{ 'gift_card.expires_on' | t: expires_on: expires_on }}</p>
         {%- endif -%}
 
@@ -273,20 +404,34 @@
 
         <div class="gift-card__code">
           <span class="gift-card__code-value" id="GiftCardCode">{{ formatted_code }}</span>
+          {%- comment -%} Shown by the script only when the browser can copy {%- endcomment -%}
           <button
             type="button"
             class="button button--secondary gift-card__copy"
             data-copy="{{ gift_card.code | escape }}"
+            aria-describedby="GiftCardCode"
             hidden
           >
             {{- 'gift_card.copy' | t -}}
           </button>
         </div>
-        <p class="gift-card__copied" role="status" data-copied-text="{{ 'gift_card.copied' | t | escape }}"></p>
+        {%- comment -%} A <div>, not an empty <p>: the theme hides p:empty, and a hidden live region is not announced {%- endcomment -%}
+        <div
+          class="gift-card__copied"
+          role="status"
+          data-copied-text="{{ 'gift_card.copied' | t | escape }}"
+          data-failed-text="{{ 'gift_card.copy_failed' | t | escape }}"
+        ></div>
 
         {%- if gift_card.qr_identifier != blank -%}
-          <div>
-            <div class="gift-card__qr" id="GiftCardQr" data-identifier="{{ gift_card.qr_identifier | escape }}" data-alt="{{ 'gift_card.qr_alt' | t | escape }}"></div>
+          {%- comment -%} Hidden until the script draws the code: no empty white box without JS {%- endcomment -%}
+          <div class="gift-card__qr-wrap" hidden>
+            <div
+              class="gift-card__qr"
+              id="GiftCardQr"
+              data-identifier="{{ gift_card.qr_identifier | escape }}"
+              data-alt="{{ 'gift_card.qr_alt' | t | escape }}"
+            ></div>
             <p class="gift-card__qr-label">{{ 'gift_card.qr_label' | t }}</p>
           </div>
         {%- endif -%}
@@ -310,23 +455,45 @@
     </main>
 
     <script>
-      // Runs once the page (and the deferred QR library) has loaded
+      // Runs one time, after the deferred QR library. No custom element and no theme editor
+      // re-attach on this page, so no AbortController is needed.
       document.addEventListener('DOMContentLoaded', () => {
         // QR code (Shopify's library): the identifier staff scan at a point of sale
         const qr = document.getElementById('GiftCardQr');
         if (qr && window.QRCode) {
-          new QRCode(qr, { text: qr.dataset.identifier, width: 120, height: 120, imageAltText: qr.dataset.alt });
+          try {
+            new QRCode(qr, { text: qr.dataset.identifier, width: 120, height: 120, imageAltText: qr.dataset.alt });
+            qr.parentElement.hidden = false;
+          } catch (error) {
+            // Leave the QR code hidden: the code above can still be typed in
+          }
         }
 
         // Copy the code (the button only shows when the browser can copy)
         const copy = document.querySelector('[data-copy]');
-        const copied = document.querySelector('[data-copied-text]');
-        if (copy && navigator.clipboard) {
+        const status = document.querySelector('[data-copied-text]');
+        const say = (text) => {
+          // Empty first, so the same message is announced again on a second click
+          status.textContent = '';
+          requestAnimationFrame(() => {
+            status.textContent = text;
+          });
+        };
+        if (copy && status && navigator.clipboard) {
           copy.hidden = false;
           copy.addEventListener('click', () => {
-            navigator.clipboard.writeText(copy.dataset.copy).then(() => {
-              copied.textContent = copied.dataset.copiedText;
-            });
+            navigator.clipboard.writeText(copy.dataset.copy).then(
+              () => say(status.dataset.copiedText),
+              () => {
+                // Copy refused (permissions): select the code so the customer can copy it
+                const range = document.createRange();
+                range.selectNodeContents(document.getElementById('GiftCardCode'));
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+                say(status.dataset.failedText);
+              }
+            );
           });
         }
 

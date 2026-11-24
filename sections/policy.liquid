@@ -739,8 +739,13 @@
 
     labelTables() {
       this.body.querySelectorAll('table').forEach((table) => {
-        const headers = [...table.querySelectorAll('tr:first-child th, thead th')].map((th) => th.textContent.trim());
-        if (!headers.length) return;
+        // The header row: the <thead>'s last row, else the table's first row. Only that row: a row
+        // header (a <th> at the start of a body row) is not a column name. Headers are read by cell
+        // position, so a body row that starts with a <th> still lines up with its column.
+        const headerRow = table.tHead?.rows.length ? table.tHead.rows[table.tHead.rows.length - 1] : table.rows[0];
+        if (!headerRow) return;
+        const headers = [...headerRow.cells].map((cell) => (cell.tagName === 'TH' ? cell.textContent.trim() : ''));
+        if (!headers.some(Boolean)) return;
         table.querySelectorAll('tr').forEach((row) => {
           [...row.children].forEach((cell, index) => {
             if (cell.tagName === 'TD' && headers[index]) cell.dataset.label = headers[index];

@@ -152,8 +152,15 @@
     the left, meta row 77px tall, 46px from the bottom. Sizes are Figma px x --px (screen-scale) with
     rem floors, or tokens.
   */
+  /* --px: one Figma pixel, by the width only and never more than 1px (without it the 1920px sizes
+     showed on phones). With "Scale with the screen" on, the rule after it also reads the height. */
   .article-hero {
+    --px: min(calc(100vw / 1920), 0.0625rem);
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  .article-hero.section--screen-scale {
+    --px: min(calc(100vw / 1920), calc(100svh / 1031));
   }
 
   .article-hero__inner {

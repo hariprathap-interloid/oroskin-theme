@@ -230,8 +230,15 @@
     text 20px; "LOAD 35 MORE COMMENTS ⌄" accent label with an underline, centred.
     Sizes are Figma px x --px (screen-scale) with rem floors, or tokens.
   */
+  /* --px: one Figma pixel, by the width only and never more than 1px (without it the 1920px sizes
+     showed on phones). With "Scale with the screen" on, the rule after it also reads the height. */
   .article-comments {
+    --px: min(calc(100vw / 1920), 0.0625rem);
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  .article-comments.section--screen-scale {
+    --px: min(calc(100vw / 1920), calc(100svh / 1031));
   }
 
   .article-comments__inner {
@@ -749,6 +756,10 @@
     }
 
     async loadMore(link) {
+      // One page at a time: a double click must not load the same page two times (repeated comments
+      // and ids). The flag is on the element, because the link itself is replaced after a load.
+      if (this.loading) return;
+      this.loading = true;
       link.setAttribute('aria-busy', 'true');
       try {
         const url = new URL(link.href, window.location.href);
@@ -769,6 +780,9 @@
         if (this.status) this.status.textContent = this.dataset.loadedText || '';
       } catch {
         window.location.href = link.href;
+      } finally {
+        this.loading = false;
+        link.removeAttribute('aria-busy');
       }
     }
   }
