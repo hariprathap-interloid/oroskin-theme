@@ -18,9 +18,8 @@
   - Page scroll: the stage stays on the screen (sticky) while the page scrolls through a tall track, one step
     per slide, then the page continues. On all screen sizes, on the live store and the theme preview (not in the
     theme editor: the "How slides change" help text says so), with motion allowed and 2+ slides. Desktop layout: a screen at least
-    36rem tall. Phone layout: the slide must fit the screen height (under a floating header); the script makes
-    the slide narrower to fit (--slideshow-fit-width), at most down to 60% of its width. In all other cases the
-    buttons work. Arrows and dots scroll the page.
+    36rem tall. Phone layout: the slide keeps its full width and own height; a slide taller than the screen
+    stops with its bottom on the screen bottom. In all other cases the buttons work. Arrows and dots scroll the page.
   Images: slide 1 loads with the page; the slides next to the shown slide load after the page load, the other
   slides when they come next to the shown slide (.is-ready; images of other slides are display: none).
   Without JavaScript: slide 1 shows, the other slides and the buttons are hidden.
@@ -292,17 +291,15 @@
     The slide is the size container: --mpx = one pixel of the 375px Figma frame at this slide's width.
     Tablets (750px and up): the slide width = "Slide width on tablets" (a %) of the screen, counted on at most
     56rem (896px), so the setting changes the width on every tablet and the slide never gets huge.
-    Page scroll (pinned): --slideshow-fit-width (set by the script) makes the slide narrower, so it fits the
-    screen height.
     --cpx: text sizes grow with the slide too, but at most to 1.2x (big text in a narrow column looks heavy).
   */
   .slideshow {
-    --slideshow-slide-width: min(100%, calc(min(100vw, 56rem) * var(--slideshow-tablet-width, 75) / 100), var(--slideshow-fit-width, 100%));
+    --slideshow-slide-width: min(100%, calc(min(100vw, 56rem) * var(--slideshow-tablet-width, 75) / 100));
   }
 
   @media (max-width: 749px) {
     .slideshow {
-      --slideshow-slide-width: min(100%, var(--slideshow-fit-width, 100%));
+      --slideshow-slide-width: 100%;
     }
   }
 
@@ -528,8 +525,7 @@
     The design has no pause button. The card goes up more when the controls are longer (relative to the slide),
     so they do not touch:
     - phones, when the pause button shows (autoplay, not pinned);
-    - a slide made narrower to fit the screen (Page scroll, .is-fit), and phones narrower than the 375px design:
-      the card gets smaller, the buttons do not.
+    - phones narrower than the 375px design: the card gets smaller, the buttons do not.
   */
   @media (max-width: 374px) {
     .slideshow-card {
@@ -541,10 +537,6 @@
     .slideshow:has(.slideshow__pause:not([hidden])) .slideshow-card {
       bottom: calc(58 * var(--mpx) + 3rem);
     }
-  }
-
-  .slideshow.is-fit .slideshow-card {
-    bottom: calc(58 * var(--mpx) + 3rem);
   }
 
   .slideshow-card__media {
@@ -822,29 +814,27 @@
   }
 
   /*
-    Phone layout, pinned: the slide fills the screen height like "space-between": the text at the top (under the
-    room a floating header takes), the scene at the bottom, the free space between them. The stage, frame and
-    slides box stretch to the screen; the slide is a column with an auto margin above the scene (also correct
-    for a slide with no text).
+    Phone layout, pinned: the stage keeps its own height (full width, the tallest slide; it does not stretch or
+    shrink to the screen). The track = the stage + one "Scroll distance for each slide" per extra slide.
+    Sticky top: under the room a floating header takes when the stage fits the screen; else the stage stops with
+    its bottom on the screen bottom (the text above scrolls away, the photo, card and buttons stay).
+    --slideshow-stage-h = the stage height, set by the script.
   */
   @media (max-width: 1023px), (max-width: 1199px) and (orientation: portrait) {
+    /* A height, not padding: a sticky box can't move into its parent's padding */
+    .slideshow.is-pinned .slideshow__track {
+      block-size: calc(var(--slideshow-stage-h, 0px) + (var(--slide-count) - 1) * var(--scroll-length) * 1svh);
+    }
+
     .slideshow.is-pinned .slideshow__stage {
-      display: grid;
-      grid-template-rows: minmax(0, 1fr);
-      padding-block-start: max(0px, calc(var(--header-space, 0px) - var(--slideshow-offset)));
-    }
-
-    .slideshow.is-pinned .slideshow__frame {
-      display: grid;
-    }
-
-    .slideshow.is-pinned .slideshow-slide {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .slideshow.is-pinned .slideshow-slide__scene {
-      margin-block-start: auto;
+      top: calc(
+        var(--slideshow-offset) +
+          min(
+            max(0px, calc(var(--header-space, 0px) - var(--slideshow-offset))),
+            calc(var(--slideshow-screen) - var(--slideshow-stage-h, 0px))
+          )
+      );
+      block-size: auto;
     }
   }
 
@@ -1279,8 +1269,7 @@
    *   keyboard focus is in a slide, while it is off screen, while the tab is hidden; off with reduced motion).
    * - Page scroll mode (data-mode="scroll"): on the live store, with motion allowed and 2+ slides, the stage
    *   pins and the scroll position picks the slide (.is-pinned). Desktop layout: the screen must be at least
-   *   36rem tall. Phone layout: the slide must fit the screen height; it is made narrower when needed
-   *   (--slideshow-fit-width, at most down to 60%). Arrows and dots scroll the page to the slide's place; the
+   *   36rem tall. Phone layout: always (full width, own height; see the CSS). Arrows and dots scroll the page to the slide's place; the
    *   arrows are dimmed at the first and the last slide. Otherwise the buttons work as above.
    * - Images: only slides with .is-ready load them (slide 1 from Liquid; the slides next to the shown slide
    *   after the page load; a slide that is about to show).
@@ -1372,6 +1361,9 @@
       );
 
       this.setUpAutoplay(signal);
+      // The stage height can change without a resize (fonts, longer text): measure again (only while pinned)
+      this.stageObserver = new ResizeObserver(() => this.measure());
+      this.stageObserver.observe(this.stage);
       this.refresh();
     }
 
@@ -1385,6 +1377,7 @@
       this.frame = 0;
       this.visibilityObserver?.disconnect();
       this.entranceObserver?.disconnect();
+      this.stageObserver?.disconnect();
       // A slide held at its first frame would stay hidden after a re-attach
       this.slides?.forEach((slide) => slide.classList.remove('is-waiting', 'is-entering', 'is-leaving'));
     }
@@ -1405,68 +1398,19 @@
     /**
      * Page scroll needs the setting, the live store (not the editor), motion and 2+ slides. The screen height
      * this section may fill comes from the stage's scroll-margin (CSS: the small viewport height, so a phone's
-     * address bar does not change it), the room a floating header takes from its scroll-padding.
+     * address bar does not change it).
      * - Desktop layout: a screen at least 36rem tall (the stage's minimum; a shorter screen would cut it).
-     * - Phone layout: the slide must fit under the header (fitPhone).
+     * - Phone layout: always. The stage keeps its full width and own height (the CSS places it).
      * On other screens the buttons work instead.
      */
     canPin() {
-      this.setFit(0);
       if (this.dataset.mode !== 'scroll' || window.Shopify?.designMode || this.reduced() || this.slides.length < 2) {
         return false;
       }
-      const style = getComputedStyle(this.stage);
-      const screen = parseFloat(style.scrollMarginBlockStart) || window.innerHeight;
-      if (this.desktopQuery.matches) {
-        const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-        return screen >= 36 * rem - 1;
-      }
-      return this.fitPhone(screen - (parseFloat(style.scrollPaddingBlockStart) || 0));
-    }
-
-    /**
-     * Phone layout: the slide = the text (a fixed height) + the scene (its height follows the slide width). When
-     * the slide is taller than the room, a narrower slide makes the scene shorter: width = (room - text height)
-     * x width / scene height. At most down to 60% of the width (a smaller photo looks wrong: the buttons work
-     * then). The text sizes change a little with the width, so it is checked one more time.
-     */
-    fitPhone(room) {
-      const height = this.naturalHeight();
-      if (height <= room) return true;
-      const slide = this.slides[this.active];
-      const scene = slide?.querySelector('.slideshow-slide__scene');
-      const width = slide?.offsetWidth || 0;
-      const sceneHeight = scene?.offsetHeight || 0;
-      if (!width || !sceneHeight) return false;
-      // The scene keeps its shape, so sceneHeight / width stays the same at every width
-      let fit = ((room - (height - sceneHeight)) * width) / sceneHeight;
-      // A narrower slide can wrap the text onto more lines: measure again after each change (at most 3 times)
-      for (let pass = 0; pass < 3; pass += 1) {
-        if (fit < width * 0.6) break;
-        this.setFit(fit);
-        const over = this.naturalHeight() - room;
-        if (over <= 0) return true;
-        fit -= (over * width) / sceneHeight + 1;
-      }
-      this.setFit(0);
-      return false;
-    }
-
-    /**
-     * Phone layout: the slide height without the free space a pinned slide gets (it fills the screen then):
-     * the tallest text of all slides + the scene (all scenes have the same height).
-     */
-    naturalHeight() {
-      const scene = this.slides[0]?.querySelector('.slideshow-slide__scene')?.offsetHeight || 0;
-      const texts = this.slides.map((slide) => slide.querySelector('.slideshow-slide__content')?.offsetHeight || 0);
-      return Math.max(0, ...texts) + scene;
-    }
-
-    /** The narrower slide width (px; 0 = none) and .is-fit (the card moves up, see the CSS) */
-    setFit(width) {
-      if (width > 0) this.style.setProperty('--slideshow-fit-width', `${Math.floor(width)}px`);
-      else this.style.removeProperty('--slideshow-fit-width');
-      this.classList.toggle('is-fit', width > 0);
+      if (!this.desktopQuery.matches) return true;
+      const screen = parseFloat(getComputedStyle(this.stage).scrollMarginBlockStart) || window.innerHeight;
+      const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      return screen >= 36 * rem - 1;
     }
 
     /** Called on start, on resize and when the layout or the motion preference changes */
@@ -1488,6 +1432,8 @@
      */
     measure() {
       if (!this.pinned) return;
+      // Phone layout: the sticky top reads the stage height (CSS)
+      this.style.setProperty('--slideshow-stage-h', `${this.stage.offsetHeight}px`);
       this.stickyTop = parseFloat(getComputedStyle(this.stage).top) || 0;
       this.step = (this.track.offsetHeight - this.stage.offsetHeight) / (this.slides.length - 1);
       this.onScroll();

@@ -151,7 +151,7 @@
     "slideshow_content_info": "Each slide is a Slide block: a big word, a model photo, text, buttons and a product card. Add, remove and reorder the slides in the list of blocks.",
     "slideshow_group_slides": "Slide change",
     "slideshow_change": "How slides change",
-    "slideshow_change_info": "Buttons = arrows and dots. Page scroll = the section stays on the screen and the page scroll shows the next slide. After the last slide, the page continues. Page scroll works on the live store and in the theme preview (not in the editor), with 2 or more slides, when the visitor allows motion. Desktop layout: the screen must be at least 576px tall. Phone layout: the slide must fit the screen height. The slide becomes narrower to fit (down to 60% of its width). In other cases, the buttons show.",
+    "slideshow_change_info": "Buttons = arrows and dots. Page scroll = the section stays on the screen and the page scroll shows the next slide. After the last slide, the page continues. Page scroll works on the live store and in the theme preview (not in the editor), with 2 or more slides, when the visitor allows motion. Desktop layout: the screen must be at least 576px tall. Phone layout: the slide keeps its full width and height. When it is taller than the screen, it stops with its bottom at the bottom of the screen. In other cases, the buttons show.",
     "slideshow_show_dots": "Show the side dots",
     "slideshow_show_dots_info": "A vertical line of dots at the right side, one dot for each slide. Shows only in the desktop layout.",
     "slideshow_show_hint": "Show the scroll hint",
