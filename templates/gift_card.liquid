@@ -66,7 +66,9 @@
     {{ 'critical.css' | asset_url | stylesheet_tag: preload: true }}
 
     {%- comment -%} Shopify's QR code library (draws the code into a <canvas> / <img>); defer: it doesn't block the page {%- endcomment -%}
-    <script src="{{ 'vendor/qrcode.js' | shopify_asset_url }}" defer></script>
+    {%- unless expired -%}
+      <script src="{{ 'vendor/qrcode.js' | shopify_asset_url }}" defer></script>
+    {%- endunless -%}
 
     {% style %}
       .gift-card {
@@ -372,10 +374,11 @@
         <div class="gift-card__card">
           <p class="gift-card__card-label">{{ 'gift_card.card' | t }}</p>
           <div>
-            <p class="gift-card__balance">{{ gift_card.balance | money }}</p>
+            {%- comment -%} With the currency code (Rs. 1,000.00 INR): a gift card is money, "$" alone can be USD, CAD or AUD {%- endcomment -%}
+            <p class="gift-card__balance">{{ gift_card.balance | money_with_currency }}</p>
             {%- if gift_card.balance != gift_card.initial_value -%}
               {%- comment -%} assign first: a filter can't go inside another filter's argument {%- endcomment -%}
-              {%- assign initial_value = gift_card.initial_value | money -%}
+              {%- assign initial_value = gift_card.initial_value | money_with_currency -%}
               <p class="gift-card__initial">{{ 'gift_card.initial_value' | t: value: initial_value }}</p>
             {%- endif -%}
           </div>
@@ -400,10 +403,18 @@
           <p class="gift-card__status">{{ 'gift_card.expires_on' | t: expires_on: expires_on }}</p>
         {%- endif -%}
 
-        <p class="gift-card__use">{{ 'gift_card.use_at_checkout' | t }}</p>
+        {%- comment -%}
+          Expired or disabled card: the message above, the code stays (for customer service), but no
+          "use at checkout", Copy button, QR code or Apple Wallet link (they can't be used any more).
+          The script skips the parts that are not on the page.
+        {%- endcomment -%}
+        {%- unless expired -%}
+          <p class="gift-card__use">{{ 'gift_card.use_at_checkout' | t }}</p>
+        {%- endunless -%}
 
         <div class="gift-card__code">
           <span class="gift-card__code-value" id="GiftCardCode">{{ formatted_code }}</span>
+          {%- unless expired -%}
           {%- comment -%} Shown by the script only when the browser can copy {%- endcomment -%}
           <button
             type="button"
@@ -414,7 +425,9 @@
           >
             {{- 'gift_card.copy' | t -}}
           </button>
+          {%- endunless -%}
         </div>
+        {%- unless expired -%}
         {%- comment -%} A <div>, not an empty <p>: the theme hides p:empty, and a hidden live region is not announced {%- endcomment -%}
         <div
           class="gift-card__copied"
@@ -446,6 +459,7 @@
             >
           </a>
         {%- endif -%}
+        {%- endunless -%}
 
         <div class="gift-card__actions">
           <a class="button" href="{{ shop.url }}">{{ 'gift_card.shop_now' | t }}</a>
