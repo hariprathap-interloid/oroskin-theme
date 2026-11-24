@@ -165,7 +165,7 @@ Why first: every later section reads these settings, CSS variables and base styl
 - [ ] Lighthouse averages across home, collection and product, on **desktop and mobile**: **performance ≥ 60** and **accessibility ≥ 90**. *§6*
 - [ ] Keyboard-only purchase path; screen-reader pass; focus order matches the page order. *§12*
 - [ ] Valid HTML; contrast 4.5:1 for body text and 3:1 for large text and UI elements. *§12*
-- [ ] Every input has a unique `id` and a matching `<label for>`. *§12* *Audit 2026-11-24 (headless Chrome, 22 page states at 1280 / 390px): no duplicate ids, every field named, 5 fields given ids + `for`, payment icon ids made unique on the product page, filter drawer `autofocus` removed. Still to audit: the open states (filter drawer, search popup, phone menu, lightbox), password page, gift card.*
+- [ ] Every input has a unique `id` and a matching `<label for>`. *§12* *Audit 2026-11-24 (headless Chrome, 22 page states at 1280 / 390px): no duplicate ids, every field named, 5 fields given ids + `for`, payment icon ids made unique on the product page, filter drawer `autofocus` removed. Open states (filter drawer, search popup, phone menu, lightbox) clean in the second run. Still to audit: password page, gift card.*
 - [ ] Browsers: the latest Safari, Chrome, Firefox, Edge, iOS Safari, Chrome Mobile and Samsung Internet, plus the **Instagram, Facebook and Pinterest in-app browsers**. *§9*
 - [x] No Sass and no minified files of our own. *§10* *Audit 2026-11-05: no `.min.*`, `.scss` or `.sass` in `assets/`. Keep it that way.*
 - [ ] Setting labels: sentence case, American English, and Shopify's terminology list ("home page", "main menu", "button label"…). *§14*
