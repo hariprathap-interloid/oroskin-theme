@@ -326,8 +326,7 @@
       "card_placeholder": "Product name",
       "card_placeholder_type": "Product type",
       "slide_empty": "This slide is empty. Add a model photo, a big word or text. On the live store, an empty slide does not show.",
-      "editor_empty": "Add Slide blocks. On the live store, a slideshow with no slides does not show.",
-      "scroll_editor_note": "Page scroll works on the live store and in the theme preview, not in the editor. In the editor, use the arrows."
+      "editor_empty": "Add Slide blocks. On the live store, a slideshow with no slides does not show."
     },
     "custom_liquid": {
       "editor_empty": "This section is empty. Add code in \"Liquid code\". On the live store, a section with no code does not show."

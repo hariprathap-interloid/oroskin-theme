@@ -5,18 +5,24 @@
   (right), handwriting (top right) and decoration images at the sides.
 
   Each slide is a "Slide" block (blocks/_slide.liquid).
-  - Desktop (1200px and up): the stage is exactly one screen tall (less the header and announcement bar when
+  - Desktop layout (1200px and up, and 1024px and up when the screen is wider than it is tall: small laptops,
+    tablets turned sideways): the stage is exactly one screen tall (less the header and announcement bar when
     first, at least 36rem). Horizontal places and widths come from the stage width (--px), vertical places from
     its height (--pv), sizes that must fit both ways from the smaller one (--pm): the whole slide is on the first
-    screen and a short window never makes the design narrower. See the desktop CSS.
-  - Below 1200px (phones and tablets): the Figma 375px frame, text above the photo.
+    screen and a short window never makes the design narrower. See the desktop CSS. The same two conditions are
+    in the block's sizes / <source media> and in the script (desktopQuery).
+  - Phone layout (all other screens): the Figma 375px frame, text above the photo.
 
   How slides change ("How slides change"):
   - Buttons: arrows, the side dots and an optional autoplay with a pause button.
   - Page scroll: the stage stays on the screen (sticky) while the page scrolls through a tall track, one step
-    per slide, then the page continues. Only from 1200px, on the live store (not in the theme editor: a note
-    says so there), with motion allowed, 2+ slides and a screen at least 36rem tall; in all other cases the
+    per slide, then the page continues. On all screen sizes, on the live store and the theme preview (not in the
+    theme editor: the "How slides change" help text says so), with motion allowed and 2+ slides. Desktop layout: a screen at least
+    36rem tall. Phone layout: the slide must fit the screen height (under a floating header); the script makes
+    the slide narrower to fit (--slideshow-fit-width), at most down to 60% of its width. In all other cases the
     buttons work. Arrows and dots scroll the page.
+  Images: slide 1 loads with the page; the slides next to the shown slide load after the page load, the other
+  slides when they come next to the shown slide (.is-ready; images of other slides are display: none).
   Without JavaScript: slide 1 shows, the other slides and the buttons are hidden.
 {%- endcomment -%}
 
@@ -54,7 +60,7 @@
     assign slide_n_text = slide_n | append: ''
     assign slide_label = 'sections.slideshow.slide_label' | t: index: slide_n, count: slide_count
     if slide_n == 1
-      assign slide_html = slide_html | replace: '__SLIDE_STATE__', 'is-active' | replace: '__SLIDE_LOADING__', first_loading | replace_first: '__SLIDE_PRIORITY__', first_priority
+      assign slide_html = slide_html | replace: '__SLIDE_STATE__', 'is-active is-ready' | replace: '__SLIDE_LOADING__', first_loading | replace_first: '__SLIDE_PRIORITY__', first_priority
       # First section of the home page: slide 1's word is the page's h1 (the other slides keep h2). Other
       # templates have their own h1 (page title, product title...), so the word stays an h2 there.
       if section.index == 1 and template.name == 'index'
@@ -102,13 +108,6 @@
     <div class="slideshow__track">
       <div class="slideshow__stage">
         <div class="slideshow__frame">
-          {%- comment -%}
-            Theme editor only: Page scroll does not pin in the editor (the editor needs the normal page scroll),
-            so the buttons work there. This note says so, so the merchant does not think it is broken.
-          {%- endcomment -%}
-          {%- if request.design_mode and section.settings.slide_change == 'scroll' and slide_count > 1 -%}
-            <p class="slideshow__editor-note">{{ 'sections.slideshow.scroll_editor_note' | t }}</p>
-          {%- endif -%}
           {%- comment -%}
             The controls come before the slides: the pause button is one of the first things a keyboard user
             reaches (WCAG 2.2.2). They show at the bottom left. Only with 2 or more slides.
@@ -225,9 +224,16 @@
     --slideshow-bar: var(--announcement-size, 2.25rem);
   }
 
+  /*
+    Two values carried to the script (these properties have no other use here, the stage does not scroll):
+    scroll-margin-block-start = the screen height this section may fill; scroll-padding-block-start = the room a
+    floating header takes at the top (0 when --slideshow-offset already takes the header off).
+  */
   .slideshow__stage {
     position: relative;
     overflow-x: clip;
+    scroll-margin-block-start: var(--slideshow-screen);
+    scroll-padding-block-start: max(0px, calc(var(--header-space, 0px) - var(--slideshow-offset)));
   }
 
   .slideshow__frame {
@@ -255,6 +261,15 @@
     pointer-events: none;
   }
 
+  /*
+    Images load only for slides that are ready (slide 1, and the slides next to the shown slide: the script
+    adds .is-ready). The hidden slides are on the screen, so "lazy" alone does not stop their images: a hidden
+    <img> does. The boxes keep their size (aspect-ratio), so the slide height does not change.
+  */
+  slideshow-section:defined .slideshow-slide:not(.is-ready) img {
+    display: none;
+  }
+
   /* No JavaScript, or before the script runs: slide 1 only, no buttons */
   slideshow-section:not(:defined) .slideshow-slide:not(.is-active) {
     display: none;
@@ -264,22 +279,31 @@
     visibility: hidden;
   }
 
+  /* Two parts: the .slideshow__controls / __dots rules later in this file would win over one class */
   @media (scripting: none) {
-    :is(.slideshow__controls, .slideshow__dots) {
+    .slideshow :is(.slideshow__controls, .slideshow__dots) {
       display: none;
     }
   }
 
-  /* ---------- Phones and tablets (below 1200px): the Figma 375px frame ---------- */
+  /* ---------- Phone layout (phones, tablets, and 1024-1199px screens taller than wide): the Figma 375px frame ---------- */
 
   /*
     The slide is the size container: --mpx = one pixel of the 375px Figma frame at this slide's width.
-    Tablets (750-1199px): the slide width = "Slide width on tablets" (a %) of the screen, counted on at most
+    Tablets (750px and up): the slide width = "Slide width on tablets" (a %) of the screen, counted on at most
     56rem (896px), so the setting changes the width on every tablet and the slide never gets huge.
+    Page scroll (pinned): --slideshow-fit-width (set by the script) makes the slide narrower, so it fits the
+    screen height.
     --cpx: text sizes grow with the slide too, but at most to 1.2x (big text in a narrow column looks heavy).
   */
   .slideshow {
-    --slideshow-slide-width: min(100%, calc(min(100vw, 56rem) * var(--slideshow-tablet-width, 75) / 100));
+    --slideshow-slide-width: min(100%, calc(min(100vw, 56rem) * var(--slideshow-tablet-width, 75) / 100), var(--slideshow-fit-width, 100%));
+  }
+
+  @media (max-width: 749px) {
+    .slideshow {
+      --slideshow-slide-width: min(100%, var(--slideshow-fit-width, 100%));
+    }
   }
 
   .slideshow-slide {
@@ -290,12 +314,6 @@
     align-content: start;
     inline-size: var(--slideshow-slide-width);
     margin-inline: auto;
-  }
-
-  @media (max-width: 749px) {
-    .slideshow-slide {
-      inline-size: 100%;
-    }
   }
 
   .slideshow-slide__content {
@@ -494,7 +512,8 @@
     position: absolute;
     z-index: 4;
     right: calc(25 * var(--mpx));
-    bottom: calc(58 * var(--mpx));
+    /* + 1.25rem: our arrows are 40px (tap size), the design's about 28px; the card corner must stay above them */
+    bottom: calc(58 * var(--mpx) + 1.25rem);
     inline-size: var(--card-w);
     overflow: hidden;
     border-radius: 1.4em;
@@ -503,6 +522,29 @@
     color: var(--color-text);
     font-size: calc(var(--card-w) / 21);
     rotate: 8deg;
+  }
+
+  /*
+    The design has no pause button. The card goes up more when the controls are longer (relative to the slide),
+    so they do not touch:
+    - phones, when the pause button shows (autoplay, not pinned);
+    - a slide made narrower to fit the screen (Page scroll, .is-fit), and phones narrower than the 375px design:
+      the card gets smaller, the buttons do not.
+  */
+  @media (max-width: 374px) {
+    .slideshow-card {
+      bottom: calc(58 * var(--mpx) + 3rem);
+    }
+  }
+
+  @media (max-width: 749px) {
+    .slideshow:has(.slideshow__pause:not([hidden])) .slideshow-card {
+      bottom: calc(58 * var(--mpx) + 3rem);
+    }
+  }
+
+  .slideshow.is-fit .slideshow-card {
+    bottom: calc(58 * var(--mpx) + 3rem);
   }
 
   .slideshow-card__media {
@@ -637,27 +679,11 @@
     inline-size: calc(80 * var(--mpx) * var(--deco-size, 1));
   }
 
-  @media (max-width: 1199px) {
+  /* The phone layout (the opposite of the desktop media query below) */
+  @media (max-width: 1023px), (max-width: 1199px) and (orientation: portrait) {
     .slideshow-slide__deco--no-phone {
       display: none;
     }
-  }
-
-  /* Theme editor: Page scroll works only on the live store */
-  .slideshow__editor-note {
-    position: absolute;
-    z-index: 7;
-    top: var(--space-md);
-    left: 50%;
-    max-inline-size: min(36rem, calc(100% - 2rem));
-    margin: 0;
-    padding: var(--space-xs) var(--space-md);
-    border: 1px dashed currentColor;
-    border-radius: var(--radius-xs);
-    background-color: var(--color-background);
-    font-size: 0.8125rem;
-    text-align: center;
-    translate: -50% 0;
   }
 
   /* Theme editor: a slide with no content */
@@ -686,12 +712,6 @@
     gap: 0.625rem;
   }
 
-  @media (max-width: 749px) {
-    .slideshow__controls {
-      left: 1.25rem;
-    }
-  }
-
   .slideshow__counter {
     margin: 0;
     color: color-mix(in srgb, var(--color-text) 85%, var(--color-background));
@@ -707,9 +727,9 @@
   }
 
   /*
-    Figma "Liquid Glass Button": 40 x 40, white 13% fill, a 6% red edge and a soft shadow. On a white or cream
-    background the fill is almost invisible: the shadow and the red arrow carry it (contrast: M9).
-    Never smaller than 40px (tap size).
+    Figma "Liquid Glass Button", on all screens: 40 x 40, white 13% fill (#ffffff21), a 6% red edge (#7d00000f)
+    and a soft shadow (#00000012); the arrow in the highlight color. On white the fill does not show: the
+    shadow draws the circle (as in the design). Never smaller than 40px (tap size).
   */
   .slideshow__button {
     display: grid;
@@ -729,6 +749,27 @@
 
   .slideshow__button:hover {
     box-shadow: 0 5px 14px #00000024;
+  }
+
+  /*
+    Phone layout: the buttons sit on the photo, where the 13% white fill does not show. They get the color
+    scheme's background and a stronger shadow, so they stand out from the photo.
+  */
+  @media (max-width: 1023px), (max-width: 1199px) and (orientation: portrait) {
+    .slideshow__button {
+      background-color: var(--color-background);
+      box-shadow: 0 4px 12px #00000029;
+    }
+
+    .slideshow__button:hover {
+      box-shadow: 0 5px 16px #00000038;
+    }
+  }
+
+  /* Page scroll: no previous slide before slide 1, no next slide after the last one */
+  .slideshow__arrow[aria-disabled='true'] {
+    opacity: 0.4;
+    cursor: default;
   }
 
   .slideshow__button svg {
@@ -764,9 +805,53 @@
     display: none;
   }
 
-  /* ---------- Desktop (1200px and up): the Figma 1920 x 1031 frame ---------- */
+  /* ---------- Page scroll, pinned (all screen sizes; the script adds .is-pinned) ---------- */
 
-  @media (min-width: 1200px) {
+  /*
+    The track is one screen plus one "Scroll distance for each slide" per extra slide; the stage stays on the
+    screen while the track passes.
+  */
+  .slideshow.is-pinned .slideshow__track {
+    block-size: calc(var(--slideshow-screen) + (var(--slide-count) - 1) * var(--scroll-length) * 1svh);
+  }
+
+  .slideshow.is-pinned .slideshow__stage {
+    position: sticky;
+    top: var(--slideshow-offset);
+    block-size: var(--slideshow-screen);
+  }
+
+  /*
+    Phone layout, pinned: the slide fills the screen height like "space-between": the text at the top (under the
+    room a floating header takes), the scene at the bottom, the free space between them. The stage, frame and
+    slides box stretch to the screen; the slide is a column with an auto margin above the scene (also correct
+    for a slide with no text).
+  */
+  @media (max-width: 1023px), (max-width: 1199px) and (orientation: portrait) {
+    .slideshow.is-pinned .slideshow__stage {
+      display: grid;
+      grid-template-rows: minmax(0, 1fr);
+      padding-block-start: max(0px, calc(var(--header-space, 0px) - var(--slideshow-offset)));
+    }
+
+    .slideshow.is-pinned .slideshow__frame {
+      display: grid;
+    }
+
+    .slideshow.is-pinned .slideshow-slide {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .slideshow.is-pinned .slideshow-slide__scene {
+      margin-block-start: auto;
+    }
+  }
+
+  /* ---------- Desktop layout: the Figma 1920 x 1031 frame ---------- */
+
+  /* 1200px and up, and 1024px and up on a screen wider than it is tall (the phone layout is too tall there) */
+  @media (min-width: 1200px), (min-width: 1024px) and (orientation: landscape) {
     /*
       The stage is exactly the screen height this section may fill (--slideshow-screen: 100svh less the header
       and announcement bar when first), at least 36rem: below that the section grows and the page scrolls.
@@ -775,7 +860,6 @@
       - --pv = stage height / 1031, at most 1.3 x --px: vertical places (the frame below is 1031 --pv tall and
         stands on the stage's bottom edge, so the photo, arrows and hint are always on the first screen);
       - --pm = the smaller of the two: sizes that must fit both ways (big word, photo width, card, text).
-      scroll-margin-block-start carries the screen height to the script (it has no other use here).
     */
     .slideshow__stage {
       --px: calc(100cqw / 1920);
@@ -784,7 +868,6 @@
       --pm: min(var(--px), var(--pv));
       container-type: size;
       block-size: max(var(--slideshow-screen), 36rem);
-      scroll-margin-block-start: var(--slideshow-screen);
     }
 
     /* "Make the section one screen tall" off: the design's shape */
@@ -1069,19 +1152,9 @@
       background-color: var(--color-accent);
     }
 
-    /*
-      Page scroll (the script adds .is-pinned only when the screen is at least 36rem tall): the track is one
-      screen plus one "Scroll distance for each slide" per extra slide; the stage stays on the screen while the
-      track passes.
-    */
-    .slideshow.is-pinned .slideshow__track {
-      block-size: calc(var(--slideshow-screen) + (var(--slide-count) - 1) * var(--scroll-length) * 1svh);
-    }
-
+    /* Pinned (only when the screen is at least 36rem tall): exactly one screen, also with the design shape */
     .slideshow.is-pinned .slideshow__stage {
-      position: sticky;
-      top: var(--slideshow-offset);
-      block-size: var(--slideshow-screen);
+      display: block;
       aspect-ratio: auto;
     }
   }
@@ -1204,9 +1277,13 @@
    * <slideshow-section>: one slide at a time.
    * - Arrows, side dots, optional autoplay (pause button; waits while the pointer is over the slides or the
    *   keyboard focus is in a slide, while it is off screen, while the tab is hidden; off with reduced motion).
-   * - Page scroll mode (data-mode="scroll"): from 1200px, on the live store, with motion allowed, 2+ slides and
-   *   a screen at least 36rem tall, the stage pins and the scroll position picks the slide (.is-pinned).
-   *   Arrows and dots scroll the page to the slide's place. Otherwise the buttons work as above.
+   * - Page scroll mode (data-mode="scroll"): on the live store, with motion allowed and 2+ slides, the stage
+   *   pins and the scroll position picks the slide (.is-pinned). Desktop layout: the screen must be at least
+   *   36rem tall. Phone layout: the slide must fit the screen height; it is made narrower when needed
+   *   (--slideshow-fit-width, at most down to 60%). Arrows and dots scroll the page to the slide's place; the
+   *   arrows are dimmed at the first and the last slide. Otherwise the buttons work as above.
+   * - Images: only slides with .is-ready load them (slide 1 from Liquid; the slides next to the shown slide
+   *   after the page load; a slide that is about to show).
    * - Outline word: masked with the photo's own pixels once the photo has loaded.
    * - Theme editor: selecting a Slide block shows it and holds it until it is deselected.
    */
@@ -1224,7 +1301,11 @@
       this.stage = this.querySelector('.slideshow__stage');
       this.slidesBox = this.querySelector('.slideshow__slides');
       this.reducedQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-      this.desktopQuery = window.matchMedia('(min-width: 1200px)');
+      // The desktop layout: the same conditions as the CSS media query and the block's sizes
+      this.desktopQuery = window.matchMedia('(min-width: 1200px), (min-width: 1024px) and (orientation: landscape)');
+      // A pointer or focus from before an editor re-attach must not hold autoplay
+      this.hovered = false;
+      this.focused = false;
 
       this.setUpMasks(signal);
 
@@ -1235,17 +1316,24 @@
         slide.classList.toggle('is-active', i === this.active);
         slide.inert = i !== this.active;
       });
+      this.ready(this.active);
 
       this.setUpEntrance();
       if (this.slides.length < 2) return;
 
+      // The slides next to the shown slide load after the page (they never compete with slide 1)
+      if (document.readyState === 'complete') this.readyAround(this.active);
+      else window.addEventListener('load', () => this.readyAround(this.active), { once: true, signal });
+
       this.current = this.querySelector('[data-slideshow-current]');
       this.dots = [...this.querySelectorAll('.slideshow__dot')];
       this.rails = [...this.querySelectorAll('.slideshow__rail')];
+      this.prevArrow = this.querySelector('.slideshow__arrow--prev');
+      this.nextArrow = this.querySelector('.slideshow__arrow--next');
       this.updateControls();
 
-      this.querySelector('.slideshow__arrow--prev')?.addEventListener('click', () => this.goTo(this.active - 1, true), { signal });
-      this.querySelector('.slideshow__arrow--next')?.addEventListener('click', () => this.goTo(this.active + 1, true), { signal });
+      this.prevArrow?.addEventListener('click', () => this.goTo(this.active - 1, true), { signal });
+      this.nextArrow?.addEventListener('click', () => this.goTo(this.active + 1, true), { signal });
       this.dots.forEach((dot, i) => dot.addEventListener('click', () => this.goTo(i, true), { signal }));
 
       // Theme editor: a selected Slide block shows and stays until it is deselected
@@ -1315,27 +1403,73 @@
     }
 
     /**
-     * Page scroll needs the setting, 1200px+, the live store (not the editor), motion, 2+ slides, and a screen
-     * at least 36rem tall (the stage's minimum; the screen height comes from the stage's scroll-margin, set in
-     * CSS). On a shorter screen the pinned stage would be cut: the buttons work instead.
+     * Page scroll needs the setting, the live store (not the editor), motion and 2+ slides. The screen height
+     * this section may fill comes from the stage's scroll-margin (CSS: the small viewport height, so a phone's
+     * address bar does not change it), the room a floating header takes from its scroll-padding.
+     * - Desktop layout: a screen at least 36rem tall (the stage's minimum; a shorter screen would cut it).
+     * - Phone layout: the slide must fit under the header (fitPhone).
+     * On other screens the buttons work instead.
      */
     canPin() {
-      if (
-        this.dataset.mode !== 'scroll' ||
-        !this.desktopQuery.matches ||
-        window.Shopify?.designMode ||
-        this.reduced() ||
-        this.slides.length < 2
-      ) {
+      this.setFit(0);
+      if (this.dataset.mode !== 'scroll' || window.Shopify?.designMode || this.reduced() || this.slides.length < 2) {
         return false;
       }
-      // The stage is at least 36rem tall: a shorter screen would cut it while pinned
-      const screen = parseFloat(getComputedStyle(this.stage).scrollMarginBlockStart) || window.innerHeight;
-      const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-      return screen >= 36 * rem - 1;
+      const style = getComputedStyle(this.stage);
+      const screen = parseFloat(style.scrollMarginBlockStart) || window.innerHeight;
+      if (this.desktopQuery.matches) {
+        const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+        return screen >= 36 * rem - 1;
+      }
+      return this.fitPhone(screen - (parseFloat(style.scrollPaddingBlockStart) || 0));
     }
 
-    /** Called on start, on resize and when the screen width or the motion preference changes */
+    /**
+     * Phone layout: the slide = the text (a fixed height) + the scene (its height follows the slide width). When
+     * the slide is taller than the room, a narrower slide makes the scene shorter: width = (room - text height)
+     * x width / scene height. At most down to 60% of the width (a smaller photo looks wrong: the buttons work
+     * then). The text sizes change a little with the width, so it is checked one more time.
+     */
+    fitPhone(room) {
+      const height = this.naturalHeight();
+      if (height <= room) return true;
+      const slide = this.slides[this.active];
+      const scene = slide?.querySelector('.slideshow-slide__scene');
+      const width = slide?.offsetWidth || 0;
+      const sceneHeight = scene?.offsetHeight || 0;
+      if (!width || !sceneHeight) return false;
+      // The scene keeps its shape, so sceneHeight / width stays the same at every width
+      let fit = ((room - (height - sceneHeight)) * width) / sceneHeight;
+      // A narrower slide can wrap the text onto more lines: measure again after each change (at most 3 times)
+      for (let pass = 0; pass < 3; pass += 1) {
+        if (fit < width * 0.6) break;
+        this.setFit(fit);
+        const over = this.naturalHeight() - room;
+        if (over <= 0) return true;
+        fit -= (over * width) / sceneHeight + 1;
+      }
+      this.setFit(0);
+      return false;
+    }
+
+    /**
+     * Phone layout: the slide height without the free space a pinned slide gets (it fills the screen then):
+     * the tallest text of all slides + the scene (all scenes have the same height).
+     */
+    naturalHeight() {
+      const scene = this.slides[0]?.querySelector('.slideshow-slide__scene')?.offsetHeight || 0;
+      const texts = this.slides.map((slide) => slide.querySelector('.slideshow-slide__content')?.offsetHeight || 0);
+      return Math.max(0, ...texts) + scene;
+    }
+
+    /** The narrower slide width (px; 0 = none) and .is-fit (the card moves up, see the CSS) */
+    setFit(width) {
+      if (width > 0) this.style.setProperty('--slideshow-fit-width', `${Math.floor(width)}px`);
+      else this.style.removeProperty('--slideshow-fit-width');
+      this.classList.toggle('is-fit', width > 0);
+    }
+
+    /** Called on start, on resize and when the layout or the motion preference changes */
     refresh() {
       const pin = this.canPin();
       if (pin !== Boolean(this.pinned)) {
@@ -1343,15 +1477,31 @@
         this.classList.toggle('is-pinned', pin);
       }
       this.measure();
+      this.updateControls();
       this.restartAutoplay();
     }
 
-    /** The stage's sticky top and the scroll step (px), read once per size instead of on every scroll */
+    /**
+     * The stage's sticky top and the scroll step (px), read once per size instead of on every scroll. The step
+     * comes from the real track: (track height - stage height) / (slides - 1). The CSS uses svh; the window's
+     * innerHeight can be different on phones (address bar), and then the last slide could not be reached.
+     */
     measure() {
       if (!this.pinned) return;
       this.stickyTop = parseFloat(getComputedStyle(this.stage).top) || 0;
-      this.step = (window.innerHeight * (Number(this.dataset.scrollLength) || 100)) / 100;
+      this.step = (this.track.offsetHeight - this.stage.offsetHeight) / (this.slides.length - 1);
       this.onScroll();
+    }
+
+    /** Lets a slide load its images (see the CSS: images of other slides are hidden) */
+    ready(index) {
+      this.slides[index]?.classList.add('is-ready');
+    }
+
+    /** The slide and the slides next to it (with wrap-around, as the arrows go) */
+    readyAround(index) {
+      const count = this.slides.length;
+      [index, index - 1, index + 1].forEach((i) => this.ready((i + count) % count));
     }
 
     onScroll() {
@@ -1397,7 +1547,9 @@
       previous.classList.remove('is-active', 'is-entering', 'is-waiting');
       previous.inert = true;
       next.classList.remove('is-leaving', 'is-waiting', 'is-entering');
-      next.classList.add('is-active');
+      next.classList.add('is-active', 'is-ready');
+      // The next steps (an arrow, or one more scroll step) start to load now
+      this.readyAround(index);
       next.inert = false;
 
       if (animate) {
@@ -1413,9 +1565,21 @@
       this.updateControls();
     }
 
-    /** Counter, dots (aria-current) and the two red rail lines next to the shown dot */
+    /**
+     * Counter, dots (aria-current), the two red rail lines next to the shown dot, and the arrows: pinned, there
+     * is no wrap-around, so the arrow that can do nothing is dimmed (aria-disabled keeps it in the Tab order).
+     */
     updateControls() {
       if (this.current) this.current.textContent = String(this.active + 1).padStart(2, '0');
+      const ends = [
+        [this.prevArrow, this.active === 0],
+        [this.nextArrow, this.active === this.slides.length - 1],
+      ];
+      ends.forEach(([arrow, atEnd]) => {
+        if (!arrow) return;
+        if (this.pinned && atEnd) arrow.setAttribute('aria-disabled', 'true');
+        else arrow.removeAttribute('aria-disabled');
+      });
       this.dots?.forEach((dot, i) => {
         if (i === this.active) dot.setAttribute('aria-current', 'true');
         else dot.removeAttribute('aria-current');
@@ -1562,42 +1726,11 @@
     },
     {
       "type": "header",
-      "content": "t:labels.slideshow_group_slides"
-    },
-    {
-      "type": "select",
-      "id": "slide_change",
-      "label": "t:labels.slideshow_change",
-      "info": "t:labels.slideshow_change_info",
-      "options": [
-        {
-          "value": "buttons",
-          "label": "t:options.slideshow_change.buttons"
-        },
-        {
-          "value": "scroll",
-          "label": "t:options.slideshow_change.scroll"
-        }
-      ],
-      "default": "buttons"
-    },
-    {
-      "type": "checkbox",
-      "id": "show_dots",
-      "label": "t:labels.slideshow_show_dots",
-      "info": "t:labels.slideshow_show_dots_info",
-      "default": true
-    },
-    {
-      "type": "checkbox",
-      "id": "show_hint",
-      "label": "t:labels.slideshow_show_hint",
-      "info": "t:labels.slideshow_show_hint_info",
-      "default": true
-    },
-    {
-      "type": "header",
       "content": "t:labels.layout"
+    },
+    {
+      "type": "paragraph",
+      "content": "t:labels.slideshow_layout_info"
     },
     {
       "type": "checkbox",
@@ -1634,6 +1767,41 @@
     },
     {
       "type": "header",
+      "content": "t:labels.slideshow_group_slides"
+    },
+    {
+      "type": "select",
+      "id": "slide_change",
+      "label": "t:labels.slideshow_change",
+      "info": "t:labels.slideshow_change_info",
+      "options": [
+        {
+          "value": "buttons",
+          "label": "t:options.slideshow_change.buttons"
+        },
+        {
+          "value": "scroll",
+          "label": "t:options.slideshow_change.scroll"
+        }
+      ],
+      "default": "buttons"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_dots",
+      "label": "t:labels.slideshow_show_dots",
+      "info": "t:labels.slideshow_show_dots_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_hint",
+      "label": "t:labels.slideshow_show_hint",
+      "info": "t:labels.slideshow_show_hint_info",
+      "default": true
+    },
+    {
+      "type": "header",
       "content": "t:labels.autoplay"
     },
     {
@@ -1647,6 +1815,7 @@
       "type": "range",
       "id": "interval",
       "label": "t:labels.slideshow_interval",
+      "info": "t:labels.slideshow_interval_info",
       "min": 3,
       "max": 10,
       "step": 0.5,

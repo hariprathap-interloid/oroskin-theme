@@ -5,7 +5,7 @@
 
   The block does not know its place in the slideshow (a theme block gets no loop index). It writes
   markers that the section fills after it captures all slides (see "Markers" in sections/slideshow.liquid):
-  __SLIDE_N__ (1, 2, 3...), __SLIDE_STATE__ (is-active on slide 1), __SLIDE_LABEL__ ("1 of 3"),
+  __SLIDE_N__ (1, 2, 3...), __SLIDE_STATE__ ("is-active is-ready" on slide 1), __SLIDE_LABEL__ ("1 of 3"),
   __SLIDE_LOADING__ (eager / lazy) and __SLIDE_PRIORITY__ (high only for slide 1's photo in section 1).
   Each slide starts with the comment <!--slideshow-slide-->: the section splits the captured HTML there.
 
@@ -19,9 +19,69 @@
   assign word = block.settings.word | strip
   assign product = block.settings.product
 
-  assign is_empty = false
-  if image == blank and word == blank and block.settings.subheading == blank and block.settings.text == blank
-    assign is_empty = true
+  # Placeholders (model photo, product card): in the theme editor and in the "Add section" preview
+  assign show_placeholders = false
+  if request.design_mode
+    assign show_placeholders = true
+  elsif request.visual_preview_mode
+    assign show_placeholders = true
+  endif
+
+  # A slide shows on the store when it has any content
+  assign is_empty = true
+  if image != blank
+    assign is_empty = false
+  elsif mobile_image != blank
+    assign is_empty = false
+  elsif word != blank
+    assign is_empty = false
+  elsif block.settings.eyebrow != blank
+    assign is_empty = false
+  elsif block.settings.subheading != blank
+    assign is_empty = false
+  elsif block.settings.text != blank
+    assign is_empty = false
+  elsif block.settings.button_label != blank
+    assign is_empty = false
+  elsif block.settings.link_label != blank
+    assign is_empty = false
+  elsif product != blank
+    assign is_empty = false
+  elsif block.settings.handwriting != blank
+    assign is_empty = false
+  elsif block.settings.decoration_start != blank
+    assign is_empty = false
+  elsif block.settings.decoration_end != blank
+    assign is_empty = false
+  endif
+
+  # Button and text link: on the store only with a label AND a link. The theme editor also shows a label with no
+  # link (dimmed), so the merchant sees what to complete.
+  assign show_button = false
+  if block.settings.button_label != blank
+    if block.settings.button_link != blank
+      assign show_button = true
+    elsif request.design_mode
+      assign show_button = true
+    endif
+  endif
+  assign show_link = false
+  if block.settings.link_label != blank
+    if block.settings.link != blank
+      assign show_link = true
+    elsif request.design_mode
+      assign show_link = true
+    endif
+  endif
+  assign show_content = false
+  if block.settings.subheading != blank
+    assign show_content = true
+  elsif block.settings.text != blank
+    assign show_content = true
+  elsif show_button
+    assign show_content = true
+  elsif show_link
+    assign show_content = true
   endif
 
   # Photo size (70-130%) as a factor for CSS and for the sizes maths
@@ -45,24 +105,47 @@
     assign model_ratio_phone = mobile_image.aspect_ratio
   endif
 
-  # sizes. Desktop (1200px+): the photo is 840 design px tall (x Photo size) in the 1920px frame = 840 x ratio / 1920
-  # of the screen. Below 1200px it is 470 / 375 of the slide's width: 100vw on phones; on tablets the slide is
+  # The desktop layout: from 1200px, and from 1024px when the screen is wider than it is tall (small laptops,
+  # tablets turned sideways: the phone layout is too tall for them). The same two conditions are in the CSS and
+  # in the script of sections/slideshow.liquid. A sizes list cannot join two conditions with a comma, so each
+  # desktop size is written two times.
+  assign desktop_a = '(min-width: 1200px) '
+  assign desktop_b = '(min-width: 1024px) and (orientation: landscape) '
+
+  # sizes, desktop: the photo is 840 design px tall (x Photo size). Its height comes from the stage height
+  # (--pv: at most the screen height / 1031, at least 576px / 1031) and is never more than 1.3 x the width scale
+  # (--px = the screen width / 1920). So the width is at most: 1.3 x 840 x ratio / 1920 of the screen width, and
+  # at most 840 x ratio / 1031 of the screen height (or of 576px on a short screen). "Make the section one screen
+  # tall" off: the design shape, the width scale only.
+  # Below the desktop layout it is 470 / 375 of the slide's width: 100vw on phones; on tablets the slide is
   # "Slide width on tablets" (%) of the screen, counted on at most 896px (56rem).
-  assign desktop_vw = 840 | times: model_ratio | times: photo_size | divided_by: 19.2 | ceil
+  assign desktop_base = 840 | times: model_ratio | times: photo_size
+  if section.settings.fill_screen == false
+    assign desktop_vw = desktop_base | divided_by: 19.2 | ceil
+    assign desktop_size = desktop_vw | append: 'vw'
+  else
+    assign desktop_vw = desktop_base | times: 1.3 | divided_by: 19.2 | ceil
+    assign desktop_vh = desktop_base | divided_by: 10.31 | ceil
+    assign desktop_min_px = desktop_base | times: 576 | divided_by: 1031 | ceil
+    assign desktop_size = 'min(' | append: desktop_vw | append: 'vw, max(' | append: desktop_vh | append: 'vh, ' | append: desktop_min_px | append: 'px))'
+  endif
   assign tablet_share = section.settings.tablet_width | default: 75
   assign phone_factor = 470 | times: model_ratio_phone | times: photo_size | divided_by: 375.0
   assign phone_vw = phone_factor | times: 100 | ceil
   assign tablet_vw = phone_factor | times: tablet_share | ceil
   assign tablet_px = phone_factor | times: 8.96 | times: tablet_share | ceil
+  capture small_sizes
+    echo '(min-width: 750px) min(' | append: tablet_vw | append: 'vw, ' | append: tablet_px | append: 'px), ' | append: phone_vw | append: 'vw'
+  endcapture
   capture model_sizes
-    echo '(min-width: 1200px) ' | append: desktop_vw | append: 'vw, (min-width: 750px) min(' | append: tablet_vw | append: 'vw, ' | append: tablet_px | append: 'px), ' | append: phone_vw | append: 'vw'
+    echo desktop_a | append: desktop_size | append: ', ' | append: desktop_b | append: desktop_size | append: ', ' | append: small_sizes
   endcapture
   assign model_alt = image.alt | default: '' | escape
 
-  # Card photo: 420 design px wide on desktop (22vw), 215 / 375 of the slide below 1200px
+  # Card photo: 420 design px wide on desktop (at least 15rem: 22vw or 240px), 215 / 375 of the slide below
   assign card_tablet_vw = tablet_share | times: 0.58 | ceil
   capture card_sizes
-    echo '(min-width: 1200px) 22vw, (min-width: 750px) min(' | append: card_tablet_vw | append: 'vw, 320px), 58vw'
+    echo desktop_a | append: 'max(22vw, 240px), ' | append: desktop_b | append: 'max(22vw, 240px), (min-width: 750px) min(' | append: card_tablet_vw | append: 'vw, 320px), 58vw'
   endcapture
 
   assign card_image = block.settings.card_image
@@ -71,7 +154,7 @@
   endif
 
   assign show_card = false
-  if product != blank or request.design_mode
+  if product != blank or show_placeholders
     assign show_card = true
   endif
 -%}
@@ -125,17 +208,17 @@
               assign mobile_srcset = mobile_srcset | append: mobile_url | append: ' ' | append: mobile_full | append: 'w'
             -%}
             <source
-              media="(max-width: 1199px)"
+              media="(max-width: 1023px), (max-width: 1199px) and (orientation: portrait)"
               srcset="{{ mobile_srcset }}"
-              sizes="(min-width: 750px) min({{ tablet_vw }}vw, {{ tablet_px }}px), {{ phone_vw }}vw"
+              sizes="{{ small_sizes }}"
               width="{{ mobile_image.width }}"
               height="{{ mobile_image.height }}"
             >
           {%- endif -%}
           {%- assign model_width = image.width | at_most: 2000 -%}
-          {{ image | image_url: width: model_width | image_tag: widths: '300, 450, 600, 800, 1000, 1200, 1600, 2000', sizes: model_sizes, loading: '__SLIDE_LOADING__', fetchpriority: '__SLIDE_PRIORITY__', alt: model_alt, class: 'slideshow-slide__model-image' }}
+          {{ image | image_url: width: model_width | image_tag: widths: '300, 450, 600, 800, 1000, 1200, 1600, 2000', sizes: model_sizes, loading: '__SLIDE_LOADING__', fetchpriority: '__SLIDE_PRIORITY__', alt: model_alt }}
         </picture>
-      {%- elsif request.design_mode -%}
+      {%- elsif show_placeholders -%}
         {{ 'image' | placeholder_svg_tag: 'slideshow-slide__placeholder' }}
       {%- endif -%}
     </div>
@@ -196,7 +279,7 @@
         assign deco_phone_vw = deco_phone | times: deco_size | ceil
         assign deco_tablet_vw = deco_phone_vw | times: tablet_share | divided_by: 100 | ceil
         capture deco_sizes
-          echo '(min-width: 1200px) ' | append: deco_desktop_vw | append: 'vw, (min-width: 750px) ' | append: deco_tablet_vw | append: 'vw, ' | append: deco_phone_vw | append: 'vw'
+          echo desktop_a | append: deco_desktop_vw | append: 'vw, ' | append: desktop_b | append: deco_desktop_vw | append: 'vw, (min-width: 750px) ' | append: deco_tablet_vw | append: 'vw, ' | append: deco_phone_vw | append: 'vw'
         endcapture
         assign deco_phone_class = ''
         if block.settings[phone_key] == false
@@ -212,7 +295,7 @@
     {%- endif -%}
   {%- endfor -%}
 
-  {%- if block.settings.subheading != blank or block.settings.text != blank or block.settings.button_label != blank or block.settings.link_label != blank -%}
+  {%- if show_content -%}
     <div class="slideshow-slide__content">
       {%- if block.settings.subheading != blank -%}
         <p class="slideshow-slide__subheading">{{ block.settings.subheading | escape }}</p>
@@ -220,9 +303,9 @@
       {%- if block.settings.text != blank -%}
         <div class="slideshow-slide__text rte">{{ block.settings.text }}</div>
       {%- endif -%}
-      {%- if block.settings.button_label != blank or block.settings.link_label != blank -%}
+      {%- if show_button or show_link -%}
         <div class="slideshow-slide__actions">
-          {%- if block.settings.button_label != blank -%}
+          {%- if show_button -%}
             <a
               class="button slideshow-slide__button"
               {% if block.settings.button_link != blank %}
@@ -235,7 +318,7 @@
               {{- 'icon-send.svg' | inline_asset_content -}}
             </a>
           {%- endif -%}
-          {%- if block.settings.link_label != blank -%}
+          {%- if show_link -%}
             <a
               class="button button--text slideshow-slide__link"
               {% if block.settings.link != blank %}
@@ -341,7 +424,9 @@
     {
       "type": "url",
       "id": "button_link",
-      "label": "t:labels.slideshow_button_link"
+      "label": "t:labels.slideshow_button_link",
+      "info": "t:labels.slideshow_button_link_info",
+      "visible_if": "{{ block.settings.button_label != blank }}"
     },
     {
       "type": "text",
@@ -352,7 +437,9 @@
     {
       "type": "url",
       "id": "link",
-      "label": "t:labels.slideshow_link"
+      "label": "t:labels.slideshow_link",
+      "info": "t:labels.slideshow_link_info",
+      "visible_if": "{{ block.settings.link_label != blank }}"
     },
     {
       "type": "header",
@@ -395,7 +482,8 @@
       "type": "image_picker",
       "id": "card_image",
       "label": "t:labels.slideshow_card_image",
-      "info": "t:labels.slideshow_card_image_info"
+      "info": "t:labels.slideshow_card_image_info",
+      "visible_if": "{{ block.settings.product != blank }}"
     },
     {
       "type": "header",
