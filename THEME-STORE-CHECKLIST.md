@@ -165,7 +165,7 @@ Why first: every later section reads these settings, CSS variables and base styl
 - [ ] Lighthouse averages across home, collection and product, on **desktop and mobile**: **performance ≥ 60** and **accessibility ≥ 90**. *§6*
 - [ ] Keyboard-only purchase path; screen-reader pass; focus order matches the page order. *§12*
 - [ ] Valid HTML; contrast 4.5:1 for body text and 3:1 for large text and UI elements. *§12*
-- [ ] Every input has a unique `id` and a matching `<label for>`. *§12* *Audit 2026-11-24 (headless Chrome, 22 page states at 1280 / 390px): no duplicate ids, every field named, 5 fields given ids + `for`, payment icon ids made unique on the product page, filter drawer `autofocus` removed. Open states (filter drawer, search popup, phone menu, lightbox) clean in the second run. Still to audit: password page, gift card.*
+- [ ] Every input has a unique `id` and a matching `<label for>`. *§12* *Audit 2026-11-24 (headless Chrome, 22 page states at 1280 / 390px): no duplicate ids, every field named, 5 fields given ids + `for`, payment icon ids made unique on the product page, filter drawer `autofocus` removed. Open states (filter drawer, search popup, phone menu, lightbox) clean in the second run. Password page audited 2026-11-24: clean (title fixed). Still to audit: gift card (needs a real URL).*
 - [ ] Browsers: the latest Safari, Chrome, Firefox, Edge, iOS Safari, Chrome Mobile and Samsung Internet, plus the **Instagram, Facebook and Pinterest in-app browsers**. *§9*
 - [x] No Sass and no minified files of our own. *§10* *Audit 2026-11-05: no `.min.*`, `.scss` or `.sass` in `assets/`. Keep it that way.*
 - [ ] Setting labels: sentence case, American English, and Shopify's terminology list ("home page", "main menu", "button label"…). *§14*
@@ -186,7 +186,60 @@ These are in the Figma but aren't native Shopify features. Don't build them unti
 
 ## M10 Launch (Phase 1) → Phase 2 prep
 
-- [ ] Showcase on a **client transfer store or a paid store**. A dev store can't go live.
+*List written 2026-11-24 from the roadmap (Part 13, Stages 8–11) and every open item in CLAUDE.md. Who: **D** = developer, **C** = client / design team, **S** = store admin work.*
+
+### 0. Blocker: the store
+- [ ] **S** Showcase on a **client transfer store or a paid store**. A dev store can't go live (`oroskin-dev` stays the dev / QA store). Then add the `showcase` environment in `shopify.theme.toml` (unpublished theme id only, `ignore` the editor files).
+
+### 1. Open M9 items to finish first
+- [ ] **C** Gold colour: design team approval for `#8a6a1f` (2.1–2.3:1 → 4.86:1). Then set the Highlight color on the QA theme (Scrolling showcase, Cart, any other gold). If refused: put the code defaults back to `#c8a24b` (search popup, Scrolling showcase) and record the contrast fail as a known issue.
+- [ ] **D** Collection page Lighthouse fixes (first card photo eager, sold-out option 65%), then Lighthouse on the QA preview link: home, collection, product, cart; mobile + desktop (~1350px wide). Goal ≥ 90 everywhere; Theme Store minimum P ≥ 60, A ≥ 90.
+- [ ] **D** Mobile performance (parked): `styles.css` size choice (keep the bundle or move page-only CSS to `assets/`).
+- [ ] **D** Gift card page audit on a real URL (order #1005's card).
+- [ ] **D + C** Real-device pass with the QA matrix (roadmap Stage 6): iPhone Safari, Android Chrome, iPad, laptop Chrome + Safari; plus Firefox, Edge, Samsung Internet and the Instagram / Facebook / Pinterest in-app browsers (§9). Each section's "Open: real phone test" note in CLAUDE.md belongs here.
+- [ ] **D** Screen-reader pass (VoiceOver on iPhone, NVDA on Windows): home → collection → product → cart.
+- [ ] **D** Media test: a product with YouTube, Vimeo and a 3D model (the demo catalogue has none).
+- [ ] **D** Forms on the preview link (`theme dev` can't POST): contact, newsletter, localization switch, password, article comment.
+- [ ] **D** Optional: Organization + BreadcrumbList JSON-LD (M8, not required).
+
+### 2. Store setup (admin)
+- [ ] **S** Pages: set each page's **Template** once the theme is published (about, faq, privacy, terms, returns, contact). Until then preview with `?view=`.
+- [ ] **S** Settings > Policies: refund, privacy, terms, shipping, **contact information** and **legal notice** (the last two are empty).
+- [ ] **S** Menus: `main-menu`, `footer` (nested), `customer_account_menu`, `collection-pills` with "All products" first.
+- [ ] **S** Collections: the "Pill image" metafield (`custom.pill_image`) on each collection used in the pills.
+- [ ] **S** Settings > Checkout: "Automatically fulfill gift cards" on.
+- [ ] **S** Customer accounts: new customer accounts on, branding in Checkout and accounts → Customize.
+- [ ] **S** Payments (Shop Pay for Follow on Shop and installments), shipping, taxes, markets / languages; one **test order**.
+- [ ] **S** Apps from decision 6 (reviews, wishlist, rewards, back in stock for "Notify me") installed and placed.
+- [ ] **S** Analytics and pixels (Customer events).
+- [ ] **S** Domain, SSL, remove the store password.
+
+### 3. Content
+- [ ] **C** Real logo and product photography (still blocked, see CLAUDE.md).
+- [ ] **C** Replace demo content: FAQ answers, team quotes, policy texts, the test text in the demo article ("Dataasd" after the lead), the "Hot" / "New" Badge entries' own colours (clear them for the gold pill).
+- [ ] **C** Hero cut-outs uploaded at ~1400px wide (now 360–467px, blurry on large screens).
+- [ ] **S** Homepage meta description (Online Store → Preferences) and the social sharing image; SEO titles on key pages.
+- [ ] **S** Alt text on images in Content → Files (generated PNGs carry the prompt as metadata); the logo alt text.
+- [ ] **S** Collection template: Icon features → Card style; promo card cut-outs.
+
+### 4. Theme files before the final push
+- [ ] **D** `theme_info`: documentation and support URLs (the documentation URL is a placeholder).
+- [ ] **D** Pull the QA theme's editor files (`templates/*.json`, `sections/*.json`, `config/settings_data.json`, `locales/*.json`), check `git diff`, and delete what comes back from old saves: `heading_level` / `tag` / `link_to_product` on product title blocks, `heading_tag: h2` in `page.returns.json`, the old spec-block order in Product highlights, Product tabs Layout (Stacked vs Tabbed).
+- [ ] **D** Theme Check clean; `main` merged and pushed to the final (unpublished) theme.
+- [ ] **D** Setting labels: sentence case, American English, Shopify's terms (§14).
+- [ ] **D** Re-read §8 (fake urgency): the real low-stock count in `product-stock`.
+- [ ] **D** Verify Follow on Shop on the Shop Pay store.
+
+### 5. Launch day (roadmap Stage 10)
+- [ ] **C** Written approval of the final preview theme; launch date agreed (not a Friday, not a sale period).
+- [ ] **D** Duplicate the live theme as a backup.
+- [ ] **S** Publish the approved theme (by hand in the admin, never from the CLI).
+- [ ] **D** Smoke test: home → collection → product → add to cart → checkout (test order) → account; mobile and desktop.
+- [ ] **D** If something breaks: publish the backup theme.
+
+### 6. After launch (Stage 11)
+- [ ] **D** Watch 1–2 weeks: errors, the Web performance report (real-user data), client feedback.
+- [ ] **D** Tag the release `v1.0.0`; documentation (sections, metafields, settings) — the docs phase.
 - [ ] Phase 2:
   - theme name (1–2 words, under 30 characters)
   - version number and release notes
