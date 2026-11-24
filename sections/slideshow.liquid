@@ -2,16 +2,21 @@
   Slideshow (Figma "slider section", design/inbox/slider section/): one category per slide. A very large word in
   the heading font sits behind a cut-out model photo; the letters that cross the photo show again in front of it
   as an outline. Around it: an eyebrow, a subheading with text and two links (left), a tilted product card
-  (right), handwriting (top right) and blurred decoration images at the sides.
+  (right), handwriting (top right) and decoration images at the sides.
 
-  Each slide is a "Slide" block (blocks/_slide.liquid). Desktop (990px and up): the Figma 1920 x 1031 frame,
-  scaled to fit the stage. Phones and tablets: the Figma 375px frame, text above the photo.
+  Each slide is a "Slide" block (blocks/_slide.liquid).
+  - Desktop (1200px and up): the stage is exactly one screen tall (less the header and announcement bar when
+    first, at least 36rem). Horizontal places and widths come from the stage width (--px), vertical places from
+    its height (--pv), sizes that must fit both ways from the smaller one (--pm): the whole slide is on the first
+    screen and a short window never makes the design narrower. See the desktop CSS.
+  - Below 1200px (phones and tablets): the Figma 375px frame, text above the photo.
 
   How slides change ("How slides change"):
   - Buttons: arrows, the side dots and an optional autoplay with a pause button.
   - Page scroll: the stage stays on the screen (sticky) while the page scrolls through a tall track, one step
-    per slide, then the page continues. Only from 990px, on the live store, with motion allowed and 2+ slides;
-    in all other cases the buttons work as above. The arrows and dots also work: they scroll the page.
+    per slide, then the page continues. Only from 1200px, on the live store (not in the theme editor: a note
+    says so there), with motion allowed, 2+ slides and a screen at least 36rem tall; in all other cases the
+    buttons work. Arrows and dots scroll the page.
   Without JavaScript: slide 1 shows, the other slides and the buttons are hidden.
 {%- endcomment -%}
 
@@ -67,11 +72,6 @@
     assign count_text = '0' | append: slide_count
   endif
 
-  assign carousel_label = 'sections.slideshow.label' | t
-  if section.settings.label != blank
-    assign carousel_label = section.settings.label | escape
-  endif
-
   assign autoplay_ms = 0
   if section.settings.autoplay and slide_count > 1
     assign autoplay_ms = section.settings.interval | times: 1000
@@ -88,82 +88,97 @@
   {%- endif -%}
 {%- else -%}
   <slideshow-section
-    class="slideshow full-width section-width--{{ section.settings.section_width | default: 'full' }} color-{{ scheme_id }} slideshow--anim-{{ animation }}{% unless section.settings.fill_screen %} slideshow--fit{% endunless %}{% unless section.settings.show_decorations_phone %} slideshow--no-phone-deco{% endunless %}"
+    class="slideshow full-width color-{{ scheme_id }} slideshow--anim-{{ animation }}{% unless section.settings.fill_screen %} slideshow--fit{% endunless %}"
     role="region"
     aria-roledescription="{{ 'sections.slideshow.carousel_role' | t }}"
-    aria-label="{{ carousel_label }}"
+    aria-label="{{ 'sections.slideshow.label' | t }}"
     data-mode="{{ section.settings.slide_change | default: 'buttons' }}"
     data-scroll-length="{{ section.settings.scroll_length | default: 100 }}"
     {% if autoplay_ms > 0 %}
       data-autoplay="{{ autoplay_ms }}"
     {% endif %}
-    style="--slide-count: {{ slide_count }}; --scroll-length: {{ section.settings.scroll_length | default: 100 }}; --word-scale: {{ section.settings.word_scale | default: 100 | times: 0.01 }}; --deco-blur: {{ section.settings.decoration_blur }}px; --slideshow-tablet-width: {{ section.settings.tablet_width | default: 75 }}%; --slideshow-pad-top: {{ section.settings.padding_top }}px; --slideshow-pad-bottom: {{ section.settings.padding_bottom }}px;{% if section.settings.highlight_color != blank %} --color-accent: {{ section.settings.highlight_color }};{% endif %}{% if section.settings.outline_color != blank %} --slideshow-outline: {{ section.settings.outline_color }};{% endif %}"
+    style="--slide-count: {{ slide_count }}; --scroll-length: {{ section.settings.scroll_length | default: 100 }}; --word-scale: {{ section.settings.word_scale | default: 100 | times: 0.01 }}; --slideshow-tablet-width: {{ section.settings.tablet_width | default: 75 }}; --slideshow-pad-top: {{ section.settings.padding_top }}px; --slideshow-pad-bottom: {{ section.settings.padding_bottom }}px;{% if section.settings.highlight_color != blank %} --color-accent: {{ section.settings.highlight_color }};{% endif %}{% if section.settings.outline_color != blank %} --slideshow-outline: {{ section.settings.outline_color }};{% endif %}"
   >
     <div class="slideshow__track">
       <div class="slideshow__stage">
-        {%- comment -%}
-          The controls come before the slides: the pause button is one of the first things a keyboard user
-          reaches (WCAG 2.2.2). They show at the bottom left. Only with 2 or more slides.
-        {%- endcomment -%}
-        {%- if slide_count > 1 -%}
-          <div class="slideshow__controls">
-            <p class="slideshow__counter" aria-hidden="true">
-              <span data-slideshow-current>01</span> / {{ count_text }}
-            </p>
-            <span class="slideshow__line" aria-hidden="true"></span>
-            <button
-              type="button"
-              class="slideshow__button slideshow__arrow slideshow__arrow--prev"
-              aria-controls="SlideshowSlides-{{ section.id }}"
-              aria-label="{{ 'sections.slideshow.previous' | t }}"
-            >
-              {{- 'icon-arrow.svg' | inline_asset_content -}}
-            </button>
-            <button
-              type="button"
-              class="slideshow__button slideshow__arrow slideshow__arrow--next"
-              aria-controls="SlideshowSlides-{{ section.id }}"
-              aria-label="{{ 'sections.slideshow.next' | t }}"
-            >
-              {{- 'icon-arrow.svg' | inline_asset_content -}}
-            </button>
-            {%- if autoplay_ms > 0 -%}
-              {%- comment -%} Fixed label; aria-pressed says whether it is on (pressed = paused) {%- endcomment -%}
-              <button type="button" class="slideshow__button slideshow__pause" aria-pressed="false" hidden>
-                <span class="visually-hidden">{{ 'sections.slideshow.pause' | t }}</span>
-                <svg class="slideshow__pause-icon slideshow__pause-icon--pause" aria-hidden="true" focusable="false" viewBox="0 0 16 16"><rect x="3.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/><rect x="9.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/></svg>
-                <svg class="slideshow__pause-icon slideshow__pause-icon--play" aria-hidden="true" focusable="false" viewBox="0 0 16 16"><path d="M4.5 2.8v10.4a.8.8 0 0 0 1.2.7l8.4-5.2a.8.8 0 0 0 0-1.4L5.7 2.1a.8.8 0 0 0-1.2.7z" fill="currentColor"/></svg>
-              </button>
-            {%- endif -%}
-          </div>
-        {%- endif -%}
-
-        <div class="slideshow__slides" id="SlideshowSlides-{{ section.id }}" aria-live="polite">
-          {{- slides_html -}}
-        </div>
-
-        {%- if section.settings.show_dots and slide_count > 1 -%}
-          <div class="slideshow__dots" role="group" aria-label="{{ 'sections.slideshow.dots_label' | t }}">
-            {%- for i in (1..slide_count) -%}
+        <div class="slideshow__frame">
+          {%- comment -%}
+            Theme editor only: Page scroll does not pin in the editor (the editor needs the normal page scroll),
+            so the buttons work there. This note says so, so the merchant does not think it is broken.
+          {%- endcomment -%}
+          {%- if request.design_mode and section.settings.slide_change == 'scroll' and slide_count > 1 -%}
+            <p class="slideshow__editor-note">{{ 'sections.slideshow.scroll_editor_note' | t }}</p>
+          {%- endif -%}
+          {%- comment -%}
+            The controls come before the slides: the pause button is one of the first things a keyboard user
+            reaches (WCAG 2.2.2). They show at the bottom left. Only with 2 or more slides.
+          {%- endcomment -%}
+          {%- if slide_count > 1 -%}
+            <div class="slideshow__controls">
+              <p class="slideshow__counter" aria-hidden="true">
+                <span data-slideshow-current>01</span> / {{ count_text }}
+              </p>
+              <span class="slideshow__line" aria-hidden="true"></span>
               <button
                 type="button"
-                class="slideshow__dot"
-                aria-controls="Slide-{{ section.id }}-{{ i }}"
-                aria-label="{{ 'sections.slideshow.dot_label' | t: index: i, count: slide_count }}"
-                {% if forloop.first %}
-                  aria-current="true"
-                {% endif %}
-              ></button>
-            {%- endfor -%}
-          </div>
-        {%- endif -%}
+                class="slideshow__button slideshow__arrow slideshow__arrow--prev"
+                aria-controls="SlideshowSlides-{{ section.id }}"
+                aria-label="{{ 'sections.slideshow.previous' | t }}"
+              >
+                {{- 'icon-arrow.svg' | inline_asset_content -}}
+              </button>
+              <button
+                type="button"
+                class="slideshow__button slideshow__arrow slideshow__arrow--next"
+                aria-controls="SlideshowSlides-{{ section.id }}"
+                aria-label="{{ 'sections.slideshow.next' | t }}"
+              >
+                {{- 'icon-arrow.svg' | inline_asset_content -}}
+              </button>
+              {%- if autoplay_ms > 0 -%}
+                {%- comment -%} Fixed label; aria-pressed says whether it is on (pressed = paused) {%- endcomment -%}
+                <button type="button" class="slideshow__button slideshow__pause" aria-pressed="false" hidden>
+                  <span class="visually-hidden">{{ 'sections.slideshow.pause' | t }}</span>
+                  <svg class="slideshow__pause-icon slideshow__pause-icon--pause" aria-hidden="true" focusable="false" viewBox="0 0 16 16"><rect x="3.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/><rect x="9.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/></svg>
+                  <svg class="slideshow__pause-icon slideshow__pause-icon--play" aria-hidden="true" focusable="false" viewBox="0 0 16 16"><path d="M4.5 2.8v10.4a.8.8 0 0 0 1.2.7l8.4-5.2a.8.8 0 0 0 0-1.4L5.7 2.1a.8.8 0 0 0-1.2.7z" fill="currentColor"/></svg>
+                </button>
+              {%- endif -%}
+            </div>
+          {%- endif -%}
 
-        {%- if section.settings.show_hint -%}
-          <p class="slideshow__hint" aria-hidden="true">
-            <span class="slideshow__mouse"></span>
-            {{ 'sections.slideshow.scroll_hint' | t }}
-          </p>
-        {%- endif -%}
+          <div class="slideshow__slides" id="SlideshowSlides-{{ section.id }}" aria-live="polite">
+            {{- slides_html -}}
+          </div>
+
+          {%- comment -%}
+            Side dots (Figma rail): line, dot, line, dot ... line, with gaps between the pieces. The two lines that
+            touch the shown slide's dot are red (.is-active, set by the script). Lines are decoration.
+          {%- endcomment -%}
+          {%- if section.settings.show_dots and slide_count > 1 -%}
+            <div class="slideshow__dots" role="group" aria-label="{{ 'sections.slideshow.dots_label' | t }}">
+              <span class="slideshow__rail slideshow__rail--end is-active" data-rail="0" aria-hidden="true"></span>
+              {%- for i in (1..slide_count) -%}
+                <button
+                  type="button"
+                  class="slideshow__dot"
+                  aria-controls="Slide-{{ section.id }}-{{ i }}"
+                  aria-label="{{ 'sections.slideshow.dot_label' | t: index: i, count: slide_count }}"
+                  {% if forloop.first %}
+                    aria-current="true"
+                  {% endif %}
+                ></button>
+                <span class="slideshow__rail{% if forloop.last %} slideshow__rail--end{% endif %}{% if forloop.first %} is-active{% endif %}" data-rail="{{ i }}" aria-hidden="true"></span>
+              {%- endfor -%}
+            </div>
+          {%- endif -%}
+
+          {%- if section.settings.show_hint -%}
+            <p class="slideshow__hint" aria-hidden="true">
+              <span class="slideshow__mouse"></span>
+              {{ 'sections.slideshow.scroll_hint' | t }}
+            </p>
+          {%- endif -%}
+        </div>
       </div>
     </div>
   </slideshow-section>
@@ -183,9 +198,11 @@
   /*
     No overflow rule on the section: an ancestor with overflow (hidden / clip) stops the sticky stage in
     Page scroll mode. The stage itself clips what goes past the sides (decorations, the card).
+    --slideshow-screen = the screen height this section may fill (less the header / announcement bar, below).
   */
   .slideshow {
     --slideshow-offset: 0px;
+    --slideshow-screen: calc(100svh - var(--slideshow-offset) - var(--slideshow-bar, 0px));
     --slideshow-outline: var(--color-background);
     position: relative;
     padding-block: var(--slideshow-pad-top, 0px) var(--slideshow-pad-bottom, 0px);
@@ -195,15 +212,15 @@
 
   /*
     The first section slides up under a floating header, and the header CSS adds a top border as tall as the
-    header (sections/header.liquid): the stage is then one screen less the header, so its bottom (photo, arrows)
-    is on the first screen. A solid header covers the top of the page: the same height comes off.
+    header (sections/header.liquid): the stage is then one screen less the header. A solid header covers the
+    top of the page: the same height comes off. A top announcement bar above the first section pushes it down:
+    its height comes off too (as on the hero).
   */
   body:has(sticky-header):not(:has(.header--transparent, .header--solid)) #MainContent > .shopify-section:first-child .slideshow,
   body:has(.header--solid) .slideshow {
     --slideshow-offset: var(--header-space);
   }
 
-  /* A top announcement bar above the first section pushes it down: its height comes off too (as on the hero) */
   body:has(.announcement-bar--top:not([hidden]):not(.is-closing)) #MainContent > .shopify-section:first-child .slideshow {
     --slideshow-bar: var(--announcement-size, 2.25rem);
   }
@@ -211,8 +228,10 @@
   .slideshow__stage {
     position: relative;
     overflow-x: clip;
-    max-inline-size: var(--section-width, 100vw);
-    margin-inline: auto;
+  }
+
+  .slideshow__frame {
+    position: relative;
   }
 
   /* All slides in one grid cell: the shown one on top, the others invisible (their images still load) */
@@ -251,20 +270,25 @@
     }
   }
 
-  /* ---------- Phones and tablets (below 990px): the Figma 375px frame ---------- */
+  /* ---------- Phones and tablets (below 1200px): the Figma 375px frame ---------- */
 
   /*
     The slide is the size container: --mpx = one pixel of the 375px Figma frame at this slide's width.
-    Tablets (750-989px): the slide uses "Slide width" of the screen, centred.
+    Tablets (750-1199px): the slide width = "Slide width on tablets" (a %) of the screen, counted on at most
+    56rem (896px), so the setting changes the width on every tablet and the slide never gets huge.
+    --cpx: text sizes grow with the slide too, but at most to 1.2x (big text in a narrow column looks heavy).
   */
+  .slideshow {
+    --slideshow-slide-width: min(100%, calc(min(100vw, 56rem) * var(--slideshow-tablet-width, 75) / 100));
+  }
+
   .slideshow-slide {
     --mpx: calc(100cqi / 375);
-    /* Text sizes grow with the slide too, but at most to 1.2x (tablets): big text in a narrow column looks heavy */
     --cpx: min(100cqi / 375, 0.075rem);
     container-type: inline-size;
     display: grid;
     align-content: start;
-    inline-size: min(100%, var(--slideshow-tablet-width));
+    inline-size: var(--slideshow-slide-width);
     margin-inline: auto;
   }
 
@@ -277,7 +301,7 @@
   .slideshow-slide__content {
     position: relative;
     z-index: 5;
-    order: -1; /* phones: the text first, above the photo (Figma 375px frame) */
+    order: -1; /* below 1200px: the text first, above the photo (Figma 375px frame) */
     display: grid;
     justify-items: start;
     gap: calc(12 * var(--cpx));
@@ -465,7 +489,8 @@
 
   /* Product card. Its sizes are in em of the card: font-size = card width / 21 (10px on a 210px card). */
   .slideshow-card {
-    --card-w: calc(215 * var(--mpx));
+    /* At most 20rem on tablets: a bigger card hides the photo */
+    --card-w: min(calc(215 * var(--mpx)), 20rem);
     position: absolute;
     z-index: 4;
     right: calc(25 * var(--mpx));
@@ -581,11 +606,16 @@
     block-size: auto;
   }
 
-  /* Decorations: blurred, behind the text and the photo, past the sides (the stage clips them) */
+  /*
+    Decorations: behind the text and the photo, past the sides (the stage clips them). Per decoration (Slide
+    block): --deco-size, --deco-rotate, --deco-x / --deco-y (% of the slide: + = to the right / down) and
+    --deco-blur ("Soft focus"; a little less below 1200px, where the images are smaller).
+  */
   .slideshow-slide__deco {
     position: absolute;
     z-index: 0;
-    filter: blur(calc(var(--deco-blur, 6px) * 0.6));
+    filter: blur(calc(var(--deco-blur, 0px) * 0.6));
+    rotate: var(--deco-rotate, 0deg);
     pointer-events: none;
   }
 
@@ -596,21 +626,38 @@
   }
 
   .slideshow-slide__deco--start {
-    left: calc(-25 * var(--mpx));
-    bottom: calc(190 * var(--mpx));
-    inline-size: calc(95 * var(--mpx));
+    left: calc(-25 * var(--mpx) + var(--deco-x, 0) * 1%);
+    bottom: calc(190 * var(--mpx) - var(--deco-y, 0) * 1%);
+    inline-size: calc(95 * var(--mpx) * var(--deco-size, 1));
   }
 
   .slideshow-slide__deco--end {
-    right: calc(-20 * var(--mpx));
-    top: calc(70 * var(--mpx));
-    inline-size: calc(80 * var(--mpx));
+    right: calc(-20 * var(--mpx) - var(--deco-x, 0) * 1%);
+    top: calc(70 * var(--mpx) + var(--deco-y, 0) * 1%);
+    inline-size: calc(80 * var(--mpx) * var(--deco-size, 1));
   }
 
-  @media (max-width: 989px) {
-    .slideshow--no-phone-deco .slideshow-slide__deco {
+  @media (max-width: 1199px) {
+    .slideshow-slide__deco--no-phone {
       display: none;
     }
+  }
+
+  /* Theme editor: Page scroll works only on the live store */
+  .slideshow__editor-note {
+    position: absolute;
+    z-index: 7;
+    top: var(--space-md);
+    left: 50%;
+    max-inline-size: min(36rem, calc(100% - 2rem));
+    margin: 0;
+    padding: var(--space-xs) var(--space-md);
+    border: 1px dashed currentColor;
+    border-radius: var(--radius-xs);
+    background-color: var(--color-background);
+    font-size: 0.8125rem;
+    text-align: center;
+    translate: -50% 0;
   }
 
   /* Theme editor: a slide with no content */
@@ -633,7 +680,7 @@
     position: absolute;
     z-index: 6;
     bottom: var(--space-md);
-    left: calc((100% - min(100%, var(--slideshow-tablet-width))) / 2 + 1.25rem);
+    left: calc((100% - var(--slideshow-slide-width)) / 2 + 1.25rem);
     display: flex;
     align-items: center;
     gap: 0.625rem;
@@ -659,24 +706,29 @@
     background-color: var(--color-accent);
   }
 
+  /*
+    Figma "Liquid Glass Button": 40 x 40, white 13% fill, a 6% red edge and a soft shadow. On a white or cream
+    background the fill is almost invisible: the shadow and the red arrow carry it (contrast: M9).
+    Never smaller than 40px (tap size).
+  */
   .slideshow__button {
     display: grid;
     place-items: center;
-    inline-size: 2.25rem;
+    inline-size: 2.5rem;
     aspect-ratio: 1;
     margin: 0;
     padding: 0;
-    border: 0;
-    border-radius: 50%;
-    background-color: color-mix(in srgb, var(--color-text) 14%, var(--color-background));
-    box-shadow: 0 4px 12px #00000026;
+    border: 1px solid #7d00000f;
+    border-radius: 2.5rem;
+    background-color: #ffffff21;
+    box-shadow: 0 5px 10px #00000012;
     color: var(--color-accent);
     cursor: pointer;
-    transition: background-color var(--duration-fast) var(--ease-out);
+    transition: box-shadow var(--duration-fast) var(--ease-out);
   }
 
   .slideshow__button:hover {
-    background-color: color-mix(in srgb, var(--color-text) 22%, var(--color-background));
+    box-shadow: 0 5px 14px #00000024;
   }
 
   .slideshow__button svg {
@@ -684,8 +736,9 @@
     block-size: auto;
   }
 
+  /* The left arrow = the right arrow mirrored (Figma scaleX(-1)) */
   .slideshow__arrow--prev svg {
-    scale: -1 1;
+    transform: scaleX(-1);
   }
 
   .slideshow__pause[hidden] {
@@ -711,26 +764,40 @@
     display: none;
   }
 
-  /* ---------- Desktop (990px and up): the Figma 1920 x 1031 frame ---------- */
+  /* ---------- Desktop (1200px and up): the Figma 1920 x 1031 frame ---------- */
 
-  @media (min-width: 990px) {
+  @media (min-width: 1200px) {
     /*
-      The stage is one screen tall (less the header when the header covers the top) and is the size container.
-      --px = one Figma pixel: the 1920 x 1031 frame fitted into the stage (width or height, the smaller), so the
-      whole composition always fits. --box-x = where the frame starts when the stage is wider than the frame.
-      The frame sits on the stage's bottom edge (the photo stands on it).
+      The stage is exactly the screen height this section may fill (--slideshow-screen: 100svh less the header
+      and announcement bar when first), at least 36rem: below that the section grows and the page scrolls.
+      It is the size container, so the parts use both its width and its height:
+      - --px = stage width / 1920: horizontal places and widths (a short window never makes the design narrower);
+      - --pv = stage height / 1031, at most 1.3 x --px: vertical places (the frame below is 1031 --pv tall and
+        stands on the stage's bottom edge, so the photo, arrows and hint are always on the first screen);
+      - --pm = the smaller of the two: sizes that must fit both ways (big word, photo width, card, text).
+      scroll-margin-block-start carries the screen height to the script (it has no other use here).
     */
     .slideshow__stage {
-      --px: min(100cqw / 1920, 100cqh / 1031);
-      --box-x: calc((100cqw - 1920 * var(--px)) / 2);
+      --px: calc(100cqw / 1920);
+      --py: calc(100cqh / 1031);
+      --pv: min(var(--py), var(--px) * 1.3);
+      --pm: min(var(--px), var(--pv));
       container-type: size;
-      block-size: calc(100svh - var(--slideshow-offset) - var(--slideshow-bar, 0px));
+      block-size: max(var(--slideshow-screen), 36rem);
+      scroll-margin-block-start: var(--slideshow-screen);
     }
 
-    /* "Fill the screen height" off: the design's shape */
+    /* "Make the section one screen tall" off: the design's shape */
     .slideshow--fit .slideshow__stage {
       block-size: auto;
       aspect-ratio: 1920 / 1031;
+    }
+
+    .slideshow__frame {
+      position: absolute;
+      inset-inline: 0;
+      bottom: 0;
+      block-size: calc(1031 * var(--pv));
     }
 
     .slideshow__slides {
@@ -747,25 +814,23 @@
 
     .slideshow-slide__scene {
       position: absolute;
-      bottom: 0;
-      left: var(--box-x);
-      inline-size: calc(1920 * var(--px));
-      block-size: calc(1031 * var(--px));
+      inset: 0;
       aspect-ratio: auto;
     }
 
+    /* Eyebrow and big word: their top at y 222 of the frame, centred across */
     .slideshow-slide__title,
     .slideshow-slide__twin {
-      padding-block-start: calc(222 * var(--px));
+      padding-block-start: calc(222 * var(--pv));
     }
 
     .slideshow-slide__title-inner {
-      gap: calc(4 * var(--px));
+      gap: calc(4 * var(--pv));
     }
 
     .slideshow-slide__eyebrow {
       gap: calc(20 * var(--px));
-      font-size: max(0.6875rem, calc(15 * var(--px)));
+      font-size: max(0.6875rem, calc(15 * var(--pm)));
       letter-spacing: 0.2em;
     }
 
@@ -774,21 +839,22 @@
     }
 
     .slideshow-slide__word {
-      font-size: calc(min(var(--word-size) * var(--word-scale, 1), var(--word-fit)) * var(--px));
+      font-size: calc(min(var(--word-size) * var(--word-scale, 1), var(--word-fit)) * var(--pm));
     }
 
     .slideshow-slide__word--outline {
-      -webkit-text-stroke-width: max(1px, calc(1.5 * var(--px)));
+      -webkit-text-stroke-width: max(1px, calc(1.5 * var(--pm)));
     }
 
+    /* The photo stands on the bottom edge; its height from the stage height (never below the screen) */
     .slideshow-slide__model {
       left: calc(935 * var(--px));
-      block-size: calc(840 * var(--px) * var(--photo-size, 1));
+      block-size: calc(840 * var(--pv) * var(--photo-size, 1));
       aspect-ratio: var(--model-ratio);
     }
 
     .slideshow-slide__twin {
-      --mask-h: calc(840 * var(--px) * var(--photo-size, 1));
+      --mask-h: calc(840 * var(--pv) * var(--photo-size, 1));
       --mask-w: calc(var(--mask-h) * var(--model-ratio));
       --mask-x: calc(935 * var(--px) - var(--mask-w) / 2);
     }
@@ -797,14 +863,14 @@
     .slideshow-slide__script {
       position: absolute;
       z-index: 3;
-      top: calc(128 * var(--px));
+      top: calc(128 * var(--pv));
       left: calc(1640 * var(--px));
       display: block;
       inline-size: min-content;
       margin: 0;
       color: var(--color-accent);
       font-family: var(--font-accent--family);
-      font-size: max(1.5rem, calc(50 * var(--px)));
+      font-size: max(1.5rem, calc(50 * var(--pm)));
       font-style: italic;
       font-weight: var(--font-accent--weight);
       line-height: 1.15;
@@ -816,120 +882,126 @@
       position: absolute;
       top: 100%;
       right: 90%;
-      inline-size: calc(64 * var(--px));
+      inline-size: calc(64 * var(--pm));
       block-size: auto;
-      margin-block-start: calc(18 * var(--px));
+      margin-block-start: calc(18 * var(--pm));
       rotate: 8deg;
     }
 
-    /*
-      Left column: from the frame's left edge (50px at 1920), its top at y 580 of the frame (Figma 575), under
-      the big word. Top, not bottom: on small laptops the minimum text sizes make the column taller than the
-      design, and it must grow down (towards the arrows), never up into the word.
-    */
+    /* Left column: 50 design px from the left, its top at y 580 of the frame, under the big word */
     .slideshow-slide__content {
       position: absolute;
-      top: calc(100cqh - 1031 * var(--px) + 580 * var(--px));
-      left: calc(var(--box-x) + max(1.25rem, calc(50 * var(--px))));
-      inline-size: max(23rem, calc(520 * var(--px)));
-      gap: calc(30 * var(--px));
+      top: calc(580 * var(--pv));
+      left: max(1.25rem, calc(50 * var(--px)));
+      inline-size: max(23rem, calc(520 * var(--pm)));
+      gap: calc(30 * var(--pv));
       padding: 0;
     }
 
     .slideshow-slide__subheading {
-      font-size: max(1.25rem, calc(34 * var(--px)));
+      font-size: max(1.25rem, calc(34 * var(--pm)));
     }
 
     .slideshow-slide__text {
       max-inline-size: 20em;
-      font-size: max(0.9375rem, calc(22 * var(--px)));
+      font-size: max(0.9375rem, calc(22 * var(--pm)));
       line-height: 1.45;
     }
 
     .slideshow-slide__actions {
-      gap: calc(16 * var(--px)) calc(45 * var(--px));
-      margin-block-start: calc(28 * var(--px));
+      gap: calc(16 * var(--pv)) calc(45 * var(--px));
+      margin-block-start: calc(28 * var(--pv));
     }
 
     .slideshow-slide__button.button {
-      min-block-size: max(2.75rem, calc(60 * var(--px)));
-      padding-inline: max(1.25rem, calc(32 * var(--px)));
-      font-size: max(0.8125rem, calc(17 * var(--px)));
+      min-block-size: max(2.75rem, calc(60 * var(--pm)));
+      padding-inline: max(1.25rem, calc(32 * var(--pm)));
+      font-size: max(0.8125rem, calc(17 * var(--pm)));
     }
 
     .slideshow-slide__link.button {
-      font-size: max(0.8125rem, calc(17 * var(--px)));
+      font-size: max(0.8125rem, calc(17 * var(--pm)));
     }
 
+    /* Card: bottom right, its size fits both the width and the height */
     .slideshow-card {
-      --card-w: max(15rem, calc(420 * var(--px)));
+      --card-w: max(15rem, calc(420 * var(--pm)));
       right: auto;
-      bottom: calc(62 * var(--px));
-      left: calc(var(--box-x) + 1262 * var(--px));
+      bottom: calc(62 * var(--pv));
+      left: calc(1262 * var(--px));
     }
 
     .slideshow-slide__deco {
-      filter: blur(var(--deco-blur, 6px));
+      filter: blur(var(--deco-blur, 0px));
     }
 
     .slideshow-slide__deco--start {
       top: auto;
-      bottom: calc(486 * var(--px));
-      left: calc(-20 * var(--px));
-      inline-size: calc(210 * var(--px));
+      bottom: calc(486 * var(--pv) - var(--deco-y, 0) * 1%);
+      left: calc(-20 * var(--px) + var(--deco-x, 0) * 1%);
+      inline-size: calc(210 * var(--pm) * var(--deco-size, 1));
     }
 
     .slideshow-slide__deco--end {
       top: auto;
-      right: calc(-30 * var(--px));
-      bottom: calc(-40 * var(--px));
-      inline-size: calc(180 * var(--px));
+      right: calc(-30 * var(--px) - var(--deco-x, 0) * 1%);
+      bottom: calc(-40 * var(--pv) - var(--deco-y, 0) * 1%);
+      inline-size: calc(180 * var(--pm) * var(--deco-size, 1));
     }
 
     .slideshow-slide__note {
       inset-inline: 30%;
     }
 
+    /* Counter, line, arrows, pause: on the bottom edge, left */
     .slideshow__controls {
-      bottom: max(var(--space-md), calc(20 * var(--px)));
-      left: calc(var(--box-x) + max(1.25rem, calc(50 * var(--px))));
-      gap: calc(14 * var(--px));
+      bottom: max(var(--space-md), calc(20 * var(--pv)));
+      left: max(1.25rem, calc(50 * var(--px)));
+      gap: max(0.625rem, calc(14 * var(--px)));
     }
 
     .slideshow__counter {
-      font-size: max(0.8125rem, calc(17 * var(--px)));
+      font-size: max(0.8125rem, calc(17 * var(--pm)));
     }
 
     .slideshow__line {
       inline-size: calc(62 * var(--px));
     }
 
-    .slideshow__button {
-      inline-size: max(2.5rem, calc(42 * var(--px)));
-    }
-
-    /* Side dots: a vertical line with one dot per slide, at the right edge, level with the photo's face */
+    /*
+      Side dots (Figma rail), centred on the frame's y 515 at the right edge: separate pieces with gaps. Dot =
+      a 24px button (tap size) with a 12px dot; the shown slide's dot is solid red, the others pale with a faint
+      ring. Lines 2px wide: the two that touch the shown dot are red, the others pale.
+    */
     .slideshow__dots {
       position: absolute;
       z-index: 6;
-      top: calc(100cqh - 1031 * var(--px) + 440 * var(--px));
-      right: calc(var(--box-x) + max(1.25rem, calc(44 * var(--px))));
+      top: calc(515 * var(--pv));
+      right: max(1.25rem, calc(44 * var(--px)));
       display: flex;
       flex-direction: column;
-      gap: calc(34 * var(--px));
+      align-items: center;
+      gap: 0.25rem;
+      translate: 0 -50%;
     }
 
-    .slideshow__dots::before {
-      content: '';
-      position: absolute;
-      inset-block: calc(-20 * var(--px));
-      left: 50%;
-      inline-size: 1px;
-      background-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-background));
+    .slideshow__rail {
+      inline-size: 2px;
+      block-size: max(1.5rem, calc(36 * var(--pm)));
+      border-radius: 1px;
+      background-color: color-mix(in srgb, var(--color-accent) 14%, var(--color-background));
+      transition: background-color var(--duration-base) var(--ease-out);
+    }
+
+    .slideshow__rail--end {
+      block-size: max(0.75rem, calc(16 * var(--pm)));
+    }
+
+    .slideshow__rail.is-active {
+      background-color: var(--color-accent);
     }
 
     .slideshow__dot {
-      position: relative;
       display: grid;
       place-items: center;
       inline-size: 1.5rem;
@@ -946,7 +1018,8 @@
       inline-size: 0.75rem;
       aspect-ratio: 1;
       border-radius: 50%;
-      background-color: color-mix(in srgb, var(--color-accent) 18%, var(--color-background));
+      background-color: color-mix(in srgb, var(--color-accent) 22%, var(--color-background));
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent) 25%, transparent);
       transition: background-color var(--duration-fast) var(--ease-out);
     }
 
@@ -955,19 +1028,19 @@
       background-color: var(--color-accent);
     }
 
-    /* "Scroll to explore": bottom centre, over the photo */
+    /* "Scroll to explore": on the bottom edge, centred. The mouse = a 20 x 36 pill with a red dot. */
     .slideshow__hint {
       position: absolute;
       z-index: 6;
-      bottom: calc(18 * var(--px));
+      bottom: calc(14 * var(--pv));
       left: 50%;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: calc(10 * var(--px));
+      gap: calc(10 * var(--pv));
       margin: 0;
       color: var(--color-accent);
-      font-size: max(0.6875rem, calc(13 * var(--px)));
+      font-size: max(0.6875rem, calc(13 * var(--pm)));
       font-weight: var(--font-weight-medium);
       letter-spacing: 0.25em;
       text-transform: uppercase;
@@ -977,36 +1050,51 @@
     }
 
     .slideshow__mouse {
-      inline-size: max(0.875rem, calc(20 * var(--px)));
-      aspect-ratio: 20 / 34;
-      border: 1.5px solid color-mix(in srgb, var(--color-text) 35%, transparent);
+      position: relative;
+      inline-size: 1.25rem;
+      block-size: 2.25rem;
+      border: 2px solid #dcdce4;
       border-radius: var(--radius-pill);
     }
 
+    .slideshow__mouse::after {
+      content: '';
+      position: absolute;
+      top: 0.3125rem;
+      left: 50%;
+      inline-size: 0.375rem;
+      aspect-ratio: 1;
+      margin-inline-start: -0.1875rem;
+      border-radius: 50%;
+      background-color: var(--color-accent);
+    }
+
     /*
-      Page scroll (the script adds .is-pinned): the track is one screen plus one "Scroll for each slide" per
-      extra slide; the stage stays on the screen while the track scrolls past.
+      Page scroll (the script adds .is-pinned only when the screen is at least 36rem tall): the track is one
+      screen plus one "Scroll distance for each slide" per extra slide; the stage stays on the screen while the
+      track passes.
     */
     .slideshow.is-pinned .slideshow__track {
-      block-size: calc(100svh - var(--slideshow-offset) + (var(--slide-count) - 1) * var(--scroll-length) * 1svh);
+      block-size: calc(var(--slideshow-screen) + (var(--slide-count) - 1) * var(--scroll-length) * 1svh);
     }
 
     .slideshow.is-pinned .slideshow__stage {
       position: sticky;
       top: var(--slideshow-offset);
-      block-size: calc(100svh - var(--slideshow-offset));
+      block-size: var(--slideshow-screen);
       aspect-ratio: auto;
     }
   }
 
-  /* ---------- Slide entrance (Figma Default frames) ---------- */
+  /* ---------- Motion ---------- */
 
   /*
-    Plays when a slide becomes the shown slide (.is-entering, set by the script): the photo rises and fades in,
-    then the big word, then the outline, text, card and decorations. Only with "Enable animations" (.motion-on)
-    and no reduced motion. Slide 1 never moves on page load in the first section (decision 3: never hide the
-    hero): the script adds .is-entering to it only when the section comes on screen later (.is-waiting holds the
-    first frame until then).
+    Slide entrance (Figma Default frames): plays when a slide becomes the shown slide (.is-entering, set by the
+    script): the photo rises and fades in, then the big word, then the outline, text, card and decorations. Only
+    with "Enable animations" (.motion-on) and no reduced motion. Slide 1 never moves on page load when the
+    section is on screen (decision 3: never hide the hero): .is-waiting holds the first frame for a section
+    further down until it comes on screen.
+    The scroll hint's dot moves down and fades, then starts again (reduced motion: it stays at the top).
   */
   @media (prefers-reduced-motion: no-preference) {
     .motion-on .slideshow--anim-rise .is-entering .slideshow-slide__model {
@@ -1054,6 +1142,10 @@
     .slideshow-slide.is-waiting * {
       animation-play-state: paused !important;
     }
+
+    .motion-on .slideshow__mouse::after {
+      animation: slideshow-wheel 1.8s var(--ease-out) infinite;
+    }
   }
 
   @keyframes slideshow-rise {
@@ -1088,16 +1180,33 @@
       opacity: 0;
     }
   }
+
+  @keyframes slideshow-wheel {
+    0% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    70% {
+      opacity: 0;
+      transform: translateY(0.875rem);
+    }
+
+    100% {
+      opacity: 0;
+      transform: translateY(0.875rem);
+    }
+  }
 {% endstylesheet %}
 
 {% javascript %}
   /**
    * <slideshow-section>: one slide at a time.
-   * - Arrows, side dots, optional autoplay (pause button; waits while the pointer or keyboard focus is on the
-   *   section, while it is off screen, while the tab is hidden; off with reduced motion).
-   * - Page scroll mode (data-mode="scroll"): from 990px, on the live store, with motion allowed and 2+ slides,
-   *   the stage pins and the scroll position picks the slide (.is-pinned). Arrows and dots scroll the page to
-   *   the slide's place. Otherwise the buttons work as above.
+   * - Arrows, side dots, optional autoplay (pause button; waits while the pointer is over the slides or the
+   *   keyboard focus is in a slide, while it is off screen, while the tab is hidden; off with reduced motion).
+   * - Page scroll mode (data-mode="scroll"): from 1200px, on the live store, with motion allowed, 2+ slides and
+   *   a screen at least 36rem tall, the stage pins and the scroll position picks the slide (.is-pinned).
+   *   Arrows and dots scroll the page to the slide's place. Otherwise the buttons work as above.
    * - Outline word: masked with the photo's own pixels once the photo has loaded.
    * - Theme editor: selecting a Slide block shows it and holds it until it is deselected.
    */
@@ -1115,7 +1224,7 @@
       this.stage = this.querySelector('.slideshow__stage');
       this.slidesBox = this.querySelector('.slideshow__slides');
       this.reducedQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-      this.desktopQuery = window.matchMedia('(min-width: 990px)');
+      this.desktopQuery = window.matchMedia('(min-width: 1200px)');
 
       this.setUpMasks(signal);
 
@@ -1132,6 +1241,7 @@
 
       this.current = this.querySelector('[data-slideshow-current]');
       this.dots = [...this.querySelectorAll('.slideshow__dot')];
+      this.rails = [...this.querySelectorAll('.slideshow__rail')];
       this.updateControls();
 
       this.querySelector('.slideshow__arrow--prev')?.addEventListener('click', () => this.goTo(this.active - 1, true), { signal });
@@ -1163,7 +1273,15 @@
       this.reducedQuery.addEventListener('change', () => this.refresh(), { signal });
       this.desktopQuery.addEventListener('change', () => this.refresh(), { signal });
       window.addEventListener('scroll', () => this.onScroll(), { passive: true, signal });
-      window.addEventListener('resize', () => this.measure(), { passive: true, signal });
+      // A resize can change whether Page scroll can pin (screen height) and the scroll step
+      window.addEventListener(
+        'resize',
+        () => {
+          cancelAnimationFrame(this.resizeFrame);
+          this.resizeFrame = requestAnimationFrame(() => this.refresh());
+        },
+        { passive: true, signal }
+      );
 
       this.setUpAutoplay(signal);
       this.refresh();
@@ -1175,6 +1293,7 @@
       clearTimeout(this.leaveTimer);
       clearTimeout(this.enterTimer);
       cancelAnimationFrame(this.frame);
+      cancelAnimationFrame(this.resizeFrame);
       this.frame = 0;
       this.visibilityObserver?.disconnect();
       this.entranceObserver?.disconnect();
@@ -1195,18 +1314,28 @@
       );
     }
 
-    /** Page scroll needs the setting, 990px+, the live store (not the editor), motion and 2+ slides */
+    /**
+     * Page scroll needs the setting, 1200px+, the live store (not the editor), motion, 2+ slides, and a screen
+     * at least 36rem tall (the stage's minimum; the screen height comes from the stage's scroll-margin, set in
+     * CSS). On a shorter screen the pinned stage would be cut: the buttons work instead.
+     */
     canPin() {
-      return (
-        this.dataset.mode === 'scroll' &&
-        this.desktopQuery.matches &&
-        !window.Shopify?.designMode &&
-        !this.reduced() &&
-        this.slides.length > 1
-      );
+      if (
+        this.dataset.mode !== 'scroll' ||
+        !this.desktopQuery.matches ||
+        window.Shopify?.designMode ||
+        this.reduced() ||
+        this.slides.length < 2
+      ) {
+        return false;
+      }
+      // The stage is at least 36rem tall: a shorter screen would cut it while pinned
+      const screen = parseFloat(getComputedStyle(this.stage).scrollMarginBlockStart) || window.innerHeight;
+      const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      return screen >= 36 * rem - 1;
     }
 
-    /** Called on start and when the screen width or the motion preference changes */
+    /** Called on start, on resize and when the screen width or the motion preference changes */
     refresh() {
       const pin = this.canPin();
       if (pin !== Boolean(this.pinned)) {
@@ -1284,12 +1413,14 @@
       this.updateControls();
     }
 
+    /** Counter, dots (aria-current) and the two red rail lines next to the shown dot */
     updateControls() {
       if (this.current) this.current.textContent = String(this.active + 1).padStart(2, '0');
       this.dots?.forEach((dot, i) => {
         if (i === this.active) dot.setAttribute('aria-current', 'true');
         else dot.removeAttribute('aria-current');
       });
+      this.rails?.forEach((rail, i) => rail.classList.toggle('is-active', i === this.active || i === this.active + 1));
     }
 
     /**
@@ -1426,10 +1557,8 @@
       "content": "t:labels.content"
     },
     {
-      "type": "text",
-      "id": "label",
-      "label": "t:labels.slideshow_name",
-      "info": "t:labels.slideshow_name_info"
+      "type": "paragraph",
+      "content": "t:labels.slideshow_content_info"
     },
     {
       "type": "header",
@@ -1471,34 +1600,9 @@
       "content": "t:labels.layout"
     },
     {
-      "type": "select",
-      "id": "section_width",
-      "label": "t:labels.section_width",
-      "info": "t:labels.section_width_info",
-      "options": [
-        {
-          "value": "narrow",
-          "label": "t:options.section_width.narrow"
-        },
-        {
-          "value": "wide",
-          "label": "t:options.section_width.wide"
-        },
-        {
-          "value": "widest",
-          "label": "t:options.section_width.widest"
-        },
-        {
-          "value": "full",
-          "label": "t:options.section_width.full"
-        }
-      ],
-      "default": "full"
-    },
-    {
       "type": "checkbox",
       "id": "fill_screen",
-      "label": "t:labels.fill_screen",
+      "label": "t:labels.slideshow_fill_screen",
       "info": "t:labels.slideshow_fill_info",
       "default": true
     },
@@ -1512,26 +1616,6 @@
       "step": 5,
       "unit": "%",
       "default": 100
-    },
-    {
-      "type": "range",
-      "id": "decoration_blur",
-      "label": "t:labels.slideshow_decoration_blur",
-      "min": 0,
-      "max": 20,
-      "step": 1,
-      "unit": "px",
-      "default": 6
-    },
-    {
-      "type": "header",
-      "content": "t:labels.phones"
-    },
-    {
-      "type": "checkbox",
-      "id": "show_decorations_phone",
-      "label": "t:labels.slideshow_phone_decorations",
-      "default": true
     },
     {
       "type": "header",

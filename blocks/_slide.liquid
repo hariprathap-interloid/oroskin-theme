@@ -1,7 +1,7 @@
 {%- comment -%}
   One slide of the Slideshow section (sections/slideshow.liquid): a big word with a cut-out model photo in
   front of it, an outline copy of the word over the photo, text and buttons, a product card, handwriting
-  and two blurred decoration images.
+  and two decoration images (each with its own size, rotation, place and soft focus).
 
   The block does not know its place in the slideshow (a theme block gets no loop index). It writes
   markers that the section fills after it captures all slides (see "Markers" in sections/slideshow.liquid):
@@ -45,21 +45,24 @@
     assign model_ratio_phone = mobile_image.aspect_ratio
   endif
 
-  # sizes: the photo is 840 design px tall on desktop (x Photo size), so its width is 840 x ratio / 1920 of the
-  # screen; on phones it is 470 / 375 of the slide's width (100vw on phones, Slide width on tablets).
+  # sizes. Desktop (1200px+): the photo is 840 design px tall (x Photo size) in the 1920px frame = 840 x ratio / 1920
+  # of the screen. Below 1200px it is 470 / 375 of the slide's width: 100vw on phones; on tablets the slide is
+  # "Slide width on tablets" (%) of the screen, counted on at most 896px (56rem).
   assign desktop_vw = 840 | times: model_ratio | times: photo_size | divided_by: 19.2 | ceil
   assign tablet_share = section.settings.tablet_width | default: 75
-  assign phone_vw = 470 | times: model_ratio_phone | times: photo_size | divided_by: 3.75 | ceil
-  assign tablet_vw = phone_vw | times: tablet_share | divided_by: 100 | ceil
+  assign phone_factor = 470 | times: model_ratio_phone | times: photo_size | divided_by: 375.0
+  assign phone_vw = phone_factor | times: 100 | ceil
+  assign tablet_vw = phone_factor | times: tablet_share | ceil
+  assign tablet_px = phone_factor | times: 8.96 | times: tablet_share | ceil
   capture model_sizes
-    echo '(min-width: 990px) ' | append: desktop_vw | append: 'vw, (min-width: 750px) ' | append: tablet_vw | append: 'vw, ' | append: phone_vw | append: 'vw'
+    echo '(min-width: 1200px) ' | append: desktop_vw | append: 'vw, (min-width: 750px) min(' | append: tablet_vw | append: 'vw, ' | append: tablet_px | append: 'px), ' | append: phone_vw | append: 'vw'
   endcapture
   assign model_alt = image.alt | default: '' | escape
 
-  # Card photo: 420 design px wide on desktop (22vw), 215 / 375 of the slide on phones
+  # Card photo: 420 design px wide on desktop (22vw), 215 / 375 of the slide below 1200px
   assign card_tablet_vw = tablet_share | times: 0.58 | ceil
   capture card_sizes
-    echo '(min-width: 990px) 22vw, (min-width: 750px) ' | append: card_tablet_vw | append: 'vw, 58vw'
+    echo '(min-width: 1200px) 22vw, (min-width: 750px) min(' | append: card_tablet_vw | append: 'vw, 320px), 58vw'
   endcapture
 
   assign card_image = block.settings.card_image
@@ -122,9 +125,9 @@
               assign mobile_srcset = mobile_srcset | append: mobile_url | append: ' ' | append: mobile_full | append: 'w'
             -%}
             <source
-              media="(max-width: 989px)"
+              media="(max-width: 1199px)"
               srcset="{{ mobile_srcset }}"
-              sizes="(min-width: 750px) {{ tablet_vw }}vw, {{ phone_vw }}vw"
+              sizes="(min-width: 750px) min({{ tablet_vw }}vw, {{ tablet_px }}px), {{ phone_vw }}vw"
               width="{{ mobile_image.width }}"
               height="{{ mobile_image.height }}"
             >
@@ -159,17 +162,55 @@
     {%- endif -%}
   </div>
 
-  {%- comment -%} Decorations: blurred, decorative (empty alt), behind everything {%- endcomment -%}
-  {%- if block.settings.decoration_start != blank -%}
-    <div class="slideshow-slide__deco slideshow-slide__deco--start">
-      {{ block.settings.decoration_start | image_url: width: 600 | image_tag: widths: '200, 300, 400, 600', sizes: '(min-width: 990px) 12vw, 22vw', loading: '__SLIDE_LOADING__', alt: '' }}
-    </div>
-  {%- endif -%}
-  {%- if block.settings.decoration_end != blank -%}
-    <div class="slideshow-slide__deco slideshow-slide__deco--end">
-      {{ block.settings.decoration_end | image_url: width: 600 | image_tag: widths: '200, 300, 400, 600', sizes: '(min-width: 990px) 12vw, 22vw', loading: '__SLIDE_LOADING__', alt: '' }}
-    </div>
-  {%- endif -%}
+  {%- comment -%}
+    Decorations: decorative (empty alt), behind everything. Each one has its own Size, Rotation, Move across /
+    up or down (% of the slide), Soft focus (blur) and "Show on phones and tablets". Base place and width:
+    desktop left 210 / right 180 design px (11 / 9.4vw); below 1200px left 95 / right 80 of 375 (25 / 21vw).
+  {%- endcomment -%}
+  {%- for side in (1..2) -%}
+    {%- liquid
+      if side == 1
+        assign deco_image = block.settings.decoration_start
+        assign deco_prefix = 'decoration_start'
+        assign deco_class = 'slideshow-slide__deco--start'
+        assign deco_desktop = 11
+        assign deco_phone = 25
+      else
+        assign deco_image = block.settings.decoration_end
+        assign deco_prefix = 'decoration_end'
+        assign deco_class = 'slideshow-slide__deco--end'
+        assign deco_desktop = 9.4
+        assign deco_phone = 21
+      endif
+    -%}
+    {%- if deco_image != blank -%}
+      {%- liquid
+        assign size_key = deco_prefix | append: '_size'
+        assign rotate_key = deco_prefix | append: '_rotate'
+        assign x_key = deco_prefix | append: '_x'
+        assign y_key = deco_prefix | append: '_y'
+        assign blur_key = deco_prefix | append: '_blur'
+        assign phone_key = deco_prefix | append: '_phone'
+        assign deco_size = block.settings[size_key] | default: 100 | times: 0.01
+        assign deco_desktop_vw = deco_desktop | times: deco_size | ceil
+        assign deco_phone_vw = deco_phone | times: deco_size | ceil
+        assign deco_tablet_vw = deco_phone_vw | times: tablet_share | divided_by: 100 | ceil
+        capture deco_sizes
+          echo '(min-width: 1200px) ' | append: deco_desktop_vw | append: 'vw, (min-width: 750px) ' | append: deco_tablet_vw | append: 'vw, ' | append: deco_phone_vw | append: 'vw'
+        endcapture
+        assign deco_phone_class = ''
+        if block.settings[phone_key] == false
+          assign deco_phone_class = ' slideshow-slide__deco--no-phone'
+        endif
+      -%}
+      <div
+        class="slideshow-slide__deco {{ deco_class }}{{ deco_phone_class }}"
+        style="--deco-size: {{ deco_size }}; --deco-rotate: {{ block.settings[rotate_key] | default: 0 }}deg; --deco-x: {{ block.settings[x_key] | default: 0 }}; --deco-y: {{ block.settings[y_key] | default: 0 }}; --deco-blur: {{ block.settings[blur_key] | default: 0 }}px;"
+      >
+        {{ deco_image | image_url: width: 800 | image_tag: widths: '200, 300, 400, 600, 800', sizes: deco_sizes, loading: '__SLIDE_LOADING__', alt: '' }}
+      </div>
+    {%- endif -%}
+  {%- endfor -%}
 
   {%- if block.settings.subheading != blank or block.settings.text != blank or block.settings.button_label != blank or block.settings.link_label != blank -%}
     <div class="slideshow-slide__content">
@@ -284,7 +325,8 @@
     {
       "type": "text",
       "id": "subheading",
-      "label": "t:labels.slideshow_subheading"
+      "label": "t:labels.slideshow_subheading",
+      "info": "t:labels.slideshow_subheading_info"
     },
     {
       "type": "richtext",
@@ -304,7 +346,8 @@
     {
       "type": "text",
       "id": "link_label",
-      "label": "t:labels.slideshow_link_label"
+      "label": "t:labels.slideshow_link_label",
+      "info": "t:labels.slideshow_link_label_info"
     },
     {
       "type": "url",
@@ -331,6 +374,7 @@
       "type": "range",
       "id": "photo_size",
       "label": "t:labels.slideshow_photo_size",
+      "info": "t:labels.slideshow_photo_size_info",
       "min": 70,
       "max": 130,
       "step": 5,
@@ -365,7 +409,7 @@
     },
     {
       "type": "header",
-      "content": "t:labels.slideshow_group_decorations"
+      "content": "t:labels.slideshow_group_deco_start"
     },
     {
       "type": "paragraph",
@@ -374,12 +418,148 @@
     {
       "type": "image_picker",
       "id": "decoration_start",
-      "label": "t:labels.slideshow_decoration_start"
+      "label": "t:labels.slideshow_deco_image"
+    },
+    {
+      "type": "range",
+      "id": "decoration_start_size",
+      "label": "t:labels.slideshow_deco_size",
+      "info": "t:labels.slideshow_deco_size_info",
+      "min": 50,
+      "max": 200,
+      "step": 5,
+      "unit": "%",
+      "default": 100,
+      "visible_if": "{{ block.settings.decoration_start != blank }}"
+    },
+    {
+      "type": "range",
+      "id": "decoration_start_rotate",
+      "label": "t:labels.slideshow_deco_rotate",
+      "min": -180,
+      "max": 180,
+      "step": 5,
+      "unit": "°",
+      "default": 0,
+      "visible_if": "{{ block.settings.decoration_start != blank }}"
+    },
+    {
+      "type": "range",
+      "id": "decoration_start_x",
+      "label": "t:labels.slideshow_deco_x",
+      "info": "t:labels.slideshow_deco_x_info",
+      "min": -50,
+      "max": 50,
+      "step": 1,
+      "unit": "%",
+      "default": 0,
+      "visible_if": "{{ block.settings.decoration_start != blank }}"
+    },
+    {
+      "type": "range",
+      "id": "decoration_start_y",
+      "label": "t:labels.slideshow_deco_y",
+      "info": "t:labels.slideshow_deco_y_info",
+      "min": -50,
+      "max": 50,
+      "step": 1,
+      "unit": "%",
+      "default": 0,
+      "visible_if": "{{ block.settings.decoration_start != blank }}"
+    },
+    {
+      "type": "range",
+      "id": "decoration_start_blur",
+      "label": "t:labels.slideshow_deco_blur",
+      "info": "t:labels.slideshow_deco_blur_info",
+      "min": 0,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "default": 6,
+      "visible_if": "{{ block.settings.decoration_start != blank }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "decoration_start_phone",
+      "label": "t:labels.slideshow_deco_phone",
+      "default": true,
+      "visible_if": "{{ block.settings.decoration_start != blank }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.slideshow_group_deco_end"
     },
     {
       "type": "image_picker",
       "id": "decoration_end",
-      "label": "t:labels.slideshow_decoration_end"
+      "label": "t:labels.slideshow_deco_image"
+    },
+    {
+      "type": "range",
+      "id": "decoration_end_size",
+      "label": "t:labels.slideshow_deco_size",
+      "info": "t:labels.slideshow_deco_size_info",
+      "min": 50,
+      "max": 200,
+      "step": 5,
+      "unit": "%",
+      "default": 100,
+      "visible_if": "{{ block.settings.decoration_end != blank }}"
+    },
+    {
+      "type": "range",
+      "id": "decoration_end_rotate",
+      "label": "t:labels.slideshow_deco_rotate",
+      "min": -180,
+      "max": 180,
+      "step": 5,
+      "unit": "°",
+      "default": 0,
+      "visible_if": "{{ block.settings.decoration_end != blank }}"
+    },
+    {
+      "type": "range",
+      "id": "decoration_end_x",
+      "label": "t:labels.slideshow_deco_x",
+      "info": "t:labels.slideshow_deco_x_info",
+      "min": -50,
+      "max": 50,
+      "step": 1,
+      "unit": "%",
+      "default": 0,
+      "visible_if": "{{ block.settings.decoration_end != blank }}"
+    },
+    {
+      "type": "range",
+      "id": "decoration_end_y",
+      "label": "t:labels.slideshow_deco_y",
+      "info": "t:labels.slideshow_deco_y_info",
+      "min": -50,
+      "max": 50,
+      "step": 1,
+      "unit": "%",
+      "default": 0,
+      "visible_if": "{{ block.settings.decoration_end != blank }}"
+    },
+    {
+      "type": "range",
+      "id": "decoration_end_blur",
+      "label": "t:labels.slideshow_deco_blur",
+      "info": "t:labels.slideshow_deco_blur_info",
+      "min": 0,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "default": 6,
+      "visible_if": "{{ block.settings.decoration_end != blank }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "decoration_end_phone",
+      "label": "t:labels.slideshow_deco_phone",
+      "default": true,
+      "visible_if": "{{ block.settings.decoration_end != blank }}"
     }
   ],
   "presets": [

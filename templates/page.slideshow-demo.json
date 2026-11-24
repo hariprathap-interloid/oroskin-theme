@@ -38,7 +38,19 @@
             "card_image": "shopify://shop_images/a5ec77e6ff85bba5d64d95f387da441da0f12977.png",
             "handwriting": "Bold Beautiful You",
             "decoration_start": "shopify://shop_images/86f19252dff0964d3e5851910310f73172495a77.png",
-            "decoration_end": "shopify://shop_images/86f19252dff0964d3e5851910310f73172495a77.png"
+            "decoration_end": "shopify://shop_images/86f19252dff0964d3e5851910310f73172495a77.png",
+            "decoration_start_size": 110,
+            "decoration_start_rotate": -15,
+            "decoration_start_x": 0,
+            "decoration_start_y": 0,
+            "decoration_start_blur": 6,
+            "decoration_start_phone": true,
+            "decoration_end_size": 90,
+            "decoration_end_rotate": 160,
+            "decoration_end_x": 0,
+            "decoration_end_y": 0,
+            "decoration_end_blur": 8,
+            "decoration_end_phone": false
           }
         },
         "slide_skincare": {
@@ -59,12 +71,15 @@
           }
         }
       },
-      "block_order": ["slide_fragrance", "slide_makeup", "slide_skincare"],
+      "block_order": [
+        "slide_fragrance",
+        "slide_makeup",
+        "slide_skincare"
+      ],
       "settings": {
         "slide_change": "buttons",
         "show_dots": true,
         "show_hint": true,
-        "section_width": "full",
         "fill_screen": true,
         "autoplay": true,
         "interval": 6,
@@ -114,7 +129,19 @@
             "card_image": "shopify://shop_images/a5ec77e6ff85bba5d64d95f387da441da0f12977.png",
             "handwriting": "Bold Beautiful You",
             "decoration_start": "shopify://shop_images/86f19252dff0964d3e5851910310f73172495a77.png",
-            "decoration_end": "shopify://shop_images/86f19252dff0964d3e5851910310f73172495a77.png"
+            "decoration_end": "shopify://shop_images/86f19252dff0964d3e5851910310f73172495a77.png",
+            "decoration_start_size": 110,
+            "decoration_start_rotate": -15,
+            "decoration_start_x": 0,
+            "decoration_start_y": 0,
+            "decoration_start_blur": 6,
+            "decoration_start_phone": true,
+            "decoration_end_size": 90,
+            "decoration_end_rotate": 160,
+            "decoration_end_x": 0,
+            "decoration_end_y": 0,
+            "decoration_end_blur": 8,
+            "decoration_end_phone": false
           }
         },
         "scroll_skincare": {
@@ -134,7 +161,11 @@
           }
         }
       },
-      "block_order": ["scroll_fragrance", "scroll_makeup", "scroll_skincare"],
+      "block_order": [
+        "scroll_fragrance",
+        "scroll_makeup",
+        "scroll_skincare"
+      ],
       "settings": {
         "slide_change": "scroll",
         "show_dots": true,
@@ -146,5 +177,9 @@
       }
     }
   },
-  "order": ["slideshow_buttons", "main", "slideshow_scroll"]
+  "order": [
+    "slideshow_buttons",
+    "main",
+    "slideshow_scroll"
+  ]
 }
