@@ -734,7 +734,7 @@
       "name": "t:general.product_spec_row",
       "settings": [
         { "type": "text", "id": "label", "label": "t:labels.label", "default": "Texture" },
-        { "type": "text", "id": "value", "label": "t:labels.product_spec_value", "default": "Weightless oil-serum" }
+        { "type": "text", "id": "value", "label": "t:labels.product_spec_value", "default": "Add a value" }
       ]
     },
     {
@@ -742,8 +742,8 @@
       "name": "t:general.product_hotspot",
       "settings": [
         { "type": "header", "content": "t:labels.content", "info": "t:labels.product_overview_hotspot_content_info" },
-        { "type": "text", "id": "title", "label": "t:labels.heading", "default": "Dew, not shine" },
-        { "type": "text", "id": "text", "label": "t:labels.text", "default": "A satin glow that settles in seconds." },
+        { "type": "text", "id": "title", "label": "t:labels.heading", "default": "Feature name" },
+        { "type": "text", "id": "text", "label": "t:labels.text", "default": "Describe the part this dot points to." },
         { "type": "header", "content": "t:labels.product_overview_hotspot_position" },
         { "type": "range", "id": "x", "label": "t:labels.product_hotspot_x", "info": "t:labels.product_overview_hotspot_x_info", "min": 0, "max": 100, "step": 1, "unit": "%", "default": 50 },
         { "type": "range", "id": "y", "label": "t:labels.product_hotspot_y", "info": "t:labels.product_overview_hotspot_y_info", "min": 0, "max": 100, "step": 1, "unit": "%", "default": 50 }
@@ -753,8 +753,8 @@
       "type": "figure",
       "name": "t:general.product_figure",
       "settings": [
-        { "type": "text", "id": "value", "label": "t:labels.product_figure_value", "default": "98%" },
-        { "type": "text", "id": "label", "label": "t:labels.label", "default": "Felt skin softer" }
+        { "type": "text", "id": "value", "label": "t:labels.product_figure_value", "default": "100%" },
+        { "type": "text", "id": "label", "label": "t:labels.label", "default": "Describe what this number shows" }
       ]
     }
   ],
@@ -778,20 +778,20 @@
       "type": "text",
       "id": "eyebrow",
       "label": "t:labels.eyebrow",
-      "default": "The object"
+      "default": "Overview"
     },
     {
       "type": "inline_richtext",
       "id": "heading",
       "label": "t:labels.heading",
       "info": "t:labels.accent_heading_info",
-      "default": "Written for <em>the senses,</em> not the spec sheet."
+      "default": "Tell the story of <em>this product</em>"
     },
     {
       "type": "richtext",
       "id": "text",
       "label": "t:labels.text",
-      "default": "<p>The formula was built backwards — from the finish. We wanted the look of skin caught in late afternoon light, then reverse-engineered a lipid system that could hold it through a full day of wear.</p>"
+      "default": "<p>Describe what the product is, how it feels and why you made it. Use this text to help customers understand what makes it different.</p>"
     },
     {
       "type": "image_picker",
@@ -804,7 +804,7 @@
       "id": "quote",
       "label": "t:labels.product_overview_quote",
       "info": "t:labels.product_overview_quote_info",
-      "default": "It behaves less like a treatment and more like <em>a change of light</em>"
+      "default": "Add a short quote about <em>this product</em>"
     },
     {
       "type": "header",
@@ -860,17 +860,17 @@
     {
       "name": "t:general.product_overview",
       "blocks": [
-        { "type": "spec", "settings": { "label": "Texture", "value": "Weightless oil-serum" } },
-        { "type": "spec", "settings": { "label": "Finish", "value": "Satin, non-shifting" } },
-        { "type": "spec", "settings": { "label": "Format", "value": "Apothecary glass, refillable" } },
-        { "type": "spec", "settings": { "label": "Origin", "value": "Compounded in Grasse" } },
-        { "type": "hotspot", "settings": { "x": 66, "y": 28, "title": "Dew, not shine", "text": "A satin glow that settles in seconds." } },
-        { "type": "hotspot", "settings": { "x": 55, "y": 40, "title": "Lipid veil", "text": "Ceramides hold water in through the day." } },
-        { "type": "hotspot", "settings": { "x": 45, "y": 72, "title": "Refillable glass", "text": "Keep the bottle; refill the serum." } },
-        { "type": "figure", "settings": { "value": "98%", "label": "Felt skin softer" } },
-        { "type": "figure", "settings": { "value": "14 Days", "label": "Visible barrier repair" } },
-        { "type": "figure", "settings": { "value": "0", "label": "Silicones" } },
-        { "type": "figure", "settings": { "value": "100%", "label": "Recyclable glass" } }
+        { "type": "spec", "settings": { "label": "Texture", "value": "Add a value" } },
+        { "type": "spec", "settings": { "label": "Finish", "value": "Add a value" } },
+        { "type": "spec", "settings": { "label": "Format", "value": "Add a value" } },
+        { "type": "spec", "settings": { "label": "Origin", "value": "Add a value" } },
+        { "type": "hotspot", "settings": { "x": 66, "y": 28, "title": "Feature name", "text": "Describe the part this dot points to." } },
+        { "type": "hotspot", "settings": { "x": 55, "y": 40, "title": "Feature name", "text": "Describe the part this dot points to." } },
+        { "type": "hotspot", "settings": { "x": 45, "y": 72, "title": "Feature name", "text": "Describe the part this dot points to." } },
+        { "type": "figure", "settings": { "value": "100%", "label": "Describe what this number shows" } },
+        { "type": "figure", "settings": { "value": "30", "label": "Describe what this number shows" } },
+        { "type": "figure", "settings": { "value": "0", "label": "Describe what this number shows" } },
+        { "type": "figure", "settings": { "value": "100%", "label": "Describe what this number shows" } }
       ]
     }
   ]

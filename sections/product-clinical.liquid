@@ -738,7 +738,7 @@
       "name": "t:general.product_clinical_result",
       "settings": [
         { "type": "paragraph", "content": "t:labels.product_clinical_result_info" },
-        { "type": "text", "id": "label", "label": "t:labels.label", "default": "reported visibly brighter skin" },
+        { "type": "text", "id": "label", "label": "t:labels.label", "default": "Describe the result this number shows" },
         { "type": "range", "id": "value", "label": "t:labels.product_clinical_value", "min": 0, "max": 100, "step": 1, "unit": "%", "default": 94 }
       ]
     }
@@ -763,14 +763,14 @@
       "type": "text",
       "id": "eyebrow",
       "label": "t:labels.eyebrow",
-      "default": "Clinical results"
+      "default": "Results"
     },
     {
       "type": "inline_richtext",
       "id": "heading",
       "label": "t:labels.heading",
       "info": "t:labels.accent_heading_info",
-      "default": "Twelve weeks, 142 participants, <em>no retouching.</em>"
+      "default": "Show the results customers <em>can see</em>"
     },
     {
       "type": "header",
@@ -778,9 +778,9 @@
       "info": "t:labels.product_clinical_compare_info"
     },
     { "type": "image_picker", "id": "before", "label": "t:labels.product_clinical_before" },
-    { "type": "text", "id": "before_label", "label": "t:labels.product_clinical_before_label", "info": "t:labels.product_clinical_before_label_info", "default": "Week 0" },
+    { "type": "text", "id": "before_label", "label": "t:labels.product_clinical_before_label", "info": "t:labels.product_clinical_before_label_info", "default": "Before" },
     { "type": "image_picker", "id": "after", "label": "t:labels.product_clinical_after" },
-    { "type": "text", "id": "after_label", "label": "t:labels.product_clinical_after_label", "default": "Week 12" },
+    { "type": "text", "id": "after_label", "label": "t:labels.product_clinical_after_label", "default": "After" },
     {
       "type": "range",
       "id": "start",
@@ -801,7 +801,7 @@
       "id": "ring_label",
       "label": "t:labels.product_clinical_ring_label",
       "info": "t:labels.product_clinical_ring_label_info",
-      "default": "Radiance"
+      "default": "Result"
     },
     {
       "type": "header",
@@ -858,10 +858,10 @@
     {
       "name": "t:general.product_clinical",
       "blocks": [
-        { "type": "result", "settings": { "label": "reported visibly brighter skin", "value": 94 } },
-        { "type": "result", "settings": { "label": "measured improved elasticity", "value": 88 } },
-        { "type": "result", "settings": { "label": "saw reduced pigmentation", "value": 79 } },
-        { "type": "result", "settings": { "label": "found it comfortable daily", "value": 97 } }
+        { "type": "result", "settings": { "label": "Describe the result this number shows", "value": 94 } },
+        { "type": "result", "settings": { "label": "Describe the result this number shows", "value": 88 } },
+        { "type": "result", "settings": { "label": "Describe the result this number shows", "value": 79 } },
+        { "type": "result", "settings": { "label": "Describe the result this number shows", "value": 97 } }
       ]
     }
   ]

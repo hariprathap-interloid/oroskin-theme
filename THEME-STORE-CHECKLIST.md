@@ -184,6 +184,36 @@ These are in the Figma but aren't native Shopify features. Don't build them unti
 
 ---
 
+## Theme Store submission: gaps found 2026-11-24
+
+*Decided 2026-11-24 (user): the theme will be submitted to the Theme Store. Requirements, rejection, submit and listing pages read again the same day (no "last updated" date on them). Items below are what the theme or the plan does NOT meet yet.*
+
+### Must fix in the code
+- [ ] **`<shopify-account>` in the header, desktop AND mobile (§4).** The header uses our own `<account-menu>` + a LOGIN link (decision 6), the drawer has no `<shopify-account>`. The rule names the component. Options: render `<shopify-account>` (styled) in both places, or keep our menu and ask the review team. Highest risk.
+- [x] **Setting defaults with demo content (§14: "Default values must not use Lorem Ipsum or demo content").** *Done 2026-11-25 (user chose "all as instructions"): every text default and preset value in 79 section / block files rewritten. Generic store headings kept ("Pairs well with", "Customer reviews"); story text and product claims became instructions for the merchant ("Describe a key benefit of this product."); names → "Customer name" / "Team member name"; numbers no longer read as facts (100, "Describe what this number shows"); places → "City" / "Street address"; dates and offer codes empty; brand name gone; "Figma" / "Oroskin" gone from help texts; British "centre" → "center". Only schema blocks changed (checked); the demo pages keep their saved text, except 404 text + links heading, password heading, search placeholder and the article page's comments / related headings (their templates don't save them). Still in the editor content (clean install item): `header-group.json` announcement ("OroSkin • … • Estd. 2026") and the old copy saved in `templates/*.json`.*
+- [x] **Countdown preset date (2026-12-31)** expires. *Done: the Promo banner preset has no end date (hidden on the store, the editor note asks for a date); the date placeholder is `YYYY-MM-DD`. The homepage template still saves 2026-12-31 (clean install item).*
+- [ ] **Shipped templates and `settings_data.json` = the clean install state:** no demo collection handles (skincare, makeup, editors-picks), no demo metafields, no `shopify://` file URLs (support tip), but the same look as the demo store (§20: "On install, the theme should match the demo store's look").
+- [ ] **Setting labels audit (§14):** American English, sentence case, no "&", verbs on buttons, "Show" / "Use" / "Enable" rules, no numbered options, Shopify terms. Our labels follow ASD-STE100; check them against Shopify's list.
+- [ ] **Presets (settings_data `presets`):** at least one preset named like the theme; each further preset needs its own demo store + listing. Decide: 1 preset ("Beauty") to start.
+- [ ] **`theme_info`:** name (1–2 words, < 30 characters, not changeable after upload, not a company name), version, documentation + support URLs. `theme_author` / support email: the partner's public ones.
+- [ ] **Cart coupon field:** §8 lists "cart-level discount codes" among app-like features that need API access. Ours uses the Cart AJAX API `discount` field (no app). Confirm it is allowed (Shopify's own themes have it) or ask.
+- [ ] **Comments without moderation (§7)** must work: test on an unmoderated blog.
+- [ ] **Theme features that read custom metafields** (`custom.badges` + Badge metaobject, `custom.pill_image`, `custom.subtitle`, `custom.short_videos`): only standard `metaobject_type` in settings (we have none: checked), but a merchant has no such metafields. Document them, and make sure nothing looks broken without them.
+
+### Must have outside the code
+- [ ] **Rights (§3, §20, rejections "unlicensed content" / "another entity's IP"):** the Figma design (who owns it: the client?), the brand name "Oroskin", and the demo product images (AI-generated PNGs: the rules don't mention AI images; check the generator's licence). Without written rights: new name, own or licensed images.
+- [ ] **Exclusivity (§1):** a Theme Store theme can't be distributed elsewhere. If the client store (Phase 1) also uses it, check this with Shopify / the client first.
+- [ ] **Uniqueness (§2):** a short written case for the review notes (Product panels accordion, Product deck fan, Scrolling showcase, bento grid, pinned product tabs…). "Animation or transition tweaks" don't count.
+- [ ] **Demo store per preset:** a *client transfer store* from the Dev Dashboard (a dev store can't be used), Beauty industry, realistic catalogue (a sale product, a sold-out variant, a multi-variant product, a gift card), Bogus Gateway or Shopify Payments test mode only, no apps except a free reviews / translation app, no text inside images, no Lorem ipsum, latest theme version, one password for all demo stores.
+- [ ] **Lighthouse on the benchmark store:** averages over home, collection, product, desktop + mobile: performance ≥ 60, accessibility ≥ 90, with real content in every section.
+- [ ] **Browsers (§9):** Safari (2 latest), Chrome (3), Firefox (3), Edge (2), iOS Safari (2), Chrome Mobile (3), Samsung Internet (2), Instagram / Facebook / Pinterest in-app (browse AND buy).
+- [ ] **Listing:** desktop screenshot 1000 × 1248 or 2000 × 2496, mobile 750 × 1334 (not a copy of desktop), alt text; tagline ≤ 70 characters; industry Beauty; catalogue size; 3 highlights (image 1600 × 1200, title ≤ 30, text ≤ 140, or a YouTube video ≤ 2 min); metadata description; feature tags; review notes; price $100–$500 in $10 steps.
+- [ ] **Public documentation (with an FAQ, labels as in the editor) and a support contact form** (name, email, store URL, description, file upload, auto-reply); a support process that answers in 2 business days; release notes + version.
+- [ ] Allow-list themes@shopify.com, theme-submissions@shopify.com and noreply@shopify.com. One theme in review at a time; after a rejection, wait 30 days.
+- [ ] Package with `shopify theme package` (no `config/markets.json`, no `robots.txt.liquid`, no designer credits or affiliate links).
+
+---
+
 ## M10 Launch (Phase 1) → Phase 2 prep
 
 *List written 2026-11-24 from the roadmap (Part 13, Stages 8–11) and every open item in CLAUDE.md. Who: **D** = developer, **C** = client / design team, **S** = store admin work.*
