@@ -1,0 +1,60 @@
+{
+  "sections": {
+    "newsletter_image": {
+      "type": "newsletter",
+      "settings": {
+        "eyebrow": "Join the circle",
+        "heading": "Get <em>10% off</em> your first order",
+        "text": "<p>Be the first to know about new rituals, limited editions and private offers. One letter a month, written with care.</p>",
+        "button_label": "",
+        "note": "No spam. Unsubscribe at any time.",
+        "image": "shopify://shop_images/6a9da17c3473051a785c2d23aa0bb872cbfeedf7.png",
+        "image_position": "left",
+        "card_width": "wide",
+        "text_alignment": "start",
+        "phone_image": true,
+        "phone_shape": "landscape",
+        "animation": "fade-up",
+        "padding_top": 64,
+        "padding_bottom": 32,
+        "color_scheme": "scheme-1"
+      }
+    },
+    "newsletter_right": {
+      "type": "newsletter",
+      "settings": {
+        "eyebrow": "The Oroskin letter",
+        "heading": "Rituals, <em>in your inbox</em>",
+        "text": "<p>Seasonal routines and early access to new arrivals.</p>",
+        "button_label": "Join",
+        "note": "",
+        "image": "shopify://shop_images/6a9da17c3473051a785c2d23aa0bb872cbfeedf7.png",
+        "image_position": "right",
+        "card_width": "narrow",
+        "text_alignment": "center",
+        "phone_image": true,
+        "phone_shape": "square",
+        "animation": "fade-up",
+        "padding_top": 32,
+        "padding_bottom": 32,
+        "color_scheme": "scheme-1"
+      }
+    },
+    "newsletter_plain": {
+      "type": "newsletter",
+      "settings": {
+        "eyebrow": "Join the circle",
+        "heading": "",
+        "text": "<p>Get 10% off your first order when you sign up.</p>",
+        "button_label": "",
+        "note": "No spam. Unsubscribe at any time.",
+        "card_width": "narrow",
+        "animation": "fade-up",
+        "padding_top": 32,
+        "padding_bottom": 96,
+        "color_scheme": "scheme-1"
+      }
+    }
+  },
+  "order": ["newsletter_image", "newsletter_right", "newsletter_plain"]
+}

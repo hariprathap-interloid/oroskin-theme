@@ -1,5 +1,5 @@
 {% doc %}
-  Email sign-up form (footer now, a homepage newsletter section later).
+  Email sign-up form: the footer and the Email signup section (sections/newsletter.liquid).
 
   Uses Shopify's 'customer' form: submitting it creates a customer with that email (or updates the
   existing one), marks them as accepting email marketing and adds the tag "newsletter", so the merchant
@@ -12,13 +12,17 @@
   That focus move is done by the script below (data-focus-after-submit), not the autofocus attribute:
   Shopify's accessibility rules for themes say "no autofocus".
 
-  Note for a second copy (e.g. a homepage section in M4): form.posted_successfully? isn't tied to one
-  form's id, so after one sign-up every newsletter form on that page shows the success message.
+  Note for a second copy (the Email signup section): form.posted_successfully? and form.errors aren't
+  tied to one form's id, so after one sign-up every newsletter form on that page shows the message. The
+  script moves focus into the form that was sent (its id is the #anchor in the URL).
 
   @param {string} id_prefix - Unique prefix for the ids, e.g. 'footer' (needed when the form appears twice)
+  @param {string} [button_label] - Button text. Empty = "Subscribe" (newsletter.subscribe)
+  @param {string} [class] - Extra class on the <form>, for a caller's own layout (e.g. 'newsletter-form--row')
 
   @example
   {% render 'newsletter-form', id_prefix: 'footer' %}
+  {% render 'newsletter-form', id_prefix: section.id, button_label: section.settings.button_label, class: 'newsletter-form--row' %}
 {% enddoc %}
 
 {%- liquid
@@ -26,9 +30,14 @@
   assign input_id = form_id | append: '-email'
   assign error_id = form_id | append: '-error'
   assign success_id = form_id | append: '-success'
+
+  assign form_class = 'newsletter-form'
+  if class != blank
+    assign form_class = form_class | append: ' ' | append: class
+  endif
 -%}
 
-{%- form 'customer', id: form_id, class: 'newsletter-form' -%}
+{%- form 'customer', id: form_id, class: form_class -%}
   <input type="hidden" name="contact[tags]" value="newsletter">
 
   <label class="visually-hidden" for="{{ input_id }}">{{ 'newsletter.email_label' | t }}</label>
@@ -53,7 +62,11 @@
   >
 
   <button type="submit" class="button newsletter-form__button">
-    {{- 'newsletter.subscribe' | t -}}
+    {%- if button_label != blank -%}
+      {{- button_label | escape -}}
+    {%- else -%}
+      {{- 'newsletter.subscribe' | t -}}
+    {%- endif -%}
   </button>
 
   {%- if form.errors -%}
@@ -213,9 +226,20 @@
    * data-focus-after-submit (the email field with its error, or the success message) only exists in
    * that case, so focus moves only right after the visitor's own submit, never on a normal page load.
    * preventScroll: the page already jumps to the form through its #anchor.
+   * Every newsletter form on the page shows the message (Shopify doesn't tie it to one form), so the
+   * form named in the #anchor (the one the visitor sent) wins; else the first one on the page.
    */
   function focusNewsletterResult() {
-    document.querySelector('[data-focus-after-submit]')?.focus({ preventScroll: true });
+    let sent = null;
+    try {
+      const id = decodeURIComponent(location.hash.slice(1));
+      if (id) sent = document.getElementById(id);
+    } catch (error) {
+      sent = null;
+    }
+    const target =
+      sent?.querySelector('[data-focus-after-submit]') || document.querySelector('[data-focus-after-submit]');
+    target?.focus({ preventScroll: true });
   }
 
   if (document.readyState === 'loading') {

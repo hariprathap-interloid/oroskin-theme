@@ -1,0 +1,391 @@
+{%- comment -%}
+  One slide of the Slideshow section (sections/slideshow.liquid): a big word with a cut-out model photo in
+  front of it, an outline copy of the word over the photo, text and buttons, a product card, handwriting
+  and two blurred decoration images.
+
+  The block does not know its place in the slideshow (a theme block gets no loop index). It writes
+  markers that the section fills after it captures all slides (see "Markers" in sections/slideshow.liquid):
+  __SLIDE_N__ (1, 2, 3...), __SLIDE_STATE__ (is-active on slide 1), __SLIDE_LABEL__ ("1 of 3"),
+  __SLIDE_LOADING__ (eager / lazy) and __SLIDE_PRIORITY__ (high only for slide 1's photo in section 1).
+  Each slide starts with the comment <!--slideshow-slide-->: the section splits the captured HTML there.
+
+  "tag": null: Shopify adds no wrapper <div>, so the slide itself is the grid item and carries the
+  editor attributes (block select finds it).
+{%- endcomment -%}
+
+{%- liquid
+  assign image = block.settings.image
+  assign mobile_image = block.settings.mobile_image
+  assign word = block.settings.word | strip
+  assign product = block.settings.product
+
+  assign is_empty = false
+  if image == blank and word == blank and block.settings.subheading == blank and block.settings.text == blank
+    assign is_empty = true
+  endif
+
+  # Photo size (70-130%) as a factor for CSS and for the sizes maths
+  assign photo_size = block.settings.photo_size | default: 100 | times: 0.01
+
+  # Big word size: the Figma word is 290px on the 1920px frame (84px on the 375px phone frame). A long word must
+  # still fit: the width is estimated at 0.56 em per letter, so the fit size = the free width / (letters x 0.56).
+  # 1766 = the 1920px frame less 2 x 77px; 345 = the 375px phone frame less 2 x 15px. The CSS uses the smaller one.
+  assign word_letters = word | size | at_least: 1
+  assign word_em = word_letters | times: 0.56
+  assign word_fit = 1766.0 | divided_by: word_em | at_most: 400 | round
+  assign word_fit_phone = 345.0 | divided_by: word_em | at_most: 120 | round
+
+  # Photo shape (width / height), for the box and the outline mask. Phones use the Mobile photo when there is one.
+  assign model_ratio = 0.667
+  if image != blank
+    assign model_ratio = image.aspect_ratio
+  endif
+  assign model_ratio_phone = model_ratio
+  if mobile_image != blank
+    assign model_ratio_phone = mobile_image.aspect_ratio
+  endif
+
+  # sizes: the photo is 840 design px tall on desktop (x Photo size), so its width is 840 x ratio / 1920 of the
+  # screen; on phones it is 470 / 375 of the slide's width (100vw on phones, Slide width on tablets).
+  assign desktop_vw = 840 | times: model_ratio | times: photo_size | divided_by: 19.2 | ceil
+  assign tablet_share = section.settings.tablet_width | default: 75
+  assign phone_vw = 470 | times: model_ratio_phone | times: photo_size | divided_by: 3.75 | ceil
+  assign tablet_vw = phone_vw | times: tablet_share | divided_by: 100 | ceil
+  capture model_sizes
+    echo '(min-width: 990px) ' | append: desktop_vw | append: 'vw, (min-width: 750px) ' | append: tablet_vw | append: 'vw, ' | append: phone_vw | append: 'vw'
+  endcapture
+  assign model_alt = image.alt | default: '' | escape
+
+  # Card photo: 420 design px wide on desktop (22vw), 215 / 375 of the slide on phones
+  assign card_tablet_vw = tablet_share | times: 0.58 | ceil
+  capture card_sizes
+    echo '(min-width: 990px) 22vw, (min-width: 750px) ' | append: card_tablet_vw | append: 'vw, 58vw'
+  endcapture
+
+  assign card_image = block.settings.card_image
+  if card_image == blank and product != blank
+    assign card_image = product.featured_image
+  endif
+
+  assign show_card = false
+  if product != blank or request.design_mode
+    assign show_card = true
+  endif
+-%}
+
+{%- unless is_empty and request.design_mode == false -%}
+<!--slideshow-slide-->
+<div
+  class="slideshow-slide __SLIDE_STATE__"
+  id="Slide-{{ section.id }}-__SLIDE_N__"
+  role="group"
+  aria-roledescription="{{ 'sections.slideshow.slide_role' | t }}"
+  aria-label="__SLIDE_LABEL__"
+  data-slideshow-slide
+  style="--word-size: 290; --word-fit: {{ word_fit }}; --word-size-phone: 84; --word-fit-phone: {{ word_fit_phone }}; --model-ratio: {{ model_ratio }}; --model-ratio-phone: {{ model_ratio_phone }}; --photo-size: {{ photo_size }};"
+  {{ block.shopify_attributes }}
+>
+  <div class="slideshow-slide__scene">
+    {%- comment -%}
+      The word, two times: the solid word BEHIND the photo (the real heading), and an outline copy IN FRONT of
+      it. The script masks the copy with the photo's own shape, so the outline shows only where the word
+      crosses the model (Figma). Both boxes have the same size and layout, so the two words line up exactly.
+      The copy is hidden from screen readers.
+    {%- endcomment -%}
+    <div class="slideshow-slide__title">
+      <div class="slideshow-slide__title-inner">
+        {%- if block.settings.eyebrow != blank -%}
+          <p class="eyebrow slideshow-slide__eyebrow">{{ block.settings.eyebrow | escape }}</p>
+        {%- endif -%}
+        {%- if word != blank -%}
+          <h2 class="slideshow-slide__word">{{ word | escape }}</h2><!--/slideshow-word-->
+        {%- endif -%}
+      </div>
+    </div>
+
+    <div class="slideshow-slide__model">
+      {%- if image != blank -%}
+        <picture>
+          {%- if mobile_image != blank -%}
+            {%- liquid
+              assign mobile_widths = '300,450,600,800,1000,1200' | split: ','
+              assign mobile_srcset = ''
+              for width_text in mobile_widths
+                assign mw = width_text | plus: 0
+                if mw < mobile_image.width
+                  assign mobile_url = mobile_image | image_url: width: mw
+                  assign mobile_srcset = mobile_srcset | append: mobile_url | append: ' ' | append: mw | append: 'w, '
+                endif
+              endfor
+              assign mobile_full = mobile_image.width | at_most: 1600
+              assign mobile_url = mobile_image | image_url: width: mobile_full
+              assign mobile_srcset = mobile_srcset | append: mobile_url | append: ' ' | append: mobile_full | append: 'w'
+            -%}
+            <source
+              media="(max-width: 989px)"
+              srcset="{{ mobile_srcset }}"
+              sizes="(min-width: 750px) {{ tablet_vw }}vw, {{ phone_vw }}vw"
+              width="{{ mobile_image.width }}"
+              height="{{ mobile_image.height }}"
+            >
+          {%- endif -%}
+          {%- assign model_width = image.width | at_most: 2000 -%}
+          {{ image | image_url: width: model_width | image_tag: widths: '300, 450, 600, 800, 1000, 1200, 1600, 2000', sizes: model_sizes, loading: '__SLIDE_LOADING__', fetchpriority: '__SLIDE_PRIORITY__', alt: model_alt, class: 'slideshow-slide__model-image' }}
+        </picture>
+      {%- elsif request.design_mode -%}
+        {{ 'image' | placeholder_svg_tag: 'slideshow-slide__placeholder' }}
+      {%- endif -%}
+    </div>
+
+    {%- if word != blank and image != blank -%}
+      <div class="slideshow-slide__twin" aria-hidden="true">
+        <div class="slideshow-slide__title-inner">
+          {%- if block.settings.eyebrow != blank -%}
+            <p class="eyebrow slideshow-slide__eyebrow">{{ block.settings.eyebrow | escape }}</p>
+          {%- endif -%}
+          <p class="slideshow-slide__word slideshow-slide__word--outline">{{ word | escape }}</p>
+        </div>
+      </div>
+    {%- endif -%}
+
+    {%- if block.settings.handwriting != blank -%}
+      <p class="slideshow-slide__script">
+        {{ block.settings.handwriting | escape }}
+        <svg class="slideshow-slide__script-arrow" aria-hidden="true" focusable="false" viewBox="0 0 64 56" fill="none">
+          <path d="M60 2c-2 10-8 19-17 23-7 3-15 1-17-4-2-6 5-9 9-5 5 5 0 15-8 21-6 5-13 9-20 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M14 39l-7 10 12 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </p>
+    {%- endif -%}
+  </div>
+
+  {%- comment -%} Decorations: blurred, decorative (empty alt), behind everything {%- endcomment -%}
+  {%- if block.settings.decoration_start != blank -%}
+    <div class="slideshow-slide__deco slideshow-slide__deco--start">
+      {{ block.settings.decoration_start | image_url: width: 600 | image_tag: widths: '200, 300, 400, 600', sizes: '(min-width: 990px) 12vw, 22vw', loading: '__SLIDE_LOADING__', alt: '' }}
+    </div>
+  {%- endif -%}
+  {%- if block.settings.decoration_end != blank -%}
+    <div class="slideshow-slide__deco slideshow-slide__deco--end">
+      {{ block.settings.decoration_end | image_url: width: 600 | image_tag: widths: '200, 300, 400, 600', sizes: '(min-width: 990px) 12vw, 22vw', loading: '__SLIDE_LOADING__', alt: '' }}
+    </div>
+  {%- endif -%}
+
+  {%- if block.settings.subheading != blank or block.settings.text != blank or block.settings.button_label != blank or block.settings.link_label != blank -%}
+    <div class="slideshow-slide__content">
+      {%- if block.settings.subheading != blank -%}
+        <p class="slideshow-slide__subheading">{{ block.settings.subheading | escape }}</p>
+      {%- endif -%}
+      {%- if block.settings.text != blank -%}
+        <div class="slideshow-slide__text rte">{{ block.settings.text }}</div>
+      {%- endif -%}
+      {%- if block.settings.button_label != blank or block.settings.link_label != blank -%}
+        <div class="slideshow-slide__actions">
+          {%- if block.settings.button_label != blank -%}
+            <a
+              class="button slideshow-slide__button"
+              {% if block.settings.button_link != blank %}
+                href="{{ block.settings.button_link }}"
+              {% else %}
+                role="link" aria-disabled="true"
+              {% endif %}
+            >
+              {{- block.settings.button_label | escape -}}
+              {{- 'icon-send.svg' | inline_asset_content -}}
+            </a>
+          {%- endif -%}
+          {%- if block.settings.link_label != blank -%}
+            <a
+              class="button button--text slideshow-slide__link"
+              {% if block.settings.link != blank %}
+                href="{{ block.settings.link }}"
+              {% else %}
+                role="link" aria-disabled="true"
+              {% endif %}
+            >
+              {{- block.settings.link_label | escape -}}
+              {{- 'icon-arrow.svg' | inline_asset_content -}}
+            </a>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+    </div>
+  {%- endif -%}
+
+  {%- if show_card -%}
+    {%- comment -%}
+      One link only: the title. Its ::after covers the whole card, so the card and the arrow open the product;
+      the arrow is decoration. No product = a placeholder card in the theme editor, nothing on the store.
+    {%- endcomment -%}
+    <div class="slideshow-card">
+      <div class="slideshow-card__media">
+        {%- if card_image != blank -%}
+          {%- assign card_alt = card_image.alt | default: '' | escape -%}
+          {{ card_image | image_url: width: 900 | image_tag: widths: '300, 450, 600, 900', sizes: card_sizes, loading: '__SLIDE_LOADING__', alt: card_alt }}
+        {%- else -%}
+          {{ 'product-1' | placeholder_svg_tag: 'slideshow-card__placeholder' }}
+        {%- endif -%}
+      </div>
+      <div class="slideshow-card__body">
+        {%- if product != blank -%}
+          {%- assign variant = product.selected_or_first_available_variant -%}
+          <p class="slideshow-card__title">
+            <a class="slideshow-card__link" href="{{ product.url }}">{{ product.title | escape }}</a>
+          </p>
+          {%- if product.type != blank -%}
+            <p class="slideshow-card__type">{{ product.type | escape }}</p>
+          {%- endif -%}
+          <p class="slideshow-card__price">
+            {%- if variant.compare_at_price > variant.price -%}
+              <span class="visually-hidden">{{ 'sections.slideshow.sale_price' | t }}</span>
+              <span class="slideshow-card__current">{{ variant.price | money }}</span>
+              <span class="visually-hidden">{{ 'sections.slideshow.regular_price' | t }}</span>
+              <s class="slideshow-card__compare">{{ variant.compare_at_price | money }}</s>
+            {%- else -%}
+              <span class="slideshow-card__current">{{ variant.price | money }}</span>
+            {%- endif -%}
+          </p>
+        {%- else -%}
+          <p class="slideshow-card__title">{{ 'sections.slideshow.card_placeholder' | t }}</p>
+          <p class="slideshow-card__type">{{ 'sections.slideshow.card_placeholder_type' | t }}</p>
+          <p class="slideshow-card__price"><span class="slideshow-card__current">{{ 18500 | money }}</span></p>
+        {%- endif -%}
+        <span class="slideshow-card__arrow" aria-hidden="true">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+      </div>
+    </div>
+  {%- endif -%}
+
+  {%- if is_empty -%}
+    <p class="slideshow-slide__note">{{ 'sections.slideshow.slide_empty' | t }}</p>
+  {%- endif -%}
+</div>
+{%- endunless -%}
+
+{% schema %}
+{
+  "name": "t:general.slideshow_slide",
+  "tag": null,
+  "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow"
+    },
+    {
+      "type": "text",
+      "id": "word",
+      "label": "t:labels.slideshow_word",
+      "info": "t:labels.slideshow_word_info"
+    },
+    {
+      "type": "text",
+      "id": "subheading",
+      "label": "t:labels.slideshow_subheading"
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "t:labels.text"
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "t:labels.slideshow_button_label"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "t:labels.slideshow_button_link"
+    },
+    {
+      "type": "text",
+      "id": "link_label",
+      "label": "t:labels.slideshow_link_label"
+    },
+    {
+      "type": "url",
+      "id": "link",
+      "label": "t:labels.slideshow_link"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.slideshow_group_photo"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.slideshow_photo",
+      "info": "t:labels.slideshow_photo_info"
+    },
+    {
+      "type": "image_picker",
+      "id": "mobile_image",
+      "label": "t:labels.slideshow_mobile_photo",
+      "info": "t:labels.slideshow_mobile_photo_info"
+    },
+    {
+      "type": "range",
+      "id": "photo_size",
+      "label": "t:labels.slideshow_photo_size",
+      "min": 70,
+      "max": 130,
+      "step": 5,
+      "unit": "%",
+      "default": 100
+    },
+    {
+      "type": "header",
+      "content": "t:labels.slideshow_group_card"
+    },
+    {
+      "type": "product",
+      "id": "product",
+      "label": "t:labels.product",
+      "info": "t:labels.slideshow_product_info"
+    },
+    {
+      "type": "image_picker",
+      "id": "card_image",
+      "label": "t:labels.slideshow_card_image",
+      "info": "t:labels.slideshow_card_image_info"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.slideshow_group_handwriting"
+    },
+    {
+      "type": "text",
+      "id": "handwriting",
+      "label": "t:labels.slideshow_handwriting",
+      "info": "t:labels.slideshow_handwriting_info"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.slideshow_group_decorations"
+    },
+    {
+      "type": "paragraph",
+      "content": "t:labels.slideshow_decorations_info"
+    },
+    {
+      "type": "image_picker",
+      "id": "decoration_start",
+      "label": "t:labels.slideshow_decoration_start"
+    },
+    {
+      "type": "image_picker",
+      "id": "decoration_end",
+      "label": "t:labels.slideshow_decoration_end"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.slideshow_slide"
+    }
+  ]
+}
+{% endschema %}

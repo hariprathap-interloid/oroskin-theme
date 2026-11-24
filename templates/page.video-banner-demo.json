@@ -1,0 +1,32 @@
+{
+  "sections": {
+    "video_banner": {
+      "type": "video-banner",
+      "settings": {
+        "eyebrow": "Luxury eau de parfum",
+        "heading": "Fragrance that stays with <em>you</em>",
+        "text": "More than a scent, it's a feeling. Crafted for the moments you'll always want to remember.",
+        "button_label": "Shop fragrance",
+        "button_link": "shopify://collections/all",
+        "show_tagline": true,
+        "tagline": "A signature scent for every you",
+        "show_scroll_hint": true,
+        "overlay_opacity": 30,
+        "products": ["velvet-amber-parfum", "oud-noir-eau-de-parfum", "rose-eau-de-parfum"],
+        "section_width": "full",
+        "fill_screen": true,
+        "phone_card": true,
+        "tablet_card": "beside",
+        "autoplay_video": true,
+        "seconds": 6,
+        "animation": "fade-up",
+        "padding_top": 80,
+        "padding_bottom": 32,
+        "color_scheme": "scheme-1",
+        "text_color": "#ffffff",
+        "highlight_color": ""
+      }
+    }
+  },
+  "order": ["video_banner"]
+}

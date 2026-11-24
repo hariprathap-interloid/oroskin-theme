@@ -1,0 +1,150 @@
+{
+  "sections": {
+    "slideshow_buttons": {
+      "type": "slideshow",
+      "blocks": {
+        "slide_fragrance": {
+          "type": "_slide",
+          "settings": {
+            "eyebrow": "Discover your scent",
+            "word": "Fragrance",
+            "subheading": "Scented Emotions",
+            "text": "<p>More than a scent, it's a feeling. Crafted for the moments you'll always want to remember.</p>",
+            "button_label": "Shop fragrance",
+            "button_link": "shopify://collections/all",
+            "link_label": "New arrivals",
+            "link": "shopify://collections/all",
+            "image": "shopify://shop_images/e94215402f9aa9bd75f8ed261aaad5aa18d17259.png",
+            "photo_size": 100,
+            "product": "velvet-amber-parfum",
+            "card_image": "shopify://shop_images/d14a9a71bbd7de53a457aa9bb959423fd1c122fc.png",
+            "handwriting": "Leave Lasting Memories"
+          }
+        },
+        "slide_makeup": {
+          "type": "_slide",
+          "settings": {
+            "eyebrow": "Express yourself",
+            "word": "Makeup",
+            "subheading": "Artistry Unleashed",
+            "text": "<p>Express your personality with luxurious, long-lasting makeup that enhances your natural beauty and confidence.</p>",
+            "button_label": "Shop the kit",
+            "button_link": "shopify://collections/all",
+            "link_label": "New arrivals",
+            "link": "shopify://collections/all",
+            "image": "shopify://shop_images/28e942ce15806aaf260112e7cf91c2fbe806ce48.png",
+            "photo_size": 100,
+            "product": "silk-foundation",
+            "card_image": "shopify://shop_images/a5ec77e6ff85bba5d64d95f387da441da0f12977.png",
+            "handwriting": "Bold Beautiful You",
+            "decoration_start": "shopify://shop_images/86f19252dff0964d3e5851910310f73172495a77.png",
+            "decoration_end": "shopify://shop_images/86f19252dff0964d3e5851910310f73172495a77.png"
+          }
+        },
+        "slide_skincare": {
+          "type": "_slide",
+          "settings": {
+            "eyebrow": "Nourish deeply",
+            "word": "Skincare",
+            "subheading": "The Glow Presets",
+            "text": "<p>Clean, bioactive formulas that work at the cellular level. This isn't a routine—it's your skin's new baseline.</p>",
+            "button_label": "Shop skincare",
+            "button_link": "shopify://collections/all",
+            "link_label": "New arrivals",
+            "link": "shopify://collections/all",
+            "image": "shopify://shop_images/48191a58ffcfeeb666831edf8777457ffc980560.png",
+            "photo_size": 100,
+            "product": "the-skin-moisturizer",
+            "handwriting": "Healthy Glowing Skin"
+          }
+        }
+      },
+      "block_order": ["slide_fragrance", "slide_makeup", "slide_skincare"],
+      "settings": {
+        "slide_change": "buttons",
+        "show_dots": true,
+        "show_hint": true,
+        "section_width": "full",
+        "fill_screen": true,
+        "autoplay": true,
+        "interval": 6,
+        "animation": "rise",
+        "color_scheme": "scheme-2",
+        "padding_top": 0,
+        "padding_bottom": 0
+      }
+    },
+    "main": {
+      "type": "page",
+      "settings": {}
+    },
+    "slideshow_scroll": {
+      "type": "slideshow",
+      "blocks": {
+        "scroll_fragrance": {
+          "type": "_slide",
+          "settings": {
+            "eyebrow": "Discover your scent",
+            "word": "Fragrance",
+            "subheading": "Scented Emotions",
+            "text": "<p>More than a scent, it's a feeling. Crafted for the moments you'll always want to remember.</p>",
+            "button_label": "Shop fragrance",
+            "button_link": "shopify://collections/all",
+            "link_label": "New arrivals",
+            "link": "shopify://collections/all",
+            "image": "shopify://shop_images/e94215402f9aa9bd75f8ed261aaad5aa18d17259.png",
+            "product": "velvet-amber-parfum",
+            "card_image": "shopify://shop_images/d14a9a71bbd7de53a457aa9bb959423fd1c122fc.png",
+            "handwriting": "Leave Lasting Memories"
+          }
+        },
+        "scroll_makeup": {
+          "type": "_slide",
+          "settings": {
+            "eyebrow": "Express yourself",
+            "word": "Makeup",
+            "subheading": "Artistry Unleashed",
+            "text": "<p>Express your personality with luxurious, long-lasting makeup that enhances your natural beauty and confidence.</p>",
+            "button_label": "Shop the kit",
+            "button_link": "shopify://collections/all",
+            "link_label": "New arrivals",
+            "link": "shopify://collections/all",
+            "image": "shopify://shop_images/28e942ce15806aaf260112e7cf91c2fbe806ce48.png",
+            "product": "silk-foundation",
+            "card_image": "shopify://shop_images/a5ec77e6ff85bba5d64d95f387da441da0f12977.png",
+            "handwriting": "Bold Beautiful You",
+            "decoration_start": "shopify://shop_images/86f19252dff0964d3e5851910310f73172495a77.png",
+            "decoration_end": "shopify://shop_images/86f19252dff0964d3e5851910310f73172495a77.png"
+          }
+        },
+        "scroll_skincare": {
+          "type": "_slide",
+          "settings": {
+            "eyebrow": "Nourish deeply",
+            "word": "Skincare",
+            "subheading": "The Glow Presets",
+            "text": "<p>Clean, bioactive formulas that work at the cellular level. This isn't a routine—it's your skin's new baseline.</p>",
+            "button_label": "Shop skincare",
+            "button_link": "shopify://collections/all",
+            "link_label": "New arrivals",
+            "link": "shopify://collections/all",
+            "image": "shopify://shop_images/48191a58ffcfeeb666831edf8777457ffc980560.png",
+            "product": "the-skin-moisturizer",
+            "handwriting": "Healthy Glowing Skin"
+          }
+        }
+      },
+      "block_order": ["scroll_fragrance", "scroll_makeup", "scroll_skincare"],
+      "settings": {
+        "slide_change": "scroll",
+        "show_dots": true,
+        "show_hint": true,
+        "fill_screen": true,
+        "autoplay": false,
+        "animation": "rise",
+        "color_scheme": "scheme-2"
+      }
+    }
+  },
+  "order": ["slideshow_buttons", "main", "slideshow_scroll"]
+}

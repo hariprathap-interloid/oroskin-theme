@@ -1,0 +1,1705 @@
+{%- comment -%}
+  Slideshow (Figma "slider section", design/inbox/slider section/): one category per slide. A very large word in
+  the heading font sits behind a cut-out model photo; the letters that cross the photo show again in front of it
+  as an outline. Around it: an eyebrow, a subheading with text and two links (left), a tilted product card
+  (right), handwriting (top right) and blurred decoration images at the sides.
+
+  Each slide is a "Slide" block (blocks/_slide.liquid). Desktop (990px and up): the Figma 1920 x 1031 frame,
+  scaled to fit the stage. Phones and tablets: the Figma 375px frame, text above the photo.
+
+  How slides change ("How slides change"):
+  - Buttons: arrows, the side dots and an optional autoplay with a pause button.
+  - Page scroll: the stage stays on the screen (sticky) while the page scrolls through a tall track, one step
+    per slide, then the page continues. Only from 990px, on the live store, with motion allowed and 2+ slides;
+    in all other cases the buttons work as above. The arrows and dots also work: they scroll the page.
+  Without JavaScript: slide 1 shows, the other slides and the buttons are hidden.
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+
+  # Markers: a theme block gets no loop index, so each slide writes markers that are filled here, in order.
+  # The slides are captured one time (one content_for 'blocks' per file) and split at the comment each one
+  # starts with; the number of parts gives the slide count (an empty slide writes nothing on the store).
+  capture blocks_html
+    content_for 'blocks'
+  endcapture
+  assign parts = blocks_html | split: '<!--slideshow-slide-->'
+  assign slide_count = parts.size | minus: 1 | at_least: 0
+
+  # Slide 1: eager in the first 3 sections (snippets/section-loading.liquid); its photo gets high priority only
+  # in section 1 (it is the LCP). The other slides are lazy.
+  capture first_loading
+    render 'section-loading'
+  endcapture
+  assign first_loading = first_loading | strip
+  assign first_priority = 'auto'
+  if section.index == 1
+    assign first_priority = 'high'
+  endif
+
+  assign slides_html = ''
+  for raw_part in parts
+    if forloop.first
+      continue
+    endif
+    # A loop variable cannot be changed with assign: work on a copy
+    assign slide_html = raw_part
+    assign slide_n = forloop.index0
+    assign slide_n_text = slide_n | append: ''
+    assign slide_label = 'sections.slideshow.slide_label' | t: index: slide_n, count: slide_count
+    if slide_n == 1
+      assign slide_html = slide_html | replace: '__SLIDE_STATE__', 'is-active' | replace: '__SLIDE_LOADING__', first_loading | replace_first: '__SLIDE_PRIORITY__', first_priority
+      # First section of the home page: slide 1's word is the page's h1 (the other slides keep h2). Other
+      # templates have their own h1 (page title, product title...), so the word stays an h2 there.
+      if section.index == 1 and template.name == 'index'
+        assign slide_html = slide_html | replace_first: '<h2 class="slideshow-slide__word"', '<h1 class="slideshow-slide__word"' | replace_first: '</h2><!--/slideshow-word-->', '</h1>'
+      endif
+    else
+      assign slide_html = slide_html | replace: '__SLIDE_STATE__', '' | replace: '__SLIDE_LOADING__', 'lazy'
+    endif
+    assign slide_html = slide_html | replace: '__SLIDE_PRIORITY__', 'auto' | replace: '__SLIDE_N__', slide_n_text | replace: '__SLIDE_LABEL__', slide_label
+    assign slides_html = slides_html | append: slide_html
+  endfor
+
+  assign count_text = slide_count | append: ''
+  if slide_count < 10
+    assign count_text = '0' | append: slide_count
+  endif
+
+  assign carousel_label = 'sections.slideshow.label' | t
+  if section.settings.label != blank
+    assign carousel_label = section.settings.label | escape
+  endif
+
+  assign autoplay_ms = 0
+  if section.settings.autoplay and slide_count > 1
+    assign autoplay_ms = section.settings.interval | times: 1000
+  endif
+
+  assign animation = section.settings.animation | default: 'rise'
+-%}
+
+{%- if slide_count == 0 -%}
+  {%- if request.design_mode -%}
+    <div class="slideshow-empty full-width color-{{ scheme_id }}">
+      <p>{{ 'sections.slideshow.editor_empty' | t }}</p>
+    </div>
+  {%- endif -%}
+{%- else -%}
+  <slideshow-section
+    class="slideshow full-width section-width--{{ section.settings.section_width | default: 'full' }} color-{{ scheme_id }} slideshow--anim-{{ animation }}{% unless section.settings.fill_screen %} slideshow--fit{% endunless %}{% unless section.settings.show_decorations_phone %} slideshow--no-phone-deco{% endunless %}"
+    role="region"
+    aria-roledescription="{{ 'sections.slideshow.carousel_role' | t }}"
+    aria-label="{{ carousel_label }}"
+    data-mode="{{ section.settings.slide_change | default: 'buttons' }}"
+    data-scroll-length="{{ section.settings.scroll_length | default: 100 }}"
+    {% if autoplay_ms > 0 %}
+      data-autoplay="{{ autoplay_ms }}"
+    {% endif %}
+    style="--slide-count: {{ slide_count }}; --scroll-length: {{ section.settings.scroll_length | default: 100 }}; --word-scale: {{ section.settings.word_scale | default: 100 | times: 0.01 }}; --deco-blur: {{ section.settings.decoration_blur }}px; --slideshow-tablet-width: {{ section.settings.tablet_width | default: 75 }}%; --slideshow-pad-top: {{ section.settings.padding_top }}px; --slideshow-pad-bottom: {{ section.settings.padding_bottom }}px;{% if section.settings.highlight_color != blank %} --color-accent: {{ section.settings.highlight_color }};{% endif %}{% if section.settings.outline_color != blank %} --slideshow-outline: {{ section.settings.outline_color }};{% endif %}"
+  >
+    <div class="slideshow__track">
+      <div class="slideshow__stage">
+        {%- comment -%}
+          The controls come before the slides: the pause button is one of the first things a keyboard user
+          reaches (WCAG 2.2.2). They show at the bottom left. Only with 2 or more slides.
+        {%- endcomment -%}
+        {%- if slide_count > 1 -%}
+          <div class="slideshow__controls">
+            <p class="slideshow__counter" aria-hidden="true">
+              <span data-slideshow-current>01</span> / {{ count_text }}
+            </p>
+            <span class="slideshow__line" aria-hidden="true"></span>
+            <button
+              type="button"
+              class="slideshow__button slideshow__arrow slideshow__arrow--prev"
+              aria-controls="SlideshowSlides-{{ section.id }}"
+              aria-label="{{ 'sections.slideshow.previous' | t }}"
+            >
+              {{- 'icon-arrow.svg' | inline_asset_content -}}
+            </button>
+            <button
+              type="button"
+              class="slideshow__button slideshow__arrow slideshow__arrow--next"
+              aria-controls="SlideshowSlides-{{ section.id }}"
+              aria-label="{{ 'sections.slideshow.next' | t }}"
+            >
+              {{- 'icon-arrow.svg' | inline_asset_content -}}
+            </button>
+            {%- if autoplay_ms > 0 -%}
+              {%- comment -%} Fixed label; aria-pressed says whether it is on (pressed = paused) {%- endcomment -%}
+              <button type="button" class="slideshow__button slideshow__pause" aria-pressed="false" hidden>
+                <span class="visually-hidden">{{ 'sections.slideshow.pause' | t }}</span>
+                <svg class="slideshow__pause-icon slideshow__pause-icon--pause" aria-hidden="true" focusable="false" viewBox="0 0 16 16"><rect x="3.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/><rect x="9.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/></svg>
+                <svg class="slideshow__pause-icon slideshow__pause-icon--play" aria-hidden="true" focusable="false" viewBox="0 0 16 16"><path d="M4.5 2.8v10.4a.8.8 0 0 0 1.2.7l8.4-5.2a.8.8 0 0 0 0-1.4L5.7 2.1a.8.8 0 0 0-1.2.7z" fill="currentColor"/></svg>
+              </button>
+            {%- endif -%}
+          </div>
+        {%- endif -%}
+
+        <div class="slideshow__slides" id="SlideshowSlides-{{ section.id }}" aria-live="polite">
+          {{- slides_html -}}
+        </div>
+
+        {%- if section.settings.show_dots and slide_count > 1 -%}
+          <div class="slideshow__dots" role="group" aria-label="{{ 'sections.slideshow.dots_label' | t }}">
+            {%- for i in (1..slide_count) -%}
+              <button
+                type="button"
+                class="slideshow__dot"
+                aria-controls="Slide-{{ section.id }}-{{ i }}"
+                aria-label="{{ 'sections.slideshow.dot_label' | t: index: i, count: slide_count }}"
+                {% if forloop.first %}
+                  aria-current="true"
+                {% endif %}
+              ></button>
+            {%- endfor -%}
+          </div>
+        {%- endif -%}
+
+        {%- if section.settings.show_hint -%}
+          <p class="slideshow__hint" aria-hidden="true">
+            <span class="slideshow__mouse"></span>
+            {{ 'sections.slideshow.scroll_hint' | t }}
+          </p>
+        {%- endif -%}
+      </div>
+    </div>
+  </slideshow-section>
+{%- endif -%}
+
+{% stylesheet %}
+  slideshow-section {
+    display: block;
+  }
+
+  /* Theme editor only: no Slide block */
+  .slideshow-empty {
+    padding: var(--space-2xl) var(--page-margin);
+    text-align: center;
+  }
+
+  /*
+    No overflow rule on the section: an ancestor with overflow (hidden / clip) stops the sticky stage in
+    Page scroll mode. The stage itself clips what goes past the sides (decorations, the card).
+  */
+  .slideshow {
+    --slideshow-offset: 0px;
+    --slideshow-outline: var(--color-background);
+    position: relative;
+    padding-block: var(--slideshow-pad-top, 0px) var(--slideshow-pad-bottom, 0px);
+    background-color: var(--color-background);
+    color: var(--color-text);
+  }
+
+  /*
+    The first section slides up under a floating header, and the header CSS adds a top border as tall as the
+    header (sections/header.liquid): the stage is then one screen less the header, so its bottom (photo, arrows)
+    is on the first screen. A solid header covers the top of the page: the same height comes off.
+  */
+  body:has(sticky-header):not(:has(.header--transparent, .header--solid)) #MainContent > .shopify-section:first-child .slideshow,
+  body:has(.header--solid) .slideshow {
+    --slideshow-offset: var(--header-space);
+  }
+
+  /* A top announcement bar above the first section pushes it down: its height comes off too (as on the hero) */
+  body:has(.announcement-bar--top:not([hidden]):not(.is-closing)) #MainContent > .shopify-section:first-child .slideshow {
+    --slideshow-bar: var(--announcement-size, 2.25rem);
+  }
+
+  .slideshow__stage {
+    position: relative;
+    overflow-x: clip;
+    max-inline-size: var(--section-width, 100vw);
+    margin-inline: auto;
+  }
+
+  /* All slides in one grid cell: the shown one on top, the others invisible (their images still load) */
+  .slideshow__slides {
+    display: grid;
+  }
+
+  .slideshow-slide {
+    position: relative;
+    grid-area: 1 / 1;
+    min-inline-size: 0;
+  }
+
+  .slideshow-slide.is-active {
+    z-index: 1;
+  }
+
+  .slideshow-slide:not(.is-active):not(.is-leaving) {
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* No JavaScript, or before the script runs: slide 1 only, no buttons */
+  slideshow-section:not(:defined) .slideshow-slide:not(.is-active) {
+    display: none;
+  }
+
+  slideshow-section:not(:defined) :is(.slideshow__controls, .slideshow__dots) {
+    visibility: hidden;
+  }
+
+  @media (scripting: none) {
+    :is(.slideshow__controls, .slideshow__dots) {
+      display: none;
+    }
+  }
+
+  /* ---------- Phones and tablets (below 990px): the Figma 375px frame ---------- */
+
+  /*
+    The slide is the size container: --mpx = one pixel of the 375px Figma frame at this slide's width.
+    Tablets (750-989px): the slide uses "Slide width" of the screen, centred.
+  */
+  .slideshow-slide {
+    --mpx: calc(100cqi / 375);
+    /* Text sizes grow with the slide too, but at most to 1.2x (tablets): big text in a narrow column looks heavy */
+    --cpx: min(100cqi / 375, 0.075rem);
+    container-type: inline-size;
+    display: grid;
+    align-content: start;
+    inline-size: min(100%, var(--slideshow-tablet-width));
+    margin-inline: auto;
+  }
+
+  @media (max-width: 749px) {
+    .slideshow-slide {
+      inline-size: 100%;
+    }
+  }
+
+  .slideshow-slide__content {
+    position: relative;
+    z-index: 5;
+    order: -1; /* phones: the text first, above the photo (Figma 375px frame) */
+    display: grid;
+    justify-items: start;
+    gap: calc(12 * var(--cpx));
+    padding: calc(40 * var(--cpx)) calc(28 * var(--cpx)) calc(26 * var(--cpx));
+  }
+
+  .slideshow-slide__subheading {
+    margin: 0;
+    color: var(--color-accent);
+    font-family: var(--font-heading--family);
+    font-size: max(1.375rem, calc(24 * var(--cpx)));
+    font-style: var(--font-heading--style);
+    font-weight: 700;
+    line-height: 1.15;
+  }
+
+  .slideshow-slide__text {
+    max-inline-size: 34em;
+    color: color-mix(in srgb, var(--color-text) 85%, var(--color-background));
+    font-size: max(0.8125rem, calc(13 * var(--cpx)));
+    line-height: 1.5;
+  }
+
+  .slideshow-slide__text p {
+    margin: 0;
+  }
+
+  .slideshow-slide__text p + p {
+    margin-block-start: 0.6em;
+  }
+
+  .slideshow-slide__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: calc(12 * var(--cpx)) calc(20 * var(--cpx));
+    margin-block-start: calc(16 * var(--cpx));
+  }
+
+  /* Two classes: the global .button rule loads after this file and would win over one class */
+  .slideshow-slide__button.button {
+    gap: 0.75em;
+    min-block-size: max(2.75rem, calc(42 * var(--cpx)));
+    padding-inline: max(1rem, calc(18 * var(--cpx)));
+    font-size: max(0.75rem, calc(11 * var(--cpx)));
+    letter-spacing: 0.08em;
+  }
+
+  .slideshow-slide__link.button {
+    gap: 0.5em;
+    font-size: max(0.75rem, calc(11 * var(--cpx)));
+    letter-spacing: 0.08em;
+  }
+
+  .slideshow-slide__actions svg {
+    flex: none;
+    inline-size: 1.3em;
+    block-size: auto;
+  }
+
+  .slideshow-slide__actions [aria-disabled='true'] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* The scene: eyebrow, word, photo, outline. Figma phone frame from the eyebrow down = 375 x 450. */
+  .slideshow-slide__scene {
+    position: relative;
+    aspect-ratio: 375 / 450;
+  }
+
+  .slideshow-slide__title,
+  .slideshow-slide__twin {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    justify-content: center;
+    padding-block-start: calc(10 * var(--mpx));
+    pointer-events: none;
+  }
+
+  .slideshow-slide__title {
+    z-index: 1;
+  }
+
+  .slideshow-slide__model {
+    position: absolute;
+    z-index: 2;
+    inset-block-end: 0;
+    left: calc(197 * var(--mpx));
+    block-size: calc(470 * var(--mpx) * var(--photo-size, 1));
+    aspect-ratio: var(--model-ratio-phone);
+    translate: -50% 0;
+  }
+
+  .slideshow-slide__model picture,
+  .slideshow-slide__model img,
+  .slideshow-slide__placeholder {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  .slideshow-slide__model img {
+    object-fit: contain;
+    object-position: 50% 100%;
+  }
+
+  .slideshow-slide__placeholder {
+    background-color: var(--color-tint-subtle);
+    fill: var(--color-tint-border);
+  }
+
+  /*
+    The outline copy: the same box and layout as the title, masked by the photo's own pixels (the script sets
+    --model-mask from the loaded photo). The mask has the photo's box: the same size, at the bottom, centred
+    on the same point. No mask yet (no JS, photo not loaded, or the browser can't read it) = no outline.
+  */
+  .slideshow-slide__twin {
+    --mask-h: calc(470 * var(--mpx) * var(--photo-size, 1));
+    --mask-w: calc(var(--mask-h) * var(--model-ratio-phone));
+    --mask-x: calc(197 * var(--mpx) - var(--mask-w) / 2);
+    z-index: 3;
+    -webkit-mask-image: var(--model-mask);
+    mask-image: var(--model-mask);
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-size: var(--mask-w) var(--mask-h);
+    mask-size: var(--mask-w) var(--mask-h);
+    -webkit-mask-position: var(--mask-x) 100%;
+    mask-position: var(--mask-x) 100%;
+  }
+
+  .slideshow-slide__twin:not(.has-mask) {
+    display: none;
+  }
+
+  .slideshow-slide__twin .slideshow-slide__eyebrow {
+    visibility: hidden;
+  }
+
+  .slideshow-slide__title-inner {
+    display: grid;
+    align-content: start;
+    justify-items: start;
+    gap: calc(10 * var(--mpx));
+  }
+
+  .slideshow-slide__eyebrow {
+    margin: 0;
+    gap: calc(12 * var(--mpx));
+    font-size: max(0.6875rem, calc(11 * var(--cpx)));
+    font-weight: var(--font-weight-medium);
+    letter-spacing: 0.16em;
+  }
+
+  .slideshow-slide__eyebrow::before {
+    inline-size: calc(20 * var(--mpx));
+    block-size: 1px;
+  }
+
+  /* h1 / h2 reset: the size comes from the word length (Liquid) and "Big word size" */
+  .slideshow-slide__word {
+    margin: 0;
+    color: color-mix(in srgb, var(--color-text) 92%, var(--color-background));
+    font-family: var(--font-heading--family);
+    font-size: calc(min(var(--word-size-phone) * var(--word-scale, 1), var(--word-fit-phone)) * var(--mpx));
+    font-style: var(--font-heading--style);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    text-wrap: nowrap;
+  }
+
+  .slideshow-slide__word--outline {
+    color: transparent;
+    -webkit-text-stroke: 1px var(--slideshow-outline);
+  }
+
+  /* Handwriting: desktop only (the phone design has none) */
+  .slideshow-slide__script {
+    display: none;
+  }
+
+  /* Product card. Its sizes are in em of the card: font-size = card width / 21 (10px on a 210px card). */
+  .slideshow-card {
+    --card-w: calc(215 * var(--mpx));
+    position: absolute;
+    z-index: 4;
+    right: calc(25 * var(--mpx));
+    bottom: calc(58 * var(--mpx));
+    inline-size: var(--card-w);
+    overflow: hidden;
+    border-radius: 1.4em;
+    background-color: var(--color-surface-raised);
+    box-shadow: 0 1.2em 3em #0000002e;
+    color: var(--color-text);
+    font-size: calc(var(--card-w) / 21);
+    rotate: 8deg;
+  }
+
+  .slideshow-card__media {
+    aspect-ratio: 420 / 250;
+    overflow: hidden;
+  }
+
+  .slideshow-card__media img,
+  .slideshow-card__placeholder {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .slideshow-card__placeholder {
+    background-color: var(--color-tint-subtle);
+    fill: var(--color-tint-border);
+  }
+
+  .slideshow-card__body {
+    display: grid;
+    gap: 0.3em;
+    padding: 0.9em 1.1em 1.1em;
+  }
+
+  .slideshow-card__title {
+    margin: 0;
+    font-family: var(--font-heading--family);
+    font-size: max(0.9375rem, 1.5em);
+    font-style: var(--font-heading--style);
+    font-weight: 700;
+    line-height: 1.15;
+  }
+
+  .slideshow-card__link {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* The title link covers the whole card (the card is positioned) */
+  .slideshow-card__link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+
+  .slideshow-card__link:focus-visible {
+    outline: none;
+  }
+
+  .slideshow-card:has(.slideshow-card__link:focus-visible) {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+  }
+
+  .slideshow-card__type {
+    margin: 0;
+    color: var(--color-accent);
+    font-size: max(0.625rem, 0.7em);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  .slideshow-card__price {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 0.6em;
+    margin: 0.4em 0 0;
+    padding-inline-end: 3em;
+  }
+
+  .slideshow-card__current {
+    font-size: max(1rem, 1.55em);
+    line-height: 1.2;
+  }
+
+  .slideshow-card__compare {
+    color: color-mix(in srgb, var(--color-text) 65%, var(--color-background));
+    font-size: max(0.75rem, 0.95em);
+  }
+
+  .slideshow-card__arrow {
+    position: absolute;
+    right: 1em;
+    bottom: 1em;
+    display: grid;
+    place-items: center;
+    inline-size: max(1.75rem, 2.1em);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background-color: var(--color-surface-raised);
+    box-shadow: 0 2px 10px #0000001f;
+    color: var(--color-accent);
+  }
+
+  .slideshow-card__arrow svg {
+    inline-size: 45%;
+    block-size: auto;
+  }
+
+  /* Decorations: blurred, behind the text and the photo, past the sides (the stage clips them) */
+  .slideshow-slide__deco {
+    position: absolute;
+    z-index: 0;
+    filter: blur(calc(var(--deco-blur, 6px) * 0.6));
+    pointer-events: none;
+  }
+
+  .slideshow-slide__deco img {
+    display: block;
+    inline-size: 100%;
+    block-size: auto;
+  }
+
+  .slideshow-slide__deco--start {
+    left: calc(-25 * var(--mpx));
+    bottom: calc(190 * var(--mpx));
+    inline-size: calc(95 * var(--mpx));
+  }
+
+  .slideshow-slide__deco--end {
+    right: calc(-20 * var(--mpx));
+    top: calc(70 * var(--mpx));
+    inline-size: calc(80 * var(--mpx));
+  }
+
+  @media (max-width: 989px) {
+    .slideshow--no-phone-deco .slideshow-slide__deco {
+      display: none;
+    }
+  }
+
+  /* Theme editor: a slide with no content */
+  .slideshow-slide__note {
+    position: absolute;
+    z-index: 6;
+    inset-block-start: 50%;
+    inset-inline: var(--space-md);
+    margin: 0;
+    padding: var(--space-md);
+    border: 1px dashed currentColor;
+    border-radius: var(--radius-xs);
+    background-color: var(--color-background);
+    font-style: italic;
+    text-align: center;
+  }
+
+  /* Counter, line, arrows, pause: bottom left, over the photo */
+  .slideshow__controls {
+    position: absolute;
+    z-index: 6;
+    bottom: var(--space-md);
+    left: calc((100% - min(100%, var(--slideshow-tablet-width))) / 2 + 1.25rem);
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+  }
+
+  @media (max-width: 749px) {
+    .slideshow__controls {
+      left: 1.25rem;
+    }
+  }
+
+  .slideshow__counter {
+    margin: 0;
+    color: color-mix(in srgb, var(--color-text) 85%, var(--color-background));
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .slideshow__line {
+    inline-size: 2.5rem;
+    block-size: 1px;
+    background-color: var(--color-accent);
+  }
+
+  .slideshow__button {
+    display: grid;
+    place-items: center;
+    inline-size: 2.25rem;
+    aspect-ratio: 1;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--color-text) 14%, var(--color-background));
+    box-shadow: 0 4px 12px #00000026;
+    color: var(--color-accent);
+    cursor: pointer;
+    transition: background-color var(--duration-fast) var(--ease-out);
+  }
+
+  .slideshow__button:hover {
+    background-color: color-mix(in srgb, var(--color-text) 22%, var(--color-background));
+  }
+
+  .slideshow__button svg {
+    inline-size: 45%;
+    block-size: auto;
+  }
+
+  .slideshow__arrow--prev svg {
+    scale: -1 1;
+  }
+
+  .slideshow__pause[hidden] {
+    display: none;
+  }
+
+  .slideshow__pause svg {
+    inline-size: 40%;
+  }
+
+  .slideshow__pause-icon--play,
+  .slideshow__pause[aria-pressed='true'] .slideshow__pause-icon--pause {
+    display: none;
+  }
+
+  .slideshow__pause[aria-pressed='true'] .slideshow__pause-icon--play {
+    display: block;
+  }
+
+  /* Side dots and the scroll hint: desktop only */
+  .slideshow__dots,
+  .slideshow__hint {
+    display: none;
+  }
+
+  /* ---------- Desktop (990px and up): the Figma 1920 x 1031 frame ---------- */
+
+  @media (min-width: 990px) {
+    /*
+      The stage is one screen tall (less the header when the header covers the top) and is the size container.
+      --px = one Figma pixel: the 1920 x 1031 frame fitted into the stage (width or height, the smaller), so the
+      whole composition always fits. --box-x = where the frame starts when the stage is wider than the frame.
+      The frame sits on the stage's bottom edge (the photo stands on it).
+    */
+    .slideshow__stage {
+      --px: min(100cqw / 1920, 100cqh / 1031);
+      --box-x: calc((100cqw - 1920 * var(--px)) / 2);
+      container-type: size;
+      block-size: calc(100svh - var(--slideshow-offset) - var(--slideshow-bar, 0px));
+    }
+
+    /* "Fill the screen height" off: the design's shape */
+    .slideshow--fit .slideshow__stage {
+      block-size: auto;
+      aspect-ratio: 1920 / 1031;
+    }
+
+    .slideshow__slides {
+      block-size: 100%;
+    }
+
+    .slideshow-slide {
+      container-type: normal;
+      display: block;
+      inline-size: auto;
+      block-size: 100%;
+      margin-inline: 0;
+    }
+
+    .slideshow-slide__scene {
+      position: absolute;
+      bottom: 0;
+      left: var(--box-x);
+      inline-size: calc(1920 * var(--px));
+      block-size: calc(1031 * var(--px));
+      aspect-ratio: auto;
+    }
+
+    .slideshow-slide__title,
+    .slideshow-slide__twin {
+      padding-block-start: calc(222 * var(--px));
+    }
+
+    .slideshow-slide__title-inner {
+      gap: calc(4 * var(--px));
+    }
+
+    .slideshow-slide__eyebrow {
+      gap: calc(20 * var(--px));
+      font-size: max(0.6875rem, calc(15 * var(--px)));
+      letter-spacing: 0.2em;
+    }
+
+    .slideshow-slide__eyebrow::before {
+      inline-size: calc(62 * var(--px));
+    }
+
+    .slideshow-slide__word {
+      font-size: calc(min(var(--word-size) * var(--word-scale, 1), var(--word-fit)) * var(--px));
+    }
+
+    .slideshow-slide__word--outline {
+      -webkit-text-stroke-width: max(1px, calc(1.5 * var(--px)));
+    }
+
+    .slideshow-slide__model {
+      left: calc(935 * var(--px));
+      block-size: calc(840 * var(--px) * var(--photo-size, 1));
+      aspect-ratio: var(--model-ratio);
+    }
+
+    .slideshow-slide__twin {
+      --mask-h: calc(840 * var(--px) * var(--photo-size, 1));
+      --mask-w: calc(var(--mask-h) * var(--model-ratio));
+      --mask-x: calc(935 * var(--px) - var(--mask-w) / 2);
+    }
+
+    /* Handwriting: top right, accent font, one word per line, slightly turned, with a curly arrow */
+    .slideshow-slide__script {
+      position: absolute;
+      z-index: 3;
+      top: calc(128 * var(--px));
+      left: calc(1640 * var(--px));
+      display: block;
+      inline-size: min-content;
+      margin: 0;
+      color: var(--color-accent);
+      font-family: var(--font-accent--family);
+      font-size: max(1.5rem, calc(50 * var(--px)));
+      font-style: italic;
+      font-weight: var(--font-accent--weight);
+      line-height: 1.15;
+      text-align: center;
+      rotate: -8deg;
+    }
+
+    .slideshow-slide__script-arrow {
+      position: absolute;
+      top: 100%;
+      right: 90%;
+      inline-size: calc(64 * var(--px));
+      block-size: auto;
+      margin-block-start: calc(18 * var(--px));
+      rotate: 8deg;
+    }
+
+    /*
+      Left column: from the frame's left edge (50px at 1920), its top at y 580 of the frame (Figma 575), under
+      the big word. Top, not bottom: on small laptops the minimum text sizes make the column taller than the
+      design, and it must grow down (towards the arrows), never up into the word.
+    */
+    .slideshow-slide__content {
+      position: absolute;
+      top: calc(100cqh - 1031 * var(--px) + 580 * var(--px));
+      left: calc(var(--box-x) + max(1.25rem, calc(50 * var(--px))));
+      inline-size: max(23rem, calc(520 * var(--px)));
+      gap: calc(30 * var(--px));
+      padding: 0;
+    }
+
+    .slideshow-slide__subheading {
+      font-size: max(1.25rem, calc(34 * var(--px)));
+    }
+
+    .slideshow-slide__text {
+      max-inline-size: 20em;
+      font-size: max(0.9375rem, calc(22 * var(--px)));
+      line-height: 1.45;
+    }
+
+    .slideshow-slide__actions {
+      gap: calc(16 * var(--px)) calc(45 * var(--px));
+      margin-block-start: calc(28 * var(--px));
+    }
+
+    .slideshow-slide__button.button {
+      min-block-size: max(2.75rem, calc(60 * var(--px)));
+      padding-inline: max(1.25rem, calc(32 * var(--px)));
+      font-size: max(0.8125rem, calc(17 * var(--px)));
+    }
+
+    .slideshow-slide__link.button {
+      font-size: max(0.8125rem, calc(17 * var(--px)));
+    }
+
+    .slideshow-card {
+      --card-w: max(15rem, calc(420 * var(--px)));
+      right: auto;
+      bottom: calc(62 * var(--px));
+      left: calc(var(--box-x) + 1262 * var(--px));
+    }
+
+    .slideshow-slide__deco {
+      filter: blur(var(--deco-blur, 6px));
+    }
+
+    .slideshow-slide__deco--start {
+      top: auto;
+      bottom: calc(486 * var(--px));
+      left: calc(-20 * var(--px));
+      inline-size: calc(210 * var(--px));
+    }
+
+    .slideshow-slide__deco--end {
+      top: auto;
+      right: calc(-30 * var(--px));
+      bottom: calc(-40 * var(--px));
+      inline-size: calc(180 * var(--px));
+    }
+
+    .slideshow-slide__note {
+      inset-inline: 30%;
+    }
+
+    .slideshow__controls {
+      bottom: max(var(--space-md), calc(20 * var(--px)));
+      left: calc(var(--box-x) + max(1.25rem, calc(50 * var(--px))));
+      gap: calc(14 * var(--px));
+    }
+
+    .slideshow__counter {
+      font-size: max(0.8125rem, calc(17 * var(--px)));
+    }
+
+    .slideshow__line {
+      inline-size: calc(62 * var(--px));
+    }
+
+    .slideshow__button {
+      inline-size: max(2.5rem, calc(42 * var(--px)));
+    }
+
+    /* Side dots: a vertical line with one dot per slide, at the right edge, level with the photo's face */
+    .slideshow__dots {
+      position: absolute;
+      z-index: 6;
+      top: calc(100cqh - 1031 * var(--px) + 440 * var(--px));
+      right: calc(var(--box-x) + max(1.25rem, calc(44 * var(--px))));
+      display: flex;
+      flex-direction: column;
+      gap: calc(34 * var(--px));
+    }
+
+    .slideshow__dots::before {
+      content: '';
+      position: absolute;
+      inset-block: calc(-20 * var(--px));
+      left: 50%;
+      inline-size: 1px;
+      background-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-background));
+    }
+
+    .slideshow__dot {
+      position: relative;
+      display: grid;
+      place-items: center;
+      inline-size: 1.5rem;
+      block-size: 1.5rem;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background: none;
+      cursor: pointer;
+    }
+
+    .slideshow__dot::before {
+      content: '';
+      inline-size: 0.75rem;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background-color: color-mix(in srgb, var(--color-accent) 18%, var(--color-background));
+      transition: background-color var(--duration-fast) var(--ease-out);
+    }
+
+    .slideshow__dot:hover::before,
+    .slideshow__dot[aria-current='true']::before {
+      background-color: var(--color-accent);
+    }
+
+    /* "Scroll to explore": bottom centre, over the photo */
+    .slideshow__hint {
+      position: absolute;
+      z-index: 6;
+      bottom: calc(18 * var(--px));
+      left: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: calc(10 * var(--px));
+      margin: 0;
+      color: var(--color-accent);
+      font-size: max(0.6875rem, calc(13 * var(--px)));
+      font-weight: var(--font-weight-medium);
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      translate: -50% 0;
+      pointer-events: none;
+    }
+
+    .slideshow__mouse {
+      inline-size: max(0.875rem, calc(20 * var(--px)));
+      aspect-ratio: 20 / 34;
+      border: 1.5px solid color-mix(in srgb, var(--color-text) 35%, transparent);
+      border-radius: var(--radius-pill);
+    }
+
+    /*
+      Page scroll (the script adds .is-pinned): the track is one screen plus one "Scroll for each slide" per
+      extra slide; the stage stays on the screen while the track scrolls past.
+    */
+    .slideshow.is-pinned .slideshow__track {
+      block-size: calc(100svh - var(--slideshow-offset) + (var(--slide-count) - 1) * var(--scroll-length) * 1svh);
+    }
+
+    .slideshow.is-pinned .slideshow__stage {
+      position: sticky;
+      top: var(--slideshow-offset);
+      block-size: calc(100svh - var(--slideshow-offset));
+      aspect-ratio: auto;
+    }
+  }
+
+  /* ---------- Slide entrance (Figma Default frames) ---------- */
+
+  /*
+    Plays when a slide becomes the shown slide (.is-entering, set by the script): the photo rises and fades in,
+    then the big word, then the outline, text, card and decorations. Only with "Enable animations" (.motion-on)
+    and no reduced motion. Slide 1 never moves on page load in the first section (decision 3: never hide the
+    hero): the script adds .is-entering to it only when the section comes on screen later (.is-waiting holds the
+    first frame until then).
+  */
+  @media (prefers-reduced-motion: no-preference) {
+    .motion-on .slideshow--anim-rise .is-entering .slideshow-slide__model {
+      animation: slideshow-rise 1s var(--ease-out) both;
+    }
+
+    .motion-on .slideshow--anim-rise .is-entering .slideshow-slide__title .slideshow-slide__word {
+      animation: slideshow-word 0.9s var(--ease-out) 0.3s both;
+    }
+
+    .motion-on .slideshow--anim-rise .is-entering .slideshow-slide__twin {
+      animation: slideshow-fade 0.6s ease 0.9s both;
+    }
+
+    .motion-on .slideshow--anim-rise .is-entering :is(.slideshow-slide__title .slideshow-slide__eyebrow, .slideshow-slide__content > *, .slideshow-card, .slideshow-slide__script, .slideshow-slide__deco) {
+      animation: slideshow-up 0.8s var(--ease-out) 0.5s both;
+    }
+
+    .motion-on .slideshow--anim-rise .is-entering .slideshow-slide__content > :nth-child(2) {
+      animation-delay: 0.6s;
+    }
+
+    .motion-on .slideshow--anim-rise .is-entering .slideshow-slide__content > :nth-child(3) {
+      animation-delay: 0.7s;
+    }
+
+    .motion-on .slideshow--anim-rise .is-entering .slideshow-card {
+      animation-delay: 0.65s;
+    }
+
+    .motion-on .slideshow--anim-rise .is-entering .slideshow-slide__script {
+      animation-delay: 0.85s;
+    }
+
+    .motion-on .slideshow--anim-fade .slideshow-slide.is-entering {
+      animation: slideshow-fade 0.7s ease both;
+    }
+
+    .motion-on :is(.slideshow--anim-rise, .slideshow--anim-fade) .slideshow-slide.is-leaving {
+      animation: slideshow-fade-out 0.5s ease both;
+    }
+
+    /* Waiting to come on screen: hold the first frame of the entrance */
+    .slideshow-slide.is-waiting,
+    .slideshow-slide.is-waiting * {
+      animation-play-state: paused !important;
+    }
+  }
+
+  @keyframes slideshow-rise {
+    from {
+      opacity: 0;
+      transform: translateY(16%);
+    }
+  }
+
+  @keyframes slideshow-word {
+    from {
+      opacity: 0;
+      transform: scale(1.08);
+    }
+  }
+
+  @keyframes slideshow-up {
+    from {
+      opacity: 0;
+      transform: translateY(1.5rem);
+    }
+  }
+
+  @keyframes slideshow-fade {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes slideshow-fade-out {
+    to {
+      opacity: 0;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <slideshow-section>: one slide at a time.
+   * - Arrows, side dots, optional autoplay (pause button; waits while the pointer or keyboard focus is on the
+   *   section, while it is off screen, while the tab is hidden; off with reduced motion).
+   * - Page scroll mode (data-mode="scroll"): from 990px, on the live store, with motion allowed and 2+ slides,
+   *   the stage pins and the scroll position picks the slide (.is-pinned). Arrows and dots scroll the page to
+   *   the slide's place. Otherwise the buttons work as above.
+   * - Outline word: masked with the photo's own pixels once the photo has loaded.
+   * - Theme editor: selecting a Slide block shows it and holds it until it is deselected.
+   */
+  class SlideshowSection extends HTMLElement {
+    connectedCallback() {
+      /*
+        One AbortController for every listener: the theme editor re-attaches a moved section, so
+        connectedCallback runs again; aborting in disconnectedCallback removes all listeners at once.
+      */
+      this.abortController = new AbortController();
+      const { signal } = this.abortController;
+
+      this.slides = [...this.querySelectorAll('[data-slideshow-slide]')];
+      this.track = this.querySelector('.slideshow__track');
+      this.stage = this.querySelector('.slideshow__stage');
+      this.slidesBox = this.querySelector('.slideshow__slides');
+      this.reducedQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+      this.desktopQuery = window.matchMedia('(min-width: 990px)');
+
+      this.setUpMasks(signal);
+
+      // Start from the slide marked active (after an editor re-attach it can be another slide than 1)
+      this.active = Math.max(0, this.slides.findIndex((slide) => slide.classList.contains('is-active')));
+      this.slides.forEach((slide, i) => {
+        slide.classList.remove('is-leaving', 'is-entering', 'is-waiting');
+        slide.classList.toggle('is-active', i === this.active);
+        slide.inert = i !== this.active;
+      });
+
+      this.setUpEntrance();
+      if (this.slides.length < 2) return;
+
+      this.current = this.querySelector('[data-slideshow-current]');
+      this.dots = [...this.querySelectorAll('.slideshow__dot')];
+      this.updateControls();
+
+      this.querySelector('.slideshow__arrow--prev')?.addEventListener('click', () => this.goTo(this.active - 1, true), { signal });
+      this.querySelector('.slideshow__arrow--next')?.addEventListener('click', () => this.goTo(this.active + 1, true), { signal });
+      this.dots.forEach((dot, i) => dot.addEventListener('click', () => this.goTo(i, true), { signal }));
+
+      // Theme editor: a selected Slide block shows and stays until it is deselected
+      document.addEventListener(
+        'shopify:block:select',
+        (event) => {
+          const index = this.slides.indexOf(event.target);
+          if (index < 0) return;
+          this.editorHold = true;
+          this.show(index, { instant: true });
+          this.restartAutoplay();
+        },
+        { signal }
+      );
+      document.addEventListener(
+        'shopify:block:deselect',
+        (event) => {
+          if (!this.slides.includes(event.target)) return;
+          this.editorHold = false;
+          this.restartAutoplay();
+        },
+        { signal }
+      );
+
+      this.reducedQuery.addEventListener('change', () => this.refresh(), { signal });
+      this.desktopQuery.addEventListener('change', () => this.refresh(), { signal });
+      window.addEventListener('scroll', () => this.onScroll(), { passive: true, signal });
+      window.addEventListener('resize', () => this.measure(), { passive: true, signal });
+
+      this.setUpAutoplay(signal);
+      this.refresh();
+    }
+
+    disconnectedCallback() {
+      this.abortController?.abort();
+      clearTimeout(this.timer);
+      clearTimeout(this.leaveTimer);
+      clearTimeout(this.enterTimer);
+      cancelAnimationFrame(this.frame);
+      this.frame = 0;
+      this.visibilityObserver?.disconnect();
+      this.entranceObserver?.disconnect();
+      // A slide held at its first frame would stay hidden after a re-attach
+      this.slides?.forEach((slide) => slide.classList.remove('is-waiting', 'is-entering', 'is-leaving'));
+    }
+
+    reduced() {
+      return this.reducedQuery.matches;
+    }
+
+    /** Entrance animations: "Enable animations" on, motion allowed, and a Slide entrance other than None */
+    canAnimate() {
+      return (
+        document.documentElement.classList.contains('motion-on') &&
+        !this.reduced() &&
+        !this.classList.contains('slideshow--anim-none')
+      );
+    }
+
+    /** Page scroll needs the setting, 990px+, the live store (not the editor), motion and 2+ slides */
+    canPin() {
+      return (
+        this.dataset.mode === 'scroll' &&
+        this.desktopQuery.matches &&
+        !window.Shopify?.designMode &&
+        !this.reduced() &&
+        this.slides.length > 1
+      );
+    }
+
+    /** Called on start and when the screen width or the motion preference changes */
+    refresh() {
+      const pin = this.canPin();
+      if (pin !== Boolean(this.pinned)) {
+        this.pinned = pin;
+        this.classList.toggle('is-pinned', pin);
+      }
+      this.measure();
+      this.restartAutoplay();
+    }
+
+    /** The stage's sticky top and the scroll step (px), read once per size instead of on every scroll */
+    measure() {
+      if (!this.pinned) return;
+      this.stickyTop = parseFloat(getComputedStyle(this.stage).top) || 0;
+      this.step = (window.innerHeight * (Number(this.dataset.scrollLength) || 100)) / 100;
+      this.onScroll();
+    }
+
+    onScroll() {
+      if (!this.pinned || this.frame) return;
+      this.frame = requestAnimationFrame(() => {
+        this.frame = 0;
+        if (!this.pinned || !this.step) return;
+        const progress = (this.stickyTop - this.track.getBoundingClientRect().top) / this.step;
+        const index = Math.min(this.slides.length - 1, Math.max(0, Math.round(progress)));
+        if (index !== this.active) this.show(index);
+      });
+    }
+
+    /** Arrows and dots. Pinned: scroll the page to the slide's place (the scroll then shows it). */
+    goTo(index, byVisitor = false) {
+      const count = this.slides.length;
+      const target = ((index % count) + count) % count;
+      if (this.pinned && this.step) {
+        // No wrap-around while pinned: it would scroll the page several screens back or forward
+        if (index < 0 || index >= count) return;
+        const top = window.scrollY + this.track.getBoundingClientRect().top - this.stickyTop + target * this.step;
+        window.scrollTo({ top: Math.ceil(top), behavior: 'smooth' });
+        return;
+      }
+      this.show(target);
+      if (byVisitor) this.restartAutoplay();
+    }
+
+    show(index, { instant = false } = {}) {
+      if (index === this.active || !this.slides[index]) return;
+      const previous = this.slides[this.active];
+      const next = this.slides[index];
+      this.active = index;
+      const animate = !instant && this.canAnimate();
+
+      // Finish a change that is still running
+      clearTimeout(this.leaveTimer);
+      clearTimeout(this.enterTimer);
+      this.slides.forEach((slide) => {
+        if (slide !== previous && slide !== next) slide.classList.remove('is-leaving', 'is-entering', 'is-waiting');
+      });
+
+      previous.classList.remove('is-active', 'is-entering', 'is-waiting');
+      previous.inert = true;
+      next.classList.remove('is-leaving', 'is-waiting', 'is-entering');
+      next.classList.add('is-active');
+      next.inert = false;
+
+      if (animate) {
+        previous.classList.add('is-leaving');
+        void next.offsetWidth; // restart the entrance if this slide was shown a moment ago
+        next.classList.add('is-entering');
+        // Timers, not animationend: a hidden tab pauses animations, and the classes must still go
+        this.leaveTimer = setTimeout(() => previous.classList.remove('is-leaving'), 600);
+        this.enterTimer = setTimeout(() => next.classList.remove('is-entering'), 2000);
+      } else {
+        previous.classList.remove('is-leaving');
+      }
+      this.updateControls();
+    }
+
+    updateControls() {
+      if (this.current) this.current.textContent = String(this.active + 1).padStart(2, '0');
+      this.dots?.forEach((dot, i) => {
+        if (i === this.active) dot.setAttribute('aria-current', 'true');
+        else dot.removeAttribute('aria-current');
+      });
+    }
+
+    /**
+     * Outline word: the copy in front of the photo is masked with the photo itself (its transparent parts
+     * hide the outline). The mask uses the file the browser already loaded (currentSrc: also the phone photo
+     * from <picture>), so it costs no extra download. Set again when another file loads (screen resize).
+     */
+    setUpMasks(signal) {
+      this.slides.forEach((slide) => {
+        const image = slide.querySelector('.slideshow-slide__model img');
+        const twin = slide.querySelector('.slideshow-slide__twin');
+        if (!image || !twin) return;
+        const apply = () => {
+          const source = image.currentSrc || image.src;
+          if (!source) return;
+          twin.style.setProperty('--model-mask', `url("${source.replace(/"/g, '%22')}")`);
+          twin.classList.add('has-mask');
+        };
+        if (image.complete && image.naturalWidth) apply();
+        image.addEventListener('load', apply, { signal });
+      });
+    }
+
+    /**
+     * A section further down the page: slide 1 plays its entrance when the section comes on screen. Only
+     * when the section is off screen now (nothing visible is ever hidden), never in the theme editor, and
+     * only one time (not again after an editor re-attach).
+     */
+    setUpEntrance() {
+      if (this.entered || !this.canAnimate() || window.Shopify?.designMode) return;
+      this.entered = true;
+      const rect = this.getBoundingClientRect();
+      if (rect.top < window.innerHeight && rect.bottom > 0) return;
+      const slide = this.slides[this.active];
+      if (!slide) return;
+      slide.classList.add('is-entering', 'is-waiting');
+      this.entranceObserver = new IntersectionObserver(
+        ([entry]) => {
+          if (!entry.isIntersecting) return;
+          this.entranceObserver.disconnect();
+          slide.classList.remove('is-waiting');
+          clearTimeout(this.enterTimer);
+          this.enterTimer = setTimeout(() => slide.classList.remove('is-entering'), 2000);
+        },
+        { threshold: 0.2 }
+      );
+      this.entranceObserver.observe(this.stage);
+    }
+
+    setUpAutoplay(signal) {
+      this.delay = Number(this.dataset.autoplay) || 0;
+      this.pauseButton = this.querySelector('.slideshow__pause');
+      if (!this.delay) return;
+
+      this.pauseButton?.addEventListener(
+        'click',
+        () => {
+          this.paused = !this.paused;
+          this.pauseButton.setAttribute('aria-pressed', String(this.paused));
+          this.restartAutoplay();
+        },
+        { signal }
+      );
+      // Hover holds only over the slides (not over the arrows, dots or pause button)
+      this.slidesBox.addEventListener('pointerenter', () => (this.hovered = true), { signal });
+      this.slidesBox.addEventListener(
+        'pointerleave',
+        () => {
+          this.hovered = false;
+          this.restartAutoplay();
+        },
+        { signal }
+      );
+      // Focus on the arrows, dots or pause button does not hold the slide (Play must visibly play)
+      this.addEventListener(
+        'focusin',
+        (event) => {
+          this.focused = !event.target.closest('.slideshow__controls, .slideshow__dots');
+        },
+        { signal }
+      );
+      this.addEventListener(
+        'focusout',
+        (event) => {
+          if (this.contains(event.relatedTarget)) return;
+          this.focused = false;
+          this.restartAutoplay();
+        },
+        { signal }
+      );
+      document.addEventListener('visibilitychange', () => this.restartAutoplay(), { signal });
+      this.visibilityObserver = new IntersectionObserver(([entry]) => {
+        this.onScreen = entry.isIntersecting;
+        this.restartAutoplay();
+      });
+      this.visibilityObserver.observe(this);
+    }
+
+    /** Autoplay can run: set, not paused, not pinned, motion allowed */
+    autoplayOn() {
+      return Boolean(this.delay) && !this.paused && !this.pinned && !this.reduced();
+    }
+
+    /** A full interval from now. Waits (checks again next time) while something holds the slide. */
+    restartAutoplay() {
+      clearTimeout(this.timer);
+      if (this.pauseButton) this.pauseButton.hidden = !this.delay || this.pinned || this.reduced();
+      // Screen readers: announce slide changes, except while autoplay changes them
+      const running = Boolean(this.delay) && !this.pinned && !this.reduced() && !this.paused;
+      this.slidesBox?.setAttribute('aria-live', running ? 'off' : 'polite');
+      if (!this.autoplayOn()) return;
+      this.timer = setTimeout(() => {
+        const held = this.hovered || this.focused || this.editorHold || this.onScreen === false || document.hidden;
+        if (!held) this.show((this.active + 1) % this.slides.length);
+        this.restartAutoplay();
+      }, this.delay);
+    }
+  }
+
+  if (!customElements.get('slideshow-section')) customElements.define('slideshow-section', SlideshowSection);
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.slideshow",
+  "blocks": [
+    {
+      "type": "_slide"
+    }
+  ],
+  "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
+    {
+      "type": "text",
+      "id": "label",
+      "label": "t:labels.slideshow_name",
+      "info": "t:labels.slideshow_name_info"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.slideshow_group_slides"
+    },
+    {
+      "type": "select",
+      "id": "slide_change",
+      "label": "t:labels.slideshow_change",
+      "info": "t:labels.slideshow_change_info",
+      "options": [
+        {
+          "value": "buttons",
+          "label": "t:options.slideshow_change.buttons"
+        },
+        {
+          "value": "scroll",
+          "label": "t:options.slideshow_change.scroll"
+        }
+      ],
+      "default": "buttons"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_dots",
+      "label": "t:labels.slideshow_show_dots",
+      "info": "t:labels.slideshow_show_dots_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_hint",
+      "label": "t:labels.slideshow_show_hint",
+      "info": "t:labels.slideshow_show_hint_info",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.layout"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "t:options.section_width.narrow"
+        },
+        {
+          "value": "wide",
+          "label": "t:options.section_width.wide"
+        },
+        {
+          "value": "widest",
+          "label": "t:options.section_width.widest"
+        },
+        {
+          "value": "full",
+          "label": "t:options.section_width.full"
+        }
+      ],
+      "default": "full"
+    },
+    {
+      "type": "checkbox",
+      "id": "fill_screen",
+      "label": "t:labels.fill_screen",
+      "info": "t:labels.slideshow_fill_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "word_scale",
+      "label": "t:labels.slideshow_word_scale",
+      "info": "t:labels.slideshow_word_scale_info",
+      "min": 60,
+      "max": 120,
+      "step": 5,
+      "unit": "%",
+      "default": 100
+    },
+    {
+      "type": "range",
+      "id": "decoration_blur",
+      "label": "t:labels.slideshow_decoration_blur",
+      "min": 0,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "default": 6
+    },
+    {
+      "type": "header",
+      "content": "t:labels.phones"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_decorations_phone",
+      "label": "t:labels.slideshow_phone_decorations",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.tablets"
+    },
+    {
+      "type": "range",
+      "id": "tablet_width",
+      "label": "t:labels.slideshow_tablet_width",
+      "info": "t:labels.slideshow_tablet_width_info",
+      "min": 50,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 75
+    },
+    {
+      "type": "header",
+      "content": "t:labels.autoplay"
+    },
+    {
+      "type": "checkbox",
+      "id": "autoplay",
+      "label": "t:labels.slideshow_autoplay",
+      "info": "t:labels.slideshow_autoplay_info",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "interval",
+      "label": "t:labels.slideshow_interval",
+      "min": 3,
+      "max": 10,
+      "step": 0.5,
+      "unit": "s",
+      "default": 6,
+      "visible_if": "{{ section.settings.autoplay }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.slideshow_group_scroll"
+    },
+    {
+      "type": "range",
+      "id": "scroll_length",
+      "label": "t:labels.slideshow_scroll_length",
+      "info": "t:labels.slideshow_scroll_length_info",
+      "min": 50,
+      "max": 150,
+      "step": 10,
+      "unit": "%",
+      "default": 100,
+      "visible_if": "{{ section.settings.slide_change == 'scroll' }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.slideshow_group_animation"
+    },
+    {
+      "type": "select",
+      "id": "animation",
+      "label": "t:labels.slideshow_animation",
+      "info": "t:labels.slideshow_animation_info",
+      "options": [
+        {
+          "value": "rise",
+          "label": "t:options.slideshow_animation.rise"
+        },
+        {
+          "value": "fade",
+          "label": "t:options.slideshow_animation.fade"
+        },
+        {
+          "value": "none",
+          "label": "t:options.slideshow_animation.none"
+        }
+      ],
+      "default": "rise"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.spacing"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "min": 0,
+      "max": 200,
+      "step": 4,
+      "unit": "px",
+      "default": 0
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 200,
+      "step": 4,
+      "unit": "px",
+      "default": 0
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "color",
+      "id": "highlight_color",
+      "label": "t:labels.highlight_color",
+      "info": "t:labels.slideshow_highlight_color_info"
+    },
+    {
+      "type": "color",
+      "id": "outline_color",
+      "label": "t:labels.slideshow_outline_color",
+      "info": "t:labels.slideshow_outline_color_info"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.slideshow",
+      "blocks": [
+        {
+          "type": "_slide",
+          "settings": {
+            "eyebrow": "Discover your scent",
+            "word": "Fragrance",
+            "subheading": "Scented Emotions",
+            "text": "<p>More than a scent, it's a feeling. Crafted for the moments you'll always want to remember.</p>",
+            "button_label": "Shop fragrance",
+            "link_label": "New arrivals",
+            "handwriting": "Leave Lasting Memories"
+          }
+        },
+        {
+          "type": "_slide",
+          "settings": {
+            "eyebrow": "Express yourself",
+            "word": "Makeup",
+            "subheading": "Artistry Unleashed",
+            "text": "<p>Express your personality with luxurious, long-lasting makeup that enhances your natural beauty and confidence.</p>",
+            "button_label": "Shop the kit",
+            "link_label": "New arrivals",
+            "handwriting": "Bold Beautiful You"
+          }
+        },
+        {
+          "type": "_slide",
+          "settings": {
+            "eyebrow": "Nourish deeply",
+            "word": "Skincare",
+            "subheading": "The Glow Presets",
+            "text": "<p>Clean, bioactive formulas that work at the cellular level. This isn't a routine—it's your skin's new baseline.</p>",
+            "button_label": "Shop skincare",
+            "link_label": "New arrivals",
+            "handwriting": "Healthy Glowing Skin"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

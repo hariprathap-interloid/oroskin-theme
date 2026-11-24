@@ -296,7 +296,8 @@
     "email_label": "Email",
     "placeholder": "Enter your email",
     "subscribe": "Subscribe",
-    "success": "Thanks for subscribing. Look out for our next email."
+    "success": "Thanks for subscribing. Look out for our next email.",
+    "heading_hidden": "Email signup"
   },
   "social": {
     "facebook": "Facebook",
@@ -309,8 +310,35 @@
     "linkedin": "LinkedIn"
   },
   "sections": {
+    "slideshow": {
+      "label": "Slideshow",
+      "carousel_role": "carousel",
+      "slide_role": "slide",
+      "slide_label": "{{ index }} of {{ count }}",
+      "previous": "Previous slide",
+      "next": "Next slide",
+      "pause": "Pause slides",
+      "dots_label": "Slides",
+      "dot_label": "Show slide {{ index }} of {{ count }}",
+      "scroll_hint": "Scroll to explore",
+      "sale_price": "Sale price",
+      "regular_price": "Regular price",
+      "card_placeholder": "Product name",
+      "card_placeholder_type": "Product type",
+      "slide_empty": "This slide is empty. Add a model photo, a big word or text. On the live store, an empty slide does not show.",
+      "editor_empty": "Add Slide blocks. On the live store, a slideshow with no slides does not show."
+    },
     "custom_liquid": {
       "editor_empty": "This section is empty. Add code in \"Liquid code\". On the live store, a section with no code does not show."
+    },
+    "video_banner": {
+      "pause_video": "Pause the background video",
+      "pause_products": "Pause the product slideshow",
+      "scroll_hint": "Scroll to explore",
+      "heading_hidden": "Featured products",
+      "card_placeholder": "Product name",
+      "card_empty": "Choose products in the section settings.",
+      "video_empty": "Choose a video or a poster image in the section settings."
     },
     "hero": {
       "product_placeholder": "Product image: choose one in the block settings",

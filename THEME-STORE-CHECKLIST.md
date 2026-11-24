@@ -57,7 +57,7 @@ Why first: every later section reads these settings, CSS variables and base styl
 - [ ] 🟡 Account link in the **desktop and mobile** header. *§4* *Desktop done: our own `<account-menu>` (2026-11-05, decision 6) replaces `<shopify-account>`; signed out = LOGIN link to Shopify's sign-in. Mobile comes with the mobile header (decision 7).*
 - [x] ❌ **Country/currency selector** and **language selector**. *§4* *Done M2.7 (`localization-form` snippet, footer).*
 - [x] ❌ Menu defaults: `main-menu` for the header, `footer` for the footer. *§14*
-- [x] ❌ **Newsletter signup form** in the footer. *§4* *Done M2.9 (`newsletter-form` snippet).*
+- [x] ❌ **Newsletter signup form** in the footer. *§4* *Done M2.9 (`newsletter-form` snippet). Also an "Email signup" section for any page (`sections/newsletter.liquid`, 2026-11-24; same snippet).*
 - [x] ❌ Social media icons. *§13* *Done M2.10 (`social-icons` snippet, 7 networks incl. WhatsApp).*
 - [ ] 🟡 **Follow on Shop** button (`login_button` filter, brand colours unchanged). *§4* *Built M2.10 (shows when `shop.features.follow_on_shop?`); not available on the dev store, so verify on a store with Shop Pay before submission.*
 - [x] ✅ Payment icons via `shop.enabled_payment_types`. *§7* *Labelled list (M2.10).*

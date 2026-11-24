@@ -1,0 +1,567 @@
+{%- comment -%}
+  Email signup (no Figma design; the "Split card" look chosen 2026-11-24): a rounded card with an optional
+  image on one side, and on the other side an eyebrow, a heading, a text, the email form and a short note.
+  Any page can use it (Theme Store themes are expected to offer an email sign-up section).
+
+  - The form is the footer's snippets/newsletter-form.liquid (Shopify's 'customer' form: the email goes to
+    Admin > Customers with the tag "newsletter"). Its ids start with section.id, so this section and the
+    footer can be on one page.
+  - No image = one column, the text centred in the card. No heading = a visually hidden h2, so the form
+    always has a heading for screen readers.
+  - Layout by the card's room (container query on .newsletter__inner, not the screen): from 42rem the
+    image sits beside the text (40%, 45% from 1200px) and fills the card height; narrower = the image on
+    top in the "Image shape" ratio (phones). The form puts the field and the button on one row when the
+    text column is 24rem or wider, else one under the other.
+  - Highlight color: --color-accent is written only when it is set (empty = the scheme's accent).
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-1'
+
+  assign animation = section.settings.animation
+  if section.index == 1
+    assign animation = 'none'
+  endif
+
+  assign has_image = false
+  if section.settings.image != blank
+    assign has_image = true
+  endif
+
+  assign align = section.settings.text_alignment | default: 'start'
+  unless has_image
+    assign align = 'center'
+  endunless
+
+  # Card width in px, for the image sizes (Narrow = 75rem, Wide = the theme's page width, else the screen)
+  assign card_width = section.settings.card_width | default: 'wide'
+  assign card_px = 0
+  case card_width
+    when 'narrow'
+      assign card_px = 1200
+    when 'wide'
+      assign card_px = settings.max_page_width | remove: 'rem' | times: 16
+  endcase
+
+  # From 1200px the image takes 45% of the card, 750-1199px 40%, phones the full card width
+  if card_px > 0
+    assign desktop_px = card_px | times: 0.45 | ceil
+    assign desktop_size = 'min(45vw, ' | append: desktop_px | append: 'px)'
+  else
+    assign desktop_size = '45vw'
+  endif
+  assign image_sizes = '(min-width: 1200px) ' | append: desktop_size | append: ', (min-width: 750px) 40vw, calc(100vw - 2rem)'
+
+  case section.settings.phone_shape
+    when 'portrait'
+      assign phone_ratio = '4 / 5'
+    when 'square'
+      assign phone_ratio = '1 / 1'
+    when 'wide'
+      assign phone_ratio = '16 / 9'
+    else
+      assign phone_ratio = '4 / 3'
+  endcase
+
+  assign card_class = 'newsletter__card'
+  if has_image
+    assign card_class = card_class | append: ' newsletter__card--image-' | append: section.settings.image_position
+    unless section.settings.phone_image
+      assign card_class = card_class | append: ' newsletter__card--no-phone-image'
+    endunless
+  else
+    assign card_class = card_class | append: ' newsletter__card--no-image'
+  endif
+-%}
+
+<div
+  class="newsletter full-width section-width--{{ card_width }} color-{{ scheme_id }}"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;{% if section.settings.highlight_color != blank %} --color-accent: {{ section.settings.highlight_color }};{% endif %}"
+>
+  <animate-on-scroll class="newsletter__inner">
+    <div
+      class="{{ card_class }}"
+      style="--newsletter-phone-ratio: {{ phone_ratio }};"
+      {% if animation != 'none' %}
+        data-animate="{{ animation }}"
+      {% endif %}
+    >
+      {%- if has_image -%}
+        <div class="newsletter__media">
+          {%- comment -%}
+            No `loading` here: the image snippet uses section-loading (eager in the first 3 sections) and
+            gives fetchpriority high only in section 1.
+          {%- endcomment -%}
+          {% render 'image',
+            image: section.settings.image,
+            class: 'newsletter__image image--cover',
+            sizes: image_sizes,
+            widths: '375, 550, 750, 900, 1100, 1500'
+          %}
+        </div>
+      {%- endif -%}
+
+      <div class="newsletter__content newsletter__content--{{ align }}">
+        {%- if section.settings.eyebrow != blank -%}
+          <p class="eyebrow newsletter__eyebrow{% if align == 'center' %} eyebrow--center{% endif %}">
+            <span class="newsletter__eyebrow-label">{{- section.settings.eyebrow | escape -}}</span>
+          </p>
+        {%- endif -%}
+
+        {%- if section.settings.heading != blank -%}
+          <h2 class="newsletter__heading">{{ section.settings.heading }}</h2>
+        {%- else -%}
+          <h2 class="visually-hidden">{{ 'newsletter.heading_hidden' | t }}</h2>
+        {%- endif -%}
+
+        {%- if section.settings.text != blank -%}
+          <div class="newsletter__text rte">{{ section.settings.text }}</div>
+        {%- endif -%}
+
+        <div class="newsletter__form">
+          {% render 'newsletter-form',
+            id_prefix: section.id,
+            button_label: section.settings.button_label,
+            class: 'newsletter-form--card'
+          %}
+        </div>
+
+        {%- if section.settings.note != blank -%}
+          <p class="newsletter__note">{{ section.settings.note | escape }}</p>
+        {%- endif -%}
+      </div>
+    </div>
+  </animate-on-scroll>
+</div>
+
+{% stylesheet %}
+  .newsletter {
+    padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  /* The card's column. It is the size container: the card's layout follows the room it has. */
+  .newsletter__inner {
+    container: newsletter / inline-size;
+    inline-size: min(
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
+      calc(100% - var(--page-margin) * 2)
+    );
+    margin-inline: auto;
+  }
+
+  /*
+    The card: white on light schemes (--color-surface-raised), rounded, the soft collection shadow.
+    overflow: clip keeps the image inside the round corners.
+  */
+  .newsletter__card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    overflow: clip;
+    border-radius: var(--radius-md);
+    background-color: var(--color-surface-raised);
+    box-shadow: var(--shadow-collection);
+  }
+
+  /* Narrow card (phones): the image on top in the "Image shape" ratio */
+  .newsletter__media {
+    position: relative;
+    aspect-ratio: var(--newsletter-phone-ratio, 4 / 3);
+    background-color: var(--color-tint-subtle);
+  }
+
+  .newsletter__media .newsletter__image {
+    position: absolute;
+    inset: 0;
+  }
+
+  .newsletter__content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-inline-size: 0;
+    padding: var(--space-lg);
+    container: newsletter-content / inline-size;
+  }
+
+  .newsletter__content--center {
+    align-items: center;
+    text-align: center;
+  }
+
+  .newsletter__card--no-image .newsletter__content {
+    inline-size: min(100%, 44rem);
+    margin-inline: auto;
+  }
+
+  /* Full width of the column, so the label never wraps to make room for the rules */
+  .newsletter__eyebrow {
+    align-self: stretch;
+    margin: 0 0 var(--space-md);
+  }
+
+  /* The eyebrow rules take only the free space (66px at most), so a short label stays on one line */
+  .newsletter .newsletter__eyebrow::before,
+  .newsletter .newsletter__eyebrow::after {
+    flex: 0 1 66px;
+    width: auto;
+    min-width: 1.5rem;
+  }
+
+  /* The label never shrinks (a shrunk label wraps); it wraps only when it is wider than 75% of the column */
+  .newsletter__eyebrow-label {
+    flex: none;
+    max-inline-size: 75%;
+  }
+
+  .newsletter__heading {
+    margin: 0;
+    font-size: var(--font-size-h2);
+    line-height: var(--line-height-heading);
+    text-wrap: balance;
+  }
+
+  .newsletter__heading em {
+    color: var(--color-accent);
+  }
+
+  .newsletter__text {
+    margin-block-start: var(--space-md);
+    color: color-mix(in srgb, var(--color-text) 80%, var(--color-surface-raised));
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-body);
+  }
+
+  .newsletter__text > :first-child {
+    margin-block-start: 0;
+  }
+
+  .newsletter__text > :last-child {
+    margin-block-end: 0;
+  }
+
+  .newsletter__form {
+    inline-size: 100%;
+    margin-block-start: var(--space-xl);
+  }
+
+  .newsletter__note {
+    margin: var(--space-md) 0 0;
+    color: color-mix(in srgb, var(--color-text) 65%, var(--color-surface-raised));
+    font-size: var(--font-size-small);
+  }
+
+  /*
+    The footer's form, restyled for the card. Three classes, so these win over the snippet's own two-class
+    rules whatever order Shopify puts the stylesheets in. No gap anywhere: Shopify injects an empty
+    h-captcha div into the form, and a gap would be added next to it (see the snippet).
+    Narrow text column: the field and the button full width, one under the other.
+  */
+  .newsletter .newsletter-form.newsletter-form--card {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: stretch;
+    max-inline-size: none;
+    inline-size: 100%;
+  }
+
+  .newsletter .newsletter-form--card .newsletter-form__input {
+    flex: 1 1 100%;
+    min-inline-size: 0;
+    border: 1px solid color-mix(in srgb, var(--color-text) 55%, var(--color-surface-raised));
+    background-color: var(--color-surface-raised);
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .newsletter .newsletter-form--card .newsletter-form__input:hover {
+    border-color: var(--color-text);
+  }
+
+  .newsletter .newsletter-form--card .newsletter-form__input:focus-visible {
+    border-color: var(--color-accent);
+  }
+
+  .newsletter .newsletter-form--card .newsletter-form__input[aria-invalid='true'] {
+    border-color: var(--color-error);
+  }
+
+  .newsletter .newsletter-form--card .newsletter-form__button {
+    flex: 1 1 100%;
+    margin-block-start: var(--space-sm);
+  }
+
+  .newsletter .newsletter-form--card > .newsletter-form__message,
+  .newsletter .newsletter-form--card > auto-dismiss {
+    flex: 1 1 100%;
+  }
+
+  /* Text column 24rem or wider: the field and the button on one row */
+  @container newsletter-content (width >= 24rem) {
+    .newsletter .newsletter-form--card .newsletter-form__input {
+      flex: 1 1 12rem;
+    }
+
+    .newsletter .newsletter-form--card .newsletter-form__button {
+      flex: 0 0 auto;
+      margin-block-start: 0;
+      margin-inline-start: var(--space-sm);
+    }
+  }
+
+  /*
+    Card 42rem or wider: the image beside the text (40% of the card) and as tall as the card.
+    The text column then keeps at least ~22rem.
+  */
+  @container newsletter (width >= 42rem) {
+    .newsletter__card:not(.newsletter__card--no-image) {
+      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    }
+
+    .newsletter__card.newsletter__card--image-right {
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    }
+
+    .newsletter__card--image-right .newsletter__media {
+      order: 2;
+    }
+
+    .newsletter__media {
+      aspect-ratio: auto;
+      min-block-size: 22rem;
+    }
+
+    .newsletter__content {
+      justify-content: center;
+      padding: var(--space-2xl) var(--space-xl);
+    }
+
+    .newsletter__card--no-image .newsletter__content {
+      padding-block: var(--space-3xl);
+    }
+  }
+
+  @media (min-width: 1200px) {
+    @container newsletter (width >= 42rem) {
+      .newsletter__card:not(.newsletter__card--no-image) {
+        grid-template-columns: minmax(0, 9fr) minmax(0, 11fr);
+      }
+
+      .newsletter__card.newsletter__card--image-right {
+        grid-template-columns: minmax(0, 11fr) minmax(0, 9fr);
+      }
+
+      .newsletter__media {
+        min-block-size: 28rem;
+      }
+
+      .newsletter__content {
+        padding: var(--space-3xl);
+      }
+    }
+  }
+
+  /* Phones: half the section padding, smaller corners */
+  @media (max-width: 749px) {
+    .newsletter {
+      padding-block: calc(var(--section-padding-top) / 2) calc(var(--section-padding-bottom) / 2);
+    }
+
+    .newsletter__card {
+      border-radius: var(--radius-sm);
+    }
+
+    .newsletter__card--no-phone-image .newsletter__media {
+      display: none;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.email_signup",
+  "tag": "section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "Join the circle"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.newsletter_heading_info",
+      "default": "Get <em>10% off</em> your first order"
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "t:labels.text",
+      "default": "<p>Be the first to know about new rituals, limited editions and private offers. One letter a month, written with care.</p>"
+    },
+    {
+      "type": "paragraph",
+      "content": "t:labels.newsletter_form_info"
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "t:labels.newsletter_button_label",
+      "info": "t:labels.newsletter_button_info"
+    },
+    {
+      "type": "text",
+      "id": "note",
+      "label": "t:labels.newsletter_note",
+      "info": "t:labels.newsletter_note_info",
+      "default": "No spam. Unsubscribe at any time."
+    },
+    {
+      "type": "header",
+      "content": "t:labels.image"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.image",
+      "info": "t:labels.newsletter_image_info"
+    },
+    {
+      "type": "select",
+      "id": "image_position",
+      "label": "t:labels.trending_products_image_position",
+      "info": "t:labels.newsletter_image_position_info",
+      "options": [
+        { "value": "left", "label": "t:options.media_position.left" },
+        { "value": "right", "label": "t:options.media_position.right" }
+      ],
+      "default": "left",
+      "visible_if": "{{ section.settings.image != blank }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.layout"
+    },
+    {
+      "type": "select",
+      "id": "card_width",
+      "label": "t:labels.newsletter_card_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        { "value": "narrow", "label": "t:options.section_width.narrow" },
+        { "value": "wide", "label": "t:options.section_width.wide" },
+        { "value": "widest", "label": "t:options.section_width.widest" },
+        { "value": "full", "label": "t:options.section_width.full" }
+      ],
+      "default": "wide"
+    },
+    {
+      "type": "select",
+      "id": "text_alignment",
+      "label": "t:labels.alignment",
+      "info": "t:labels.newsletter_alignment_info",
+      "options": [
+        { "value": "start", "label": "t:options.page_align.start" },
+        { "value": "center", "label": "t:options.page_align.center" }
+      ],
+      "default": "start",
+      "visible_if": "{{ section.settings.image != blank }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.phones"
+    },
+    {
+      "type": "checkbox",
+      "id": "phone_image",
+      "label": "t:labels.newsletter_phone_image",
+      "default": true,
+      "visible_if": "{{ section.settings.image != blank }}"
+    },
+    {
+      "type": "select",
+      "id": "phone_shape",
+      "label": "t:labels.newsletter_phone_shape",
+      "info": "t:labels.newsletter_phone_shape_info",
+      "options": [
+        { "value": "portrait", "label": "t:options.image_shape.portrait" },
+        { "value": "square", "label": "t:options.image_shape.square" },
+        { "value": "landscape", "label": "t:options.image_shape.landscape" },
+        { "value": "wide", "label": "t:options.image_shape.wide" }
+      ],
+      "default": "landscape",
+      "visible_if": "{{ section.settings.image != blank }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.animation_header"
+    },
+    {
+      "type": "select",
+      "id": "animation",
+      "label": "t:labels.animation",
+      "info": "t:labels.newsletter_animation_info",
+      "options": [
+        { "value": "none", "label": "t:options.animation.none" },
+        { "value": "fade-up", "label": "t:options.animation.fade_up" },
+        { "value": "zoom-in", "label": "t:options.animation.zoom_in" },
+        { "value": "slide-bottom", "label": "t:options.animation.slide_bottom" }
+      ],
+      "default": "fade-up"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.spacing"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "info": "t:labels.newsletter_padding_info",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 64
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "info": "t:labels.newsletter_color_scheme_info",
+      "default": "scheme-1"
+    },
+    {
+      "type": "color",
+      "id": "highlight_color",
+      "label": "t:labels.highlight_color",
+      "info": "t:labels.newsletter_highlight_info"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.email_signup"
+    }
+  ]
+}
+{% endschema %}

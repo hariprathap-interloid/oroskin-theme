@@ -297,8 +297,9 @@
     A Hero as the first section goes under the header the same way when the header is not transparent
     (logo and menu always show): the hero image fills the top of the page behind the glass pill, instead
     of a strip of the hero's background colour. hero.liquid moves the hero's text down by --header-space.
+    The Video banner does the same (video-banner.liquid).
   */
-  body:has(#MainContent > .shopify-section:first-child .hero) .shopify-section-group-header-group:has(.header:not(.header--transparent):not(.header--solid)) {
+  body:has(#MainContent > .shopify-section:first-child :is(.hero, .video-banner)) .shopify-section-group-header-group:has(.header:not(.header--transparent):not(.header--solid)) {
     margin-block-end: calc(var(--header-space) * -1);
   }
 
@@ -336,11 +337,11 @@
     --header-space: 6.0625rem; /* 20px gap + 77px pill */
   }
 
-  body:has(sticky-header):not(:has(.header--transparent, .header--solid)) #MainContent > .shopify-section:first-child:not(:has(.collection-banner--under-header, .hero)) {
+  body:has(sticky-header):not(:has(.header--transparent, .header--solid)) #MainContent > .shopify-section:first-child:not(:has(.collection-banner--under-header, .hero, .video-banner)) {
     margin-block-start: calc(var(--header-space) * -1);
   }
 
-  body:has(sticky-header):not(:has(.header--transparent, .header--solid)) #MainContent > .shopify-section:first-child:not(:has(.collection-banner--under-header, .hero)) > * {
+  body:has(sticky-header):not(:has(.header--transparent, .header--solid)) #MainContent > .shopify-section:first-child:not(:has(.collection-banner--under-header, .hero, .video-banner)) > * {
     border-block-start: var(--header-space) solid transparent;
   }
 
@@ -349,7 +350,7 @@
     header (above), so it is exactly one screen tall. The older rule (critical.css / screen-scale,
     100svh minus the header) subtracted the header a second time, and the footer showed at the bottom.
   */
-  body:has(sticky-header):not(:has(.header--transparent, .header--solid)) #MainContent > .shopify-section:first-child:not(:has(.collection-banner--under-header, .hero)) .section--fill-screen {
+  body:has(sticky-header):not(:has(.header--transparent, .header--solid)) #MainContent > .shopify-section:first-child:not(:has(.collection-banner--under-header, .hero, .video-banner)) .section--fill-screen {
     min-block-size: 100svh;
   }
 

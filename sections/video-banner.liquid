@@ -1,0 +1,1348 @@
+{%- comment -%}
+  Video banner (design/inbox/video/image.png, a 1920 x 1031 screen): a background video that fills the
+  section, the text on the left (eyebrow, heading with an accent word, text, button), "Scroll to explore"
+  at the bottom left, a glass product card at the top right (it shows up to 5 products, one at a time)
+  and a tagline at the bottom right.
+
+  - Video: a Shopify-hosted video. The script sets its file and starts it (muted, repeats) only when the
+    visitor allows motion, the section is on screen and the tab shows; off screen it pauses. Until then
+    the poster image shows (Poster image, else the video's first frame). Without JS only the poster
+    shows. A pause button stops it (WCAG 2.2.2); reduced motion = no autoplay, the button starts it.
+    The video and poster are decoration (aria-hidden): the text carries the meaning.
+    YouTube / Vimeo links are not used: a background iframe with a poster and a pause button needs a
+    player script per host.
+  - First section: the poster is the page's main image (LCP): eager, high priority. The section slides
+    under the header pill like the hero (header.liquid lists .video-banner next to .hero) and moves its
+    content down by --header-space. Nothing in it animates in.
+  - Product card: one real link per product (the title, its ::after covers the card). The products
+    that do not show are inert. They change every N seconds while the section is on screen; pointer
+    or keyboard focus on the card, a hidden tab and the pause button stop it; reduced motion = no
+    change (as the hero's product rotation). No JS = the first product. 1 product = no counter.
+  - Phones (below 750px): the video fills the screen height, the text sits at the bottom on a dark
+    fade, the card goes under the video; no tagline and no scroll hint. Tablets: the desktop layout,
+    smaller; "Product card position" can put the card under the text.
+  - --px = one Figma pixel on this screen width (never more than 1px); sizes have rem minimums.
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_id = section.settings.color_scheme.id | default: 'scheme-1'
+
+  assign is_first = false
+  if section.index == 1
+    assign is_first = true
+  endif
+
+  assign animation = section.settings.animation
+  if is_first
+    assign animation = 'none'
+  endif
+
+  # h1 when this is the first section of the page (it is the page's main heading), else h2
+  assign heading_tag = 'h2'
+  assign card_title_tag = 'h3'
+  if is_first
+    assign heading_tag = 'h1'
+    assign card_title_tag = 'h2'
+  endif
+
+  # Video: the mp4 files Shopify made from the upload. The script picks one by the screen width
+  # (a short side of 1080px or less, 720px or less on phones).
+  assign video = section.settings.video
+  assign video_hd = ''
+  assign video_sd = ''
+  if video != blank
+    assign hd_side = 0
+    assign sd_side = 0
+    for source in video.sources
+      if source.mime_type == 'video/mp4'
+        assign short_side = source.width | at_most: source.height
+        if short_side <= 1080 and short_side > hd_side
+          assign hd_side = short_side
+          assign video_hd = source.url
+        endif
+        if short_side <= 720 and short_side > sd_side
+          assign sd_side = short_side
+          assign video_sd = source.url
+        endif
+      endif
+    endfor
+    if video_hd == blank
+      for source in video.sources
+        if source.mime_type == 'video/mp4'
+          assign video_hd = source.url
+          break
+        endif
+      endfor
+    endif
+    if video_sd == blank
+      assign video_sd = video_hd
+    endif
+  endif
+
+  assign has_video = false
+  if video_hd != blank
+    assign has_video = true
+  endif
+
+  assign poster = section.settings.poster
+  if poster == blank and video != blank
+    assign poster = video.preview_image
+  endif
+
+  capture poster_loading
+    render 'section-loading'
+  endcapture
+  assign poster_loading = poster_loading | strip
+  assign poster_priority = 'auto'
+  if is_first
+    assign poster_priority = 'high'
+  endif
+
+  # Products: at most 5 (the setting's limit), sold-out ones too (the card only links to them)
+  assign products = section.settings.products
+  assign product_count = products.size | default: 0
+  assign show_card = false
+  if product_count > 0 or request.design_mode
+    assign show_card = true
+  endif
+  assign rotates = false
+  if product_count > 1
+    assign rotates = true
+  endif
+  assign total_text = product_count | prepend: '0' | slice: -2, 2
+
+  assign show_button = false
+  if section.settings.button_label != blank and section.settings.button_link != blank
+    assign show_button = true
+  endif
+
+  assign has_content = false
+  if section.settings.eyebrow != blank or section.settings.heading != blank or section.settings.text != blank or show_button
+    assign has_content = true
+  endif
+
+  # Nothing to show on the store (no text, no products, no video, no poster) = no section
+  assign show_section = true
+  unless has_content or product_count > 0 or has_video or poster != blank or request.design_mode
+    assign show_section = false
+  endunless
+
+  assign interval = section.settings.seconds | default: 6 | times: 1000
+-%}
+
+{%- if show_section -%}
+<video-banner
+  class="video-banner full-width section-width--{{ section.settings.section_width | default: 'full' }} color-{{ scheme_id }}{% if section.settings.fill_screen %} video-banner--fill{% endif %}{% if section.settings.tablet_card == 'below' %} video-banner--tablet-card-below{% endif %}{% unless section.settings.phone_card %} video-banner--no-phone-card{% endunless %}{% unless show_card %} video-banner--no-card{% endunless %}"
+  style="{% if section.settings.highlight_color != blank %}--color-accent: {{ section.settings.highlight_color }}; {% endif %}--video-banner-text: {{ section.settings.text_color | default: '#ffffff' }}; --video-banner-overlay: {{ section.settings.overlay_opacity }}%; --video-banner-pad-top: {{ section.settings.padding_top }}; --video-banner-pad-bottom: {{ section.settings.padding_bottom }};"
+  data-interval="{{ interval }}"
+  {% if section.settings.autoplay_video %}
+    data-autoplay
+  {% endif %}
+>
+  {%- comment -%} Background: a dark colour, the poster, the video on top of it, the overlay {%- endcomment -%}
+  <div class="video-banner__media" aria-hidden="true">
+    {%- if poster != blank -%}
+      {{
+        poster
+        | image_url: width: 3840
+        | image_tag:
+          widths: '750, 1100, 1500, 1920, 2560, 3840',
+          sizes: '100vw',
+          loading: poster_loading,
+          fetchpriority: poster_priority,
+          alt: '',
+          class: 'video-banner__poster'
+      }}
+    {%- elsif request.design_mode and has_video == false -%}
+      {{ 'lifestyle-2' | placeholder_svg_tag: 'video-banner__placeholder' }}
+    {%- endif -%}
+    {%- if has_video -%}
+      <video
+        class="video-banner__video"
+        muted
+        loop
+        playsinline
+        disablepictureinpicture
+        preload="none"
+        tabindex="-1"
+        data-video
+        data-src="{{ video_hd }}"
+        data-src-phone="{{ video_sd }}"
+      ></video>
+    {%- endif -%}
+  </div>
+
+  <animate-on-scroll class="video-banner__inner">
+    <div
+      class="video-banner__content"
+      {% if animation != 'none' %}
+        data-animate="{{ animation }}"
+      {% endif %}
+    >
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="video-banner__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+      {%- endif -%}
+
+      {%- if section.settings.heading != blank -%}
+        <{{ heading_tag }} class="video-banner__heading">{{ section.settings.heading }}</{{ heading_tag }}>
+      {%- else -%}
+        {%- comment -%} The card titles need a parent heading {%- endcomment -%}
+        {%- liquid
+          assign hidden_heading = section.settings.eyebrow
+          if hidden_heading == blank
+            assign hidden_heading = 'sections.video_banner.heading_hidden' | t
+          endif
+        -%}
+        <{{ heading_tag }} class="visually-hidden">{{ hidden_heading | escape }}</{{ heading_tag }}>
+      {%- endif -%}
+
+      {%- if section.settings.text != blank -%}
+        <p class="video-banner__text">{{ section.settings.text | escape | newline_to_br }}</p>
+      {%- endif -%}
+
+      {%- if show_button -%}
+        <a class="button video-banner__button" href="{{ section.settings.button_link }}">
+          {{- section.settings.button_label | escape -}}
+          {{- 'icon-send.svg' | inline_asset_content -}}
+        </a>
+      {%- endif -%}
+
+      {%- if request.design_mode and has_video == false and poster == blank -%}
+        <p class="video-banner__note">{{ 'sections.video_banner.video_empty' | t }}</p>
+      {%- endif -%}
+    </div>
+
+    {%- if show_card -%}
+      <div class="video-banner__card-area">
+        <div
+          class="video-banner-card"
+          {% if animation != 'none' %}
+            data-animate="{{ animation }}" style="--animate-delay: 150ms;"
+          {% endif %}
+          data-card
+        >
+          {%- if rotates -%}
+            <div class="video-banner-card__top">
+              <p class="video-banner-card__counter" aria-hidden="true">
+                <span data-card-current>01</span> / {{ total_text }}
+              </p>
+              <button type="button" class="video-banner__pause video-banner__pause--small" aria-pressed="false" data-card-pause hidden>
+                <span class="visually-hidden">{{ 'sections.video_banner.pause_products' | t }}</span>
+                <svg class="video-banner__pause-icon video-banner__pause-icon--pause" aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="16" height="16"><rect x="3.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/><rect x="9.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/></svg>
+                <svg class="video-banner__pause-icon video-banner__pause-icon--play" aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="16" height="16"><path d="M4.5 2.8v10.4a.8.8 0 0 0 1.2.7l8.4-5.2a.8.8 0 0 0 0-1.4L5.7 2.1a.8.8 0 0 0-1.2.7z" fill="currentColor"/></svg>
+              </button>
+            </div>
+          {%- endif -%}
+
+          <ul class="video-banner-card__list" role="list">
+            {%- for product in products -%}
+              {%- liquid
+                assign short_text = product.metafields.custom.subtitle.value
+                if short_text == blank
+                  assign short_text = product.description | strip_html | truncatewords: 12
+                endif
+                assign item_loading = 'lazy'
+                if forloop.first
+                  assign item_loading = poster_loading
+                endif
+              -%}
+              <li
+                class="video-banner-card__item{% if forloop.first %} is-active{% endif %}"
+                {% unless forloop.first %}
+                  inert aria-hidden="true"
+                {% endunless %}
+                data-card-item
+              >
+                {%- if product.featured_image != blank -%}
+                  <div class="video-banner-card__media">
+                    {{
+                      product.featured_image
+                      | image_url: width: 400
+                      | image_tag:
+                        widths: '120, 200, 300, 400',
+                        sizes: '(min-width: 1920px) 96px, (min-width: 750px) max(4.5rem, 5vw), 4.5rem',
+                        loading: item_loading,
+                        alt: ''
+                    }}
+                  </div>
+                {%- endif -%}
+                <{{ card_title_tag }} class="video-banner-card__title">
+                  <a class="video-banner-card__link" href="{{ product.url }}">{{ product.title | escape }}</a>
+                </{{ card_title_tag }}>
+                {%- if product.type != blank -%}
+                  <p class="video-banner-card__type">{{ product.type | escape }}</p>
+                {%- endif -%}
+                {%- if short_text != blank -%}
+                  <p class="video-banner-card__text">{{ short_text | escape }}</p>
+                {%- endif -%}
+                <div class="video-banner-card__footer">
+                  {% render 'price', product: product %}
+                  <span class="video-banner-card__arrow" aria-hidden="true">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
+                </div>
+              </li>
+            {%- else -%}
+              {%- comment -%} Theme editor only: no product chosen yet {%- endcomment -%}
+              <li class="video-banner-card__item is-active">
+                <div class="video-banner-card__media">
+                  {{ 'product-1' | placeholder_svg_tag: 'video-banner-card__placeholder' }}
+                </div>
+                <p class="video-banner-card__title">{{ 'sections.video_banner.card_placeholder' | t }}</p>
+                <p class="video-banner-card__text">{{ 'sections.video_banner.card_empty' | t }}</p>
+              </li>
+            {%- endfor -%}
+          </ul>
+        </div>
+      </div>
+    {%- endif -%}
+
+    {%- if section.settings.show_scroll_hint -%}
+      <div class="video-banner__scroll" aria-hidden="true">
+        <span class="video-banner__mouse"></span>
+        <span class="video-banner__scroll-text">{{ 'sections.video_banner.scroll_hint' | t }}</span>
+      </div>
+    {%- endif -%}
+
+    <div class="video-banner__corner">
+      {%- if section.settings.show_tagline and section.settings.tagline != blank -%}
+        <p class="video-banner__tagline">
+          <span class="video-banner__tagline-icon" aria-hidden="true">{{ 'icon-lotus.svg' | inline_asset_content }}</span>
+          <span class="video-banner__tagline-text">{{ section.settings.tagline | escape }}</span>
+        </p>
+      {%- endif -%}
+      {%- if has_video -%}
+        {%- comment -%}
+          Pause / play for the video (WCAG 2.2.2). The label stays the same; aria-pressed = paused.
+          Hidden until the script runs (without JS the video never plays).
+        {%- endcomment -%}
+        <button type="button" class="video-banner__pause" aria-pressed="false" data-video-pause hidden>
+          <span class="visually-hidden">{{ 'sections.video_banner.pause_video' | t }}</span>
+          <svg class="video-banner__pause-icon video-banner__pause-icon--pause" aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="16" height="16"><rect x="3.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/><rect x="9.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/></svg>
+          <svg class="video-banner__pause-icon video-banner__pause-icon--play" aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="16" height="16"><path d="M4.5 2.8v10.4a.8.8 0 0 0 1.2.7l8.4-5.2a.8.8 0 0 0 0-1.4L5.7 2.1a.8.8 0 0 0-1.2.7z" fill="currentColor"/></svg>
+        </button>
+      {%- endif -%}
+    </div>
+  </animate-on-scroll>
+</video-banner>
+{%- endif -%}
+
+{% stylesheet %}
+  /*
+    Figma frame 1920 x 1031. --px = one Figma pixel on this screen width, at most 1px; sizes are
+    Figma px x --px with rem minimums, so tablets keep readable sizes.
+    The section is a one-cell grid: the media and the content layer share the cell (desktop).
+    Phones: two rows, the video with the text on it, then the card.
+  */
+  .video-banner {
+    --px: min(calc(100vw / 1920), 0.0625rem);
+    --video-banner-height: auto;
+    --video-banner-offset: 0px;
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(var(--video-banner-height), auto);
+    overflow: clip;
+    background-color: var(--color-background);
+  }
+
+  .video-banner--fill {
+    --video-banner-height: 100svh;
+  }
+
+  .video-banner:not(.video-banner--fill) {
+    --video-banner-height: 37.5rem;
+  }
+
+  /*
+    First section: it slides up under the header pill (header.liquid), so the content moves down by the
+    header's height. Also with a transparent header: its buttons still show at the top right, over the
+    card. A solid header keeps the section below it: no offset, one screen minus the header.
+  */
+  body:has(sticky-header):not(:has(.header--solid)) #MainContent > .shopify-section:first-child .video-banner {
+    --video-banner-offset: var(--header-space);
+  }
+
+  body:has(.header--solid) #MainContent > .shopify-section:first-child .video-banner--fill {
+    --video-banner-height: calc(100svh - var(--header-space));
+  }
+
+  /* A top announcement bar sits above the section and pushes it down: take its height off (as the hero) */
+  body:has(.announcement-bar--top:not([hidden]):not(.is-closing)) #MainContent > .shopify-section:first-child .video-banner--fill {
+    --video-banner-height: calc(100svh - var(--announcement-size, 2.25rem));
+  }
+
+  body:has(.header--solid):has(.announcement-bar--top:not([hidden]):not(.is-closing)) #MainContent > .shopify-section:first-child .video-banner--fill {
+    --video-banner-height: calc(100svh - var(--header-space) - var(--announcement-size, 2.25rem));
+  }
+
+  /* ---------- Background ---------- */
+
+  /* Dark under the poster: with no video and no poster the white text still reads */
+  .video-banner__media {
+    position: relative;
+    z-index: -1;
+    grid-area: 1 / 1;
+    overflow: hidden;
+    background-color: #1f1f1f;
+  }
+
+  .video-banner__poster,
+  .video-banner__video,
+  .video-banner__placeholder {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .video-banner__placeholder {
+    background-color: var(--color-tint-subtle, #f2ede6);
+    fill: var(--color-tint-border, #d8cfc4);
+  }
+
+  /* The video shows only once it plays (until then, and without JS, the sharp poster shows) */
+  .video-banner__video {
+    opacity: 0;
+  }
+
+  .video-banner.is-video-ready .video-banner__video {
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .video-banner__video {
+      transition: opacity var(--duration-slow, 700ms) var(--ease-out);
+    }
+  }
+
+  /* Overlay: the whole video darker by "Overlay opacity", plus a fade behind the text (left) */
+  .video-banner__media::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(90deg, #00000073 0%, #00000000 55%),
+      color-mix(in srgb, #000000 var(--video-banner-overlay), transparent);
+    pointer-events: none;
+  }
+
+  /* ---------- Content layer ---------- */
+
+  .video-banner__inner {
+    display: grid;
+    grid-area: 1 / 1;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas:
+      'content card'
+      'content .'
+      'scroll corner';
+    column-gap: var(--space-xl);
+    row-gap: var(--space-lg);
+    inline-size: 100%;
+    max-inline-size: var(--section-width, 100vw);
+    margin-inline: auto;
+    padding-block:
+      calc(max(var(--space-lg), calc(var(--video-banner-pad-top) * var(--px))) + var(--video-banner-offset))
+      max(var(--space-md), calc(var(--video-banner-pad-bottom) * var(--px)));
+    padding-inline: max(var(--page-margin), calc(52 * var(--px)));
+    color: var(--video-banner-text);
+  }
+
+  .video-banner__content {
+    grid-area: content;
+    align-self: center;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: max(var(--space-md), calc(28 * var(--px)));
+    max-inline-size: max(22rem, calc(560 * var(--px)));
+    padding-block: var(--space-xl);
+  }
+
+  /* Eyebrow: uppercase label, then a short line (design: after the text, in the text colour) */
+  .video-banner__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin: 0;
+    font-size: max(0.75rem, calc(15 * var(--px)));
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-label);
+    line-height: 1.3;
+    text-transform: uppercase;
+  }
+
+  .video-banner__eyebrow::after {
+    content: '';
+    flex: none;
+    inline-size: max(2.5rem, calc(60 * var(--px)));
+    block-size: 1px;
+    background-color: currentcolor;
+  }
+
+  .video-banner__heading {
+    margin: 0;
+    color: inherit;
+    font-family: var(--font-heading--family);
+    font-style: var(--font-heading--style);
+    font-weight: var(--font-heading--weight);
+    font-size: max(2.5rem, calc(76 * var(--px)));
+    line-height: 1.04;
+    text-wrap: balance;
+  }
+
+  /* The italic word(s) in the editor: the highlight colour, upright (design "You") */
+  .video-banner__heading em {
+    color: var(--color-accent);
+    font-style: normal;
+  }
+
+  .video-banner__text {
+    margin: 0;
+    max-inline-size: 20em;
+    font-size: max(1rem, calc(20 * var(--px)));
+    line-height: 1.5;
+  }
+
+  .video-banner__button.button {
+    gap: var(--space-sm);
+    min-block-size: max(3.125rem, calc(60 * var(--px)));
+    margin-block-start: max(var(--space-xs), calc(20 * var(--px)));
+    padding-inline: max(var(--space-lg), calc(33 * var(--px)));
+    font-size: max(0.875rem, calc(17 * var(--px)));
+    letter-spacing: 0.12em;
+  }
+
+  .video-banner__button svg {
+    flex: none;
+    inline-size: 1.1em;
+    block-size: auto;
+  }
+
+  .video-banner__note {
+    margin: 0;
+    padding: var(--space-xs) var(--space-sm);
+    border: 1px dashed currentcolor;
+    border-radius: var(--radius-xs);
+    font-size: var(--font-size-small);
+  }
+
+  /* Scroll hint: a mouse outline with a line under it, then the label (accent) */
+  .video-banner__scroll {
+    grid-area: scroll;
+    align-self: end;
+    display: flex;
+    align-items: flex-start;
+    gap: max(var(--space-md), calc(20 * var(--px)));
+  }
+
+  .video-banner__mouse {
+    position: relative;
+    flex: none;
+    inline-size: max(1rem, calc(20 * var(--px)));
+    block-size: max(1.75rem, calc(36 * var(--px)));
+    margin-block-end: max(2rem, calc(52 * var(--px)));
+    border: 1px solid currentcolor;
+    border-radius: var(--radius-pill);
+  }
+
+  .video-banner__mouse::after {
+    content: '';
+    position: absolute;
+    inset-block-start: calc(100% + max(0.5rem, calc(10 * var(--px))));
+    inset-inline-start: 50%;
+    inline-size: 1px;
+    block-size: max(1.75rem, calc(42 * var(--px)));
+    background-color: currentcolor;
+  }
+
+  .video-banner__scroll-text {
+    margin-block-start: max(0.375rem, calc(10 * var(--px)));
+    color: var(--color-accent);
+    font-size: max(0.6875rem, calc(13 * var(--px)));
+    font-weight: var(--font-weight-medium);
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+  }
+
+  /* Bottom right: line, lotus, italic tagline (two lines), then the video's pause button */
+  .video-banner__corner {
+    grid-area: corner;
+    align-self: end;
+    justify-self: end;
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+  }
+
+  .video-banner__tagline {
+    display: flex;
+    align-items: center;
+    gap: max(0.625rem, calc(14 * var(--px)));
+    margin: 0;
+    font-size: max(0.9375rem, calc(18 * var(--px)));
+    font-style: italic;
+    line-height: 1.4;
+  }
+
+  .video-banner__tagline::before {
+    content: '';
+    flex: none;
+    inline-size: max(3rem, calc(80 * var(--px)));
+    block-size: 1px;
+    margin-inline-end: max(0.5rem, calc(12 * var(--px)));
+    background-color: currentcolor;
+  }
+
+  .video-banner__tagline-icon {
+    display: flex;
+    flex: none;
+  }
+
+  .video-banner__tagline-icon svg {
+    inline-size: max(1.25rem, calc(26 * var(--px)));
+    block-size: auto;
+  }
+
+  .video-banner__tagline-text {
+    max-inline-size: 9em;
+  }
+
+  /* Pause buttons: round glass (as the hero's), 44px; the card's own is 32px */
+  .video-banner__pause {
+    display: grid;
+    flex: none;
+    place-items: center;
+    inline-size: 2.75rem;
+    block-size: 2.75rem;
+    margin: 0;
+    padding: 0;
+    border: 1px solid #ffffffb3;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-glass-strong, #ffffff80);
+    box-shadow: var(--shadow-header);
+    color: #1f1f1f;
+    cursor: pointer;
+  }
+
+  .video-banner__pause[hidden] {
+    display: none;
+  }
+
+  .video-banner__pause--small {
+    inline-size: 2rem;
+    block-size: 2rem;
+    border-color: color-mix(in srgb, var(--color-text) 20%, transparent);
+    background-color: transparent;
+    box-shadow: none;
+    color: var(--color-text);
+  }
+
+  .video-banner__pause-icon {
+    inline-size: 1rem;
+    block-size: 1rem;
+  }
+
+  .video-banner__pause--small .video-banner__pause-icon {
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
+  }
+
+  .video-banner__pause[aria-pressed='true'] .video-banner__pause-icon--pause,
+  .video-banner__pause:not([aria-pressed='true']) .video-banner__pause-icon--play {
+    display: none;
+  }
+
+  /* ---------- Product card (Figma 389 x 261 at x 1481, y 180) ---------- */
+
+  .video-banner__card-area {
+    grid-area: card;
+    align-self: start;
+    /* Room above the card for the product photo that sticks out */
+    padding-block-start: max(1.5rem, calc(28 * var(--px)));
+  }
+
+  .video-banner-card {
+    --card-image-width: max(4.5rem, calc(96 * var(--px)));
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: max(0.375rem, calc(10 * var(--px)));
+    inline-size: max(18rem, calc(389 * var(--px)));
+    padding: max(1.125rem, calc(29 * var(--px)));
+    border: 1px solid #ffffff99;
+    border-radius: max(1rem, calc(24 * var(--px)));
+    background-color: color-mix(in srgb, var(--color-background) 86%, transparent);
+    box-shadow: var(--glass-shadow, 0 4px 15px 0 #b9b9b940), var(--glass-rim, inset 0 1px 0 #ffffffcc);
+    color: var(--color-text);
+  }
+
+  /* Hover and focus: a touch more solid */
+  .video-banner-card:has(.video-banner-card__link:hover) {
+    background-color: color-mix(in srgb, var(--color-background) 94%, transparent);
+  }
+
+  .video-banner-card__top {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding-inline-end: calc(var(--card-image-width) + var(--space-sm));
+  }
+
+  .video-banner-card__counter {
+    margin: 0;
+    font-size: max(0.8125rem, calc(16 * var(--px)));
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+  }
+
+  /* The products share one grid cell: the card is as tall as the tallest one */
+  .video-banner-card__list {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .video-banner-card__item {
+    display: flex;
+    flex-direction: column;
+    gap: max(0.375rem, calc(10 * var(--px)));
+    grid-area: 1 / 1;
+  }
+
+  .video-banner-card__item:not(.is-active) {
+    visibility: hidden;
+    opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .video-banner-card__item {
+      transition:
+        opacity 0.6s var(--ease-out),
+        visibility 0s linear 0s;
+    }
+
+    .video-banner-card__item:not(.is-active) {
+      transition:
+        opacity 0.6s var(--ease-out),
+        visibility 0s linear 0.6s;
+    }
+  }
+
+  /* Product photo: top right, out over the card's top edge (containing block = the card) */
+  .video-banner-card__media {
+    position: absolute;
+    inset-block-start: calc(max(1.5rem, calc(28 * var(--px))) * -1);
+    inset-inline-end: max(0.875rem, calc(25 * var(--px)));
+    inline-size: var(--card-image-width);
+    aspect-ratio: 2 / 3;
+    pointer-events: none;
+  }
+
+  .video-banner-card__media img,
+  .video-banner-card__placeholder {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 6px 10px #00000026);
+  }
+
+  .video-banner-card__title,
+  .video-banner-card__type {
+    padding-inline-end: calc(var(--card-image-width) + var(--space-sm));
+  }
+
+  .video-banner-card__title {
+    margin: 0;
+    font-family: var(--font-heading--family);
+    font-style: var(--font-heading--style);
+    font-weight: var(--font-heading--weight);
+    font-size: max(1.25rem, calc(26 * var(--px)));
+    line-height: 1.2;
+  }
+
+  .video-banner-card__link {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* The title link covers the whole card (one link per product, no nested links) */
+  .video-banner-card__link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border-radius: inherit;
+  }
+
+  .video-banner-card__link:focus-visible {
+    outline: none;
+  }
+
+  .video-banner-card:has(.video-banner-card__link:focus-visible) {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+  }
+
+  .video-banner-card__type {
+    margin: 0;
+    color: var(--color-accent);
+    font-size: max(0.6875rem, calc(14 * var(--px)));
+    font-weight: var(--font-weight-medium);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  .video-banner-card__text {
+    margin: 0;
+    margin-block-start: max(0.25rem, calc(14 * var(--px)));
+    font-size: max(0.9375rem, calc(19 * var(--px)));
+    line-height: 1.4;
+  }
+
+  .video-banner-card__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    margin-block-start: max(0.375rem, calc(14 * var(--px)));
+  }
+
+  .video-banner-card__footer .price {
+    font-size: max(1.25rem, calc(30 * var(--px)));
+    gap: 0 var(--space-sm);
+  }
+
+  .video-banner-card__footer .price__current {
+    color: var(--color-text);
+    font-weight: 400;
+  }
+
+  .video-banner-card__footer .price__compare {
+    font-size: 0.67em;
+  }
+
+  .video-banner-card__arrow {
+    display: grid;
+    flex: none;
+    place-items: center;
+    inline-size: max(2rem, calc(36 * var(--px)));
+    block-size: max(2rem, calc(36 * var(--px)));
+    border-radius: var(--radius-pill);
+    background-color: #ffffff99;
+    box-shadow: var(--glass-rim, inset 0 1px 0 #ffffffcc);
+    color: var(--color-accent);
+  }
+
+  .video-banner-card__arrow svg {
+    inline-size: 45%;
+    block-size: auto;
+  }
+
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .video-banner-card__arrow {
+      transition: transform var(--duration-fast, 150ms) var(--ease-out);
+    }
+
+    .video-banner-card:has(.video-banner-card__link:hover) .video-banner-card__arrow {
+      transform: translateX(3px);
+    }
+  }
+
+  /* ---------- Tablets (750–1199px): the desktop layout; optional card under the text ---------- */
+  @media (min-width: 750px) and (max-width: 1199px) {
+    .video-banner--tablet-card-below .video-banner__inner {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-rows: 1fr auto auto;
+      grid-template-areas:
+        'content content'
+        'card .'
+        'scroll corner';
+    }
+
+    .video-banner--tablet-card-below .video-banner__card-area {
+      padding-block-end: var(--space-md);
+    }
+  }
+
+  /* ---------- Phones (below 750px) ---------- */
+  @media (max-width: 749px) {
+    .video-banner {
+      grid-template-rows: minmax(var(--video-banner-height), auto) auto;
+    }
+
+    .video-banner:not(.video-banner--fill) {
+      --video-banner-height: 32rem;
+    }
+
+    /* Stronger fade from the bottom, behind the text */
+    .video-banner__media::after {
+      background:
+        linear-gradient(0deg, #000000bf 0%, #00000066 45%, #00000000 75%),
+        color-mix(in srgb, #000000 var(--video-banner-overlay), transparent);
+    }
+
+    /* The layer's parts become the section's grid items: text on the video, the card under it */
+    .video-banner__inner {
+      display: contents;
+    }
+
+    .video-banner__content {
+      grid-area: 1 / 1;
+      align-self: end;
+      gap: var(--space-md);
+      max-inline-size: none;
+      padding-block:
+        calc(var(--space-2xl) + var(--video-banner-offset))
+        max(var(--space-xl), calc(var(--video-banner-pad-bottom) * var(--px)));
+      padding-inline: var(--page-margin) calc(var(--page-margin) + 3.25rem);
+      color: var(--video-banner-text);
+    }
+
+    .video-banner__heading {
+      font-size: clamp(2.125rem, 10vw, 2.75rem);
+    }
+
+    .video-banner__text {
+      font-size: 0.9375rem;
+    }
+
+    .video-banner__eyebrow {
+      font-size: 0.6875rem;
+    }
+
+    .video-banner__button.button {
+      min-block-size: 2.875rem;
+      margin-block-start: var(--space-xs);
+      padding-inline: var(--space-lg);
+      font-size: 0.875rem;
+    }
+
+    .video-banner__scroll,
+    .video-banner__tagline {
+      display: none;
+    }
+
+    /* The video's pause button: bottom right of the video, beside the text's last row */
+    .video-banner__corner {
+      grid-area: 1 / 1;
+      align-self: end;
+      justify-self: end;
+      padding-block-end: max(var(--space-xl), calc(var(--video-banner-pad-bottom) * var(--px)));
+      padding-inline-end: var(--page-margin);
+    }
+
+    .video-banner__card-area {
+      grid-area: 2 / 1;
+      justify-self: stretch;
+      padding: var(--space-2xl) var(--page-margin) var(--space-xl);
+    }
+
+    .video-banner--no-phone-card .video-banner__card-area {
+      display: none;
+    }
+
+    .video-banner-card {
+      --card-image-width: 4.25rem;
+      inline-size: 100%;
+      max-inline-size: 26rem;
+      margin-inline: auto;
+      padding: var(--space-md) var(--space-md) var(--space-md) 1.125rem;
+      border-color: color-mix(in srgb, var(--color-text) 8%, transparent);
+      background-color: var(--color-surface-raised, #ffffff);
+    }
+
+    .video-banner-card:has(.video-banner-card__link:hover) {
+      background-color: var(--color-surface-raised, #ffffff);
+    }
+
+    .video-banner-card__media {
+      inset-block-start: -1.25rem;
+    }
+
+    .video-banner-card__title {
+      font-size: 1.125rem;
+    }
+
+    .video-banner-card__text {
+      margin-block-start: 0;
+      font-size: 0.8125rem;
+    }
+
+    .video-banner-card__footer .price {
+      font-size: 1.125rem;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  /**
+   * <video-banner>
+   * - Video: the script gives it its file (smaller on phones) and plays it only when all are true:
+   *   "Play the video automatically" on (or the visitor pressed play), the visitor allows motion (or
+   *   pressed play), the section is on screen, the tab shows, and (first section) the page has loaded.
+   *   The pause button stops it; aria-pressed = paused, the label stays the same.
+   * - Card: shows the next product every data-interval ms while the section is on screen; the pointer
+   *   or keyboard focus on the card, a hidden tab and the pause button stop it; reduced motion = no
+   *   change (the pause button hides). The products that do not show are inert.
+   * Every listener goes through one AbortController (the theme editor re-attaches a moved section,
+   * which runs connectedCallback again).
+   */
+  class VideoBanner extends HTMLElement {
+    connectedCallback() {
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+      this.reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+      this.phone = window.matchMedia('(max-width: 749px)');
+      this.inView = false;
+
+      this.video = this.querySelector('[data-video]');
+      this.videoButton = this.querySelector('[data-video-pause]');
+      this.card = this.querySelector('[data-card]');
+      this.items = [...this.querySelectorAll('[data-card-item]')];
+      this.cardButton = this.querySelector('[data-card-pause]');
+      this.current = this.querySelector('[data-card-current]');
+      this.interval = Number(this.dataset.interval) || 6000;
+      // After a move in the page the shown product is not always the first
+      this.index = Math.max(0, this.items.findIndex((item) => item.classList.contains('is-active')));
+
+      // First section: wait for the page's load (the poster is the main image; the video comes after)
+      this.loaded = document.readyState === 'complete';
+      if (!this.loaded) {
+        window.addEventListener(
+          'load',
+          () => {
+            this.loaded = true;
+            this.update();
+          },
+          { once: true, signal }
+        );
+      }
+
+      if (this.video) {
+        this.video.muted = true;
+        // The visitor's choice survives an editor re-attach; else autoplay unless reduced motion
+        if (this.videoPaused === undefined) {
+          this.videoPaused = !this.hasAttribute('data-autoplay') || this.reduced.matches;
+        }
+        this.video.addEventListener('playing', () => this.classList.add('is-video-ready'), { signal });
+        this.video.addEventListener('error', () => this.classList.remove('is-video-ready'), { signal });
+        if (this.videoButton) {
+          this.videoButton.hidden = false;
+          this.videoButton.addEventListener(
+            'click',
+            () => {
+              this.videoPaused = !this.videoPaused;
+              this.videoChosen = true;
+              this.update();
+            },
+            { signal }
+          );
+        }
+      }
+
+      if (this.items.length > 1) {
+        this.hovered = false;
+        this.focused = false;
+        this.card.addEventListener('pointerenter', () => this.setHover(true), { signal });
+        this.card.addEventListener('pointerleave', () => this.setHover(false), { signal });
+        // Keyboard focus on the product link holds the product (not focus on the pause button: its
+        // play would then seem to do nothing)
+        this.card.addEventListener(
+          'focusin',
+          (event) => this.setFocus(Boolean(event.target.closest('.video-banner-card__link'))),
+          { signal }
+        );
+        this.card.addEventListener(
+          'focusout',
+          (event) => {
+            if (!event.relatedTarget?.closest?.('.video-banner-card__link')) this.setFocus(false);
+          },
+          { signal }
+        );
+        this.cardButton?.addEventListener(
+          'click',
+          () => {
+            this.cardPaused = !this.cardPaused;
+            this.update();
+          },
+          { signal }
+        );
+      }
+
+      this.reduced.addEventListener(
+        'change',
+        () => {
+          // Follow the new setting unless the visitor already chose with the button
+          if (this.video && !this.videoChosen) {
+            this.videoPaused = !this.hasAttribute('data-autoplay') || this.reduced.matches;
+          }
+          this.update();
+        },
+        { signal }
+      );
+      document.addEventListener('visibilitychange', () => this.update(), { signal });
+
+      this.observer = new IntersectionObserver(
+        ([entry]) => {
+          this.inView = entry.isIntersecting;
+          this.update();
+        },
+        { threshold: 0.1 }
+      );
+      this.observer.observe(this);
+      this.update();
+    }
+
+    disconnectedCallback() {
+      this.controller?.abort();
+      this.observer?.disconnect();
+      this.stopTimer();
+      this.video?.pause();
+    }
+
+    setHover(value) {
+      this.hovered = value;
+      this.update();
+    }
+
+    setFocus(value) {
+      this.focused = value;
+      this.update();
+    }
+
+    update() {
+      const shown = this.inView && !document.hidden;
+
+      if (this.video) {
+        this.videoButton?.setAttribute('aria-pressed', String(Boolean(this.videoPaused)));
+        if (shown && this.loaded && !this.videoPaused) {
+          this.playVideo();
+        } else if (!this.video.paused) {
+          this.video.pause();
+        }
+      }
+
+      if (this.items.length > 1) {
+        const reduced = this.reduced.matches;
+        if (this.cardButton) {
+          this.cardButton.hidden = reduced;
+          this.cardButton.setAttribute('aria-pressed', String(Boolean(this.cardPaused)));
+        }
+        const rotate = shown && !reduced && !this.cardPaused && !this.hovered && !this.focused;
+        if (rotate) {
+          this.startTimer();
+        } else {
+          this.stopTimer();
+        }
+      }
+    }
+
+    playVideo() {
+      if (!this.video.getAttribute('src')) {
+        const phoneSource = this.video.dataset.srcPhone;
+        this.video.src = this.phone.matches && phoneSource ? phoneSource : this.video.dataset.src;
+        this.video.preload = 'auto';
+      }
+      if (!this.video.paused) return;
+      // The browser can refuse (power saving, data saver): show the button as paused, so a tap starts it
+      this.video.play()?.catch(() => {
+        this.videoPaused = true;
+        this.update();
+      });
+    }
+
+    startTimer() {
+      if (this.timer) return;
+      this.timer = window.setInterval(() => this.show(this.index + 1), this.interval);
+    }
+
+    stopTimer() {
+      window.clearInterval(this.timer);
+      this.timer = null;
+    }
+
+    /** Shows product i (wrapping round); the others are hidden from keyboard and screen readers */
+    show(i) {
+      const count = this.items.length;
+      this.index = (i + count) % count;
+      this.items.forEach((item, n) => {
+        const active = n === this.index;
+        item.classList.toggle('is-active', active);
+        item.inert = !active;
+        item.toggleAttribute('aria-hidden', !active);
+        if (!active) return;
+        // The photo of a product that was hidden loads lazily: ask for it now
+        item.querySelector('img[loading="lazy"]')?.setAttribute('loading', 'eager');
+      });
+      if (this.current) this.current.textContent = String(this.index + 1).padStart(2, '0');
+    }
+  }
+
+  if (!customElements.get('video-banner')) customElements.define('video-banner', VideoBanner);
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.video_banner",
+  "tag": "section",
+  "settings": [
+    { "type": "header", "content": "t:labels.content" },
+    { "type": "text", "id": "eyebrow", "label": "t:labels.eyebrow", "default": "Luxury eau de parfum" },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:labels.video_banner_heading_info",
+      "default": "Fragrance that stays with <em>you</em>"
+    },
+    {
+      "type": "textarea",
+      "id": "text",
+      "label": "t:labels.text",
+      "default": "More than a scent, it's a feeling. Crafted for the moments you'll always want to remember."
+    },
+    { "type": "text", "id": "button_label", "label": "t:labels.video_banner_button_label", "default": "Shop fragrance" },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "t:labels.video_banner_button_link",
+      "info": "t:labels.video_banner_button_info",
+      "default": "/collections/all"
+    },
+    { "type": "checkbox", "id": "show_tagline", "label": "t:labels.video_banner_show_tagline", "default": true },
+    {
+      "type": "text",
+      "id": "tagline",
+      "label": "t:labels.tagline",
+      "info": "t:labels.video_banner_tagline_info",
+      "default": "A signature scent for every you",
+      "visible_if": "{{ section.settings.show_tagline }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_scroll_hint",
+      "label": "t:labels.video_banner_show_scroll_hint",
+      "info": "t:labels.video_banner_scroll_hint_info",
+      "default": true
+    },
+    { "type": "header", "content": "t:labels.video" },
+    { "type": "video", "id": "video", "label": "t:labels.video", "info": "t:labels.video_banner_video_info" },
+    { "type": "image_picker", "id": "poster", "label": "t:labels.video_banner_poster", "info": "t:labels.video_banner_poster_info" },
+    {
+      "type": "range",
+      "id": "overlay_opacity",
+      "label": "t:labels.overlay_opacity",
+      "info": "t:labels.video_banner_overlay_info",
+      "min": 0,
+      "max": 80,
+      "step": 5,
+      "unit": "%",
+      "default": 30
+    },
+    { "type": "header", "content": "t:labels.products" },
+    {
+      "type": "product_list",
+      "id": "products",
+      "label": "t:labels.products",
+      "info": "t:labels.video_banner_products_info",
+      "limit": 5
+    },
+    { "type": "header", "content": "t:labels.layout" },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.video_banner_width_info",
+      "options": [
+        { "value": "wide", "label": "t:options.section_width.wide" },
+        { "value": "widest", "label": "t:options.section_width.widest" },
+        { "value": "full", "label": "t:options.section_width.full" }
+      ],
+      "default": "full"
+    },
+    { "type": "checkbox", "id": "fill_screen", "label": "t:labels.fill_screen", "info": "t:labels.video_banner_fill_info", "default": true },
+    { "type": "header", "content": "t:labels.phones" },
+    { "type": "checkbox", "id": "phone_card", "label": "t:labels.video_banner_phone_card", "info": "t:labels.video_banner_phone_card_info", "default": true },
+    { "type": "header", "content": "t:labels.tablets" },
+    {
+      "type": "select",
+      "id": "tablet_card",
+      "label": "t:labels.video_banner_tablet_card",
+      "info": "t:labels.video_banner_tablet_card_info",
+      "options": [
+        { "value": "beside", "label": "t:options.video_banner_card.beside" },
+        { "value": "below", "label": "t:options.video_banner_card.below" }
+      ],
+      "default": "beside"
+    },
+    { "type": "header", "content": "t:labels.autoplay" },
+    {
+      "type": "checkbox",
+      "id": "autoplay_video",
+      "label": "t:labels.video_banner_autoplay",
+      "info": "t:labels.video_banner_autoplay_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "seconds",
+      "label": "t:labels.video_banner_seconds",
+      "info": "t:labels.video_banner_seconds_info",
+      "min": 3,
+      "max": 12,
+      "step": 1,
+      "unit": "s",
+      "default": 6
+    },
+    { "type": "header", "content": "t:labels.animation_header" },
+    {
+      "type": "select",
+      "id": "animation",
+      "label": "t:labels.animation",
+      "info": "t:labels.video_banner_animation_info",
+      "options": [
+        { "value": "none", "label": "t:options.animation.none" },
+        { "value": "fade-up", "label": "t:options.animation.fade_up" }
+      ],
+      "default": "fade-up"
+    },
+    { "type": "header", "content": "t:labels.spacing" },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "t:labels.padding_top",
+      "info": "t:labels.video_banner_padding_info",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 80
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "t:labels.padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 8,
+      "unit": "px",
+      "default": 32
+    },
+    { "type": "header", "content": "t:labels.colors" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "t:labels.color_scheme", "info": "t:labels.video_banner_scheme_info", "default": "scheme-1" },
+    { "type": "color", "id": "text_color", "label": "t:labels.video_banner_text_color", "default": "#ffffff" },
+    { "type": "color", "id": "highlight_color", "label": "t:labels.highlight_color", "info": "t:labels.video_banner_highlight_info" }
+  ],
+  "presets": [
+    {
+      "name": "t:general.video_banner"
+    }
+  ]
+}
+{% endschema %}
