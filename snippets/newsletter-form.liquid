@@ -1,5 +1,5 @@
 {% doc %}
-  Email sign-up form: the footer and the Email signup section (sections/newsletter.liquid).
+  Email sign-up form: the footer and the Newsletter section (sections/newsletter.liquid).
 
   Uses Shopify's 'customer' form: submitting it creates a customer with that email (or updates the
   existing one), marks them as accepting email marketing and adds the tag "newsletter", so the merchant
@@ -12,7 +12,7 @@
   That focus move is done by the script below (data-focus-after-submit), not the autofocus attribute:
   Shopify's accessibility rules for themes say "no autofocus".
 
-  Note for a second copy (the Email signup section): form.posted_successfully? and form.errors aren't
+  Note for a second copy (the Newsletter section): form.posted_successfully? and form.errors aren't
   tied to one form's id, so after one sign-up every newsletter form on that page shows the message. The
   script moves focus into the form that was sent (its id is the #anchor in the URL).
 

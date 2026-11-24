@@ -1,13 +1,13 @@
 {%- comment -%}
-  Email signup (no Figma design; the "Split card" look chosen 2026-11-24): a rounded card with an optional
+  Newsletter (no Figma design; the "Split card" look chosen 2026-11-24): a rounded card with an optional
   image on one side, and on the other side an eyebrow, a heading, a text, the email form and a short note.
   Any page can use it (Theme Store themes are expected to offer an email sign-up section).
 
   - The form is the footer's snippets/newsletter-form.liquid (Shopify's 'customer' form: the email goes to
     Admin > Customers with the tag "newsletter"). Its ids start with section.id, so this section and the
     footer can be on one page.
-  - No image = one column, the text centred in the card. No heading = a visually hidden h2, so the form
-    always has a heading for screen readers.
+  - No image = one column, the text centred in the card. No heading = a visually hidden heading, so the
+    form always has a heading for screen readers. The heading is an h1 when the section is first.
   - Layout by the card's room (container query on .newsletter__inner, not the screen): from 42rem the
     image sits beside the text (40%, 45% from 1200px) and fills the card height; narrower = the image on
     top in the "Image shape" ratio (phones). The form puts the field and the button on one row when the
@@ -63,6 +63,19 @@
       assign phone_ratio = '4 / 3'
   endcase
 
+  # First section of the page = the page's h1 (else the page has no h1)
+  assign heading_tag = 'h2'
+  if section.index == 1
+    assign heading_tag = 'h1'
+  endif
+
+  # "Show the image on phones" off: CSS hides the image below 750px, but an eager image downloads even when
+  # it is hidden. Lazy = phones skip it. Not in section 1: there the image can be the desktop LCP.
+  assign image_loading = nil
+  if section.settings.phone_image == false and section.index > 1
+    assign image_loading = 'lazy'
+  endif
+
   assign card_class = 'newsletter__card'
   if has_image
     assign card_class = card_class | append: ' newsletter__card--image-' | append: section.settings.image_position
@@ -89,11 +102,12 @@
       {%- if has_image -%}
         <div class="newsletter__media">
           {%- comment -%}
-            No `loading` here: the image snippet uses section-loading (eager in the first 3 sections) and
-            gives fetchpriority high only in section 1.
+            `loading` is nil (= the image snippet uses section-loading: eager in the first 3 sections,
+            fetchpriority high only in section 1), or 'lazy' when the image is hidden on phones.
           {%- endcomment -%}
           {% render 'image',
             image: section.settings.image,
+            loading: image_loading,
             class: 'newsletter__image image--cover',
             sizes: image_sizes,
             widths: '375, 550, 750, 900, 1100, 1500'
@@ -109,9 +123,9 @@
         {%- endif -%}
 
         {%- if section.settings.heading != blank -%}
-          <h2 class="newsletter__heading">{{ section.settings.heading }}</h2>
+          <{{ heading_tag }} class="newsletter__heading">{{ section.settings.heading }}</{{ heading_tag }}>
         {%- else -%}
-          <h2 class="visually-hidden">{{ 'newsletter.heading_hidden' | t }}</h2>
+          <{{ heading_tag }} class="visually-hidden">{{ 'newsletter.heading_hidden' | t }}</{{ heading_tag }}>
         {%- endif -%}
 
         {%- if section.settings.text != blank -%}
@@ -379,7 +393,7 @@
 
 {% schema %}
 {
-  "name": "t:general.email_signup",
+  "name": "t:general.newsletter",
   "tag": "section",
   "settings": [
     {
@@ -560,7 +574,7 @@
   ],
   "presets": [
     {
-      "name": "t:general.email_signup"
+      "name": "t:general.newsletter"
     }
   ]
 }
