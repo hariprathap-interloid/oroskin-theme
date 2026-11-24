@@ -27,8 +27,11 @@
     assign terms = predictive_search.terms
   -%}
   <div class="search-popup__matches">
-    {%- comment -%} Copied into the popup's live region by the script, so screen readers hear the count {%- endcomment -%}
-    <p class="visually-hidden" data-search-announce>
+    {%- comment -%}
+      Copied into the popup's live region by the script, so screen readers hear the count. aria-hidden: the
+      live region already reads it, so a screen reader moving through the results doesn't hear it twice.
+    {%- endcomment -%}
+    <p class="visually-hidden" aria-hidden="true" data-search-announce>
       {{- 'search.popup.results_count' | t: count: announce_count -}}
     </p>
 

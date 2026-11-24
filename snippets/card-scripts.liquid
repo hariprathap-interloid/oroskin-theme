@@ -1,0 +1,24 @@
+{% doc %}
+  Makes sure the product card scripts are on the page when the cards come later.
+
+  Shopify adds a snippet's javascript tag to the page only when the snippet is rendered in the page's
+  first HTML (the "data-snippets" list of the snippet script tag). Cards that come later (the related
+  products request, the empty cart's "You might love" after the last item is removed, a filter change
+  that brings products after 0 results) then have no script: the cart button opens /cart and the size
+  pills do nothing.
+
+  This renders one product card (snippets/product-card.liquid, the size pills script) and one cart
+  button (snippets/quick-add.liquid, the adding script) inside a <template>: never shown, not
+  focusable, not read by screen readers, its ids and images are not in the page.
+
+  @param {product} [product] - A product for the hidden card. Empty = a placeholder card (the scripts
+    still load)
+
+  @example
+  {% render 'card-scripts', product: product %}
+{% enddoc %}
+
+<template data-card-scripts>
+  {%- render 'product-card', product: product, style: 'full', loading: 'lazy' -%}
+  {%- render 'quick-add', product: product, id_suffix: 'card-scripts' -%}
+</template>

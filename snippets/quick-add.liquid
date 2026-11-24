@@ -31,10 +31,21 @@
   @param {string} [style] - 'round' (default, the glass circle) or 'pill' (the article sidebar's white
     "ADD TO CART" pill: same adding and tick, no driving off; the visible text is the button's name,
     the product name is added for screen readers; sold out = a disabled "Sold out" pill)
+  @param {string} [id_suffix] - Makes the form id unique when the same product can show two times in one
+    section with the same style and class (e.g. the card style, a loop number). The form id is
+    QuickAdd-<section id>-<product id>-<style>[-<class>][-<id_suffix>]. Shopify's default id
+    (product_form_<product id>) repeats when a product shows two times on a page.
+  @param {string} [label] - Pill only: the visible text. Default: "Add to cart" (products.add_to_cart)
+  @param {image} [icon_image] - A custom icon (an uploaded image) in place of the cart drawing, both
+    styles. It shows at the icon size with its own colours; while adding, a spinner takes its place
+    (no driving off), then the tick pops in.
+  @param {boolean} [show_icon] - Pill only: false = no icon, only the text. While adding, a spinner
+    shows before the text, then the tick. Default true. The round button always has an icon.
 
   @example
   {% render 'quick-add', product: product, class: 'product-panels__cart' %}
   {% render 'quick-add', product: product, style: 'pill', size: 44 %}
+  {% render 'quick-add', product: product, style: 'pill', size: 44, label: 'Add to bag', show_icon: false %}
 {% enddoc %}
 
 {%- liquid
@@ -57,11 +68,21 @@
     assign add_name = product.title | append: ' - ' | append: variant.title
   endif
   assign add_label = 'products.quick_add.add' | t: title: add_name
+  assign default_label = 'products.add_to_cart' | t
   assign choose_label = 'products.quick_add.choose' | t: title: product.title
   assign cart_icon = 'icon-cart.svg' | inline_asset_content
   assign tilt_icon = 'icon-cart-tilt.svg' | inline_asset_content
 
   assign button_style = style | default: 'round'
+  assign pill_label = label | default: default_label
+  # The icon: 'cart' (the drawing that drives off), 'custom' (an uploaded image) or 'none' (pill only)
+  assign icon_mode = 'cart'
+  if icon_image != blank
+    assign icon_mode = 'custom'
+  endif
+  if button_style == 'pill' and show_icon == false
+    assign icon_mode = 'none'
+  endif
   assign button_size = size | default: 50
   assign button_color = icon_color | default: '#ffffff'
   capture quick_add_style
@@ -75,18 +96,50 @@
     assign overlay_class = ' quick-add--overlay'
     assign quick_add_style = quick_add_style | append: ' --quick-add-overlay: ' | append: overlay_value | append: '%;'
   endif
+
+  # Own form id: Shopify's default (product_form_<product id>) repeats when the same product shows two
+  # times on a page (Related products: a tile and a full card; Product panels and Product deck on one
+  # page). The section id, the style, the class and the caller's suffix make it unique
+  assign form_id = 'QuickAdd-' | append: section.id | append: '-' | append: product.id | append: '-' | append: button_style
+  if class != blank
+    assign class_key = class | handleize
+    assign form_id = form_id | append: '-' | append: class_key
+  endif
+  if id_suffix != blank
+    assign form_id = form_id | append: '-' | append: id_suffix
+  endif
 -%}
 
-{%- capture quick_add_art -%}
-  <span class="quick-add__line quick-add__line--1" aria-hidden="true"></span>
-  <span class="quick-add__line quick-add__line--2" aria-hidden="true"></span>
-  <span class="quick-add__cart" aria-hidden="true">
-    <span class="quick-add__icon quick-add__icon--upright">{{ cart_icon }}</span>
-    <span class="quick-add__icon quick-add__icon--tilt">{{ tilt_icon }}</span>
-    <span class="quick-add__tick">
-      <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 12.5 4 4 8-9"/></svg>
-    </span>
+{%- capture quick_add_tick -%}
+  <span class="quick-add__tick">
+    <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 12.5 4 4 8-9"/></svg>
   </span>
+{%- endcapture -%}
+
+{%- capture quick_add_art -%}
+  {%- if icon_mode == 'cart' -%}
+    <span class="quick-add__line quick-add__line--1" aria-hidden="true"></span>
+    <span class="quick-add__line quick-add__line--2" aria-hidden="true"></span>
+    <span class="quick-add__cart" aria-hidden="true">
+      <span class="quick-add__icon quick-add__icon--upright">{{ cart_icon }}</span>
+      <span class="quick-add__icon quick-add__icon--tilt">{{ tilt_icon }}</span>
+      {{ quick_add_tick }}
+    </span>
+  {%- else -%}
+    {%- comment -%}
+      Custom icon or no icon: a spinner while adding (an uploaded image can't drive off), then the tick.
+      No icon: this box only shows while adding and added (before the text)
+    {%- endcomment -%}
+    <span class="quick-add__cart quick-add__cart--{{ icon_mode }}" aria-hidden="true">
+      {%- if icon_mode == 'custom' -%}
+        <span class="quick-add__icon quick-add__icon--custom">
+          {{- icon_image | image_url: width: 48 | image_tag: alt: '', loading: 'lazy' -}}
+        </span>
+      {%- endif -%}
+      <span class="quick-add__spinner"></span>
+      {{ quick_add_tick }}
+    </span>
+  {%- endif -%}
 {%- endcapture -%}
 
 {%- comment -%}
@@ -95,7 +148,7 @@
   text, then the product name in a visually hidden span ("Add to cart: Serum").
 {%- endcomment -%}
 {%- capture hidden_name -%}
-  <span class="visually-hidden">: {{ add_name | escape }}</span>
+  <span class="visually-hidden" data-quick-add-name>: {{ add_name | escape }}</span>
 {%- endcapture -%}
 
 {%- if can_add -%}
@@ -106,13 +159,13 @@
     data-label-added="{{ 'products.quick_add.added' | t: title: add_name }}"
     data-label-error="{{ 'products.quick_add.error' | t }}"
   >
-    {%- form 'product', product, class: 'quick-add__form' -%}
+    {%- form 'product', product, id: form_id, class: 'quick-add__form' -%}
       <input type="hidden" name="id" value="{{ variant.id }}">
       <input type="hidden" name="quantity" value="1">
       {%- if button_style == 'pill' -%}
         <button type="submit" class="quick-add__button">
           {{ quick_add_art }}
-          {{- 'products.add_to_cart' | t -}}
+          {{- pill_label | escape -}}
           {{- hidden_name -}}
         </button>
       {%- else -%}
@@ -306,6 +359,57 @@
 
   .quick-add__icon--tilt {
     opacity: 0;
+  }
+
+  /*
+    Custom icon (icon_image): the uploaded image at the icon size, its own colours. No icon (pill,
+    show_icon: false): the box takes no room at rest and shows only while adding and added, before the
+    text. Both: a spinner while adding, then the tick.
+  */
+  .quick-add__icon--custom img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: contain;
+  }
+
+  .quick-add__spinner {
+    grid-area: 1 / 1;
+    box-sizing: border-box;
+    inline-size: 100%;
+    block-size: 100%;
+    border: 2px solid currentcolor;
+    border-inline-end-color: transparent;
+    border-radius: 50%;
+    opacity: 0;
+  }
+
+  quick-add.is-adding .quick-add__icon--custom {
+    opacity: 0;
+  }
+
+  quick-add.is-adding .quick-add__spinner {
+    opacity: 1;
+    animation: quick-add-spin 0.8s linear infinite;
+  }
+
+  .quick-add__cart--none {
+    display: none;
+  }
+
+  quick-add:is(.is-adding, .is-added, .is-resetting) .quick-add__cart--none {
+    display: grid;
+  }
+
+  /* No icon: the tick takes the spinner's place (there is no icon to sit on) */
+  .quick-add__cart--none .quick-add__tick {
+    position: static;
+    grid-area: 1 / 1;
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  @keyframes quick-add-spin {
+    to { rotate: 1turn; }
   }
 
   /*
@@ -511,6 +615,11 @@
     }
 
     quick-add.is-error .quick-add__button {
+      animation: none;
+    }
+
+    /* The spinner stands still: the open ring still says "busy" */
+    quick-add.is-adding .quick-add__spinner {
       animation: none;
     }
   }

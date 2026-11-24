@@ -4,91 +4,138 @@
 
   - Media column: every product medium (photos, videos, YouTube/Vimeo, 3D models) in a row that
     swipes / scrolls sideways, one at a time. Choosing a variant scrolls to that variant's photo.
+    From 1200px it sits beside the info card and stays in view (sticky under the header) while the
+    card scrolls; below 1200px it is above the card. No media = no media column on the store.
   - Info column (Figma PDP: a large light card): theme blocks. The product blocks (Product title,
     Product price, Product description, Buy buttons) read the product from this section through
     closest.product, so they need no product picker of their own; Heading, Text, Button... and app
-    blocks (@app, e.g. reviews) can be added too.
+    blocks (@app, e.g. reviews) can be added too. The product is passed to the blocks explicitly, so
+    with no product chosen they show their placeholders (never the product page's own product).
   - No product chosen: placeholders in the theme editor, nothing on the live store.
 {%- endcomment -%}
 
 {%- liquid
   assign featured = section.settings.product
   assign scheme_id = section.settings.color_scheme.id | default: 'scheme-1'
-  assign has_3d = false
+  assign section_width = section.settings.section_width | default: 'wide'
+
+  assign has_media = false
+  if featured != blank and featured.media.size > 0
+    assign has_media = true
+  endif
+  # The media column: on the store only when the product has media; the editor shows a placeholder
+  assign show_media = has_media
+  if request.design_mode
+    assign show_media = true
+  endif
+
+  # Image sizes. From 1200px the media column is 9 of 20 parts of the content (less the gap): about 43% of
+  # the content width. Content: Widest ~92vw, Full width 100vw, Narrow / Wide 100vw at most 1200px / the
+  # page width. Tablets (750-1199px): the media is at most 40rem (640px) wide, centred. Phones: the full
+  # content width (the page margins less)
+  assign content_vw = 100
+  assign content_px = 0
+  case section_width
+    when 'narrow'
+      assign content_px = 1200
+    when 'wide'
+      assign content_px = settings.max_page_width | remove: 'rem' | times: 16
+    when 'widest'
+      assign content_vw = 92
+  endcase
+  assign column_vw = content_vw | times: 0.43 | round
+  if content_px > 0
+    assign column_px = content_px | times: 0.43 | round
+    assign media_sizes = '(min-width: 1200px) min(' | append: column_vw | append: 'vw, ' | append: column_px | append: 'px), '
+  else
+    assign media_sizes = '(min-width: 1200px) ' | append: column_vw | append: 'vw, '
+  endif
+  assign media_sizes = media_sizes | append: '(min-width: 750px) min(640px, calc(100vw - 2.5rem)), calc(100vw - 2.5rem)'
+
+  # The blocks, captured: no block (or only empty ones) = no info card
+  capture info_html
+    content_for 'blocks', closest.product: featured
+  endcapture
+  assign info_html = info_html | strip
+  assign layout_class = ''
+  if show_media == false
+    assign layout_class = ' featured-product__inner--single featured-product__inner--no-media'
+  elsif info_html == blank
+    assign layout_class = ' featured-product__inner--single featured-product__inner--no-info'
+  endif
+
   if featured != blank
-    assign models = featured.media | where: 'media_type', 'model'
-    if models.size > 0
-      assign has_3d = true
-    endif
+    assign gallery_label = 'products.media.gallery' | t: title: featured.title
   endif
 -%}
 
 {%- if featured != blank or request.design_mode -%}
   <featured-product
-    class="featured-product full-width color-{{ scheme_id }} featured-product--media-{{ section.settings.media_position }}"
+    class="featured-product full-width section-width--{{ section_width }} color-{{ scheme_id }} featured-product--media-{{ section.settings.media_position }}"
     style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
-    {% if has_3d %}
-      data-has-3d
-    {% endif %}
   >
-    <div class="featured-product__inner">
-      <div class="featured-product__media">
-        {%- if featured != blank and featured.media.size > 0 -%}
-          <div
-            class="featured-product__gallery"
-            role="region"
-            aria-label="{{ 'products.media.gallery' | t: title: featured.title }}"
-            tabindex="0"
-            data-gallery
-          >
-            {%- for media in featured.media -%}
-              <div class="featured-product__slide" data-media-id="{{ media.id }}">
-                {%- liquid
-                  # Only the first medium loads straight away; the rest wait until scrolled to
-                  assign media_loading = 'lazy'
-                  if forloop.first
-                    assign media_loading = nil
-                  endif
-                -%}
-                {% render 'product-media', media: media, sizes: '(min-width: 990px) 45vw, 90vw', loading: media_loading %}
-              </div>
-            {%- endfor -%}
-          </div>
-
-          {%- if featured.media.size > 1 -%}
-            {%- comment -%} Thumbnails: every medium visible at a glance; click one to show it above {%- endcomment -%}
-            <div class="featured-product__thumbs">
+    <div class="featured-product__inner{{ layout_class }}">
+      {%- if show_media -%}
+        <div class="featured-product__media">
+          {%- if has_media -%}
+            <div
+              class="featured-product__gallery"
+              role="region"
+              aria-label="{{ gallery_label | escape }}"
+              tabindex="0"
+              data-gallery
+            >
               {%- for media in featured.media -%}
-                {%- assign thumb_label = 'products.media.show' | t: index: forloop.index, count: forloop.length -%}
-                <button
-                  type="button"
-                  class="featured-product__thumb"
-                  data-thumb="{{ media.id }}"
-                  aria-label="{{ thumb_label | escape }}"
-                  {% if forloop.first %}
-                    aria-current="true"
-                  {% endif %}
-                >
-                  {{ media.preview_image | image_url: width: 200 | image_tag: widths: '100, 200', sizes: '72px', alt: '', loading: 'lazy' }}
-                  {%- if media.media_type == 'video' or media.media_type == 'external_video' or media.media_type == 'model' -%}
-                    <span class="featured-product__thumb-badge" aria-hidden="true">
-                      {%- if media.media_type == 'model' -%}3D{%- else -%}&#9654;{%- endif -%}
-                    </span>
-                  {%- endif -%}
-                </button>
+                <div class="featured-product__slide" data-media-id="{{ media.id }}">
+                  {%- liquid
+                    # Only the first medium loads straight away; the rest wait until scrolled to
+                    assign media_loading = 'lazy'
+                    if forloop.first
+                      assign media_loading = nil
+                    endif
+                  -%}
+                  {% render 'product-media', media: media, sizes: media_sizes, loading: media_loading %}
+                </div>
               {%- endfor -%}
             </div>
-          {%- endif -%}
-        {%- else -%}
-          <div class="featured-product__slide featured-product__slide--placeholder">
-            {{ 'product-1' | placeholder_svg_tag: 'featured-product__placeholder' }}
-          </div>
-        {%- endif -%}
-      </div>
 
-      <div class="featured-product__info">
-        {% content_for 'blocks' %}
-      </div>
+            {%- if featured.media.size > 1 -%}
+              {%- comment -%} Thumbnails: every medium visible at a glance; click one to show it above {%- endcomment -%}
+              <div class="featured-product__thumbs">
+                {%- for media in featured.media -%}
+                  {%- assign thumb_label = 'products.media.show' | t: index: forloop.index, count: forloop.length -%}
+                  <button
+                    type="button"
+                    class="featured-product__thumb"
+                    data-thumb="{{ media.id }}"
+                    aria-label="{{ thumb_label | escape }}"
+                    {% if forloop.first %}
+                      aria-current="true"
+                    {% endif %}
+                  >
+                    {{ media.preview_image | image_url: width: 200 | image_tag: widths: '100, 200', sizes: '72px', alt: '', loading: 'lazy' }}
+                    {%- if media.media_type == 'video' or media.media_type == 'external_video' or media.media_type == 'model' -%}
+                      <span class="featured-product__thumb-badge" aria-hidden="true">
+                        {%- if media.media_type == 'model' -%}3D{%- else -%}&#9654;{%- endif -%}
+                      </span>
+                    {%- endif -%}
+                  </button>
+                {%- endfor -%}
+              </div>
+            {%- endif -%}
+          {%- else -%}
+            <div class="featured-product__slide featured-product__slide--placeholder">
+              {{ 'product-1' | placeholder_svg_tag: 'featured-product__placeholder' }}
+            </div>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+
+      {%- if info_html != blank -%}
+        <div class="featured-product__info">
+          {{ info_html }}
+        </div>
+      {%- endif -%}
     </div>
   </featured-product>
 {%- endif -%}
@@ -104,24 +151,79 @@
 
   .featured-product__inner {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-xl);
     inline-size: min(
-      calc(var(--page-width) - var(--page-margin) * 2),
+      calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
       calc(100% - var(--page-margin) * 2)
     );
     margin-inline: auto;
   }
 
-  /* Two columns from tablet landscape up: media 45%, info card 55% (Figma PDP proportions) */
-  @media (min-width: 990px) {
-    .featured-product__inner {
-      grid-template-columns: 9fr 11fr;
+  /* One column on all screens: no media (store only) = the info card alone, centred, at a readable width; no
+     blocks = the media alone, not wider than a two-column media */
+  .featured-product__inner--no-media .featured-product__info {
+    inline-size: 100%;
+    max-inline-size: 60rem;
+    margin-inline: auto;
+  }
+
+  .featured-product__inner--no-info .featured-product__media {
+    inline-size: 100%;
+    max-inline-size: 40rem;
+    margin-inline: auto;
+  }
+
+  .featured-product__media {
+    min-inline-size: 0;
+  }
+
+  /*
+    Tablets (750-1199px), one column: a full-width square was taller than the screen. The media (gallery
+    and thumbnails together) is at most 40rem wide, centred. Phones keep the full width
+  */
+  @media (min-width: 750px) and (max-width: 1199px) {
+    .featured-product__media {
+      inline-size: 100%;
+      max-inline-size: 40rem;
+      margin-inline: auto;
+    }
+  }
+
+  /*
+    From 1200px: two columns, media 45% and info card 55% (Figma PDP proportions). The media stays in view
+    under the header while the info card scrolls (as the product page gallery)
+  */
+  @media (min-width: 1200px) {
+    .featured-product__inner:not(.featured-product__inner--single) {
+      grid-template-columns: minmax(0, 9fr) minmax(0, 11fr);
       align-items: start;
       gap: clamp(2rem, 3vw, 4rem);
     }
 
+    .featured-product__media {
+      position: sticky;
+      inset-block-start: calc(var(--header-space, 6.0625rem) + var(--space-sm));
+    }
+
+    /* Media at the right: the columns swap too, so the media keeps its 9 parts */
+    .featured-product--media-right .featured-product__inner:not(.featured-product__inner--single) {
+      grid-template-columns: minmax(0, 11fr) minmax(0, 9fr);
+    }
+
     .featured-product--media-right .featured-product__media {
       order: 2;
+    }
+  }
+
+  /* Phones: half the top and bottom padding, less space between the media and the card */
+  @media (max-width: 749px) {
+    .featured-product {
+      padding-block: calc(var(--section-padding-top) / 2) calc(var(--section-padding-bottom) / 2);
+    }
+
+    .featured-product__inner {
+      gap: var(--space-lg);
     }
   }
 
@@ -130,7 +232,6 @@
     Shift + wheel on desktop, arrow keys once focused). Square slides, like the PDP photos.
   */
   .featured-product__gallery {
-    position: relative; /* slides measure offsetLeft from the gallery itself */
     display: grid;
     grid-auto-columns: 100%;
     grid-auto-flow: column;
@@ -146,13 +247,39 @@
     display: none;
   }
 
-  /* Thumbnails: small rounded squares; the one on show gets an accent outline */
+  .featured-product__gallery:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 4px;
+  }
+
+  .featured-product__slide {
+    aspect-ratio: 1;
+    scroll-snap-align: start;
+  }
+
+  .featured-product__slide--placeholder {
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+    background-color: var(--color-tint);
+  }
+
+  .featured-product__placeholder {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  /*
+    Thumbnails: small rounded squares; the one on show gets an accent outline. A thin scrollbar shows when
+    they don't fit, so a mouse can reach the last ones
+  */
   .featured-product__thumbs {
     display: flex;
     gap: var(--space-sm);
     margin-block-start: var(--space-sm);
+    padding-block-end: var(--space-xs);
     overflow-x: auto;
-    scrollbar-width: none;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--color-accent) 60%, transparent) transparent;
   }
 
   .featured-product__thumb {
@@ -201,93 +328,152 @@
     line-height: 1.4;
   }
 
-  .featured-product__gallery:focus-visible {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 4px;
+  /*
+    Without JavaScript the thumbnails can't move the gallery: no buttons that do nothing. The gallery shows
+    its own thin scrollbar in their place
+  */
+  @media (scripting: none) {
+    .featured-product__thumbs {
+      display: none;
+    }
+
+    .featured-product__gallery {
+      scrollbar-width: thin;
+    }
   }
 
-  .featured-product__slide {
-    aspect-ratio: 1;
-    scroll-snap-align: start;
-  }
-
-  .featured-product__slide--placeholder {
-    overflow: hidden;
-    border-radius: var(--radius-lg);
-    background-color: var(--color-tint);
-  }
-
-  .featured-product__placeholder {
-    inline-size: 100%;
-    block-size: 100%;
-  }
-
-  /* Figma PDP: the info sits in a large, light, rounded card with a hairline border */
+  /*
+    Figma PDP: the info sits in a large, light, rounded card with a hairline border. The raised surface is
+    white on light schemes and a light veil on dark ones (never a white card on a dark section)
+  */
   .featured-product__info {
     display: flex;
     flex-direction: column;
     gap: var(--space-lg);
+    min-inline-size: 0;
     padding: clamp(1.5rem, 3.3vw, 4rem);
     border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
     border-radius: var(--radius-lg);
-    background-color: color-mix(in srgb, var(--color-background) 40%, #ffffff);
+    background-color: var(--color-surface-raised);
+  }
+
+  /* Phones: the product page's card padding (Info card block) */
+  @media (max-width: 749px) {
+    .featured-product__info {
+      gap: var(--space-md);
+      padding: var(--space-lg) var(--space-md);
+    }
   }
 {% endstylesheet %}
 
 {% javascript %}
   /**
-   * <featured-product>: scrolls the gallery to the chosen variant's photo, and loads Shopify's 3D model
-   * controls (model-viewer-ui) when the product has a 3D model.
+   * <featured-product>: scrolls the gallery to the chosen variant's photo (or a clicked thumbnail), marks the
+   * thumbnail of the medium on show, pauses the videos that are no longer on show, and loads Shopify's 3D
+   * model controls (model-viewer-ui) when the product has a 3D model.
    */
   class FeaturedProduct extends HTMLElement {
     connectedCallback() {
-      this.gallery = this.querySelector('[data-gallery]');
-      this.thumbs = [...this.querySelectorAll('[data-thumb]')];
+      // One controller: the theme editor re-attaches a moved section and runs connectedCallback again
+      this.controller?.abort();
+      this.controller = new AbortController();
+      const { signal } = this.controller;
 
-      this.onVariantChange = (event) => this.showMedia(event.detail.mediaId);
-      this.addEventListener('variant:change', this.onVariantChange);
+      this.gallery = this.querySelector('[data-gallery]');
+      this.slides = this.gallery ? [...this.gallery.querySelectorAll('[data-media-id]')] : [];
+      this.thumbs = [...this.querySelectorAll('[data-thumb]')];
+      this.current = 0;
+
+      this.addEventListener('variant:change', (event) => this.showMedia(event.detail?.mediaId), { signal });
 
       // Thumbnail click shows that medium; swiping the gallery moves the thumbnail outline along
-      this.thumbs.forEach((thumb) => thumb.addEventListener('click', () => this.showMedia(thumb.dataset.thumb)));
-      this.gallery?.addEventListener('scroll', () => {
-        if (this.scrollFrame) return;
-        this.scrollFrame = requestAnimationFrame(() => {
-          this.scrollFrame = null;
-          const index = Math.round(this.gallery.scrollLeft / this.gallery.clientWidth);
-          this.markThumb(index);
-        });
-      }, { passive: true });
+      this.thumbs.forEach((thumb) =>
+        thumb.addEventListener('click', () => this.showMedia(thumb.dataset.thumb), { signal })
+      );
+      this.gallery?.addEventListener(
+        'scroll',
+        () => {
+          if (this.scrollFrame) return;
+          this.scrollFrame = requestAnimationFrame(() => {
+            this.scrollFrame = null;
+            // RTL: scrollLeft goes from 0 to negative values, so the distance is the absolute value
+            const index = Math.round(Math.abs(this.gallery.scrollLeft) / this.step());
+            this.setCurrent(Math.min(Math.max(index, 0), this.slides.length - 1));
+          });
+        },
+        { passive: true, signal }
+      );
 
-      if (this.hasAttribute('data-has-3d')) this.loadModelViewer();
+      this.loadModelViewer();
     }
 
     disconnectedCallback() {
-      this.removeEventListener('variant:change', this.onVariantChange);
+      this.controller?.abort();
+      if (this.scrollFrame) cancelAnimationFrame(this.scrollFrame);
+      this.scrollFrame = null;
+    }
+
+    /** The distance from one slide to the next: one slide plus the gap */
+    step() {
+      const first = this.slides[0];
+      if (!first) return 1;
+      const gap = parseFloat(getComputedStyle(this.gallery).columnGap) || 0;
+      return first.offsetWidth + gap || 1;
     }
 
     /** Scrolls only the gallery sideways to one medium (scrollIntoView would also scroll the page) */
     showMedia(mediaId) {
-      const slide = mediaId && this.gallery?.querySelector(`[data-media-id="${mediaId}"]`);
-      if (!slide) return;
+      if (!mediaId || !this.gallery) return;
+      const index = this.slides.findIndex((slide) => slide.dataset.mediaId === String(mediaId));
+      if (index < 0) return;
+      const rtl = getComputedStyle(this.gallery).direction === 'rtl';
       const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      this.gallery.scrollTo({ left: slide.offsetLeft, behavior: smooth ? 'smooth' : 'auto' });
-      this.markThumb([...this.gallery.children].indexOf(slide));
+      this.gallery.scrollTo({ left: index * this.step() * (rtl ? -1 : 1), behavior: smooth ? 'smooth' : 'auto' });
+      this.setCurrent(index);
     }
 
-    markThumb(index) {
+    setCurrent(index) {
       this.thumbs.forEach((thumb, i) => thumb.setAttribute('aria-current', String(i === index)));
+      if (index === this.current) return;
+      this.current = index;
+      this.pauseOthers(index);
     }
 
-    /** Shopify's loader adds the 3D viewer's controls (play, zoom, full screen) to each <model-viewer> */
+    /** A video on a slide that is no longer on show stops (uploaded videos, YouTube and Vimeo players) */
+    pauseOthers(index) {
+      this.slides.forEach((slide, i) => {
+        if (i === index) return;
+        slide.querySelectorAll('video').forEach((video) => video.pause());
+        slide.querySelectorAll('iframe').forEach((frame) => {
+          const src = frame.getAttribute('src') || '';
+          if (src.includes('vimeo')) {
+            frame.contentWindow?.postMessage('{"method":"pause"}', '*');
+          } else if (src.includes('youtube')) {
+            frame.contentWindow?.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+          }
+        });
+      });
+    }
+
+    /**
+     * 3D models: Shopify's loader adds the viewer's controls (play, zoom, full screen) to each
+     * <model-viewer>. One time per element, and one time per model (an editor re-attach runs this again)
+     */
     loadModelViewer() {
-      if (!window.Shopify?.loadFeatures) return;
+      if (!this.querySelector('model-viewer') || this.modelViewerLoaded || !window.Shopify?.loadFeatures) return;
+      this.modelViewerLoaded = true;
       window.Shopify.loadFeatures([
         {
           name: 'model-viewer-ui',
           version: '1.0',
           onLoad: (error) => {
             if (error || !window.Shopify.ModelViewerUI) return;
-            this.querySelectorAll('model-viewer').forEach((model) => new window.Shopify.ModelViewerUI(model));
+            this.querySelectorAll('model-viewer').forEach((model) => {
+              if (!model.dataset.ui) {
+                model.dataset.ui = 'true';
+                new window.Shopify.ModelViewerUI(model);
+              }
+            });
           },
         },
       ]);
@@ -308,14 +494,24 @@
   },
   "settings": [
     {
+      "type": "header",
+      "content": "t:labels.content"
+    },
+    {
       "type": "product",
       "id": "product",
-      "label": "t:labels.product"
+      "label": "t:labels.product",
+      "info": "t:labels.featured_product_product_info"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.layout"
     },
     {
       "type": "select",
       "id": "media_position",
       "label": "t:labels.media_position",
+      "info": "t:labels.featured_product_media_position_info",
       "options": [
         { "value": "left", "label": "t:options.media_position.left" },
         { "value": "right", "label": "t:options.media_position.right" }
@@ -323,14 +519,25 @@
       "default": "left"
     },
     {
-      "type": "header",
-      "content": "t:labels.style"
+      "type": "select",
+      "id": "section_width",
+      "label": "t:labels.section_width",
+      "info": "t:labels.section_width_info",
+      "options": [
+        { "value": "narrow", "label": "t:options.section_width.narrow" },
+        { "value": "wide", "label": "t:options.section_width.wide" },
+        { "value": "widest", "label": "t:options.section_width.widest" },
+        { "value": "full", "label": "t:options.section_width.full" }
+      ],
+      "default": "wide"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-1"
+      "type": "header",
+      "content": "t:labels.spacing"
+    },
+    {
+      "type": "paragraph",
+      "content": "t:labels.featured_product_padding_info"
     },
     {
       "type": "range",
@@ -351,16 +558,32 @@
       "step": 8,
       "unit": "px",
       "default": 64
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
     }
   ],
   "presets": [
     {
       "name": "t:general.featured_product",
       "blocks": [
-        { "type": "product-title", "settings": { "size": "h1" } },
-        { "type": "product-price", "settings": { "size": "large", "show_savings": true, "show_tax_note": true } },
+        { "type": "product-title", "settings": { "size": "product-title--product" } },
+        {
+          "type": "product-price",
+          "settings": { "size": "large", "show_savings": true, "show_rating": true, "show_tax_note": true }
+        },
         { "type": "product-description", "settings": { "word_limit": 40 } },
-        { "type": "buy-buttons", "settings": { "show_dynamic_checkout": true } }
+        {
+          "type": "buy-buttons",
+          "settings": { "layout": "inline", "add_to_cart_style": "outline", "show_dynamic_checkout": true }
+        }
       ]
     }
   ]

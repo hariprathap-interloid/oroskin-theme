@@ -134,7 +134,8 @@
               show_details: section.settings.show_details,
               show_rating: section.settings.show_rating,
               show_description: section.settings.show_description,
-              cart_options: section.settings.cart_options
+              cart_options: section.settings.cart_options,
+              id_suffix: 'picks'
             -%}
           </li>
         {%- endfor -%}
@@ -444,6 +445,13 @@
       {{ search_suggestions }}
     {%- endif -%}
   </results-view>
+  {%- comment -%}
+    A filter, sort or page change can bring product cards when the first HTML has none (0 results, only
+    articles or pages, no suggestions): the card and cart button scripts must be in the page now
+    (snippets/card-scripts.liquid). Always written: a search page can't count its product results
+    before the paginated loop
+  {%- endcomment -%}
+  {% render 'card-scripts', product: suggestions_collection.products.first %}
 </div>
 
 {% stylesheet %}

@@ -9,6 +9,8 @@
 
   Width: "Sheet width" from 1200px, "Sheet width on tablets" from 750px, "Sheet width on phones" below (defaults: 70% on tablets, 80% on phones).
   "Products on phones" hides the later rows below 750px, so the sheet fits the screen (Figma mobile: 5).
+  No products (no collection or an empty one): no sheet on the store (the banner then has no scroll
+  scene: <image-banner> stops when it finds no [data-banner-sheet]); placeholder rows in the editor.
 
   The scene's "Transition" (sideways / vertical) and "Slide in the heading and View all" are settings
   of the Image banner section itself, next to its "Scroll animation".
@@ -17,7 +19,18 @@
   {% content_for 'block', type: '_trending-sheet', id: 'trending-sheet' %}
 {% enddoc %}
 
-{%- if block.settings.show -%}
+{%- liquid
+  assign sheet_collection = block.settings.collection
+  assign render_sheet = false
+  if block.settings.show
+    if sheet_collection != blank and sheet_collection.products_count > 0
+      assign render_sheet = true
+    elsif request.design_mode or request.visual_preview_mode
+      assign render_sheet = true
+    endif
+  endif
+-%}
+{%- if render_sheet -%}
   {%- liquid
     assign phone_width = block.settings.phone_width | default: 80
     assign tablet_width = block.settings.tablet_width | default: 70
@@ -48,7 +61,7 @@
       </div>
     {%- endif -%}
     {% render 'trending-list',
-      collection: block.settings.collection,
+      collection: sheet_collection,
       limit: block.settings.products_to_show,
       phone_limit: block.settings.products_to_show_phone,
       heading: block.settings.heading,

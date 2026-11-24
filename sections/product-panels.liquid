@@ -126,7 +126,7 @@
               </div>
               <span class="product-panels__number" aria-hidden="true">{{ number }}</span>
 
-              {% render 'quick-add', product: product, class: 'product-panels__cart', size: section.settings.cart_size, icon_color: section.settings.cart_icon_color, options: section.settings.cart_options, overlay: section.settings.cart_overlay %}
+              {% render 'quick-add', product: product, class: 'product-panels__cart', size: section.settings.cart_size, icon_color: section.settings.cart_icon_color, options: section.settings.cart_options, overlay: section.settings.cart_overlay, id_suffix: forloop.index %}
 
               <div class="product-panels__card">
                 <h3 class="product-panels__title">

@@ -1,8 +1,11 @@
 {%- comment -%}
   You may also love (M6.9, Figma PDP "Variant31", phone "Variant97-3"): an eyebrow on the left ("YOU MAY
-  ALSO LOVE", the section's heading), "VIEW ALL →" on the right, then wide product tiles (Figma: 2 cards
-  of 890 x 398 at 1920, the photo filling the card, a glass strip with the title, subtitle and price;
-  snippets/product-card.liquid, style 'tile').
+  ALSO LOVE", the section's heading), "VIEW ALL →" on the right, then the product cards
+  (snippets/product-card.liquid), one style on all screens (setting "Product card"):
+  - Card ('full', default): the collection page card, details under the photo.
+  - Photo tile ('tile', Figma: 2 cards of 890 x 398 at 1920, the photo filling the card, a glass strip
+    with the title, subtitle and price; hover / keyboard focus opens the details with the cart button).
+  Columns: phones 1, tablets 2, from 990px Products per row.
 
   Which products: Shopify's related recommendations (worked out by Shopify from the catalogue and
   orders, or set by the merchant in the Search & Discovery app). The recommendations object is only
@@ -53,20 +56,51 @@
     assign card_loading = 'lazy'
   endif
 
-  # Image sizes. Tiles (from 750px): Products per row from 990px (widest ~92vw, full ~96vw, wide at most
-  # the 1650px page width), 2 per row from 750px. Full cards (phones): one per row
+  # One card style on all screens: 'full' (the collection page card) or 'tile' (the Figma photo tile)
+  assign card_style = section.settings.card_style | default: 'full'
+  assign card_shape = section.settings.card_shape | default: '890 / 398'
+
+  # Tile below 990px: on touch screens the details panel is always open. A Wide or 4:3 tile is too low
+  # there (~160px on phones: the panel covers the photo and the badge), so it is portrait (4:5). Square
+  # and portrait stay as they are
+  assign tile_ratio_small = card_shape
+  if card_shape == '890 / 398' or card_shape == '4 / 3'
+    assign tile_ratio_small = '4 / 5'
+  endif
+
+  # Card: Card shape is the photo's shape. The card has no "wide" photo: Wide shows as landscape (4:3)
+  case card_shape
+    when '1 / 1'
+      assign card_ratio = 'square'
+    when '4 / 5'
+      assign card_ratio = 'portrait'
+    else
+      assign card_ratio = 'landscape'
+  endcase
+
+  # Image sizes: Products per row from 990px (widest ~92vw, full ~96vw, wide at most the 1650px page
+  # width), 2 per row from 750px, 1 per row on phones
   assign section_vw = 92
   if section.settings.section_width == 'full'
     assign section_vw = 96
   endif
   assign column_vw = section_vw | divided_by: columns | plus: 1
+  assign tablet_vw = section_vw | divided_by: 2 | plus: 1
   if section.settings.section_width == 'wide'
     assign column_px = 1650 | divided_by: columns
-    assign tile_sizes = '(min-width: 990px) min(' | append: column_vw | append: 'vw, ' | append: column_px | append: 'px), 47vw'
+    assign card_sizes = '(min-width: 990px) min(' | append: column_vw | append: 'vw, ' | append: column_px | append: 'px), '
   else
-    assign tile_sizes = '(min-width: 990px) ' | append: column_vw | append: 'vw, 47vw'
+    assign card_sizes = '(min-width: 990px) ' | append: column_vw | append: 'vw, '
   endif
-  assign full_sizes = '92vw'
+  # A tile made taller below 990px (4:5) shows the photo wider than the tile (object-fit: cover): a
+  # square photo at 1.25 times the tile's width
+  if card_style == 'tile' and tile_ratio_small != card_shape
+    assign tablet_vw = tablet_vw | times: 1.25 | ceil
+    assign phone_vw = section_vw | times: 1.25 | ceil
+  else
+    assign phone_vw = section_vw
+  endif
+  assign card_sizes = card_sizes | append: '(min-width: 750px) ' | append: tablet_vw | append: 'vw, ' | append: phone_vw | append: 'vw'
 
   # "View all": the link setting, else this product's first collection, else all products
   assign view_all_url = section.settings.link_url
@@ -81,9 +115,8 @@
     watching them (it reads its [data-animate] children when it's added to the page)
   {%- endcomment -%}
   {%- comment -%}
-    Each product has two cards: the wide photo tile (from 750px, Figma desktop) and the full card
-    (phones, Figma Variant97-3: 2 per row). CSS shows one; the other is display: none (no screen reader,
-    and its lazy photo does not load)
+    One card per product, the same style on all screens (setting "Product card"). Tile: the details
+    panel (rating, description, cart button, "View details") opens on hover and keyboard focus
   {%- endcomment -%}
   <animate-on-scroll class="product-related__grid" data-related-grid>
     {%- assign shown = 0 -%}
@@ -98,12 +131,27 @@
           style="--animate-delay: {{ shown | times: 120 }}ms;"
         {% endif %}
       >
-        <div class="product-related__tile">
-          {% render 'product-card', product: item, style: 'tile', sizes: tile_sizes, loading: card_loading %}
-        </div>
-        <div class="product-related__full">
-          {% render 'product-card', product: item, style: 'full', sizes: full_sizes, loading: card_loading %}
-        </div>
+        {%- if card_style == 'tile' -%}
+          {% render 'product-card',
+            product: item,
+            style: 'tile',
+            sizes: card_sizes,
+            loading: card_loading,
+            show_details: true,
+            show_rating: true,
+            show_description: true,
+            cart_options: 'add_first'
+          %}
+        {%- else -%}
+          {% render 'product-card',
+            product: item,
+            style: 'full',
+            image_ratio: card_ratio,
+            sizes: card_sizes,
+            loading: card_loading,
+            show_rating: true
+          %}
+        {%- endif -%}
       </div>
       {%- assign shown = shown | plus: 1 -%}
       {%- if shown >= related_limit -%}
@@ -119,8 +167,8 @@
 {%- elsif product != blank -%}
   {%- assign related_url = routes.product_recommendations_url | append: '?product_id=' | append: product.id | append: '&section_id=' | append: section.id | append: '&limit=' | append: related_limit | append: '&intent=related' -%}
   <product-related
-    class="product-related full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
-    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --columns: {{ columns }}; --columns-tablet: {{ columns | at_most: 2 }}; --tile-ratio: {{ section.settings.card_shape | default: '890 / 398' }};"
+    class="product-related product-related--{{ card_style }} full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}"
+    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --columns: {{ columns }}; --tile-ratio: {{ card_shape }}; --tile-ratio-small: {{ tile_ratio_small }};"
     data-url="{{ related_url }}"
     {% if related_count == 0 and request.design_mode == false %}
       hidden
@@ -157,6 +205,12 @@
         {%- endif -%}
       </div>
     </div>
+
+    {%- comment -%}
+      The related cards come later (the recommendations request): the card and cart button scripts
+      must be in the page's first HTML (snippets/card-scripts.liquid)
+    {%- endcomment -%}
+    {% render 'card-scripts', product: product %}
   </product-related>
 {%- endif -%}
 
@@ -268,29 +322,53 @@
     gap: max(var(--space-lg), calc(40 * var(--px, 0.0625rem)));
   }
 
-  /* The tile from 750px, the full card on phones (the other one is not shown) */
-  .product-related__tile {
+  /* Tile: the tile has the Card shape. Card: as tall as the tallest card in its row */
+  .product-related--tile .product-related__item {
     aspect-ratio: var(--tile-ratio, 890 / 398);
   }
 
-  .product-related__full {
-    display: none;
+  .product-related--full .product-related__item > .product-card {
+    block-size: 100%;
+  }
+
+  /*
+    Tile on touch screens (no hover): the details panel is always open, so the cart button can be
+    reached. The rating and the description stay hidden, so the photo still shows.
+  */
+  @media (hover: none) {
+    .product-related .product-card--tile .product-card__details {
+      grid-template-rows: 1fr;
+    }
+
+    .product-related .product-card--tile .product-card__details-inner {
+      visibility: visible;
+      transition-delay: 0s;
+    }
+
+    .product-related .product-card--tile :is(.product-card__rating, .product-card__description) {
+      display: none;
+    }
   }
 
   .product-related__empty {
     margin: 0;
   }
 
-  /* Tablets: two tiles in a row at most (the count comes from Liquid: min() in repeat() breaks) */
+  /* Tablets: two in a row (Products per row is at least 2) */
   @media (max-width: 989px) {
     .product-related__grid {
-      grid-template-columns: repeat(var(--columns-tablet, 2), minmax(0, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    /* A taller tile (Wide and 4:3 become 4:5, from Liquid): the always open panel leaves the photo */
+    .product-related--tile .product-related__item {
+      aspect-ratio: var(--tile-ratio-small, 4 / 5);
     }
   }
 
   /*
     Phones (Figma Variant97-3): the eyebrow centred with a line on each side, "View all" under it at the
-    right, then the full product cards one under the other (agreed: one per row; the Figma shows 2)
+    right, then the cards one under the other (agreed: one per row; the Figma shows 2)
   */
   @media (max-width: 749px) {
     .product-related__header {
@@ -311,15 +389,6 @@
     .product-related__grid {
       grid-template-columns: minmax(0, 1fr);
       gap: var(--space-md);
-    }
-
-    .product-related__tile {
-      display: none;
-    }
-
-    .product-related__full {
-      display: block;
-      block-size: 100%;
     }
   }
 {% endstylesheet %}
@@ -430,6 +499,23 @@
     {
       "type": "header",
       "content": "t:labels.layout"
+    },
+    {
+      "type": "select",
+      "id": "card_style",
+      "label": "t:labels.product_grid_card_style",
+      "info": "t:labels.product_related_card_style_info",
+      "options": [
+        {
+          "value": "full",
+          "label": "t:options.product_grid_card_style.full"
+        },
+        {
+          "value": "tile",
+          "label": "t:options.product_grid_card_style.tile"
+        }
+      ],
+      "default": "full"
     },
     {
       "type": "range",

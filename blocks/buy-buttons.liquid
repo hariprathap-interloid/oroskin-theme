@@ -84,6 +84,10 @@
   assign quantity_min = current_variant.quantity_rule.min | default: 1
   assign quantity_step = current_variant.quantity_rule.increment | default: 1
   assign quantity_max = current_variant.quantity_rule.max
+
+  # Own form id per block: Shopify's default (product_form_<product id>) repeats when a Featured product
+  # shows the page's own product. payment_terms and the dynamic checkout find the form by this id
+  assign buy_form_id = 'ProductForm-' | append: block.id
 -%}
 
 {%- if buy_product != blank -%}
@@ -101,7 +105,7 @@
     {%- endif %}
     {{ block.shopify_attributes }}
   >
-    {%- form 'product', buy_product, class: 'buy-buttons__form' -%}
+    {%- form 'product', buy_product, id: buy_form_id, class: 'buy-buttons__form' -%}
       {%- if buy_product.has_only_default_variant -%}
         <input type="hidden" name="id" value="{{ current_variant.id }}">
       {%- else -%}

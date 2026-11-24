@@ -4,12 +4,16 @@
   products section and the Image banner's Trending sheet, so both always look the same.
 
   Per row: category = the product's type (hidden when empty); badge = the first value of the product's
-  "Badges" field via the product-badge snippet; the whole row is one link (the title's link stretches
-  over it). Without a collection: placeholder rows.
+  "Badges" field via the product-badges snippet (limit 1); the whole row is one link (the title's link stretches
+  over it). No heading = a visually hidden h2 above the h3 product titles.
 
-  @param {collection} [collection] - The collection to list. Empty = placeholder rows
-  @param {number} [limit] - How many products, default 5
+  No products (no collection or an empty one): on the store no rows (the caller doesn't render the list
+  at all); in the theme editor and the Add section preview, placeholder rows and a note.
+
+  @param {collection} [collection] - The collection to list. Empty = no rows on the store, placeholder rows in the editor
+  @param {number} [limit] - How many products, default 5, at most 8
   @param {number} [phone_limit] - How many products on phones (below 750px); the other rows are hidden there. Default: all
+  @param {string} [loading] - Thumbnail loading ('eager' / 'lazy'), default 'lazy'
   @param {string} [heading] - Heading HTML (inline rich text: italic words show in the accent colour)
   @param {string} [link_label] - "View all" text
   @param {string} [link] - "View all" URL; default the collection's page
@@ -22,9 +26,19 @@
 {% enddoc %}
 
 {%- liquid
-  assign row_limit = limit | default: 5
+  assign row_limit = limit | default: 5 | at_most: 8
   assign phone_rows = phone_limit | default: row_limit
   assign row_animation = animation | default: 'none'
+  assign thumb_loading = loading | default: 'lazy'
+
+  assign has_products = false
+  if collection != blank and collection.products_count > 0
+    assign has_products = true
+  endif
+  assign show_placeholders = false
+  if request.design_mode or request.visual_preview_mode
+    assign show_placeholders = true
+  endif
 
   # Custom sizes: the same fluid formula as the Heading / Text blocks (snippets/fluid-font-size.liquid)
   assign heading_style = ''
@@ -47,6 +61,9 @@
 -%}
 
 <div class="trending-list">
+  {%- if heading == blank -%}
+    <h2 class="visually-hidden">{{ 'sections.trending.heading_hidden' | t }}</h2>
+  {%- endif -%}
   {%- if heading != blank or link_label != blank -%}
     <div class="trending-list__header">
       {%- if heading != blank -%}
@@ -76,12 +93,11 @@
         style="{{ title_style | strip }}"
       {% endif %}
     >
-      {%- if collection != blank and collection.products_count > 0 -%}
+      {%- if has_products -%}
         {%- for product in collection.products limit: row_limit -%}
           {%- liquid
             assign row_number = forloop.index | prepend: '0' | slice: -2, 2
             assign delay = forloop.index0 | times: 80 | at_most: 480
-            assign badges_field = product.metafields.custom.badges
           -%}
           <li
             class="trending-list__row{% if forloop.index > phone_rows %} trending-list__row--no-phone{% endif %}"
@@ -93,8 +109,8 @@
             <span class="trending-list__number" aria-hidden="true">{{ row_number }}</span>
             <div class="trending-list__thumb">
               {%- if product.featured_media != blank -%}
-                {{ product.featured_media.preview_image | image_url: width: 240, height: 160, crop: 'center' | image_tag: widths: '120, 240', sizes: '120px', alt: '', loading: 'lazy' }}
-              {%- else -%}
+                {{ product.featured_media.preview_image | image_url: width: 240, height: 160, crop: 'center' | image_tag: widths: '120, 240', sizes: '120px', alt: '', loading: thumb_loading }}
+              {%- elsif show_placeholders -%}
                 {{ 'product-1' | placeholder_svg_tag }}
               {%- endif -%}
             </div>
@@ -103,15 +119,7 @@
                 <p class="trending-list__category">{{ product.type | escape }}</p>
               {%- endif -%}
               <div class="trending-list__badge">
-                {%- if badges_field != blank -%}
-                  {%- if badges_field.type contains 'list.' -%}
-                    {%- for badge in badges_field.value limit: 1 -%}
-                      {% render 'product-badge', badge: badge %}
-                    {%- endfor -%}
-                  {%- else -%}
-                    {% render 'product-badge', badge: badges_field.value %}
-                  {%- endif -%}
-                {%- endif -%}
+                {%- render 'product-badges', field: product.metafields.custom.badges, limit: 1 -%}
               </div>
             </div>
             <h3 class="trending-list__title">
@@ -120,7 +128,7 @@
             <div class="trending-list__price">{% render 'price', product: product %}</div>
           </li>
         {%- endfor -%}
-      {%- else -%}
+      {%- elsif show_placeholders -%}
         {%- for i in (1..row_limit) -%}
           <li class="trending-list__row{% if forloop.index > phone_rows %} trending-list__row--no-phone{% endif %}">
             <span class="trending-list__number" aria-hidden="true">{{ forloop.index | prepend: '0' | slice: -2, 2 }}</span>
@@ -138,6 +146,9 @@
       {%- endif -%}
     </ol>
   </animate-on-scroll>
+  {%- if show_placeholders and has_products == false -%}
+    <p class="trending-list__note">{{ 'sections.trending.editor_empty' | t }}</p>
+  {%- endif -%}
 </div>
 
 {% stylesheet %}
@@ -352,10 +363,20 @@
     inset: 0;
   }
 
-  .trending-list__row:hover .trending-list__title {
-    text-decoration: underline;
-    text-decoration-thickness: 1px;
-    text-underline-offset: 0.2em;
+  @media (hover: hover) {
+    .trending-list__row:hover .trending-list__title {
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 0.2em;
+    }
+  }
+
+  /* Theme editor only: no products in the collection */
+  .trending-list__note {
+    margin: 0;
+    color: color-mix(in srgb, var(--color-text) 75%, var(--color-background));
+    font-size: var(--font-size-small);
+    font-style: italic;
   }
 
   .trending-list__link:focus-visible {

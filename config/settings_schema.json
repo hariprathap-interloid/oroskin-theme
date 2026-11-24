@@ -263,6 +263,101 @@
         "id": "sold_out_badge_color_scheme",
         "label": "t:labels.sold_out_badge_color_scheme",
         "default": "scheme-5"
+      },
+      {
+        "type": "header",
+        "content": "t:labels.card_buttons_group"
+      },
+      {
+        "type": "paragraph",
+        "content": "t:labels.card_buttons_info"
+      },
+      {
+        "type": "text",
+        "id": "card_buy_label",
+        "label": "t:labels.card_buy_label",
+        "info": "t:labels.card_buy_label_info",
+        "placeholder": "t:labels.card_buy_label_placeholder"
+      },
+      {
+        "type": "select",
+        "id": "card_buy_icon",
+        "label": "t:labels.card_buy_icon",
+        "options": [
+          {
+            "value": "default",
+            "label": "t:options.card_button_icon.default"
+          },
+          {
+            "value": "custom",
+            "label": "t:options.card_button_icon.custom"
+          },
+          {
+            "value": "none",
+            "label": "t:options.card_button_icon.none"
+          }
+        ],
+        "default": "default"
+      },
+      {
+        "type": "image_picker",
+        "id": "card_buy_icon_image",
+        "label": "t:labels.card_buy_icon_image",
+        "info": "t:labels.card_icon_image_info",
+        "visible_if": "{{ settings.card_buy_icon == 'custom' }}"
+      },
+      {
+        "type": "select",
+        "id": "card_cart_style",
+        "label": "t:labels.card_cart_style",
+        "info": "t:labels.card_cart_style_info",
+        "options": [
+          {
+            "value": "icon",
+            "label": "t:options.card_cart_style.icon"
+          },
+          {
+            "value": "text",
+            "label": "t:options.card_cart_style.text"
+          }
+        ],
+        "default": "icon"
+      },
+      {
+        "type": "text",
+        "id": "card_cart_label",
+        "label": "t:labels.card_cart_label",
+        "info": "t:labels.card_cart_label_info",
+        "placeholder": "t:labels.card_cart_label_placeholder",
+        "visible_if": "{{ settings.card_cart_style == 'text' }}"
+      },
+      {
+        "type": "select",
+        "id": "card_cart_icon",
+        "label": "t:labels.card_cart_icon",
+        "info": "t:labels.card_cart_icon_info",
+        "options": [
+          {
+            "value": "default",
+            "label": "t:options.card_button_icon.default"
+          },
+          {
+            "value": "custom",
+            "label": "t:options.card_button_icon.custom"
+          },
+          {
+            "value": "none",
+            "label": "t:options.card_button_icon.none"
+          }
+        ],
+        "default": "default"
+      },
+      {
+        "type": "image_picker",
+        "id": "card_cart_icon_image",
+        "label": "t:labels.card_cart_icon_image",
+        "info": "t:labels.card_icon_image_info",
+        "visible_if": "{{ settings.card_cart_icon == 'custom' }}"
       }
     ]
   },

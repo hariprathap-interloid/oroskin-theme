@@ -26,7 +26,8 @@
         | image_tag: widths: '82, 164', sizes: '82px', alt: '', loading: 'lazy'
       }}
     {%- else -%}
-      {{ 'product-1' | placeholder_svg_tag }}
+      {%- comment -%} Decoration only: the title names the link {%- endcomment -%}
+      {{ 'product-1' | placeholder_svg_tag | replace_first: '<svg', '<svg aria-hidden="true"' }}
     {%- endif -%}
   </div>
   {%- comment -%} divs, not spans: the price snippet outputs a <div>, and a link may hold divs {%- endcomment -%}

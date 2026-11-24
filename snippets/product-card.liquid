@@ -33,7 +33,7 @@
   Full style (style: 'full', the phone design of the collection page, design/collection): the photo on
   top and everything under it, always visible: category line (the product type) and rating, the
   title, the price with a "Save 24%" pill, the first option's values (size pills or colour dots, at most
-  6), then the round cart button (quick-add) and BUY. BUY is a link to Shopify's cart permalink
+  6), then the cart button (quick-add) and BUY. BUY is a link to Shopify's cart permalink
   (/cart/<variant id>:1), which opens the checkout with that one product: no second form per card.
   Sold out: "Notify me", a link to the product page (back-in-stock is an app, decision 6).
   The option values are real choices (radios) only when the product has ONE option: choosing one swaps
@@ -52,6 +52,12 @@
   @param {boolean} [show_rating] - Details panel: show the review rating when an app provides one
   @param {boolean} [show_description] - Details panel: show the start of the description
   @param {string} [cart_options] - Details panel quick add, products with several variants: 'add_first' or 'link'
+  @param {string} [id_suffix] - Added to the quick add form id (with the card style), so the same product
+    two times in one section gives two different ids (e.g. 'picks' for a second list of products)
+
+  Buttons (Theme settings > Product cards > Buttons, for the Full card and the Tile panel): the BUY
+  text and icon, and the cart button: round with an icon (default) or a pill with text, with the
+  default cart icon, a custom image or (pill only) no icon.
 
   @example
   {% render 'product-card', product: product %}
@@ -64,6 +70,33 @@
   assign ratio = image_ratio | default: 'portrait'
   assign image_sizes = sizes | default: '(min-width: 990px) 25vw, 50vw'
   assign title_tag = heading_tag | default: 'h3'
+
+  # Buttons (Theme settings > Product cards > Buttons). Empty texts = the default texts (locales)
+  assign buy_label = 'products.card.buy' | t
+  if settings.card_buy_label != blank
+    assign buy_label = settings.card_buy_label
+  endif
+  assign cart_text = false
+  if settings.card_cart_style == 'text'
+    assign cart_text = true
+  endif
+  assign cart_label = settings.card_cart_label
+  assign cart_icon_image = nil
+  if settings.card_cart_icon == 'custom' and settings.card_cart_icon_image != blank
+    assign cart_icon_image = settings.card_cart_icon_image
+  endif
+  # "No icon" only for the pill: the round button keeps the default icon
+  assign cart_show_icon = true
+  if cart_text and settings.card_cart_icon == 'none'
+    assign cart_show_icon = false
+  endif
+
+  # Quick add form id: the card style (so two card styles of one product in one section never share an
+  # id) and the caller's suffix
+  assign quick_add_suffix = card_style
+  if id_suffix != blank
+    assign quick_add_suffix = quick_add_suffix | append: '-' | append: id_suffix
+  endif
 
   assign image_class = ''
   if ratio != 'original'
@@ -256,6 +289,7 @@
                   value="{{ value_variant.id }}"
                   data-available="{{ value.available }}"
                   data-save="{{ value_save }}"
+                  data-add-name="{{ value_add_name | escape }}"
                   data-add-label="{{ 'products.quick_add.add' | t: title: value_add_name | escape }}"
                   data-added-label="{{ 'products.quick_add.added' | t: title: value_add_name | escape }}"
                   {% if value_variant.id == variant.id %}
@@ -309,11 +343,44 @@
 
         <div class="product-card__buy">
           {%- if product.available -%}
-            <div class="product-card__buy-now" data-card-buy>
-              {% render 'quick-add', product: product, size: 40, icon_color: 'var(--color-accent)', options: 'add_first', class: 'product-card__quick-add' %}
+            <div class="product-card__buy-now{% if cart_text %} product-card__buy-now--text{% endif %}" data-card-buy>
+              {%- if cart_text -%}
+                {% render 'quick-add',
+                  product: product,
+                  style: 'pill',
+                  size: 44,
+                  label: cart_label,
+                  icon_image: cart_icon_image,
+                  show_icon: cart_show_icon,
+                  options: 'add_first',
+                  class: 'product-card__quick-add product-card__cart-text',
+                  id_suffix: quick_add_suffix
+                %}
+              {%- else -%}
+                {% render 'quick-add',
+                  product: product,
+                  size: 40,
+                  icon_color: 'var(--color-accent)',
+                  icon_image: cart_icon_image,
+                  options: 'add_first',
+                  class: 'product-card__quick-add',
+                  id_suffix: quick_add_suffix
+                %}
+              {%- endif -%}
               <a class="button product-card__buy-link" href="{{ buy_url }}" data-card-buy-link>
-                {{- 'icon-buy-now.svg' | inline_asset_content -}}
-                {{- 'products.card.buy' | t -}}
+                {%- case settings.card_buy_icon -%}
+                  {%- when 'none' -%}
+                  {%- when 'custom' -%}
+                    {%- if settings.card_buy_icon_image != blank -%}
+                      {{- settings.card_buy_icon_image | image_url: width: 48 | image_tag: alt: '', loading: 'lazy' -}}
+                    {%- else -%}
+                      {{- 'icon-buy-now.svg' | inline_asset_content -}}
+                    {%- endif -%}
+                  {%- else -%}
+                    {{- 'icon-buy-now.svg' | inline_asset_content -}}
+                {%- endcase -%}
+                <span class="product-card__buy-label">{{ buy_label | escape }}</span>
+                {%- comment -%} One line: no space before the colon in the name ("Buy: Serum") {%- endcomment -%}
                 <span class="visually-hidden">: {{ product.title | escape }}</span>
               </a>
             </div>
@@ -367,7 +434,21 @@
               label only: the whole tile is already the link to the product.
             {%- endcomment -%}
             <div class="product-card__actions">
-              {% render 'quick-add', product: product, size: 44, icon_color: '#7d0000', options: cart_options %}
+              {%- if cart_text -%}
+                {% render 'quick-add',
+                  product: product,
+                  style: 'pill',
+                  size: 44,
+                  label: cart_label,
+                  icon_image: cart_icon_image,
+                  show_icon: cart_show_icon,
+                  options: cart_options,
+                  class: 'product-card__cart-text',
+                  id_suffix: quick_add_suffix
+                %}
+              {%- else -%}
+                {% render 'quick-add', product: product, size: 44, icon_color: '#7d0000', icon_image: cart_icon_image, options: cart_options, id_suffix: quick_add_suffix %}
+              {%- endif -%}
               <span class="product-card__more" aria-hidden="true">
                 <span class="product-card__more-label">{{ 'products.card.view_details' | t }}</span>
                 {{- 'icon-arrow.svg' | inline_asset_content -}}
@@ -757,6 +838,7 @@
     position: relative;
     z-index: 2; /* above the stretched title link */
     display: flex;
+    flex-wrap: wrap; /* a long cart button text puts "View details" on the next line */
     align-items: center;
     gap: var(--space-sm);
     padding-block-end: var(--space-md);
@@ -766,7 +848,7 @@
     The glass cart button needs something behind it to show; on the white strip it gets a soft tint
     instead (three classes beat quick-add's own two-class rule).
   */
-  .product-card__actions .quick-add .quick-add__button {
+  .product-card__actions .quick-add:where(:not(.quick-add--pill)) .quick-add__button {
     background-color: var(--color-tint);
   }
 
@@ -1076,10 +1158,68 @@
     white-space: nowrap;
   }
 
-  .product-card__buy-link svg,
+  .product-card__buy-link :is(svg, img),
   .product-card__notify svg {
+    flex: none;
     inline-size: 1.1em;
     block-size: 1.1em;
+  }
+
+  /* The BUY cart icon is drawn small in its 22px box: a bigger box keeps its arrow readable */
+  .product-card__buy-link svg {
+    inline-size: 1.5em;
+    block-size: 1.5em;
+  }
+
+  .product-card__buy-link img {
+    object-fit: contain;
+  }
+
+  /* A long BUY text wraps inside the button, never out of the card */
+  .product-card__buy-link {
+    min-inline-size: 0;
+    text-align: center;
+  }
+
+  .product-card__buy-label {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
+
+  /*
+    Cart button with text (Theme settings > Product cards > Cart button style): two pills, side by side
+    when they fit, else one under the other at full width. Both 44px tall at least (touch target).
+  */
+  .product-card__buy-now--text {
+    flex-wrap: wrap;
+  }
+
+  .product-card__buy-now--text > * {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+  }
+
+  .product-card__buy-now--text .product-card__buy-link {
+    min-block-size: 2.75rem;
+  }
+
+  /* Three classes: beat quick-add's pill rule (two classes) and the theme's button[type="submit"] */
+  .product-card .product-card__cart-text .quick-add__button {
+    inline-size: 100%;
+    max-inline-size: 100%;
+    block-size: auto;
+    min-block-size: 2.75rem;
+    padding-inline: 1em;
+    font-size: var(--font-size-caption);
+    line-height: 1.2;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  /* The tile panel: the pill as wide as its text */
+  .product-card__actions .product-card__cart-text .quick-add__button {
+    inline-size: auto;
   }
 {% endstylesheet %}
 
@@ -1124,7 +1264,12 @@
         quickAdd.dataset.variantId = id;
         const field = quickAdd.querySelector('input[name="id"]');
         if (field) field.value = id;
-        quickAdd.querySelector('.quick-add__button')?.setAttribute('aria-label', input.dataset.addLabel);
+        // The round button is named by its aria-label; the text pill by its visible text + a hidden
+        // product name (no aria-label: the name must start with the visible text)
+        const button = quickAdd.querySelector('.quick-add__button');
+        const name = button?.querySelector('[data-quick-add-name]');
+        if (name) name.textContent = `: ${input.dataset.addName}`;
+        else button?.setAttribute('aria-label', input.dataset.addLabel);
         quickAdd.dataset.labelAdded = input.dataset.addedLabel;
       }
 

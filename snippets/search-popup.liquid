@@ -111,6 +111,7 @@
             autocomplete="off"
             autocapitalize="off"
             spellcheck="false"
+            aria-controls="SearchPopupResults"
             data-search-input
           >
           <input type="hidden" name="options[prefix]" value="last">
@@ -173,7 +174,7 @@
         </div>
 
         {%- comment -%} The predictive results go here (sections/predictive-search.liquid) {%- endcomment -%}
-        <div class="search-popup__results" data-search-results hidden></div>
+        <div id="SearchPopupResults" class="search-popup__results" data-search-results hidden></div>
       </div>
 
       <button type="button" class="search-popup__close" data-search-close>
@@ -518,12 +519,13 @@
   }
 
   /*
-    auto-fit (not auto-fill): empty columns collapse, so 2 results share the whole width instead of
-    leaving a gap where a third card would go. At most 3 per row (the 16rem minimum).
+    auto-fill (not auto-fit): the empty columns stay, so 1 or 2 results keep the width of a full row's
+    card (about one third) instead of one card stretching over the whole 931px column. At most 3 per row
+    (the 16rem minimum); 2 on tablets, 1 on phones.
   */
   .search-popup__products {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr));
     gap: var(--space-md) 1.25rem;
   }
 
@@ -536,7 +538,8 @@
   /*
     Glass for the text panels of the product cards and the result rows (Figma Glass: fill #FFFFFF33,
     Light 45deg 80%, Frost 100). Light 45deg = the light comes from the top right, so a bright 1px rim on
-    the top and right edges (80% white) and a weaker one bottom-left; Frost 100 = the theme's 35px blur.
+    the top and right edges (80% white) and a weaker one bottom-left. Frost 100 (a backdrop blur) is left
+    out: the panel behind is solid cream, so a blur shows nothing and only costs paint time.
     Refraction / Depth / Dispersion / Splay bend the background along the rim (an SVG filter that only
     Chrome supports) and are left out, as on every other glass element.
     The two values (--search-glass-fill, --search-glass-rim) are set on .search-popup__dialog at the top.
@@ -580,8 +583,6 @@
     border-radius: 0.5rem;
     background-color: var(--search-glass-fill);
     box-shadow: var(--search-glass-rim);
-    -webkit-backdrop-filter: blur(var(--glass-frost));
-    backdrop-filter: blur(var(--glass-frost));
   }
 
   .search-card__category {
@@ -667,8 +668,6 @@
     border-radius: 0.5rem;
     background-color: var(--search-glass-fill);
     box-shadow: var(--search-glass-rim);
-    -webkit-backdrop-filter: blur(var(--glass-frost));
-    backdrop-filter: blur(var(--glass-frost));
   }
 
   .search-link__title {
@@ -777,10 +776,23 @@
       this.status = this.querySelector('[data-search-status]');
       this.recent = this.querySelector('[data-search-recent]');
 
-      this.querySelector('[data-search-open]').addEventListener('click', (event) => {
-        event.preventDefault(); // the link to the search page is the no-JavaScript fallback
-        this.open();
-      });
+      /*
+        Every listener on one AbortController, removed in disconnectedCallback. The theme editor takes the
+        header out and puts it back (connectedCallback runs again): without this, each move added a second
+        set of listeners (one click opened the popup two times).
+      */
+      this.listeners?.abort();
+      this.listeners = new AbortController();
+      const { signal } = this.listeners;
+
+      this.querySelector('[data-search-open]').addEventListener(
+        'click',
+        (event) => {
+          event.preventDefault(); // the link to the search page is the no-JavaScript fallback
+          this.open();
+        },
+        { signal }
+      );
 
       /*
         Close on a backdrop click only. The target alone can't tell: a drag that starts in the field and
@@ -788,29 +800,43 @@
         send their click to the <dialog> too. So the check is the position: the press AND the click must
         both be outside the dialog's box (the backdrop is outside it, the scrollbar inside).
       */
-      this.dialog.addEventListener('pointerdown', (event) => {
-        this.pressedBackdrop = this.isOutside(event);
-      });
+      this.dialog.addEventListener(
+        'pointerdown',
+        (event) => {
+          this.pressedBackdrop = this.isOutside(event);
+        },
+        { signal }
+      );
 
-      this.dialog.addEventListener('click', (event) => {
-        const onBackdrop = this.pressedBackdrop && this.isOutside(event);
-        this.pressedBackdrop = false;
-        if (onBackdrop || event.target.closest('[data-search-close]')) {
-          this.dialog.close();
-          return;
-        }
-        // A chip or "Search for …" link: remember the term before the page changes
-        const term = event.target.closest('[data-search-term]');
-        if (term) this.remember(term.dataset.searchTerm);
-      });
+      this.dialog.addEventListener(
+        'click',
+        (event) => {
+          const onBackdrop = this.pressedBackdrop && this.isOutside(event);
+          this.pressedBackdrop = false;
+          if (onBackdrop || event.target.closest('[data-search-close]')) {
+            this.dialog.close();
+            return;
+          }
+          /*
+            A chip (recent, trending, suggestion): remember the term before the page changes. "Search for …"
+            is a submit button of the form, so the submit handler below remembers it.
+          */
+          const term = event.target.closest('[data-search-term]');
+          if (term) this.remember(term.dataset.searchTerm);
+        },
+        { signal }
+      );
 
-      this.querySelector('[data-search-form]').addEventListener('submit', () => this.remember(this.input.value));
-      this.input.addEventListener('input', () => this.onInput());
-      this.dialog.addEventListener('close', () => this.stop());
+      this.querySelector('[data-search-form]').addEventListener('submit', () => this.remember(this.input.value), {
+        signal,
+      });
+      this.input.addEventListener('input', () => this.onInput(), { signal });
+      this.dialog.addEventListener('close', () => this.stop(), { signal });
     }
 
     disconnectedCallback() {
-      this.stop();
+      this.stop(); // also removes the resize / transitionend listeners of an open popup (this.watcher)
+      this.listeners?.abort();
     }
 
     /** Closed: no waiting search, no request in flight, no resize listener */
@@ -841,6 +867,7 @@
         when the pill's width transition ends, and when the window changes size (phone rotation).
       */
       this.place();
+      this.watcher?.abort(); // never two sets of these listeners
       this.watcher = new AbortController();
       const { signal } = this.watcher;
       window.addEventListener('resize', () => this.place(), { passive: true, signal });
@@ -891,7 +918,8 @@
     async search(terms) {
       // Cancel the previous request: an older, slower answer must never replace a newer one
       this.controller?.abort();
-      this.controller = new AbortController();
+      const controller = new AbortController();
+      this.controller = controller;
 
       const params = new URLSearchParams({
         q: terms,
@@ -903,7 +931,7 @@
 
       this.results.setAttribute('aria-busy', 'true');
       try {
-        const response = await fetch(`${this.dataset.url}?${params}`, { signal: this.controller.signal });
+        const response = await fetch(`${this.dataset.url}?${params}`, { signal: controller.signal });
         if (!response.ok) throw new Error(String(response.status));
 
         // The answer is the section's HTML inside <div id="shopify-section-predictive-search">
@@ -922,7 +950,12 @@
         this.showResults();
         this.announce(this.dataset.labelError);
       } finally {
-        this.results.removeAttribute('aria-busy');
+        /*
+          Only the newest search ends the busy state: when search B cancels search A, A ends here too, but
+          B is still loading, so the dim and aria-busy stay. A search cancelled by closing the popup or
+          by an empty field is still this.controller, so it clears them.
+        */
+        if (this.controller === controller) this.results.removeAttribute('aria-busy');
       }
     }
 

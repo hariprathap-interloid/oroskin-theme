@@ -306,7 +306,7 @@
   },
   "sections": {
     "custom_liquid": {
-      "empty": "Add your code in the \"Liquid code\" setting."
+      "editor_empty": "This section is empty. Add code in \"Liquid code\". On the live store, a section with no code does not show."
     },
     "hero": {
       "product_placeholder": "Product image: choose one in the block settings",
@@ -317,7 +317,9 @@
       "photo_link": "Shop now"
     },
     "trending": {
-      "placeholder_category": "Category"
+      "placeholder_category": "Category",
+      "heading_hidden": "Trending products",
+      "editor_empty": "Select a collection that has products. If there are no products, the store does not show this list."
     },
     "blog_stories": {
       "placeholder_category": "Category",

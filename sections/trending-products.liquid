@@ -5,19 +5,35 @@
 
   Per row:
   - category = the product's type (Products > Product type, e.g. "Makeup"), hidden when empty
-  - badge = the first value of the product's "Badges" field (custom.badges), drawn by the same
-    product-badge snippet as the product cards, so labels and colours match everywhere
+  - badge = the first value of the product's "Badges" field (custom.badges), drawn by the shared
+    product-badges snippet, so labels and colours match the product cards
   - the whole row is one link to the product (the title's link stretches over the row)
   The list itself is snippets/trending-list.liquid, shared with the Image banner's Trending sheet
   (Manifesto + Trending as one scroll scene).
 
-  Without a collection: placeholder rows, so the layout can be judged before choosing products.
+  Layout: list and photo side by side from 1200px; below 1200px (phones and tablets) the list, then the
+  photo under it. Phones: half the top and bottom padding; the phone "Number of products" hides the
+  later rows.
+
+  No products (no collection or an empty one): no section on the store; placeholder rows and a note in
+  the theme editor and the Add section preview. No image: the photo half stays as a soft tinted area
+  (the placeholder drawing only in the editor and the preview).
 {%- endcomment -%}
 
 {%- liquid
   assign trending = section.settings.collection
-  assign limit = section.settings.products_to_show
+  assign limit = section.settings.products_to_show | at_most: 8
+  assign phone_limit = section.settings.products_to_show_phone | default: 5 | at_most: 8
   assign scheme_id = section.settings.color_scheme.id | default: 'scheme-5'
+
+  assign in_editor = false
+  if request.design_mode or request.visual_preview_mode
+    assign in_editor = true
+  endif
+  assign has_products = false
+  if trending != blank and trending.products_count > 0
+    assign has_products = true
+  endif
 
   assign animation = section.settings.animation
   assign image_animation = section.settings.image_animation
@@ -26,56 +42,68 @@
     assign image_animation = 'none'
   endif
 
+  capture image_loading
+    render 'section-loading'
+  endcapture
+  assign image_loading = image_loading | strip
+
   assign overlay_opacity = section.settings.image_overlay | divided_by: 100.0
   assign bg_opacity = section.settings.background_opacity | divided_by: 100.0
 -%}
 
-<div
-  class="trending full-width color-{{ scheme_id }} trending--image-{{ section.settings.image_position }}"
-  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
->
-  <div class="trending__panel">
-    {%- if section.settings.background_image != blank -%}
-      <div class="trending-bg" style="--trending-bg-opacity: {{ bg_opacity }};" aria-hidden="true">
-        {{ section.settings.background_image | image_url: width: 1600 | image_tag: widths: '600, 900, 1200, 1600', sizes: '(min-width: 990px) 50vw, 100vw', alt: '', loading: 'lazy' }}
-      </div>
-    {%- endif -%}
-    {% render 'trending-list',
-      collection: trending,
-      limit: limit,
-      heading: section.settings.heading,
-      link_label: section.settings.link_label,
-      link: section.settings.link,
-      animation: animation,
-      heading_size: section.settings.heading_size,
-      title_size: section.settings.title_size
-    %}
-  </div>
-
-  <animate-on-scroll
-    class="trending__media"
-    {% if image_animation != 'none' %}
-      data-animate="{{ image_animation }}"
-    {% endif %}
+{%- if has_products or in_editor -%}
+  <div
+    class="trending full-width color-{{ scheme_id }} trending--image-{{ section.settings.image_position }}"
+    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"
   >
-    {%- if section.settings.image != blank -%}
-      {% render 'image', image: section.settings.image, class: 'image--cover', sizes: '(min-width: 990px) 50vw, 100vw' %}
-    {%- else -%}
-      {{ 'lifestyle-2' | placeholder_svg_tag: 'trending__placeholder' }}
-    {%- endif -%}
-    {%- if section.settings.image_overlay > 0 -%}
-      <div class="trending__overlay" style="opacity: {{ overlay_opacity }};" aria-hidden="true"></div>
-    {%- endif -%}
-  </animate-on-scroll>
-</div>
+    <div class="trending__panel">
+      {%- if section.settings.background_image != blank -%}
+        <div class="trending-bg" style="--trending-bg-opacity: {{ bg_opacity }};" aria-hidden="true">
+          {{ section.settings.background_image | image_url: width: 1600 | image_tag: widths: '600, 900, 1200, 1600', sizes: '(min-width: 1200px) 50vw, 100vw', alt: '', loading: image_loading }}
+        </div>
+      {%- endif -%}
+      {% render 'trending-list',
+        collection: trending,
+        limit: limit,
+        phone_limit: phone_limit,
+        heading: section.settings.heading,
+        link_label: section.settings.link_label,
+        link: section.settings.link,
+        animation: animation,
+        heading_size: section.settings.heading_size,
+        title_size: section.settings.title_size,
+        loading: image_loading
+      %}
+    </div>
+
+    <animate-on-scroll
+      class="trending__media{% if section.settings.image == blank %} trending__media--empty{% endif %}"
+      {% if image_animation != 'none' %}
+        data-animate="{{ image_animation }}"
+      {% endif %}
+    >
+      {%- if section.settings.image != blank -%}
+        {% render 'image', image: section.settings.image, class: 'image--cover', sizes: '(min-width: 1200px) 50vw, 100vw' %}
+      {%- elsif in_editor -%}
+        {{ 'lifestyle-2' | placeholder_svg_tag: 'trending__placeholder' }}
+      {%- endif -%}
+      {%- if section.settings.image_overlay > 0 -%}
+        <div class="trending__overlay" style="opacity: {{ overlay_opacity }};" aria-hidden="true"></div>
+      {%- endif -%}
+    </animate-on-scroll>
+  </div>
+{%- endif -%}
 
 {% stylesheet %}
-  /* Figma: two halves, the dark list panel (snippets/trending-list.liquid) and a full-height photo */
+  /*
+    Figma: two halves, the dark list panel (snippets/trending-list.liquid) and a full-height photo.
+    Below 1200px: one column, the list first, then the photo.
+  */
   .trending {
     display: grid;
   }
 
-  @media (min-width: 990px) {
+  @media (min-width: 1200px) {
     .trending {
       grid-template-columns: 1fr 1fr;
       min-block-size: 100svh;
@@ -95,9 +123,22 @@
     padding: var(--section-padding-top) clamp(var(--page-margin), 3vw, 4rem) var(--section-padding-bottom);
   }
 
+  /* Phones: half the top and bottom padding */
+  @media (max-width: 749px) {
+    .trending__panel {
+      padding-block: calc(var(--section-padding-top) / 2) calc(var(--section-padding-bottom) / 2);
+    }
+  }
+
   .trending__media {
     position: relative;
     min-block-size: 60svh;
+  }
+
+  /* No image: the half stays as the raised surface of the scheme (white on light schemes, a 12% text mix on dark ones;
+     the placeholder drawing only in the editor) */
+  .trending__media--empty {
+    background-color: var(--color-surface-raised);
   }
 
   .trending__media .image,
@@ -106,10 +147,6 @@
     inset: 0;
     inline-size: 100%;
     block-size: 100%;
-  }
-
-  .trending__placeholder {
-    background-color: var(--color-tint);
   }
 
   /* Image overlay: black at the chosen strength, over the photo */
@@ -125,10 +162,14 @@
   "name": "t:general.trending_products",
   "settings": [
     {
+      "type": "header",
+      "content": "t:labels.content"
+    },
+    {
       "type": "inline_richtext",
       "id": "heading",
       "label": "t:labels.heading",
-      "info": "t:labels.trending_heading_info",
+      "info": "t:labels.trending_products_heading_info",
       "default": "Trending <em>Now</em>"
     },
     {
@@ -141,7 +182,101 @@
       "type": "url",
       "id": "link",
       "label": "t:labels.link",
-      "info": "t:labels.trending_link_info"
+      "info": "t:labels.trending_products_link_info"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.products"
+    },
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "t:labels.collection",
+      "info": "t:labels.trending_products_collection_info"
+    },
+    {
+      "type": "range",
+      "id": "products_to_show",
+      "label": "t:labels.products_to_show",
+      "min": 3,
+      "max": 8,
+      "step": 1,
+      "default": 5
+    },
+    {
+      "type": "header",
+      "content": "t:labels.layout"
+    },
+    {
+      "type": "select",
+      "id": "image_position",
+      "label": "t:labels.trending_products_image_position",
+      "info": "t:labels.trending_products_image_position_info",
+      "options": [
+        { "value": "right", "label": "t:options.media_position.right" },
+        { "value": "left", "label": "t:options.media_position.left" }
+      ],
+      "default": "right"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.phones"
+    },
+    {
+      "type": "range",
+      "id": "products_to_show_phone",
+      "label": "t:labels.products_to_show",
+      "info": "t:labels.trending_products_phone_products_info",
+      "min": 3,
+      "max": 8,
+      "step": 1,
+      "default": 5
+    },
+    {
+      "type": "header",
+      "content": "t:labels.image"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.image",
+      "info": "t:labels.trending_products_image_info"
+    },
+    {
+      "type": "range",
+      "id": "image_overlay",
+      "label": "t:labels.overlay_opacity",
+      "min": 0,
+      "max": 80,
+      "step": 5,
+      "unit": "%",
+      "default": 0,
+      "visible_if": "{{ section.settings.image != blank }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.background_image"
+    },
+    {
+      "type": "image_picker",
+      "id": "background_image",
+      "label": "t:labels.image",
+      "info": "t:labels.trending_products_background_info"
+    },
+    {
+      "type": "range",
+      "id": "background_opacity",
+      "label": "t:labels.image_opacity",
+      "min": 5,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 30,
+      "visible_if": "{{ section.settings.background_image != blank }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.text_size"
     },
     {
       "type": "range",
@@ -158,6 +293,7 @@
       "type": "range",
       "id": "title_size",
       "label": "t:labels.title_size_px",
+      "info": "t:labels.size_px_info",
       "min": 14,
       "max": 40,
       "step": 1,
@@ -166,165 +302,48 @@
     },
     {
       "type": "header",
-      "content": "t:labels.products"
-    },
-    {
-      "type": "collection",
-      "id": "collection",
-      "label": "t:labels.collection",
-      "info": "t:labels.trending_collection_info"
-    },
-    {
-      "type": "range",
-      "id": "products_to_show",
-      "label": "t:labels.products_to_show",
-      "min": 3,
-      "max": 10,
-      "step": 1,
-      "default": 5
-    },
-    {
-      "type": "header",
-      "content": "t:labels.image"
-    },
-    {
-      "type": "image_picker",
-      "id": "image",
-      "label": "t:labels.image"
+      "content": "t:labels.animation_header"
     },
     {
       "type": "select",
-      "id": "image_position",
-      "label": "t:labels.media_position",
+      "id": "animation",
+      "label": "t:labels.rows_animation",
+      "info": "t:labels.trending_products_animation_info",
       "options": [
-        {
-          "value": "right",
-          "label": "t:options.media_position.right"
-        },
-        {
-          "value": "left",
-          "label": "t:options.media_position.left"
-        }
+        { "value": "none", "label": "t:options.animation.none" },
+        { "value": "fade-up", "label": "t:options.animation.fade_up" },
+        { "value": "zoom-in", "label": "t:options.animation.zoom_in" },
+        { "value": "slide-top", "label": "t:options.animation.slide_top" },
+        { "value": "slide-bottom", "label": "t:options.animation.slide_bottom" },
+        { "value": "slide-left", "label": "t:options.animation.slide_left" },
+        { "value": "slide-right", "label": "t:options.animation.slide_right" }
       ],
-      "default": "right"
-    },
-    {
-      "type": "range",
-      "id": "image_overlay",
-      "label": "t:labels.overlay_opacity",
-      "min": 0,
-      "max": 80,
-      "step": 5,
-      "unit": "%",
-      "default": 0
+      "default": "slide-left"
     },
     {
       "type": "select",
       "id": "image_animation",
       "label": "t:labels.image_animation",
       "options": [
-        {
-          "value": "none",
-          "label": "t:options.animation.none"
-        },
-        {
-          "value": "fade-up",
-          "label": "t:options.animation.fade_up"
-        },
-        {
-          "value": "zoom-in",
-          "label": "t:options.animation.zoom_in"
-        },
-        {
-          "value": "slide-top",
-          "label": "t:options.animation.slide_top"
-        },
-        {
-          "value": "slide-bottom",
-          "label": "t:options.animation.slide_bottom"
-        },
-        {
-          "value": "slide-left",
-          "label": "t:options.animation.slide_left"
-        },
-        {
-          "value": "slide-right",
-          "label": "t:options.animation.slide_right"
-        }
+        { "value": "none", "label": "t:options.animation.none" },
+        { "value": "fade-up", "label": "t:options.animation.fade_up" },
+        { "value": "zoom-in", "label": "t:options.animation.zoom_in" },
+        { "value": "slide-top", "label": "t:options.animation.slide_top" },
+        { "value": "slide-bottom", "label": "t:options.animation.slide_bottom" },
+        { "value": "slide-left", "label": "t:options.animation.slide_left" },
+        { "value": "slide-right", "label": "t:options.animation.slide_right" }
       ],
       "default": "fade-up"
     },
     {
       "type": "header",
-      "content": "t:labels.background_image"
-    },
-    {
-      "type": "image_picker",
-      "id": "background_image",
-      "label": "t:labels.image",
-      "info": "t:labels.trending_background_info"
-    },
-    {
-      "type": "range",
-      "id": "background_opacity",
-      "label": "t:labels.image_opacity",
-      "min": 5,
-      "max": 100,
-      "step": 5,
-      "unit": "%",
-      "default": 30
-    },
-    {
-      "type": "header",
-      "content": "t:labels.style"
-    },
-    {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-5"
-    },
-    {
-      "type": "select",
-      "id": "animation",
-      "label": "t:labels.rows_animation",
-      "info": "t:labels.animation_info",
-      "options": [
-        {
-          "value": "none",
-          "label": "t:options.animation.none"
-        },
-        {
-          "value": "fade-up",
-          "label": "t:options.animation.fade_up"
-        },
-        {
-          "value": "zoom-in",
-          "label": "t:options.animation.zoom_in"
-        },
-        {
-          "value": "slide-top",
-          "label": "t:options.animation.slide_top"
-        },
-        {
-          "value": "slide-bottom",
-          "label": "t:options.animation.slide_bottom"
-        },
-        {
-          "value": "slide-left",
-          "label": "t:options.animation.slide_left"
-        },
-        {
-          "value": "slide-right",
-          "label": "t:options.animation.slide_right"
-        }
-      ],
-      "default": "slide-left"
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
       "id": "padding_top",
       "label": "t:labels.padding_top",
+      "info": "t:labels.trending_products_padding_info",
       "min": 0,
       "max": 200,
       "step": 8,
@@ -335,11 +354,22 @@
       "type": "range",
       "id": "padding_bottom",
       "label": "t:labels.padding_bottom",
+      "info": "t:labels.trending_products_padding_info",
       "min": 0,
       "max": 200,
       "step": 8,
       "unit": "px",
       "default": 96
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-5"
     }
   ],
   "presets": [

@@ -314,7 +314,8 @@
                     show_details: section.settings.show_details,
                     show_rating: section.settings.show_rating,
                     show_description: section.settings.show_description,
-                    cart_options: section.settings.cart_options
+                    cart_options: section.settings.cart_options,
+                    id_suffix: 'picks'
                   -%}
                 </li>
               {%- endfor -%}
@@ -455,6 +456,13 @@
     {%- endif -%}
     </div>
   </results-view>
+  {%- comment -%}
+    No product in the first HTML (0 results, e.g. a filter URL): a filter change can bring cards later,
+    so the card and cart button scripts must be in the page now (snippets/card-scripts.liquid)
+  {%- endcomment -%}
+  {%- if collection.products_count == 0 -%}
+    {% render 'card-scripts', product: section.settings.empty_collection.products.first %}
+  {%- endif -%}
 </div>
 
 {% stylesheet %}

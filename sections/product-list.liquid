@@ -62,6 +62,14 @@
   {%- comment -%} Kept so the cart's script knows to render this section again when the cart changes {%- endcomment -%}
   {%- if section.settings.show_only_empty_cart -%}
     <div data-cart-refresh hidden></div>
+    {%- comment -%}
+      The cards come later (the cart's script renders this section again when the bag is empty), so
+      the card and cart button scripts must be in this first HTML
+    {%- endcomment -%}
+    {%- if hidden_by_cart -%}
+      {%- assign scripts_product = product_collection.products.first | default: cart.items.first.product -%}
+      {% render 'card-scripts', product: scripts_product %}
+    {%- endif -%}
   {%- endif -%}
 {%- else -%}
   <div
