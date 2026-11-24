@@ -1,6 +1,5 @@
 {
   "404": {
-    "title": "404",
     "not_found": "Page not found.",
     "back_to_shopping": "Back to shopping",
     "back_home": "Back to home",
@@ -74,7 +73,6 @@
     "checkout": "Checkout",
     "title": "Cart",
     "update": "Update",
-    "remove": "Remove",
     "item_count": {
       "one": "{{ count }} item",
       "other": "{{ count }} items"
@@ -139,7 +137,6 @@
     "continue_shopping": "Continue shopping",
     "back_home": "Back to home",
     "categories": "Categories",
-    "all": "All",
     "products_count": {
       "one": "{{ count }} product",
       "other": "{{ count }} products"
@@ -205,9 +202,7 @@
   },
   "search": {
     "title": "Search",
-    "placeholder": "Search articles, pages, or products",
     "submit": "Search",
-    "no_results_html": "No results found for {{ terms }}",
     "results_for_html": "Results for <em>“{{ terms }}”</em>",
     "heading": "What are you looking for?",
     "results_count": {

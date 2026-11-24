@@ -441,19 +441,6 @@ input[type="radio"] {
   cursor: pointer;
 }
 
-/* A checkbox or radio with its label: the whole row is the touch target */
-.field--check {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  min-block-size: 1.5rem;
-}
-
-.field--check label {
-  font-weight: inherit;
-  cursor: pointer;
-}
-
 input:disabled,
 select:disabled,
 textarea:disabled {

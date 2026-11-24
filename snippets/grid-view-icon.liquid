@@ -20,7 +20,6 @@
   aria-hidden="true"
   focusable="false"
   viewBox="0 0 {{ icon_width }} 10"
-  style="--icon-columns: {{ icon_columns }};"
 >
   {%- for column in (1..icon_columns) -%}
     {%- assign x = forloop.index0 | times: 6 -%}

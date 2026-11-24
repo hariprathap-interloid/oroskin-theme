@@ -172,11 +172,7 @@
     The first scheme also sets :root, so the whole page defaults to it.
     A section applies a scheme with: class="color-{{ section.settings.color_scheme.id }}"
   {% endcomment %}
-  {%- for scheme in settings.color_schemes -%}
-    {%- if forloop.first -%}
-      {%- comment -%} The brand primary colour (Scheme 1 accent), available everywhere as --color-primary {%- endcomment -%}
-      :root { --color-primary: {{ scheme.settings.accent }}; }
-    {%- endif %}
+  {%- for scheme in settings.color_schemes %}
     {% if forloop.first %}:root,{% endif %}
     .color-{{ scheme.id }} {
       --color-background: {{ scheme.settings.background }};
