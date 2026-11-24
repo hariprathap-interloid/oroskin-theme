@@ -122,7 +122,12 @@
   */
   .newsletter-form .newsletter-form__input {
     padding-inline: 1.875rem; /* text starts 30px in, Figma */
-    border: 1.5px solid #ffffff;
+    /*
+      The edge: the Figma white border gave 1.03:1 on the glass panel, so the field did not show (WCAG
+      1.4.11 asks 3:1 for the edge of a field). 55% text: 3.6:1 on the light panel; on a dark scheme the
+      text is light, so the edge is near white on the dark panel (as before).
+    */
+    border: 1.5px solid color-mix(in srgb, var(--color-text) 55%, #ffffff);
     border-radius: var(--radius-pill);
     background-color: var(--color-glass-strong);
     box-shadow: var(--shadow-card);
@@ -132,7 +137,7 @@
   }
 
   .newsletter-form .newsletter-form__input:hover {
-    border-color: color-mix(in srgb, var(--color-text) 40%, #ffffff);
+    border-color: color-mix(in srgb, var(--color-text) 80%, #ffffff);
   }
 
   .newsletter-form .newsletter-form__input:focus-visible {

@@ -389,6 +389,7 @@
       "minutes": "Minutes",
       "seconds": "Seconds",
       "ends": "Offer ends {{ date }}",
+      "pause": "Pause countdown",
       "editor_no_date": "Set the end date to start the countdown. Until then, the countdown does not show on the store.",
       "editor_ended_hide": "The end time is past. The store does not show the countdown. It shows here only so that you can select it.",
       "editor_ended_zeros": "The end time is past. The store shows 00 in all boxes.",

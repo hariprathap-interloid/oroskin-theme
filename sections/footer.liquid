@@ -618,24 +618,43 @@
   }
 
   /*
-    The whole word floats: it sinks a little further into the bottom edge and rises back, in a slow
-    loop (only down from its resting place: the box clips at the top too, so moving up would cut the
-    tops of the letters). transform only, so it costs no layout. With the theme's "Enable animations"
-    setting on (.motion-on: also in the theme editor) and motion allowed.
+    The word rises out of the bottom edge while the visitor scrolls the footer into view: it starts
+    0.14em low and is in place when the wordmark is fully on the screen (only down from its resting
+    place: the box clips at the top too). It moves only while the visitor scrolls, so it is not
+    content that moves by itself (WCAG 2.2.2: the old endless 7s float needed a pause button).
+    Browsers without scroll-driven animations show the word still. transform only, so it costs no
+    layout. With the theme's "Enable animations" setting on (.motion-on: also in the theme editor) and
+    motion allowed.
   */
   .footer__wordmark-text {
     display: inline-block;
   }
 
-  @media (prefers-reduced-motion: no-preference) {
-    .motion-on .footer__wordmark-text {
-      animation: footer-wordmark-float 7s ease-in-out infinite;
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      /*
+        The timeline is named on the box: its overflow makes it a scroll container, so view() on the
+        letters would follow the box, not the page.
+      */
+      .motion-on .footer__wordmark {
+        view-timeline-name: --footer-wordmark;
+      }
+
+      .motion-on .footer__wordmark-text {
+        animation: footer-wordmark-rise linear both;
+        animation-timeline: --footer-wordmark;
+        animation-range: entry 0% entry 100%;
+      }
     }
   }
 
-  @keyframes footer-wordmark-float {
-    50% {
+  @keyframes footer-wordmark-rise {
+    from {
       transform: translateY(0.14em);
+    }
+
+    to {
+      transform: none;
     }
   }
 

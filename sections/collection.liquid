@@ -900,7 +900,8 @@
     block-size: 2rem;
     padding-inline: var(--space-2xs);
     border-radius: var(--radius-xs);
-    color: color-mix(in srgb, var(--color-text) 35%, transparent);
+    /* 60%: an icon of a control needs 3:1 (WCAG 1.4.11); 35% gave about 2:1 */
+    color: color-mix(in srgb, var(--color-text) 60%, transparent);
     cursor: pointer;
   }
 

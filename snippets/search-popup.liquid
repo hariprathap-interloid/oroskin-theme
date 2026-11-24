@@ -20,7 +20,7 @@
 
 {%- liquid
   assign scheme_id = settings.search_color_scheme.id | default: 'scheme-1'
-  assign accent = settings.search_highlight_color | default: '#c8a24b'
+  assign accent = settings.search_highlight_color | default: '#8a6a1f'
   # The scheme's own accent (brand red), kept for the focus ring: --color-accent is replaced by the gold above
   assign focus_color = settings.search_color_scheme.settings.accent
   assign recent_on = settings.search_show_recent
@@ -388,7 +388,7 @@
   }
 
   .search-popup__form .search-popup__input::placeholder {
-    color: color-mix(in srgb, var(--color-text) 60%, var(--color-background));
+    color: color-mix(in srgb, var(--color-text) 65%, var(--color-background));
   }
 
   /* The browser's own "x" in search fields: we already have the close button */

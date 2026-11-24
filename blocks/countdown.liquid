@@ -85,7 +85,8 @@
       <p class="visually-hidden">{{ 'sections.countdown.ends' | t: date: end_label }}</p>
     {%- endif -%}
 
-    <div class="countdown__units" aria-hidden="true"{% if show_message %} hidden{% endif %}>
+    <div class="countdown__row"{% if show_message %} hidden{% endif %}>
+    <div class="countdown__units" aria-hidden="true">
       <div class="countdown__unit">
         <span class="countdown__value" data-unit="days">{% if days < 10 %}0{% endif %}{{ days }}</span>
         <span class="countdown__label">{{ 'sections.countdown.days' | t }}</span>
@@ -107,6 +108,21 @@
           <span class="countdown__label">{{ 'sections.countdown.seconds' | t }}</span>
         </div>
       {%- endif -%}
+    </div>
+
+    {%- comment -%}
+      Pause button (WCAG 2.2.2: content that updates by itself for more than 5 seconds next to other
+      content needs a way to stop it). Outside the aria-hidden tiles, so screen readers find it. Shown by
+      the script while the countdown ticks (no JS = nothing ticks = no button). Fixed label; aria-pressed
+      says whether it is on (pressed = paused).
+    {%- endcomment -%}
+    {%- if end_epoch > 0 and ended == false -%}
+      <button type="button" class="countdown__pause" aria-pressed="false" hidden>
+        <span class="visually-hidden">{{ 'sections.countdown.pause' | t }}</span>
+        <svg class="countdown__pause-icon countdown__pause-icon--pause" aria-hidden="true" focusable="false" viewBox="0 0 16 16"><rect x="3.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/><rect x="9.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/></svg>
+        <svg class="countdown__pause-icon countdown__pause-icon--play" aria-hidden="true" focusable="false" viewBox="0 0 16 16"><path d="M4.5 2.8v10.4a.8.8 0 0 0 1.2.7l8.4-5.2a.8.8 0 0 0 0-1.4L5.7 2.1a.8.8 0 0 0-1.2.7z" fill="currentColor"/></svg>
+      </button>
+    {%- endif -%}
     </div>
 
     {%- if on_end == 'message' and block.settings.end_message != blank -%}
@@ -133,7 +149,8 @@
 
   /* hidden (set by the script at the end) must win over the display values in this file */
   countdown-timer[hidden],
-  .countdown__units[hidden] {
+  .countdown .countdown__row[hidden],
+  .countdown .countdown__pause[hidden] {
     display: none;
   }
 
@@ -150,11 +167,53 @@
   }
 
   /* Alignment: "Alignment" from 1200px, "Alignment on phones and tablets" below 1200px */
-  .countdown__units {
+  /* The row: the tiles, then the pause button */
+  .countdown__row {
     display: flex;
+    flex-wrap: wrap;
     align-items: flex-start;
     justify-content: var(--countdown-justify, flex-start);
     gap: var(--countdown-gap);
+  }
+
+  .countdown__units {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--countdown-gap);
+  }
+
+  /*
+    Pause button: a round glass button like the tiles, centred on the tile height (tile width x 0.7),
+    at least 2.25rem (a big enough tap target).
+  */
+  .countdown .countdown__pause {
+    --countdown-pause: max(2.25rem, calc(var(--countdown-tile) * 0.45));
+    display: grid;
+    place-items: center;
+    flex: none;
+    inline-size: var(--countdown-pause);
+    block-size: var(--countdown-pause);
+    margin: calc((var(--countdown-tile) * 0.7 - var(--countdown-pause)) / 2) 0 0;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, currentcolor 25%, transparent);
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--color-background) 45%, transparent);
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .countdown__pause svg {
+    inline-size: 40%;
+    block-size: auto;
+  }
+
+  .countdown__pause-icon--play,
+  .countdown__pause[aria-pressed='true'] .countdown__pause-icon--pause {
+    display: none;
+  }
+
+  .countdown__pause[aria-pressed='true'] .countdown__pause-icon--play {
+    display: block;
   }
 
   .countdown__message,
@@ -260,6 +319,22 @@
       });
       this.observer.observe(this);
       document.addEventListener('visibilitychange', () => this.schedule(), { signal });
+
+      // Pause button: stops the ticking; play shows the real time left again at once (and ends the
+      // countdown if the time ran out while it was paused)
+      this.pauseButton = this.querySelector('.countdown__pause');
+      if (this.pauseButton) {
+        this.pauseButton.hidden = false;
+        this.pauseButton.addEventListener(
+          'click',
+          () => {
+            this.paused = !this.paused;
+            this.pauseButton.setAttribute('aria-pressed', String(this.paused));
+            this.schedule();
+          },
+          { signal }
+        );
+      }
       this.tick();
     }
 
@@ -272,7 +347,7 @@
     /** Runs the next tick at the start of the next second, while the countdown can be seen */
     schedule() {
       clearTimeout(this.timer);
-      if (!this.onScreen || document.hidden || this.ended) return;
+      if (!this.onScreen || document.hidden || this.ended || this.paused) return;
       this.tick();
       this.timer = setTimeout(() => this.schedule(), 1000 - (Date.now() % 1000) + 10);
     }
@@ -297,6 +372,8 @@
     finish() {
       this.ended = true;
       clearTimeout(this.timer);
+      // Nothing ticks any more: no pause button
+      if (this.pauseButton) this.pauseButton.hidden = true;
       const mode = this.dataset.onEnd;
       if (mode === 'hide') {
         // The editor keeps the block (faded), so it can still be selected
@@ -306,7 +383,7 @@
         const message = this.querySelector('.countdown__message');
         if (!message) return;
         message.hidden = false;
-        this.querySelector('.countdown__units')?.setAttribute('hidden', '');
+        this.querySelector('.countdown__row')?.setAttribute('hidden', '');
       }
     }
   }

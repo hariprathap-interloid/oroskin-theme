@@ -504,9 +504,9 @@
     font-style: normal;
   }
 
-  /* The Figma grey (developer's choice, under 4.5:1 for small text): change --trending-muted in M9 */
+  /* The Figma grey made darker in M9: 65% is the lowest mix with 4.5:1 on the light schemes */
   .blog-trending {
-    --trending-muted: color-mix(in srgb, var(--color-text) 55%, var(--color-background));
+    --trending-muted: color-mix(in srgb, var(--color-text) 65%, var(--color-background));
   }
 
   .blog-trending__view-all {
