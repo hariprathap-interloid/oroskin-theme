@@ -58,8 +58,12 @@
   >
     <div class="trending__panel">
       {%- if section.settings.background_image != blank -%}
+        {%- comment -%}
+          Decoration only (faded, aria-hidden): always lazy and never high priority, so it never competes
+          with the photos and the LCP image, also in the first sections
+        {%- endcomment -%}
         <div class="trending-bg" style="--trending-bg-opacity: {{ bg_opacity }};" aria-hidden="true">
-          {{ section.settings.background_image | image_url: width: 1600 | image_tag: widths: '600, 900, 1200, 1600', sizes: '(min-width: 1200px) 50vw, 100vw', alt: '', loading: image_loading }}
+          {{ section.settings.background_image | image_url: width: 1600 | image_tag: widths: '600, 900, 1200, 1600', sizes: '(min-width: 1200px) 50vw, 100vw', alt: '', loading: 'lazy' }}
         </div>
       {%- endif -%}
       {% render 'trending-list',

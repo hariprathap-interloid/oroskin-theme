@@ -433,8 +433,18 @@
               Above the stretched link (z-index), so the cart button gets the click. "View details" is a
               label only: the whole tile is already the link to the product.
             {%- endcomment -%}
+            {%- liquid
+              # With text: a product with several variants and cart_options 'link' can't be added from
+              # the card, so the pill would only be a second "View details" link (quick-add's fallback).
+              # No pill then: the "View details" label stays and the whole tile is the link.
+              assign pill_links_only = false
+              if cart_text and product.available and product.variants.size > 1 and cart_options == 'link'
+                assign pill_links_only = true
+              endif
+            -%}
             <div class="product-card__actions">
-              {%- if cart_text -%}
+              {%- if pill_links_only -%}
+              {%- elsif cart_text -%}
                 {% render 'quick-add',
                   product: product,
                   style: 'pill',

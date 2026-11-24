@@ -35,9 +35,14 @@
   }
 
   /*
-    Wide code (a table, <pre>, a long URL, a fixed-width box) scrolls inside this box, never the page.
-    overflow-x: auto also makes overflow-y auto, so a dropdown that opens below the box can get a
-    scroll bar here; only this box clips, not the section.
+    The box itself has no overflow (overflow-x: auto would also make overflow-y auto: it cut focus
+    rings, shadows and dropdowns, and broke position: sticky inside). Only wide content is held:
+    - a table or <pre> scrolls sideways in its own box (display: block keeps the table's rows and cells);
+    - a long URL or word breaks (overflow-wrap: break-word, not anywhere: anywhere would let a table
+      shrink and break its words instead of scrolling, and squeeze flex / grid widgets);
+    - a box with a fixed width at the top level (style="width: 1200px") is made no wider than the box;
+    - iframes, videos and images are no wider than the box.
+    <main> has overflow-x: clip, so the page never scrolls sideways.
   */
   .custom-liquid-section__content {
     inline-size: min(
@@ -45,11 +50,18 @@
       calc(100% - var(--page-margin) * 2)
     );
     margin-inline: auto;
-    overflow-x: auto;
+    overflow-wrap: break-word;
   }
 
+  .custom-liquid-section__content > *,
   .custom-liquid-section__content :is(iframe, video, img) {
     max-inline-size: 100%;
+  }
+
+  .custom-liquid-section__content :is(table, pre) {
+    display: block;
+    max-inline-size: 100%;
+    overflow-x: auto;
   }
 
   .custom-liquid-section__empty {

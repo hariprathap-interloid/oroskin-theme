@@ -11,7 +11,8 @@
     closest.product, so they need no product picker of their own; Heading, Text, Button... and app
     blocks (@app, e.g. reviews) can be added too. The product is passed to the blocks explicitly, so
     with no product chosen they show their placeholders (never the product page's own product).
-  - No product chosen: placeholders in the theme editor, nothing on the live store.
+  - No product chosen, or a product with no media and no blocks: placeholders in the theme editor and
+    the "Add section" preview, nothing on the live store.
 {%- endcomment -%}
 
 {%- liquid
@@ -23,9 +24,15 @@
   if featured != blank and featured.media.size > 0
     assign has_media = true
   endif
+  # The theme editor and the "Add section" preview show placeholders; the live store never does
+  assign in_editor = false
+  if request.design_mode or request.visual_preview_mode
+    assign in_editor = true
+  endif
+
   # The media column: on the store only when the product has media; the editor shows a placeholder
   assign show_media = has_media
-  if request.design_mode
+  if in_editor
     assign show_media = true
   endif
 
@@ -64,12 +71,21 @@
     assign layout_class = ' featured-product__inner--single featured-product__inner--no-info'
   endif
 
+  # On the store: a product AND something to show (media or a block with content). A product with no
+  # media and no blocks gives no section (no empty coloured band)
+  assign show_section = in_editor
+  if featured != blank
+    if has_media or info_html != blank
+      assign show_section = true
+    endif
+  endif
+
   if featured != blank
     assign gallery_label = 'products.media.gallery' | t: title: featured.title
   endif
 -%}
 
-{%- if featured != blank or request.design_mode -%}
+{%- if show_section -%}
   <featured-product
     class="featured-product full-width section-width--{{ section_width }} color-{{ scheme_id }} featured-product--media-{{ section.settings.media_position }}"
     style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;"

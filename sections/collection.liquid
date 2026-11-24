@@ -23,6 +23,8 @@
 
 {%- liquid
   assign scheme_id = section.settings.color_scheme.id | default: 'scheme-1'
+  # true once the grid draws a product card (no card = card-scripts at the end)
+  assign drew_card = false
   assign layout = section.settings.layout | default: 'bento'
   assign card_style = section.settings.card_style | default: 'tile'
   assign show_switch = false
@@ -385,6 +387,7 @@
           >
             {%- for product in collection.products -%}
               {%- liquid
+                assign drew_card = true
                 # Only the first row's photos load straight away; the rest load as they scroll near
                 assign loading = 'lazy'
                 if forloop.index <= 4
@@ -457,12 +460,13 @@
     </div>
   </results-view>
   {%- comment -%}
-    No product in the first HTML (0 results, e.g. a filter URL): a filter change can bring cards later,
-    so the card and cart button scripts must be in the page now (snippets/card-scripts.liquid)
+    No product card in the first HTML (0 results, e.g. a filter URL, or ?page=N past the last page):
+    a filter or page change can bring cards later, so the card and cart button scripts must be in the
+    page now (snippets/card-scripts.liquid). drew_card is set in the grid loop above.
   {%- endcomment -%}
-  {%- if collection.products_count == 0 -%}
+  {%- unless drew_card -%}
     {% render 'card-scripts', product: section.settings.empty_collection.products.first %}
-  {%- endif -%}
+  {%- endunless -%}
 </div>
 
 {% stylesheet %}

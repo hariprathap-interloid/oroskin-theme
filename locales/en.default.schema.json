@@ -257,7 +257,7 @@
     "image_width_info": "How much of the available space the image takes.",
     "link": "Link",
     "custom_liquid": "Liquid code",
-    "custom_liquid_section_info": "Add HTML and Liquid. The code runs on the live store. Objects such as product work only on the matching page. The schema, stylesheet and javascript tags do not work here. Use width=\"100%\" on iframes. The theme hides empty paragraphs and shows images as blocks. Wide content scrolls sideways in the section. When the code shows nothing, the section does not show on the store.",
+    "custom_liquid_section_info": "Add HTML and Liquid. The code runs on the live store. Objects such as product work only on the matching page. The schema, stylesheet and javascript tags do not work here. Use width=\"100%\" on iframes. The theme hides empty paragraphs and shows images as blocks. Wide tables and code blocks scroll sideways in the section. Long links break onto the next line. When the code shows nothing, the section does not show on the store.",
     "custom_liquid_block_info": "Add HTML and Liquid. The code runs on the live store. Objects such as product work only on the matching page. The schema, stylesheet and javascript tags do not work here. Use width=\"100%\" on iframes. The theme hides empty paragraphs and shows images as blocks.",
     "spacing": "Spacing",
     "padding_top": "Top padding",
