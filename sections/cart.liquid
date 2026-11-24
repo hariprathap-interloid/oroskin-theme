@@ -413,8 +413,9 @@
                           assign wrap_variant = wrap_product.selected_or_first_available_variant
                           assign wrap_price = wrap_variant.price | money
                         -%}
-                        <label class="cart-gift__style" {{ wrap_block.shopify_attributes }}>
+                        <label class="cart-gift__style" for="CartWrap-{{ wrap_variant.id }}" {{ wrap_block.shopify_attributes }}>
                           <input
+                            id="CartWrap-{{ wrap_variant.id }}"
                             class="cart-gift__radio"
                             type="radio"
                             name="wrap"

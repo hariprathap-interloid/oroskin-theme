@@ -84,8 +84,8 @@
       <div class="filter-drawer__head">
         <h2 class="filter-drawer__title" id="FilterDrawerTitle-{{ section_id }}">{{ 'collections.filters' | t }}</h2>
         <a class="filter-drawer__reset" href="{{ clear_url }}" data-results-link>{{ 'collections.reset' | t }}</a>
-        {%- comment -%} autofocus: showModal() puts focus here first (not on Reset) {%- endcomment -%}
-        <button type="button" class="filter-drawer__close" data-drawer-close autofocus>
+        {%- comment -%} The script focuses this button after showModal() (not Reset, not autofocus) {%- endcomment -%}
+        <button type="button" class="filter-drawer__close" data-drawer-close>
           {{- 'icon-close.svg' | inline_asset_content -}}
           <span class="visually-hidden">{{ 'collections.close_filters' | t }}</span>
         </button>
@@ -381,6 +381,9 @@
       this.toggle.addEventListener('click', () => {
         this.applied = false;
         this.dialog.showModal();
+        // Focus on the close button, not on Reset (the first focusable). Done here, not with the
+        // autofocus attribute: Theme Store rule "no autofocus".
+        this.dialog.querySelector('[data-drawer-close]')?.focus();
         this.toggle.setAttribute('aria-expanded', 'true');
       });
 

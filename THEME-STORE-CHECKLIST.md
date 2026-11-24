@@ -52,12 +52,12 @@ Why first: every later section reads these settings, CSS variables and base styl
 - [x] ✅ Header and footer are rendered through section groups. *§5*
 - [x] ❌ Logo, falling back to `shop.name` *Done M2.1: image / text logo / shop name.*
 - [x] ❌ **Multi-level dropdown menu**, fully keyboard accessible. *§4, §12* *Done M2.2: `<details>` mega menu, Escape/outside click; keyboard-tested M2.11.*
-- [ ] ❌ Mobile menu *Parked: M2.6, waiting on the mobile design (decision 7).*
+- [x] ❌ Mobile menu *Done: `snippets/header-drawer.liquid` (menu button below phones / 990 / 1200px, setting `menu_button_breakpoint`), reviewed 2026-11-12 → 11-14.*
 - [x] 🟡 Search link and **predictive search**. *§4* *Search link done (M2.3); predictive search popup committed in 25dff98 (`snippets/search-popup.liquid` + `sections/predictive-search.liquid`): products, suggestions, collections, pages, articles via the Predictive Search API, no-JS fallback = /search. Browser-tested 2026-11-05: open, starting groups, typing, no results, Enter, recent searches, keyboard + Escape, outside click.*
-- [ ] 🟡 Account link in the **desktop and mobile** header. *§4* *Desktop done: our own `<account-menu>` (2026-11-05, decision 6) replaces `<shopify-account>`; signed out = LOGIN link to Shopify's sign-in. Mobile comes with the mobile header (decision 7).*
+- [x] 🟡 Account link in the **desktop and mobile** header. *§4* *Desktop: our own `<account-menu>` (2026-11-05, decision 6); signed out = LOGIN link. Phones: the drawer has the LOGIN button, or signed in the account card (Hi name, email, the Customer account menu links, Sign out).*
 - [x] ❌ **Country/currency selector** and **language selector**. *§4* *Done M2.7 (`localization-form` snippet, footer).*
 - [x] ❌ Menu defaults: `main-menu` for the header, `footer` for the footer. *§14*
-- [x] ❌ **Newsletter signup form** in the footer. *§4* *Done M2.9 (`newsletter-form` snippet). Also an "Email signup" section for any page (`sections/newsletter.liquid`, 2026-11-24; same snippet).*
+- [x] ❌ **Newsletter signup form** in the footer. *§4* *Done M2.9 (`newsletter-form` snippet). Also a "Newsletter" section for any page (`sections/newsletter.liquid`, 2026-11-24; same snippet).*
 - [x] ❌ Social media icons. *§13* *Done M2.10 (`social-icons` snippet, 7 networks incl. WhatsApp).*
 - [ ] 🟡 **Follow on Shop** button (`login_button` filter, brand colours unchanged). *§4* *Built M2.10 (shows when `shop.features.follow_on_shop?`); not available on the dev store, so verify on a store with Shop Pay before submission.*
 - [x] ✅ Payment icons via `shop.enabled_payment_types`. *§7* *Labelled list (M2.10).*
@@ -75,7 +75,7 @@ Why first: every later section reads these settings, CSS variables and base styl
 - [x] ❌ **Custom Liquid block** and **Custom Liquid section**, each with a `liquid` setting. *§5. Lets merchants paste app or embed code.* *Done M3.5.*
 - [x] ❌ Product card snippet: full title, price, image, unit price and sale badge *Done M3.7 (`product-card`, badges from the Badge metaobject, `product-badge`).*
 - [x] ❌ Price snippet: sale price, compare-at price, "from" price (`price_varies`, `price_min`) and unit price *Done M3.6.*
-- [ ] ❌ Localization form snippet, shared by the header and footer selectors *Snippet built (M2.7, footer); the header use comes with the mobile drawer (M2.6, decision 7).*
+- [ ] ❌ Localization form snippet, shared by the header and footer selectors *Snippet built (M2.7, footer, reviewed 2026-11-18). The selector in the phone drawer is parked (option B, 2026-11-18): the footer one works on every screen size, so this is not required.*
 - [x] ❌ Every snippet starts with LiquidDoc (`{% doc %}`); every piece of text uses locales *Done M3.8: all 15 snippets have `{% doc %}`; new M2/M3 text is in locales.*
 
 ---
@@ -165,7 +165,7 @@ Why first: every later section reads these settings, CSS variables and base styl
 - [ ] Lighthouse averages across home, collection and product, on **desktop and mobile**: **performance ≥ 60** and **accessibility ≥ 90**. *§6*
 - [ ] Keyboard-only purchase path; screen-reader pass; focus order matches the page order. *§12*
 - [ ] Valid HTML; contrast 4.5:1 for body text and 3:1 for large text and UI elements. *§12*
-- [ ] Every input has a unique `id` and a matching `<label for>`. *§12*
+- [ ] Every input has a unique `id` and a matching `<label for>`. *§12* *Audit 2026-11-24 (headless Chrome, 22 page states at 1280 / 390px): no duplicate ids, every field named, 5 fields given ids + `for`, payment icon ids made unique on the product page, filter drawer `autofocus` removed. Still to audit: the open states (filter drawer, search popup, phone menu, lightbox), password page, gift card.*
 - [ ] Browsers: the latest Safari, Chrome, Firefox, Edge, iOS Safari, Chrome Mobile and Samsung Internet, plus the **Instagram, Facebook and Pinterest in-app browsers**. *§9*
 - [x] No Sass and no minified files of our own. *§10* *Audit 2026-11-05: no `.min.*`, `.scss` or `.sass` in `assets/`. Keep it that way.*
 - [ ] Setting labels: sentence case, American English, and Shopify's terminology list ("home page", "main menu", "button label"…). *§14*
@@ -179,8 +179,8 @@ These are in the Figma but aren't native Shopify features. Don't build them unti
 
 - [x] ~~Wishlist, custom account pages, rewards, refills, notification bell~~ **Decided 2026-11-05 (decision 6, "A + C"):** not built in the theme. Accounts are Shopify-hosted and branded; the header has our own `<account-menu>` dropdown. These features come from apps (app embeds, the Apps section, `@app` blocks). Optional later: a browser-only wishlist with a show/hide toggle.
 - [ ] Compare products bar (collection page)
-- [ ] Countdown timer ("Glow-Up Event"). *Only for real sales; §8 bans fake urgency.*
-- [ ] Mobile layouts. *No mobile designs yet; to be decided later.*
+- [x] Countdown timer ("Glow-Up Event"). *Built 2026-11-17 (`blocks/countdown.liquid`): counts to a real end date the merchant sets, hides or shows a message at the end (no fake reset). Pause button added 2026-11-24 (WCAG 2.2.2).*
+- [x] Mobile layouts. *Done in the section reviews (2026-11-14 → 11-24) from the phone designs in `design/inbox/`; tablets mostly use the phone layout. Real-phone tests are still open per section (CLAUDE.md).*
 
 ---
 

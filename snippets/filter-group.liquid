@@ -150,9 +150,9 @@
 
       {%- if is_brand -%}
         {%- comment -%} No name: typing here only hides rows, it's never sent with the form {%- endcomment -%}
-        <label class="filter-group__search">
+        <label class="filter-group__search" for="{{ group_id }}-search">
           <span class="visually-hidden">{{ 'collections.search_brands_label' | t }}</span>
-          <input type="search" placeholder="{{ 'collections.search_brands' | t }}" autocomplete="off" data-filter-search>
+          <input id="{{ group_id }}-search" type="search" placeholder="{{ 'collections.search_brands' | t }}" autocomplete="off" data-filter-search>
           {{- 'icon-search.svg' | inline_asset_content -}}
         </label>
       {%- endif -%}

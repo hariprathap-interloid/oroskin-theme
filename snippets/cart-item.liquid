@@ -37,8 +37,9 @@
     data-variant-id="{{ item.variant_id }}"
   {% endif %}
 >
-  <label class="cart-item__select">
-    <input class="cart-item__checkbox" type="checkbox" value="{{ item.key }}" data-cart-select data-cart-focus="select-{{ item.key }}">
+  {%- assign select_id = item.key | handleize | prepend: 'CartItemSelect-' -%}
+  <label class="cart-item__select" for="{{ select_id }}">
+    <input id="{{ select_id }}" class="cart-item__checkbox" type="checkbox" value="{{ item.key }}" data-cart-select data-cart-focus="select-{{ item.key }}">
     <span class="visually-hidden">{{ 'cart.select_item' | t: title: item.product.title }}</span>
   </label>
 

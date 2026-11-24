@@ -30,8 +30,18 @@
         aria-labelledby="PaymentHeading-{{ block.id }}"
       {% endif %}
     >
+      {%- liquid
+        # Shopify's icon SVGs have fixed ids (pi-visa, pi-paint0_linear…), and the footer shows the same
+        # icons, so the page had each id two times (invalid HTML; aria-labelledby could read the wrong
+        # title). This block gives its copies a prefix: ids and their references (aria-labelledby="pi-…",
+        # url(#pi-…)) change together.
+        assign icon_id_prefix = 'PaymentIcon-' | append: block.id | append: '-pi-'
+        assign icon_id_attr = '"' | append: icon_id_prefix
+        assign icon_id_url = '#' | append: icon_id_prefix
+      -%}
       {%- for type in shop.enabled_payment_types -%}
-        <li>{{ type | payment_type_svg_tag: class: 'product-payment__icon' }}</li>
+        {%- assign icon_svg = type | payment_type_svg_tag: class: 'product-payment__icon' -%}
+        <li>{{ icon_svg | replace: '"pi-', icon_id_attr | replace: '#pi-', icon_id_url }}</li>
       {%- endfor -%}
     </ul>
   {%- endif -%}
