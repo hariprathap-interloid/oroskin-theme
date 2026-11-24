@@ -1,46 +1,67 @@
 {%- comment -%}
   One milestone of the About timeline (design/briefs/about-us.md §4.4, exports "Default-3" to
-  "Default-6"): a round marker on the rail, a pill ("The beginning"), a title, a text, a stat
-  ("6m² The entire first lab") and the big pale year on the right.
-  - Each milestone draws its own piece of the rail (from its top to the next marker), so the rail
-    works with Shopify's block wrappers in between. The section's script fills each piece (--seg,
-    0 → 1) and marks milestones the reader has reached (is-reached).
-  - The big year is decoration (aria-hidden); screen readers get the year before the pill.
+  "Default-6", mobile "Variant45-3" to "Variant48-1"): a round marker on the rail, a pill ("The
+  beginning"), a title, a text, a stat ("6m² The entire first lab") and the big pale year on the
+  right.
+  - Without the section's script, each milestone draws its own piece of the rail (::before, from
+    its top to its end), so the pieces join into one line. With the script, the section draws one
+    rail for the whole list and marks milestones the reader has reached (is-reached).
+  - The big year is decoration (aria-hidden); screen readers get the year before the title.
+  - An empty milestone (every setting blank) renders nothing on the store; in the editor a note.
+  - "tag": null: no Shopify wrapper, so the milestones are the list's own children (the section
+    finds the last one with :nth-last-child).
 {%- endcomment -%}
 
-<div class="milestone" {{ block.shopify_attributes }}>
-  <span class="milestone__marker" aria-hidden="true"></span>
+{%- liquid
+  assign is_empty = true
+  if block.settings.year != blank or block.settings.pill != blank or block.settings.title != blank
+    assign is_empty = false
+  elsif block.settings.text != blank or block.settings.stat_value != blank or block.settings.stat_label != blank
+    assign is_empty = false
+  endif
+-%}
 
-  <div class="milestone__content">
-    {%- if block.settings.pill != blank or block.settings.year != blank -%}
-      <p class="milestone__pill">
-        {%- if block.settings.year != blank -%}
-          <span class="visually-hidden">{{ block.settings.year | escape }}: </span>
-        {%- endif -%}
-        {{- block.settings.pill | escape -}}
-      </p>
-    {%- endif -%}
+{%- if is_empty -%}
+  {%- if request.design_mode -%}
+    <p class="about-timeline__item-note" {{ block.shopify_attributes }}>{{ 'about.milestone_empty' | t }}</p>
+  {%- endif -%}
+{%- else -%}
+  <div class="milestone" {{ block.shopify_attributes }}>
+    <span class="milestone__marker" aria-hidden="true"></span>
 
-    {%- if block.settings.title != blank -%}
-      <h3 class="milestone__title">{{ block.settings.title | escape }}</h3>
-    {%- endif -%}
+    <div class="milestone__content">
+      {%- if block.settings.pill != blank -%}
+        <p class="milestone__pill">{{ block.settings.pill | escape }}</p>
+      {%- endif -%}
 
-    {%- if block.settings.text != blank -%}
-      <div class="milestone__text">{{ block.settings.text }}</div>
-    {%- endif -%}
+      {%- if block.settings.title != blank -%}
+        <h3 class="milestone__title">
+          {%- if block.settings.year != blank -%}
+            <span class="visually-hidden">{{ block.settings.year | escape }}: </span>
+          {%- endif -%}
+          {{- block.settings.title | escape -}}
+        </h3>
+      {%- elsif block.settings.year != blank -%}
+        <p class="visually-hidden">{{ block.settings.year | escape }}</p>
+      {%- endif -%}
 
-    {%- if block.settings.stat_value != blank or block.settings.stat_label != blank -%}
-      <p class="milestone__stat">
-        <span class="milestone__stat-value">{{ block.settings.stat_value | escape }}</span>
-        <span class="milestone__stat-label">{{ block.settings.stat_label | escape }}</span>
-      </p>
+      {%- if block.settings.text != blank -%}
+        <div class="milestone__text">{{ block.settings.text }}</div>
+      {%- endif -%}
+
+      {%- if block.settings.stat_value != blank or block.settings.stat_label != blank -%}
+        <p class="milestone__stat">
+          <span class="milestone__stat-value">{{ block.settings.stat_value | escape }}</span>
+          <span class="milestone__stat-label">{{ block.settings.stat_label | escape }}</span>
+        </p>
+      {%- endif -%}
+    </div>
+
+    {%- if block.settings.year != blank -%}
+      <p class="milestone__year" aria-hidden="true">{{ block.settings.year | escape }}</p>
     {%- endif -%}
   </div>
-
-  {%- if block.settings.year != blank -%}
-    <p class="milestone__year" aria-hidden="true">{{ block.settings.year | escape }}</p>
-  {%- endif -%}
-</div>
+{%- endif -%}
 
 {% stylesheet %}
   /*
@@ -48,22 +69,22 @@
     fill); content from x 301, ~520 wide; pill label ~13px bold uppercase, accent on accent ~10%,
     padding ~6 x 13; title ~24px medium; text ~19px / 29px; stat value ~24px accent + label ~17px;
     year ~200px body font medium, accent ~20%, centred in the right part; ~291px per milestone.
-    The section sets --rail-x (the rail, from the content box's left) and --content-x.
+    The section sets --px, --rail-x (the rail, from the content box's left) and --content-x.
+    --milestone-pad-top: the space above the content; the marker sits at its end.
   */
   .milestone {
-    --marker-size: max(1.125rem, calc(22 * var(--px, 0.0625rem)));
-    --seg: 1;
+    --marker-size: max(1.125rem, calc(22 * var(--px)));
+    --milestone-pad-top: max(var(--space-xl), calc(40 * var(--px)));
 
     position: relative;
     display: grid;
     grid-template-columns: var(--content-x) minmax(0, 560fr) minmax(0, 1000fr);
     align-items: start;
-    padding-block: max(var(--space-xl), calc(40 * var(--px, 0.0625rem))) max(var(--space-2xl), calc(70 * var(--px, 0.0625rem)));
+    padding-block: var(--milestone-pad-top) max(var(--space-2xl), calc(70 * var(--px)));
   }
 
-  /* The rail piece (pale track) and its fill (accent, grows from the top as --seg goes 0 → 1) */
-  .milestone::before,
-  .milestone::after {
+  /* The rail piece without the section's script (the whole rail shows filled) */
+  .milestone::before {
     content: "";
     position: absolute;
     inset-block: 0;
@@ -72,15 +93,10 @@
     background-color: var(--color-accent);
   }
 
-  .milestone::after {
-    transform: scaleY(var(--seg));
-    transform-origin: top;
-  }
-
   .milestone__marker {
     position: absolute;
     z-index: 1;
-    inset-block-start: calc(max(var(--space-xl), calc(40 * var(--px, 0.0625rem))) + 0.05rem);
+    inset-block-start: calc(var(--milestone-pad-top) + 0.05rem);
     inset-inline-start: calc(var(--rail-x) - var(--marker-size) / 2);
     box-sizing: border-box;
     inline-size: var(--marker-size);
@@ -93,7 +109,7 @@
 
   .milestone__content {
     grid-column: 2;
-    max-inline-size: max(18rem, calc(540 * var(--px, 0.0625rem)));
+    max-inline-size: max(18rem, calc(540 * var(--px)));
   }
 
   .milestone__pill {
@@ -111,15 +127,20 @@
   }
 
   .milestone__title {
-    margin: max(var(--space-md), calc(22 * var(--px, 0.0625rem))) 0 0;
+    margin: max(var(--space-md), calc(22 * var(--px))) 0 0;
     font-family: var(--font-body--family);
-    font-size: max(1.25rem, calc(24 * var(--px, 0.0625rem)));
+    font-size: max(1.25rem, calc(24 * var(--px)));
     font-weight: var(--font-weight-medium);
     line-height: 1.3;
   }
 
+  /* The title can be first (no pill) */
+  .milestone__content > .milestone__title:first-child {
+    margin-block-start: 0;
+  }
+
   .milestone__text {
-    margin-block-start: max(var(--space-sm), calc(18 * var(--px, 0.0625rem)));
+    margin-block-start: max(var(--space-sm), calc(18 * var(--px)));
     font-size: var(--font-size-body);
     line-height: 1.55;
   }
@@ -133,12 +154,12 @@
     flex-wrap: wrap;
     align-items: baseline;
     gap: var(--space-xs) var(--space-sm);
-    margin: max(var(--space-md), calc(22 * var(--px, 0.0625rem))) 0 0;
+    margin: max(var(--space-md), calc(22 * var(--px))) 0 0;
   }
 
   .milestone__stat-value {
     color: var(--color-accent);
-    font-size: max(1.25rem, calc(24 * var(--px, 0.0625rem)));
+    font-size: max(1.25rem, calc(24 * var(--px)));
     line-height: 1;
   }
 
@@ -149,13 +170,22 @@
   .milestone__year {
     grid-column: 3;
     justify-self: center;
-    margin: calc(max(var(--space-sm), calc(15 * var(--px, 0.0625rem))) * -1) 0 0;
+    margin: calc(max(var(--space-sm), calc(15 * var(--px))) * -1) 0 0;
     color: color-mix(in srgb, var(--color-accent) 20%, transparent);
     font-family: var(--font-body--family);
-    font-size: max(4rem, calc(200 * var(--px, 0.0625rem)));
+    font-size: max(4rem, calc(200 * var(--px)));
     font-weight: var(--font-weight-medium);
     line-height: 1;
     letter-spacing: -0.01em;
+  }
+
+  /* Editor only: an empty milestone */
+  .about-timeline__item-note {
+    margin: 0;
+    padding-block: var(--space-md);
+    padding-inline-start: var(--content-x);
+    font-style: italic;
+    opacity: 0.7;
   }
 
   /*
@@ -163,8 +193,7 @@
     milestones' own pieces go; milestones not reached yet are faded, their markers paler and
     without the glow, their years paler (Default-4).
   */
-  .about-timeline[data-ready] .milestone::before,
-  .about-timeline[data-ready] .milestone::after {
+  .about-timeline[data-ready] .milestone::before {
     content: none;
   }
 
@@ -193,20 +222,105 @@
     }
   }
 
-  /* Phones (brief §8): the rail at the left edge, a smaller year at the right of each milestone */
-  @media (max-width: 749px) {
+  /*
+    Tablets (750–1199px): the phone layout (Variant45-3) a little bigger: the content next to the
+    rail, the year centred in the space at the right and in the middle of its milestone's height.
+  */
+  @media (max-width: 1199px) {
     .milestone {
-      grid-template-columns: var(--content-x) minmax(0, 1fr) auto;
-      column-gap: var(--space-sm);
+      --marker-size: 0.875rem;
+      --milestone-pad-top: var(--space-md);
+
+      grid-template-columns: var(--content-x) minmax(0, 24rem) minmax(0, 1fr);
+      column-gap: var(--space-md);
+      padding-block-end: var(--space-xl);
     }
 
-    .milestone__year {
-      margin-block-start: 0;
-      font-size: 2.25rem;
+    .milestone__marker {
+      inset-block-start: calc(var(--milestone-pad-top) + 0.25rem);
+    }
+
+    .milestone__content {
+      max-inline-size: none;
+    }
+
+    .milestone__pill {
+      padding: 0.25rem 0.625rem;
+      font-size: 0.6875rem;
+    }
+
+    .milestone__title {
+      margin-block-start: var(--space-sm);
+      font-size: 1.125rem;
     }
 
     .milestone__text {
-      font-size: var(--font-size-body-sm);
+      margin-block-start: var(--space-xs);
+      font-size: 0.875rem;
+      line-height: 1.5;
+    }
+
+    .milestone__stat {
+      margin-block-start: var(--space-sm);
+    }
+
+    .milestone__stat-value {
+      font-size: 1rem;
+    }
+
+    .milestone__stat-label {
+      font-size: 0.75rem;
+    }
+
+    .milestone__year {
+      align-self: center;
+      margin: 0;
+      font-size: min(6rem, 10vw);
+    }
+  }
+
+  /*
+    Phones (Variant45-3 at 375px): marker 12px; content ~175px wide; pill 9px, title 14px, text
+    12px, stat 13px + 9px; the year ~52px flush right (it shrinks with the screen, so a 320px phone
+    keeps room for the text).
+  */
+  @media (max-width: 749px) {
+    .milestone {
+      --marker-size: 0.75rem;
+
+      grid-template-columns: var(--content-x) minmax(0, 1fr) auto;
+      column-gap: var(--space-sm);
+      padding-block-end: 1.75rem;
+    }
+
+    .milestone__marker {
+      inset-block-start: calc(var(--milestone-pad-top) + 0.125rem);
+    }
+
+    .milestone__pill {
+      padding: 0.1875rem 0.5rem;
+      font-size: 0.5625rem;
+    }
+
+    .milestone__title {
+      font-size: 0.875rem;
+    }
+
+    .milestone__text {
+      font-size: 0.75rem;
+    }
+
+    .milestone__stat-value {
+      font-size: 0.8125rem;
+    }
+
+    .milestone__stat-label {
+      font-size: 0.5625rem;
+    }
+
+    .milestone__year {
+      justify-self: end;
+      font-size: min(3.25rem, 13.9vw);
     }
   }
 {% endstylesheet %}
@@ -214,17 +328,20 @@
 {% schema %}
 {
   "name": "t:general.milestone",
+  "tag": null,
   "settings": [
     {
       "type": "text",
       "id": "year",
       "label": "t:labels.milestone_year",
+      "info": "t:labels.milestone_year_info",
       "default": "2019"
     },
     {
       "type": "text",
       "id": "pill",
-      "label": "t:labels.pill_label",
+      "label": "t:labels.milestone_label",
+      "info": "t:labels.milestone_label_info",
       "default": "The beginning"
     },
     {

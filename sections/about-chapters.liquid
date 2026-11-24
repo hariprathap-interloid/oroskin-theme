@@ -1,46 +1,86 @@
 {%- comment -%}
   About chapters (M8.4 part 2, design/briefs/about-us.md §4.2, exports "Default-1", "Default-14" to
-  "Default-17", mobile "Variant45-1/-2"): a full-screen photo story, one screen per Chapter block.
+  "Default-17", mobile "Variant45-1" to "Variant48"): a full-screen photo story, one screen per
+  Chapter block.
 
-  Three layers share one grid cell:
+  Layers that share one grid cell:
   1. the photos (sticky, one screen): the script moves every chapter's photo or video here, stacked,
      only the active one visible; they cross-fade when the chapter changes;
-  2. the chapters (blocks/_chapter.liquid), one screen each, scrolling over the photos;
-  3. the side nav 01–04 (sticky, vertically centred): links to each chapter, the active one marked;
-     the script builds it from the chapters.
+  2. the side nav 01–04 (sticky, vertically centred): links to each chapter, the active one marked;
+     the script builds it from the chapters. It comes before the chapters in the HTML, so the Tab
+     order follows its place on the left;
+  3. the video pause button (sticky, bottom right of the screen), only when a chapter has a video;
+  4. the chapters (blocks/_chapter.liquid), one screen each, scrolling over the photos.
   Why the script moves the photos and builds the nav: a section can't read its theme blocks'
   settings (section.blocks only gives "@theme" stand-ins with other ids), so each Chapter block
-  draws its own photo, and the script gathers them.
+  draws its own photo, and the script gathers them. The blocks are captured first: a Chapter with
+  no content draws nothing on the store, so no chapter = no section (a note in the theme editor).
   The script finds the chapter crossing a line 70% down the screen (IntersectionObserver) and marks it.
-  Without JS: each chapter keeps its own photo behind its words (full-screen panels), no nav.
+  Without JS: each chapter keeps its own photo behind its words (full-screen panels), no nav, no
+  pause button (the videos don't play).
 {%- endcomment -%}
 
 {%- liquid
   assign overlay = section.settings.overlay_opacity | divided_by: 100.0
+
+  capture blocks_html
+    content_for 'blocks'
+  endcapture
+
+  assign has_chapters = false
+  if blocks_html contains 'class="chapter'
+    assign has_chapters = true
+  endif
+
+  assign has_video = false
+  if blocks_html contains '<video'
+    assign has_video = true
+  endif
 -%}
 
 {% render 'screen-scale' %}
 
-<about-chapters
-  class="about-chapters full-width{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
-  style="--chapter-text: {{ section.settings.text_color }}; --chapter-accent: {{ section.settings.label_color }}; --chapter-overlay: {{ overlay }}; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};"
->
-  {%- if section.blocks.size > 0 -%}
-    {%- comment -%} Filled by the script with each chapter's photo (empty without JS) {%- endcomment -%}
-    <div class="about-chapters__media" aria-hidden="true"></div>
+{%- if has_chapters or request.design_mode -%}
+  <about-chapters
+    class="about-chapters full-width{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
+    style="--chapter-text: {{ section.settings.text_color }};{% if section.settings.label_color != blank %} --chapter-accent: {{ section.settings.label_color }};{% endif %} --chapter-overlay: {{ overlay }};{% if section.settings.scale_screen %} --text-boost: {{ section.settings.text_scale | default: 100 | divided_by: 100.0 }};{% endif %}"
+  >
+    {%- if has_chapters -%}
+      {%- comment -%} Filled by the script with each chapter's photo (empty without JS) {%- endcomment -%}
+      <div class="about-chapters__media" aria-hidden="true"></div>
 
-    <div class="about-chapters__list">
-      {% content_for 'blocks' %}
-    </div>
+      {%- comment -%} The script adds one link per chapter; hidden until it does {%- endcomment -%}
+      <nav class="about-chapters__nav" aria-label="{{ 'about.chapters_nav' | t }}" hidden>
+        <ol class="about-chapters__nav-list"></ol>
+      </nav>
 
-    {%- comment -%} The script adds one link per chapter; hidden until it does {%- endcomment -%}
-    <nav class="about-chapters__nav" aria-label="{{ 'about.chapters_nav' | t }}" hidden>
-      <ol class="about-chapters__nav-list"></ol>
-    </nav>
-  {%- elsif request.design_mode -%}
-    <p class="about-chapters__empty">{{ 'about.chapters_empty' | t }}</p>
-  {%- endif -%}
-</about-chapters>
+      {%- if has_video -%}
+        {%- comment -%}
+          Pause / play for the looping videos (WCAG 2.2.2). A fixed label; aria-pressed tells the
+          state. Hidden until the script runs, and hidden for visitors who reduce motion (no video
+          plays then).
+        {%- endcomment -%}
+        <div class="about-chapters__controls">
+          <button type="button" class="about-chapters__pause" aria-pressed="false" hidden>
+            <span class="visually-hidden">{{ 'about.chapters_video_pause' | t }}</span>
+            <svg class="about-chapters__pause-icon about-chapters__pause-icon--pause" aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="16" height="16"><rect x="3.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/><rect x="9.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/></svg>
+            <svg class="about-chapters__pause-icon about-chapters__pause-icon--play" aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="16" height="16"><path d="M4.5 2.8v10.4a.8.8 0 0 0 1.2.7l8.4-5.2a.8.8 0 0 0 0-1.4L5.7 2.1a.8.8 0 0 0-1.2.7z" fill="currentColor"/></svg>
+          </button>
+        </div>
+      {%- endif -%}
+
+      <div class="about-chapters__list">
+        {{ blocks_html }}
+      </div>
+    {%- else -%}
+      {%- comment -%} Theme editor only: no Chapter block, or only Chapter blocks with no content {%- endcomment -%}
+      <div class="about-chapters__editor">
+        <p class="about-chapters__empty">{{ 'about.chapters_empty' | t }}</p>
+        {{ blocks_html }}
+      </div>
+    {%- endif -%}
+  </about-chapters>
+{%- endif -%}
 
 {% stylesheet %}
   /*
@@ -49,19 +89,28 @@
     the active one a 66px rule + number in the accent. Sizes: Figma px x --px with rem floors.
   */
   .about-chapters {
-    --chapter-indent: max(4.75rem, calc(308 * var(--px, 0.0625rem)));
+    /* One Figma pixel; with "Scale with the screen" off it follows the width only, never more than 1px */
+    --px: min(calc(100vw / 1920), 0.0625rem);
+    /* Empty Label color = the theme's accent (the setting writes its own value inline) */
+    --chapter-accent: var(--color-accent);
+    --chapter-indent: max(4.75rem, calc(308 * var(--px)));
 
     display: grid;
     background-color: #1f1f1f; /* behind the photos while they load */
   }
 
-  /* The three layers share one cell; the sticky ones stay one screen tall at the top */
+  .about-chapters.section--screen-scale {
+    --px: min(calc(100vw / 1920), calc(100svh / 1031));
+  }
+
+  /* The layers share one cell; the sticky ones stay one screen tall at the top */
   .about-chapters > * {
     grid-area: 1 / 1;
   }
 
   .about-chapters__media,
-  .about-chapters__nav {
+  .about-chapters__nav,
+  .about-chapters__controls {
     position: sticky;
     inset-block-start: 0;
     align-self: start;
@@ -96,7 +145,7 @@
     display: flex;
     align-items: center;
     justify-self: start;
-    padding-inline-start: max(1rem, calc(55 * var(--px, 0.0625rem)));
+    padding-inline-start: max(1rem, calc(55 * var(--px)));
     pointer-events: none;
   }
 
@@ -107,7 +156,7 @@
 
   .about-chapters__nav-list {
     display: grid;
-    gap: max(0.75rem, calc(22 * var(--px, 0.0625rem)));
+    gap: max(0.75rem, calc(22 * var(--px)));
     margin: 0;
     padding: 0;
     list-style: none;
@@ -116,7 +165,7 @@
   .about-chapters__link {
     display: flex;
     align-items: center;
-    gap: max(0.75rem, calc(17 * var(--px, 0.0625rem)));
+    gap: max(0.75rem, calc(17 * var(--px)));
     color: var(--chapter-text);
     font-size: var(--font-size-label);
     font-weight: var(--font-weight-medium);
@@ -126,7 +175,7 @@
   }
 
   .about-chapters__rule {
-    inline-size: max(1.25rem, calc(30 * var(--px, 0.0625rem)));
+    inline-size: max(1.25rem, calc(30 * var(--px)));
     block-size: 1px;
     background-color: currentcolor;
   }
@@ -136,15 +185,61 @@
   }
 
   .about-chapters__link[aria-current] .about-chapters__rule {
-    inline-size: max(2.5rem, calc(66 * var(--px, 0.0625rem)));
+    inline-size: max(2.5rem, calc(66 * var(--px)));
     block-size: 2px;
+  }
+
+  /*
+    Pause / play for the videos: the About hero's round button, at the bottom right of the screen.
+    The layer lets clicks through; only the button takes them.
+  */
+  .about-chapters__controls {
+    z-index: 2;
+    display: flex;
+    align-items: flex-end;
+    justify-self: end;
+    padding: var(--space-lg) var(--page-margin);
+    pointer-events: none;
+  }
+
+  .about-chapters__pause {
+    display: grid;
+    place-items: center;
+    inline-size: 2.25rem;
+    block-size: 2.25rem;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-background);
+    box-shadow: var(--shadow-header);
+    color: var(--color-accent);
+    cursor: pointer;
+    pointer-events: auto;
+  }
+
+  .about-chapters__pause[hidden] {
+    display: none;
+  }
+
+  .about-chapters__pause-icon--play,
+  .about-chapters__pause[aria-pressed='true'] .about-chapters__pause-icon--pause {
+    display: none;
+  }
+
+  .about-chapters__pause[aria-pressed='true'] .about-chapters__pause-icon--play {
+    display: block;
+  }
+
+  /* Theme editor only: no chapter with content */
+  .about-chapters__editor {
+    padding: var(--space-2xl) var(--page-margin);
+    color: #ffffff;
+    text-align: center;
   }
 
   .about-chapters__empty {
     margin: 0;
-    padding: var(--space-2xl) var(--page-margin);
-    color: #ffffff;
-    text-align: center;
   }
 
   /* The photo cross-fade and the nav rule's growth, only with motion allowed */
@@ -158,14 +253,27 @@
     }
   }
 
-  /* Phones (Variant45-2): the nav closer to the edge, shorter rules, so it fits beside the words */
+  /*
+    Phones (Variant45-1 to Variant48, 375px): the words start ~80px in, the nav closer to the edge
+    with ~8px numbers and shorter rules, so it never touches the words
+  */
   @media (max-width: 749px) {
+    .about-chapters {
+      --chapter-indent: 5rem;
+    }
+
+    .about-chapters__nav {
+      padding-inline-start: 1.125rem;
+    }
+
     .about-chapters__nav-list {
       gap: var(--space-sm);
     }
 
     .about-chapters__link {
       gap: var(--space-xs);
+      font-size: 0.5rem;
+      letter-spacing: 0.1em;
     }
 
     .about-chapters__rule {
@@ -183,29 +291,46 @@
    * <about-chapters>: the photo story.
    *
    * sync() gathers the chapters: it moves each chapter's photo (.chapter__media) into the sticky
-   * layer, in chapter order, and builds the side nav (one link per chapter: "01" + its heading for
-   * screen readers). A chapter remembers its moved photo (chapter.media), so sync() can run again:
-   * the theme editor re-renders a block when its settings change, and a MutationObserver re-syncs.
+   * layer, in chapter order, and builds the side nav (one link per chapter: "01" + its heading, else
+   * its label, for screen readers). A chapter remembers its moved photo (chapter.media), so sync()
+   * can run again: the theme editor re-renders a block when its settings change, and a
+   * MutationObserver re-syncs. A Chapter with no content draws no .chapter, so it gets no photo and
+   * no nav item.
    *
    * The IntersectionObserver's root is a thin line across the viewport 70% down (rootMargin -69%
    * top, -30% bottom), so one chapter crosses it at a time, early enough that its words are already
    * fading in while it scrolls into view (the middle felt late: half a screen of photo without
    * words). activate() then:
-   * - shows that chapter's photo (is-active: CSS cross-fades it) and plays its video, if any and
-   *   if motion is allowed, pausing the others;
+   * - shows that chapter's photo (is-active: CSS cross-fades it) and plays its video (playVideos);
    * - marks its nav link (aria-current="step");
    * - adds is-active to the chapter, so its words fade up (CSS, only with animations on).
    * data-ready tells the CSS the script runs, so it may hide words until their chapter arrives.
+   *
+   * Videos (WCAG 2.2.2: a loop longer than 5 seconds needs a way to stop it): only the active
+   * chapter's video plays, and only when motion is allowed and the pause button is not pressed. A
+   * reduced-motion change while the page is open pauses or plays it and hides or shows the button.
    */
   class AboutChapters extends HTMLElement {
     connectedCallback() {
+      /*
+        One AbortController for every listener: the theme editor re-attaches a moved section, so
+        connectedCallback runs again; without it the pause button would toggle twice per click.
+      */
+      this.controller?.abort();
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+
       this.media = this.querySelector('.about-chapters__media');
       this.list = this.querySelector('.about-chapters__list');
       this.nav = this.querySelector('.about-chapters__nav');
       if (!this.media || !this.list || !this.nav) return;
 
       this.motion = window.matchMedia('(prefers-reduced-motion: no-preference)');
+      this.paused ??= false;
+      this.pauseButton = this.querySelector('.about-chapters__pause');
       this.current = -1;
+
+      this.observer?.disconnect();
       this.observer = new IntersectionObserver(
         (entries) => {
           entries.forEach((entry) => {
@@ -215,15 +340,29 @@
         { rootMargin: '-69% 0px -30% 0px' }
       );
 
+      this.pauseButton?.addEventListener('click', () => this.togglePause(), { signal });
+      this.motion.addEventListener(
+        'change',
+        () => {
+          this.updatePauseButton();
+          this.playVideos();
+        },
+        { signal }
+      );
+
       this.sync();
+      this.mutations?.disconnect();
       this.mutations = new MutationObserver(() => this.sync());
       this.mutations.observe(this.list, { childList: true, subtree: true });
       this.setAttribute('data-ready', '');
     }
 
     disconnectedCallback() {
+      this.controller?.abort(); // removes every listener added with its signal
       this.observer?.disconnect();
       this.mutations?.disconnect();
+      // The videos were moved into the sticky layer: pause every one of them
+      this.querySelectorAll('video').forEach((video) => video.pause());
     }
 
     sync() {
@@ -247,11 +386,11 @@
         rule.setAttribute('aria-hidden', 'true');
         link.append(rule, String(i + 1).padStart(2, '0'));
 
-        const heading = chapter.querySelector('.chapter__heading');
+        const heading = chapter.querySelector('.chapter__heading') || chapter.querySelector('.chapter__label');
         if (heading) {
           const name = document.createElement('span');
           name.className = 'visually-hidden';
-          name.textContent = `: ${heading.textContent}`;
+          name.textContent = `: ${heading.textContent.trim()}`;
           link.append(name);
         }
 
@@ -262,6 +401,7 @@
       this.nav.querySelector('ol').replaceChildren(...items);
       this.links = [...this.nav.querySelectorAll('.about-chapters__link')];
       this.nav.hidden = this.chapters.length < 2;
+      this.updatePauseButton();
 
       this.observer.disconnect();
       this.chapters.forEach((chapter) => this.observer.observe(chapter));
@@ -289,15 +429,33 @@
         if (i === index) link.setAttribute('aria-current', 'step');
         else link.removeAttribute('aria-current');
       });
-      this.chapters.forEach((chapter, i) => {
-        const slide = chapter.media;
-        if (!slide) return;
-        slide.classList.toggle('is-active', i === index);
-        const video = slide.querySelector('video');
+      this.chapters.forEach((chapter, i) => chapter.media?.classList.toggle('is-active', i === index));
+      this.playVideos();
+    }
+
+    /** Plays the active chapter's video (motion allowed, not paused); pauses every other video */
+    playVideos() {
+      this.chapters?.forEach((chapter, i) => {
+        const video = chapter.media?.querySelector('video');
         if (!video) return;
-        if (i === index && this.motion.matches) video.play().catch(() => {});
+        if (i === this.current && this.motion.matches && !this.paused) video.play().catch(() => {});
         else video.pause();
       });
+    }
+
+    /** The button shows only when a chapter has a video and motion is allowed */
+    updatePauseButton() {
+      if (!this.pauseButton) return;
+      const hasVideo = this.slides?.some((slide) => slide.querySelector('video'));
+      this.pauseButton.hidden = !hasVideo || !this.motion.matches;
+      this.pauseButton.setAttribute('aria-pressed', String(this.paused));
+    }
+
+    togglePause() {
+      this.paused = !this.paused;
+      // The label stays "Pause"; aria-pressed says whether it is on (pressed = paused)
+      this.pauseButton.setAttribute('aria-pressed', String(this.paused));
+      this.playVideos();
     }
   }
 
@@ -308,7 +466,6 @@
 {
   "name": "t:general.about_chapters",
   "tag": "section",
-  "class": "about-chapters-section",
   "enabled_on": {
     "templates": ["page"]
   },
@@ -316,8 +473,39 @@
   "max_blocks": 8,
   "settings": [
     {
+      "type": "header",
+      "content": "t:labels.content"
+    },
+    {
       "type": "paragraph",
       "content": "t:labels.about_chapters_help"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.layout"
+    },
+    {
+      "type": "checkbox",
+      "id": "scale_screen",
+      "label": "t:labels.scale_screen",
+      "info": "t:labels.about_scale_screen_info",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "text_scale",
+      "label": "t:labels.text_scale",
+      "info": "t:labels.about_text_scale_info",
+      "min": 100,
+      "max": 130,
+      "step": 5,
+      "unit": "%",
+      "default": 110,
+      "visible_if": "{{ section.settings.scale_screen }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
     },
     {
       "type": "color",
@@ -329,8 +517,7 @@
       "type": "color",
       "id": "label_color",
       "label": "t:labels.chapters_label_color",
-      "info": "t:labels.chapters_label_color_info",
-      "default": "#7d0000"
+      "info": "t:labels.about_chapters_label_color_info"
     },
     {
       "type": "range",
@@ -342,25 +529,6 @@
       "step": 5,
       "unit": "%",
       "default": 100
-    },
-    {
-      "type": "checkbox",
-      "id": "scale_screen",
-      "label": "t:labels.scale_screen",
-      "info": "t:labels.scale_screen_info",
-      "default": true
-    },
-    {
-      "type": "range",
-      "id": "text_scale",
-      "label": "t:labels.text_scale",
-      "info": "t:labels.text_scale_info",
-      "min": 100,
-      "max": 130,
-      "step": 5,
-      "unit": "%",
-      "default": 110,
-      "visible_if": "{{ section.settings.scale_screen }}"
     }
   ],
   "presets": [

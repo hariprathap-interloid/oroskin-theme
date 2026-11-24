@@ -1,60 +1,96 @@
 {%- comment -%}
-  About numbers (M8.4 part 7, design/briefs/about-us.md §4.7, exports "Default-10", "big"):
+  About numbers (M8.4 part 7, design/briefs/about-us.md §4.7, exports "Default-10", "big"; phones
+  design/inbox/about-us-mobile/Property 1=Variant46-3.png):
   "By the numbers" / "Proof, not promises." and one Stat figure block per number.
-  Desktop: 4 square cards in a row, set at staggered heights (Default-10, "Stagger the cards").
-  Phones and tablets: 2 x 2. The cards fade up one after another and each number counts up from 0
-  once, when its card is in view (only with animations on and motion allowed).
+  - From 1200px: up to 4 square cards in a row (fewer cards = fewer columns, centred), set at
+    staggered heights ("Stagger the cards").
+  - Below 1200px: 2 per row in a zig-zag (the right column sits lower, also "Stagger the cards").
+  - The cards fade up one after another and each number counts up once, when its card is in view
+    (only with animations on and motion allowed).
+  - Empty cards render nothing; no card = no section on the store (a note in the editor).
 {%- endcomment -%}
 
 {%- liquid
   assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+
+  # A section can't read its theme blocks' settings (section.blocks gives empty settings), so the
+  # blocks are rendered first and their HTML is checked. data-stat-card is only on a real card (the
+  # editor note for an empty card doesn't have it).
+  capture cards_html
+    content_for 'blocks'
+  endcapture
+  assign card_count = cards_html | split: 'data-stat-card' | size | minus: 1
+  if request.design_mode
+    # In the editor the notes for empty cards take a place in the row too
+    assign note_count = cards_html | split: 'about-numbers__note' | size | minus: 1
+    assign card_count = card_count | plus: note_count
+  endif
+  assign columns = card_count | at_most: 4 | at_least: 1
 -%}
 
-{% render 'screen-scale' %}
+{%- if card_count > 0 or request.design_mode -%}
+  {% render 'screen-scale' %}
 
-{%- comment -%} The titles are semibold (600): the page only loads regular and bold {%- endcomment -%}
-{% style %}
-  {{ settings.type_heading_font | font_modify: 'weight', '600' | font_face: font_display: 'swap' }}
-{% endstyle %}
+  {%- comment -%} The titles are semibold (600): the page only loads regular and bold {%- endcomment -%}
+  {% style %}
+    {{ settings.type_heading_font | font_modify: 'weight', '600' | font_face: font_display: 'swap' }}
+  {% endstyle %}
 
-<about-numbers
-  class="about-numbers full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
-  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};"
->
-  <div class="about-numbers__inner">
-    {%- if section.settings.eyebrow != blank or section.settings.heading != blank -%}
-      <header class="about-numbers__header">
-        {%- if section.settings.eyebrow != blank -%}
-          <p class="eyebrow eyebrow--center">{{ section.settings.eyebrow | escape }}</p>
-        {%- endif -%}
-        {%- if section.settings.heading != blank -%}
-          <h2 class="about-numbers__heading">{{ section.settings.heading }}</h2>
-        {%- endif -%}
-      </header>
-    {%- endif -%}
+  <about-numbers
+    class="about-numbers full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
+    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --columns: {{ columns }};{% if section.settings.scale_screen %} --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};{% endif %}"
+  >
+    <div class="about-numbers__inner">
+      {%- if section.settings.eyebrow != blank or section.settings.heading != blank -%}
+        <header class="about-numbers__header">
+          {%- if section.settings.eyebrow != blank -%}
+            <p class="eyebrow eyebrow--center">{{ section.settings.eyebrow | escape }}</p>
+          {%- endif -%}
+          {%- if section.settings.heading != blank -%}
+            <h2 class="about-numbers__heading">{{ section.settings.heading }}</h2>
+          {%- else -%}
+            <h2 class="visually-hidden">{{ 'about.numbers_heading_hidden' | t }}</h2>
+          {%- endif -%}
+        </header>
+      {%- else -%}
+        {%- comment -%} No heading: the card titles (h3) still need an h2 above them {%- endcomment -%}
+        <h2 class="visually-hidden">{{ 'about.numbers_heading_hidden' | t }}</h2>
+      {%- endif -%}
 
-    {%- if section.blocks.size > 0 -%}
-      <animate-on-scroll
-        class="about-numbers__list{% if section.settings.stagger %} about-numbers__list--stagger{% endif %}"
-      >
-        {% content_for 'blocks' %}
-      </animate-on-scroll>
-    {%- elsif request.design_mode -%}
-      <p class="about-numbers__empty">{{ 'about.numbers_empty' | t }}</p>
-    {%- endif -%}
-  </div>
-</about-numbers>
+      {%- if card_count > 0 -%}
+        <animate-on-scroll
+          class="about-numbers__list{% if section.settings.stagger %} about-numbers__list--stagger{% endif %}"
+        >
+          {{ cards_html }}
+        </animate-on-scroll>
+      {%- elsif request.design_mode -%}
+        <p class="about-numbers__empty">{{ 'about.numbers_empty' | t }}</p>
+      {%- endif -%}
+    </div>
+  </about-numbers>
+{%- endif -%}
 
 {% stylesheet %}
   /*
     Figma 1920 (Default-10): eyebrow y 148, heading ~66px y 205–265 ("*Proof,* not promises.",
     accent upright); 4 cards 371x371 at x 183 / 598 / 1015 / 1430 (gap ~45, row ~1618 wide);
     card tops staggered y 330 / 437 / 357 / 408 (0 / 107 / 27 / 78 below the first).
+    Phones (Variant46-3, 375 wide): heading ~26px, cards ~148x150, 26px apart, the right column
+    30px lower.
   */
+
+  /* --px = one Figma pixel. Scale off: it follows the width only, never more than 1px */
   .about-numbers {
+    --px: min(calc(100vw / 1920), 0.0625rem);
+
     display: block;
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
     background-color: var(--color-background);
+  }
+
+  /* Two classes: beats the shared .section--screen-scale rule whatever the bundle order */
+  .about-numbers.section--screen-scale {
+    --px: min(calc(100vw / 1920), calc(100svh / 1031));
   }
 
   .about-numbers__inner {
@@ -66,13 +102,13 @@
   }
 
   .about-numbers__header {
-    margin-block-end: max(var(--space-xl), calc(65 * var(--px, 0.0625rem)));
+    margin-block-end: max(var(--space-xl), calc(65 * var(--px)));
     text-align: center;
   }
 
   .about-numbers__heading {
-    margin: max(var(--space-lg), calc(40 * var(--px, 0.0625rem))) 0 0;
-    font-size: max(2rem, calc(66 * var(--px, 0.0625rem)));
+    margin: max(var(--space-lg), calc(40 * var(--px))) 0 0;
+    font-size: max(2rem, calc(66 * var(--px)));
     line-height: 1.15;
   }
 
@@ -81,39 +117,57 @@
     font-style: normal;
   }
 
+  /*
+    Flex, not grid: a row that isn't full (1–3 cards, or 5–7) is centred. --columns (from Liquid) =
+    the number of cards, at most 4; the row is never wider than that many cards.
+  */
   .about-numbers__list {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 371fr));
-    align-items: start;
-    gap: max(var(--space-lg), calc(45 * var(--px, 0.0625rem)));
-    max-inline-size: calc(1618 * var(--px, 0.0625rem));
+    --numbers-columns: var(--columns, 4);
+    --numbers-card: calc(371 * var(--px));
+    --numbers-gap: max(var(--space-lg), calc(45 * var(--px)));
+
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: center;
+    gap: var(--numbers-gap);
+    max-inline-size: calc(
+      var(--numbers-columns) * var(--numbers-card) + (var(--numbers-columns) - 1) * var(--numbers-gap)
+    );
     margin-inline: auto;
   }
 
-  /* Staggered heights (Shopify wraps each block in a div: the wrappers are the grid items) */
-  .about-numbers__list--stagger > :nth-child(4n + 2) {
-    margin-block-start: calc(107 * var(--px, 0.0625rem));
+  .about-numbers__list > * {
+    flex: 0 0 calc((100% - (var(--numbers-columns) - 1) * var(--numbers-gap)) / var(--numbers-columns));
+    min-inline-size: 0;
   }
 
-  .about-numbers__list--stagger > :nth-child(4n + 3) {
-    margin-block-start: calc(27 * var(--px, 0.0625rem));
-  }
+  /* Staggered heights from 1200px (the cards are the direct children: the block has no wrapper) */
+  @media (min-width: 1200px) {
+    .about-numbers__list--stagger > :nth-child(4n + 2) {
+      margin-block-start: calc(107 * var(--px));
+    }
 
-  .about-numbers__list--stagger > :nth-child(4n + 4) {
-    margin-block-start: calc(78 * var(--px, 0.0625rem));
-  }
+    .about-numbers__list--stagger > :nth-child(4n + 3) {
+      margin-block-start: calc(27 * var(--px));
+    }
 
-  /* The cards fade up one after another */
-  .about-numbers__list > :nth-child(4n + 2) .stat-figure {
-    --animate-delay: 100ms;
-  }
+    .about-numbers__list--stagger > :nth-child(4n + 4) {
+      margin-block-start: calc(78 * var(--px));
+    }
 
-  .about-numbers__list > :nth-child(4n + 3) .stat-figure {
-    --animate-delay: 200ms;
-  }
+    /* The cards fade up one after another */
+    .about-numbers__list > :nth-child(4n + 2) {
+      --animate-delay: 100ms;
+    }
 
-  .about-numbers__list > :nth-child(4n + 4) .stat-figure {
-    --animate-delay: 300ms;
+    .about-numbers__list > :nth-child(4n + 3) {
+      --animate-delay: 200ms;
+    }
+
+    .about-numbers__list > :nth-child(4n + 4) {
+      --animate-delay: 300ms;
+    }
   }
 
   .about-numbers__empty {
@@ -121,34 +175,51 @@
     text-align: center;
   }
 
-  /* Phones and tablets (brief §8): 2 x 2, no stagger */
+  /*
+    Phones and tablets: 2 per row in a zig-zag. The right column moves down with a relative offset
+    (not a margin), so each column keeps its own even gap, as in the phone design; the list gets the
+    same space at the bottom so the last card doesn't run into the padding.
+  */
   @media (max-width: 1199px) {
     .about-numbers__list {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: var(--space-md);
-      max-inline-size: 48rem;
+      --numbers-columns: min(var(--columns, 2), 2);
+      --numbers-card: 13.5rem;
+      --numbers-gap: 2rem;
     }
 
-    .about-numbers__list--stagger > :nth-child(n) {
-      margin-block-start: 0;
+    .about-numbers__list--stagger {
+      --numbers-drop: 2.5rem;
+
+      padding-block-end: var(--numbers-drop);
     }
 
-    .about-numbers__list > :nth-child(n) .stat-figure {
-      --animate-delay: 0ms;
+    .about-numbers__list--stagger > :nth-child(even) {
+      position: relative;
+      inset-block-start: var(--numbers-drop);
     }
 
-    .about-numbers__list > :nth-child(even) .stat-figure {
+    .about-numbers__list > :nth-child(even) {
       --animate-delay: 100ms;
     }
   }
 
   @media (max-width: 749px) {
     .about-numbers__list {
-      gap: var(--space-sm);
+      --numbers-card: 9.25rem;
+      --numbers-gap: 1.625rem;
+    }
+
+    .about-numbers__list--stagger {
+      --numbers-drop: 1.875rem;
+    }
+
+    .about-numbers__header {
+      margin-block-end: 1.75rem;
     }
 
     .about-numbers__heading {
-      margin-block-start: var(--space-md);
+      margin-block-start: var(--space-sm);
+      font-size: 1.625rem;
     }
   }
 {% endstylesheet %}
@@ -158,64 +229,150 @@
    * <about-numbers>: counts each card's number up from 0 once, when the card is in view.
    *
    * The real value is the data-count attribute (also in a visually hidden copy for screen readers);
-   * only the visible, aria-hidden digits change. The count keeps the value's decimals ("4.9" counts
-   * 0.0 → 4.9). A value that isn't a plain number (e.g. "N/A", or "31,400" with a comma) is left as
-   * it is. Off (the final value shows straight away): animations off (also in the theme editor),
-   * reduced motion, or no JS.
+   * only the visible, aria-hidden digits change, and the last frame is the saved value itself.
+   * - Decimals and the number of digits are kept ("4.9" counts 0.0 → 4.9, "98" 00 → 98, "07" ends as 07).
+   * - A value with thousands commas ("31,400"), or a collection count of 1000 or more
+   *   (data-group), counts with the store language's separators (Intl.NumberFormat).
+   * - Anything else ("N/A") is left as it is.
+   * Off (the final value shows straight away): animations off (also in the theme editor), reduced
+   * motion (also when it is turned on during the count), or no JS.
    */
   class AboutNumbers extends HTMLElement {
     connectedCallback() {
+      this.controller?.abort();
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+      this.frames = new Set();
+
+      this.counts = [...this.querySelectorAll('.stat-figure__count')]
+        .map((element) => this.parse(element))
+        .filter(Boolean);
+      if (!this.counts.length) return;
+
+      // A collection count of 1000 or more gets its separators even when nothing moves
+      this.counts.forEach((count) => {
+        if (count.group && !count.element.dataset.done) this.render(count, count.target);
+      });
+
       const animations = document.documentElement.classList.contains('animations-on');
-      const motion = window.matchMedia('(prefers-reduced-motion: no-preference)').matches;
-      if (!animations || !motion) return;
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+      if (!animations || reduce.matches) return;
 
-      const counts = [...this.querySelectorAll('.stat-figure__count')].filter((count) =>
-        /^\d+(\.\d+)?$/.test(count.dataset.count)
+      // Reduced motion turned on while on the page: show every final value and stop
+      reduce.addEventListener(
+        'change',
+        () => {
+          if (reduce.matches) this.finish();
+        },
+        { signal }
       );
-      if (!counts.length) return;
 
+      const waiting = this.counts.filter((count) => !count.element.dataset.done);
       // Start from 0 before the cards come into view
-      counts.forEach((count) => this.render(count, 0));
+      waiting.forEach((count) => this.render(count, 0));
 
       this.observer = new IntersectionObserver(
         (entries) => {
           entries.forEach((entry) => {
             if (!entry.isIntersecting) return;
             this.observer.unobserve(entry.target);
-            this.countUp(entry.target);
+            const count = this.counts.find((item) => item.element === entry.target);
+            if (count) this.countUp(count);
           });
         },
         { threshold: 0.5 }
       );
-      counts.forEach((count) => this.observer.observe(count));
+      waiting.forEach((count) => this.observer.observe(count.element));
     }
 
     disconnectedCallback() {
-      this.observer?.disconnect();
-      this.frames?.forEach((frame) => cancelAnimationFrame(frame));
+      // The editor re-attaches a moved section: a count cut off here shows its final value
+      this.finish();
+      this.controller?.abort();
+    }
+
+    /** Reads a card's saved value; null when it isn't a number this script can count. */
+    parse(element) {
+      const saved = element.dataset.count || '';
+      const grouped = /^\d{1,3}(,\d{3})+(\.\d+)?$/.test(saved);
+      if (!grouped && !/^\d+(\.\d+)?$/.test(saved)) return null;
+
+      const plain = saved.replace(/,/g, '');
+      const [whole, fraction = ''] = plain.split('.');
+      const target = parseFloat(plain);
+      const group = grouped || (element.hasAttribute('data-group') && target >= 1000);
+      // The count keeps the saved number of digits (phone design: 98 counts 00 → 98; 07 ends as 07)
+      const digits = Math.min(whole.length, 21);
+
+      let format = null;
+      if (group) {
+        const formatter = new Intl.NumberFormat(document.documentElement.lang || undefined, {
+          minimumIntegerDigits: digits,
+          minimumFractionDigits: fraction.length,
+          maximumFractionDigits: fraction.length,
+          numberingSystem: 'latn',
+        });
+        format = (value) => formatter.format(value);
+      }
+
+      return {
+        element,
+        number: element.querySelector('.stat-figure__number'),
+        saved,
+        target,
+        decimals: fraction.length,
+        digits,
+        group,
+        format,
+      };
     }
 
     render(count, value) {
-      const decimals = (count.dataset.count.split('.')[1] || '').length;
-      count.querySelector('.stat-figure__number').textContent = value.toFixed(decimals);
+      if (!count.number) return;
+      if (count.format) {
+        count.number.textContent = count.format(value);
+        return;
+      }
+      const [whole, fraction] = value.toFixed(count.decimals).split('.');
+      count.number.textContent = whole.padStart(count.digits, '0') + (fraction ? `.${fraction}` : '');
+    }
+
+    /** The final value: the saved text, or its grouped form for a collection count. */
+    show(count) {
+      count.element.dataset.done = '';
+      if (count.group && count.format) this.render(count, count.target);
+      else if (count.number) count.number.textContent = count.saved;
+    }
+
+    /** Stops every count and shows every final value (also the cards not in view yet). */
+    finish() {
+      this.observer?.disconnect();
+      this.observer = null;
+      this.frames?.forEach((frame) => cancelAnimationFrame(frame));
+      this.frames?.clear();
+      this.counts?.forEach((count) => {
+        if (!count.element.dataset.done) this.show(count);
+      });
     }
 
     countUp(count) {
-      const target = parseFloat(count.dataset.count);
       const duration = 1200;
       const start = performance.now();
-      this.frames ??= new Set();
 
       const step = (now) => {
+        this.frames.delete(frame);
         const progress = Math.min((now - start) / duration, 1);
-        const eased = 1 - (1 - progress) ** 3; // ease-out: fast first, gentle at the end
-        this.render(count, target * eased);
         if (progress < 1) {
-          const frame = requestAnimationFrame(step);
+          const eased = 1 - (1 - progress) ** 3; // ease-out: fast first, gentle at the end
+          this.render(count, count.target * eased);
+          frame = requestAnimationFrame(step);
           this.frames.add(frame);
+        } else {
+          this.show(count);
         }
       };
-      requestAnimationFrame(step);
+      let frame = requestAnimationFrame(step);
+      this.frames.add(frame);
     }
   }
 
@@ -226,13 +383,16 @@
 {
   "name": "t:general.about_numbers",
   "tag": "section",
-  "class": "about-numbers-section",
   "enabled_on": {
     "templates": ["page"]
   },
   "blocks": [{ "type": "_stat-figure" }],
   "max_blocks": 8,
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
     {
       "type": "text",
       "id": "eyebrow",
@@ -247,15 +407,15 @@
       "default": "<em>Proof,</em> not promises."
     },
     {
+      "type": "header",
+      "content": "t:labels.layout"
+    },
+    {
       "type": "checkbox",
       "id": "stagger",
       "label": "t:labels.numbers_stagger",
-      "info": "t:labels.numbers_stagger_info",
+      "info": "t:labels.numbers_stagger_zigzag_info",
       "default": true
-    },
-    {
-      "type": "header",
-      "content": "t:labels.style"
     },
     {
       "type": "select",
@@ -286,14 +446,14 @@
       "type": "checkbox",
       "id": "scale_screen",
       "label": "t:labels.scale_screen",
-      "info": "t:labels.scale_screen_info",
+      "info": "t:labels.about_scale_screen_info",
       "default": true
     },
     {
       "type": "range",
       "id": "text_scale",
       "label": "t:labels.text_scale",
-      "info": "t:labels.text_scale_info",
+      "info": "t:labels.about_text_scale_info",
       "min": 100,
       "max": 130,
       "step": 5,
@@ -302,10 +462,8 @@
       "visible_if": "{{ section.settings.scale_screen }}"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -326,6 +484,16 @@
       "step": 8,
       "unit": "px",
       "default": 80
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ],
   "presets": [

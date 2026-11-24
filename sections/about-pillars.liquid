@@ -1,21 +1,31 @@
 {%- comment -%}
   About pillars (M8.4 part 3, design/briefs/about-us.md §4.3, exports "Default-2", "Default-12",
-  "Default-13", mobile "Variant45-3"): Mission / Vision / Promise as slides that change while the
-  visitor scrolls, next to two columns of photos.
+  "Default-13", mobile "Variant45-2", "Variant46-1", "Variant47-1"): Mission / Vision / Promise as
+  slides that change while the visitor scrolls, next to two columns of photos.
 
   - Slides: one Pillar block each (blocks/_pillar.liquid). With the script, the section is one
     screen tall per slide and its panel is sticky: scrolling through it changes the slide (01 / 03,
-    the progress bars) instead of moving the page. Without JS the slides simply stack.
+    the progress bars) instead of moving the page. Without JS, or when the tallest slide and the
+    photos do not fit one screen (the script checks), the slides simply stack.
   - Photos: one shared set (Photo 1–8, section settings), split over two columns (odd photos left,
     even right), as in the exports where the same photos move between slides. While scrolling the
     left column moves up and the right one down: smoothly with "Photos drift while scrolling",
-    one step per slide without it (and for visitors who reduce motion).
+    one step per slide without it (and for visitors who reduce motion). Below 990px the columns
+    are two rows that slide sideways.
   - The script writes --progress (0 → 1) on the section; the CSS turns it into the column moves.
+  - The blocks are rendered first and their HTML checked (a section can't read its theme blocks'
+    settings): an empty Pillar renders nothing on the store, so it is not a slide; no slide = no
+    section on the store. Each slide carries data-pillar, so the count is right in the editor too
+    (where an empty Pillar shows as a slide with a note).
 {%- endcomment -%}
 
 {%- liquid
   assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
-  assign slide_count = section.blocks.size
+
+  capture blocks_html
+    content_for 'blocks'
+  endcapture
+  assign slide_count = blocks_html | split: 'data-pillar' | size | minus: 1 | at_least: 0
 
   assign photos = ''
   for i in (1..8)
@@ -25,81 +35,118 @@
     endif
   endfor
   assign photo_keys = photos | split: ','
+
+  assign has_photos = false
+  if photo_keys.size > 0 or request.design_mode
+    assign has_photos = true
+  endif
+
+  # Photo widths from 990px: the photo side is 807 / 1820 of the content, each column about half of
+  # it (less the gaps), so a photo is about 22% of the content width
+  case section.settings.section_width
+    when 'full'
+      assign desktop_size = '21vw'
+    when 'wide'
+      assign desktop_size = 'min(20vw, 370px)'
+    when 'narrow'
+      assign desktop_size = 'min(20vw, 245px)'
+    else
+      assign desktop_size = '20vw'
+  endcase
+-%}
+
+{%- comment -%}
+  Eager only as the page's first section: on the About us page this section comes after the hero and
+  the chapters (several screens), so section-loading's "first 3 sections" rule loaded all photos at once.
+{%- endcomment -%}
+{%- liquid
+  assign image_loading = 'lazy'
+  if section.index == 1
+    assign image_loading = 'eager'
+  endif
 -%}
 
 {% render 'screen-scale' %}
 
-<about-pillars
-  class="about-pillars full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
-  style="--slides: {{ slide_count | at_least: 1 }}; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};"
-  {% if section.settings.drift %}
-    data-drift
-  {% endif %}
->
-  <div class="about-pillars__panel">
-    <div class="about-pillars__inner">
-      <div class="about-pillars__story">
-        {%- if slide_count > 1 -%}
-          <div class="about-pillars__progress" aria-hidden="true">
-            {%- for block in section.blocks -%}
-              <span class="about-pillars__bar{% if forloop.first %} is-active{% endif %}"></span>
-            {%- endfor -%}
-            <span class="about-pillars__count">
-              <span class="about-pillars__count-current">01</span> /
-              {% if slide_count < 10 %}0{% endif %}{{ slide_count -}}
-            </span>
-          </div>
-        {%- endif -%}
+{%- if slide_count > 0 or request.design_mode -%}
+  <about-pillars
+    class="about-pillars full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
+    style="--slides: {{ slide_count | at_least: 1 }};{% if section.settings.scale_screen %} --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};{% endif %}"
+    {% if section.settings.drift %}
+      data-drift
+    {% endif %}
+  >
+    <div class="about-pillars__panel">
+      <div class="about-pillars__inner{% if has_photos %} about-pillars__inner--photos{% endif %}">
+        <div class="about-pillars__story">
+          {%- if slide_count > 1 -%}
+            <div class="about-pillars__progress" aria-hidden="true">
+              {%- for i in (1..slide_count) -%}
+                <span class="about-pillars__bar{% if forloop.first %} is-active{% endif %}"></span>
+              {%- endfor -%}
+              <span class="about-pillars__count">
+                <span class="about-pillars__count-current">01</span> /
+                {% if slide_count < 10 %}0{% endif %}{{ slide_count -}}
+              </span>
+            </div>
+          {%- endif -%}
 
-        {%- if slide_count > 0 -%}
-          <div class="about-pillars__slides">
-            {% content_for 'blocks' %}
+          {%- if slide_count > 0 -%}
+            <div class="about-pillars__slides">
+              {{ blocks_html }}
+            </div>
+          {%- else -%}
+            <p class="about-pillars__empty">{{ 'about.pillars_empty' | t }}</p>
+          {%- endif -%}
+        </div>
+
+        {%- if has_photos -%}
+          <div class="about-pillars__photos" aria-hidden="true">
+            {%- for column in (1..2) -%}
+              <div class="about-pillars__column about-pillars__column--{{ column }}">
+                {%- if photo_keys.size > 0 -%}
+                  {%- for photo_key in photo_keys -%}
+                    {%- liquid
+                      # Odd photos (1st, 3rd…) go left, even ones right
+                      assign photo_column = 2
+                      assign odd = forloop.index | modulo: 2
+                      if odd == 1
+                        assign photo_column = 1
+                      endif
+                    -%}
+                    {%- if photo_column == column -%}
+                      {%- liquid
+                        # Below 990px the photos are a row 7.25rem (116px) tall: the width follows the photo's shape
+                        assign photo = section.settings[photo_key]
+                        assign row_width = photo.aspect_ratio | times: 116 | ceil
+                        assign photo_sizes = '(min-width: 990px) ' | append: desktop_size | append: ', ' | append: row_width | append: 'px'
+                      -%}
+                      {% render 'image',
+                        image: photo,
+                        class: 'about-pillars__photo',
+                        alt: '',
+                        sizes: photo_sizes,
+                        widths: '180, 240, 360, 480, 640, 800',
+                        loading: image_loading
+                      %}
+                    {%- endif -%}
+                  {%- endfor -%}
+                {%- else -%}
+                  {%- comment -%} Editor only: a hint of the photo columns until photos are chosen {%- endcomment -%}
+                  {%- for i in (1..3) -%}
+                    <div class="about-pillars__photo about-pillars__photo--placeholder">
+                      {{ 'lifestyle-1' | placeholder_svg_tag }}
+                    </div>
+                  {%- endfor -%}
+                {%- endif -%}
+              </div>
+            {%- endfor -%}
           </div>
-        {%- elsif request.design_mode -%}
-          <p class="about-pillars__empty">{{ 'about.pillars_empty' | t }}</p>
         {%- endif -%}
       </div>
-
-      {%- if photo_keys.size > 0 or request.design_mode -%}
-        <div class="about-pillars__photos" aria-hidden="true">
-          {%- for column in (1..2) -%}
-            <div class="about-pillars__column about-pillars__column--{{ column }}">
-              {%- if photo_keys.size > 0 -%}
-                {%- for photo_key in photo_keys -%}
-                  {%- liquid
-                    # Odd photos (1st, 3rd…) go left, even ones right
-                    assign photo_column = 2
-                    assign odd = forloop.index | modulo: 2
-                    if odd == 1
-                      assign photo_column = 1
-                    endif
-                  -%}
-                  {%- if photo_column == column -%}
-                    {% render 'image',
-                      image: section.settings[photo_key],
-                      class: 'about-pillars__photo',
-                      alt: '',
-                      sizes: '(min-width: 1200px) 21vw, (min-width: 750px) 40vw, 30vw',
-                      widths: '240, 360, 480, 640, 800',
-                      loading: 'lazy'
-                    %}
-                  {%- endif -%}
-                {%- endfor -%}
-              {%- else -%}
-                {%- comment -%} Editor only: a hint of the photo columns until photos are chosen {%- endcomment -%}
-                {%- for i in (1..3) -%}
-                  <div class="about-pillars__photo about-pillars__photo--placeholder">
-                    {{ 'lifestyle-1' | placeholder_svg_tag }}
-                  </div>
-                {%- endfor -%}
-              {%- endif -%}
-            </div>
-          {%- endfor -%}
-        </div>
-      {%- endif -%}
     </div>
-  </div>
-</about-pillars>
+  </about-pillars>
+{%- endif -%}
 
 {% stylesheet %}
   /*
@@ -109,12 +156,18 @@
     ~200px; the right column starts higher. Sizes: Figma px x --px with rem floors, or tokens.
   */
   .about-pillars {
+    /* One Figma pixel; with "Scale with the screen" also limited by the screen height */
+    --px: min(calc(100vw / 1920), 0.0625rem);
     --progress: 0;
     --drift-distance: 35%;
 
     display: block;
     counter-reset: pillar;
     background-color: var(--color-background);
+  }
+
+  .about-pillars.section--screen-scale {
+    --px: min(calc(100vw / 1920), calc(100svh / 1031));
   }
 
   .about-pillars__inner {
@@ -127,41 +180,46 @@
     margin-inline: auto;
   }
 
+  /* Two columns only with photos (no empty photo column) */
   @media (min-width: 990px) {
-    .about-pillars__inner {
+    .about-pillars__inner--photos {
       grid-template-columns: minmax(0, 1013fr) minmax(0, 807fr);
       column-gap: var(--space-xl);
     }
   }
 
   .about-pillars__story {
-    padding-block: max(6.5rem, calc(185 * var(--px, 0.0625rem))) var(--space-2xl);
+    padding-block: max(6.5rem, calc(185 * var(--px))) var(--space-2xl);
   }
 
-  /* ---------- Progress ---------- */
+  /* ---------- Progress (only while the panel is pinned: it means nothing on stacked slides) ---------- */
   .about-pillars__progress {
     display: flex;
     align-items: center;
-    gap: max(var(--space-md), calc(17 * var(--px, 0.0625rem)));
-    margin-block-end: max(var(--space-xl), calc(60 * var(--px, 0.0625rem)));
+    gap: max(var(--space-md), calc(17 * var(--px)));
+    margin-block-end: max(var(--space-xl), calc(60 * var(--px)));
     font-size: var(--font-size-label);
     font-weight: var(--font-weight-medium);
     letter-spacing: var(--letter-spacing-label);
   }
 
+  .about-pillars:not([data-ready]) .about-pillars__progress {
+    display: none;
+  }
+
   .about-pillars__bar {
-    inline-size: max(1.25rem, calc(30 * var(--px, 0.0625rem)));
+    inline-size: max(1.25rem, calc(30 * var(--px)));
     block-size: 2px;
     background-color: color-mix(in srgb, var(--color-accent) 20%, transparent);
   }
 
   .about-pillars__bar.is-active {
-    inline-size: max(2.5rem, calc(66 * var(--px, 0.0625rem)));
+    inline-size: max(2.5rem, calc(66 * var(--px)));
     background-color: var(--color-accent);
   }
 
   .about-pillars__count {
-    margin-inline-start: max(var(--space-md), calc(15 * var(--px, 0.0625rem)));
+    margin-inline-start: max(var(--space-md), calc(15 * var(--px)));
     white-space: nowrap;
   }
 
@@ -171,6 +229,7 @@
 
   .about-pillars__empty {
     margin: 0;
+    font-style: italic;
   }
 
   /* ---------- Photos ---------- */
@@ -179,7 +238,7 @@
     grid-template-columns: minmax(0, 396fr) minmax(0, 387fr);
     align-items: start;
     position: relative;
-    gap: max(var(--space-md), calc(24 * var(--px, 0.0625rem)));
+    gap: max(var(--space-md), calc(24 * var(--px)));
     overflow: hidden;
   }
 
@@ -198,7 +257,7 @@
     position: absolute;
     inset: auto 0 0;
     z-index: 1;
-    block-size: max(7rem, calc(195 * var(--px, 0.0625rem))); /* 195px at 1920 */
+    block-size: max(7rem, calc(195 * var(--px))); /* 195px at 1920 */
     /*
       In a wide, short band the slanted gradient is already partly white along its top edge on the
       right, which drew a hard line (like a box). This mask fades the band in from its top, so it
@@ -237,29 +296,29 @@
   }
 
   /*
-    ---------- With the script (data-ready, from 990px) ----------
+    ---------- Pinned (data-ready: the script runs and the content fits one screen) ----------
     The section is one screen tall per slide; its panel sticks to the top for the whole way, so the
     visitor scrolls "through" it. Slides lie on top of each other, the current one shows.
   */
+  .about-pillars[data-ready] {
+    block-size: calc(var(--slides) * 100svh);
+  }
+
+  .about-pillars[data-ready] .about-pillars__panel {
+    position: sticky;
+    inset-block-start: 0;
+    block-size: 100svh;
+    overflow: hidden;
+  }
+
   @media (min-width: 990px) {
-    .about-pillars[data-ready] {
-      block-size: calc(var(--slides) * 100svh);
-    }
-
-    .about-pillars[data-ready] .about-pillars__panel {
-      position: sticky;
-      inset-block-start: 0;
-      block-size: 100svh;
-      overflow: hidden;
-    }
-
     .about-pillars[data-ready] .about-pillars__inner {
       block-size: 100%;
     }
 
     .about-pillars[data-ready] .about-pillars__photos {
       align-self: stretch;
-      margin-block-start: max(6rem, calc(155 * var(--px, 0.0625rem)));
+      margin-block-start: max(6rem, calc(155 * var(--px)));
     }
 
     /* The left column moves up, the right one (starting higher) moves down */
@@ -272,14 +331,11 @@
     }
   }
 
+  /* The slides are the Pillar blocks themselves ("tag": null: no Shopify wrapper), stacked in one cell */
   .about-pillars[data-ready] .about-pillars__slides {
     display: grid;
   }
 
-  /*
-    Shopify wraps every theme block in its own <div class="shopify-block">: the wrappers are the
-    direct children (stacked in one cell), the .pillar inside each one fades
-  */
   .about-pillars[data-ready] .about-pillars__slides > * {
     grid-area: 1 / 1;
     margin: 0;
@@ -360,22 +416,27 @@
   }
 
   /*
-    ---------- Phones and tablets (Variant45-3) ----------
-    The text, then the photos as two rows sliding sideways (left row to the left, right row to the
-    right) while the slide changes. The section stays one screen tall per slide.
+    ---------- Phones and tablets (Variant45-2, 46-1, 47-1) ----------
+    The text, then the photos as two rows sliding sideways while the slide changes: row 1 starts
+    7.5rem in from the screen edge on the first slide and moves left; row 2 starts cut off at the
+    left and ends 7.5rem in on the last slide (--row-indent, --row-travel: 6rem per step of three
+    slides). The rows reach the screen edges (negative page margins).
   */
   @media (max-width: 989px) {
-    .about-pillars[data-ready] {
-      block-size: calc(var(--slides) * 100svh);
+    .about-pillars {
+      --row-indent: 7.5rem;
+      --row-travel: 12rem;
+      --dir: 1;
+    }
+
+    /* translate is physical: mirror the moves on right-to-left pages */
+    .about-pillars:dir(rtl) {
+      --dir: -1;
     }
 
     .about-pillars[data-ready] .about-pillars__panel {
-      position: sticky;
-      inset-block-start: 0;
       display: flex;
       flex-direction: column;
-      block-size: 100svh;
-      overflow: hidden;
     }
 
     .about-pillars__inner {
@@ -396,10 +457,6 @@
       inline-size: max-content;
     }
 
-    .about-pillars__column--2 {
-      margin-inline-start: calc(var(--page-margin) * -2);
-    }
-
     .about-pillars__photo,
     .about-pillars__photo img {
       inline-size: auto;
@@ -416,11 +473,20 @@
     }
 
     .about-pillars[data-ready] .about-pillars__column--1 {
-      translate: calc(var(--progress) * var(--drift-distance) * -1) 0;
+      translate: calc((var(--row-indent) - var(--progress) * var(--row-travel)) * var(--dir)) 0;
     }
 
     .about-pillars[data-ready] .about-pillars__column--2 {
-      translate: calc((var(--progress) - 1) * var(--drift-distance)) 0;
+      translate: calc((var(--row-indent) - (1 - var(--progress)) * var(--row-travel)) * var(--dir)) 0;
+    }
+  }
+
+  /* Phones (Variant45-2): small progress text */
+  @media (max-width: 749px) {
+    .about-pillars__progress {
+      gap: var(--space-sm);
+      margin-block-end: var(--space-lg);
+      font-size: 0.625rem;
     }
   }
 {% endstylesheet %}
@@ -429,25 +495,47 @@
   /**
    * <about-pillars>: turns scrolling through the (tall) section into slide changes.
    *
-   * update() runs at most once per frame while the section is on screen (an IntersectionObserver
-   * adds and removes the scroll listener). It measures how far the visitor is through the section
-   * (0 at its top, 1 at its end), shows slide floor(progress x slides), and writes --progress:
+   * fit() decides if the panel can be pinned: it applies the pinned layout (data-ready) and checks
+   * that the panel's content (the tallest slide and the photos) fits one screen. If not, it removes
+   * data-ready again in the same step (before paint), so the slides stack as without JS. It runs on
+   * connect, on resize and when the web fonts have loaded (text gets taller).
+   *
+   * While pinned, update() runs at most once per frame while the section is on screen (an
+   * IntersectionObserver adds and removes the scroll listener). It measures how far the visitor is
+   * through the section (0 at its top, 1 at its end), shows slide floor(progress x slides), and
+   * writes --progress:
    * - "Photos drift while scrolling" on (data-drift) and motion allowed: the exact progress, so the
    *   photo columns follow the scroll smoothly (data-drift-on);
    * - otherwise one step per slide (0, 0.5, 1 for three slides): the columns glide once per slide.
-   * In the theme editor, selecting a Pillar block scrolls to its slide.
+   * Keyboard focus in a slide that doesn't show, and selecting a Pillar block in the theme editor,
+   * scroll to that slide. Every listener is on one AbortController (the editor re-attaches a moved
+   * section, so connectedCallback can run again).
    */
   class AboutPillars extends HTMLElement {
     connectedCallback() {
+      this.controller?.abort();
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+
       this.slides = [...this.querySelectorAll('.pillar')];
       if (!this.slides.length) return;
 
+      this.panel = this.querySelector('.about-pillars__panel');
       this.bars = [...this.querySelectorAll('.about-pillars__bar')];
       this.counter = this.querySelector('.about-pillars__count-current');
-      const motion = window.matchMedia('(prefers-reduced-motion: no-preference)');
-      this.drift = this.hasAttribute('data-drift') && motion.matches;
-      this.toggleAttribute('data-drift-on', this.drift);
       this.current = -1;
+
+      // Smooth drift only with motion allowed; follow a change of the visitor's setting
+      this.motion = window.matchMedia('(prefers-reduced-motion: no-preference)');
+      this.setDrift();
+      this.motion.addEventListener(
+        'change',
+        () => {
+          this.setDrift();
+          this.update();
+        },
+        { signal }
+      );
 
       this.onScroll = () => {
         if (this.frame) return;
@@ -459,27 +547,68 @@
 
       this.visibility = new IntersectionObserver(([entry]) => {
         if (entry.isIntersecting) {
-          window.addEventListener('scroll', this.onScroll, { passive: true });
-          window.addEventListener('resize', this.onScroll);
+          window.addEventListener('scroll', this.onScroll, { passive: true, signal });
           this.update();
         } else {
           window.removeEventListener('scroll', this.onScroll);
-          window.removeEventListener('resize', this.onScroll);
         }
       });
 
-      this.setAttribute('data-ready', '');
-      this.visibility.observe(this);
-      this.activate(0);
+      // Pin again or stack after a resize, and once the web fonts have loaded
+      this.onResize = () => {
+        if (this.fitFrame) return;
+        this.fitFrame = requestAnimationFrame(() => {
+          this.fitFrame = null;
+          this.fit();
+          this.update();
+        });
+      };
+      window.addEventListener('resize', this.onResize, { signal });
+      document.fonts?.ready.then(() => {
+        if (!signal.aborted) this.onResize();
+      });
 
-      this.addEventListener('shopify:block:select', (event) => this.scrollToSlide(event.target));
+      this.fit();
+      this.activate(0);
+      this.visibility.observe(this);
+
+      this.addEventListener('shopify:block:select', (event) => this.scrollToSlide(event.target), { signal });
+
+      // A link in a slide that doesn't show gets keyboard focus: bring its slide in
+      this.addEventListener(
+        'focusin',
+        (event) => {
+          if (!this.pinned) return;
+          const slide = event.target.closest?.('.pillar');
+          if (slide && slide !== this.slides[this.current]) this.scrollToSlide(slide);
+        },
+        { signal }
+      );
     }
 
     disconnectedCallback() {
+      this.controller?.abort();
       clearTimeout(this.leaveTimer);
       this.visibility?.disconnect();
-      window.removeEventListener('scroll', this.onScroll);
-      window.removeEventListener('resize', this.onScroll);
+      if (this.frame) cancelAnimationFrame(this.frame);
+      if (this.fitFrame) cancelAnimationFrame(this.fitFrame);
+      this.frame = null;
+      this.fitFrame = null;
+    }
+
+    setDrift() {
+      this.drift = this.hasAttribute('data-drift') && this.motion.matches;
+      this.toggleAttribute('data-drift-on', this.drift);
+    }
+
+    /**
+     * Pinned only when the content fits one screen. Always measured in the pinned layout (the
+     * stacked slides are taller, so measuring them would flip it back and forth).
+     */
+    fit() {
+      this.setAttribute('data-ready', '');
+      this.pinned = this.panel.scrollHeight <= this.panel.clientHeight + 1;
+      this.toggleAttribute('data-ready', this.pinned);
     }
 
     /** 0 at the section's top, 1 once its end reaches the bottom of the screen */
@@ -491,6 +620,7 @@
     }
 
     update() {
+      if (!this.pinned) return;
       const count = this.slides.length;
       const progress = this.progress();
       const index = Math.min(Math.floor(progress * count), count - 1);
@@ -522,8 +652,15 @@
     }
 
     scrollToSlide(target) {
-      const index = this.slides.indexOf(target.closest?.('.pillar'));
+      const slide = target.closest?.('.pillar');
+      const index = this.slides.indexOf(slide);
       if (index < 0) return;
+
+      // Stacked: the slide is in the page flow
+      if (!this.pinned) {
+        slide.scrollIntoView({ block: 'nearest' });
+        return;
+      }
 
       const top = this.getBoundingClientRect().top + window.scrollY;
       const travel = this.offsetHeight - window.innerHeight;
@@ -538,13 +675,16 @@
 {
   "name": "t:general.about_pillars",
   "tag": "section",
-  "class": "about-pillars-section",
   "enabled_on": {
     "templates": ["page"]
   },
   "blocks": [{ "type": "_pillar" }],
   "max_blocks": 6,
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
     {
       "type": "paragraph",
       "content": "t:labels.about_pillars_help"
@@ -598,15 +738,8 @@
       "label": "t:labels.photo_8"
     },
     {
-      "type": "checkbox",
-      "id": "drift",
-      "label": "t:labels.pillars_drift",
-      "info": "t:labels.pillars_drift_info",
-      "default": true
-    },
-    {
       "type": "header",
-      "content": "t:labels.style"
+      "content": "t:labels.layout"
     },
     {
       "type": "select",
@@ -637,20 +770,35 @@
       "type": "checkbox",
       "id": "scale_screen",
       "label": "t:labels.scale_screen",
-      "info": "t:labels.scale_screen_info",
+      "info": "t:labels.about_scale_screen_info",
       "default": true
     },
     {
       "type": "range",
       "id": "text_scale",
       "label": "t:labels.text_scale",
-      "info": "t:labels.text_scale_info",
+      "info": "t:labels.about_text_scale_info",
       "min": 100,
       "max": 130,
       "step": 5,
       "unit": "%",
       "default": 110,
       "visible_if": "{{ section.settings.scale_screen }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.animation"
+    },
+    {
+      "type": "checkbox",
+      "id": "drift",
+      "label": "t:labels.pillars_drift",
+      "info": "t:labels.pillars_drift_info",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
     },
     {
       "type": "color_scheme",

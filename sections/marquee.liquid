@@ -5,16 +5,35 @@
   - Pure CSS: a track with two identical halves slides by one half, then starts over, so the seam
     never shows. Each half repeats the sentence enough times to be wider than the screen.
   - Screen readers read the sentence once (a visually hidden copy); the moving track is aria-hidden.
-  - Moves only with animations on (the global setting; never in the theme editor) and motion
-    allowed. It pauses on hover, and a pause / play button stops it (WCAG 2.2.2).
+  - Moves only when the script runs (it sets is-moving), "Enable animations" is on (.motion-on: a
+    looping movement that never hides content, so it also moves in the theme editor) and motion is
+    allowed. No JS = no movement, because the pause / play button (WCAG 2.2.2) needs the script.
+    It pauses on hover (mouse only) and with the button.
+  - The loop always runs left to right inside (direction: ltr), also on right-to-left stores, so
+    the slide by -50% never leaves a blank space.
 {%- endcomment -%}
 
 {%- liquid
   assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
   assign text = section.settings.text | strip
   assign separator = section.settings.separator | strip | escape
-  # Copies per half: enough to fill a wide screen even with short text or a small size
-  assign copies = 4
+
+  # Copies per half: one half must be wider than the screen, or the loop shows a gap and jumps.
+  # The font size follows the screen width (Text size at a 1920px screen, at least 40px), so the
+  # sum doesn't depend on the screen: copies x (one copy in em) x Text size >= 1920 (+20% spare).
+  # One copy in em, x100: 50 per character (a low guess for bold capitals, so we round up) +
+  # 35 for the space after it + the separator.
+  assign copy_em = text | size | times: 50 | plus: 35
+  if separator != blank
+    assign separator_em = section.settings.separator | strip | size | times: 50 | plus: 35
+    assign copy_em = copy_em | plus: separator_em
+  endif
+  assign text_size = section.settings.text_size | default: 110 | at_least: 40
+  assign copy_px = copy_em | times: text_size
+  assign copies = 230400 | plus: copy_px | minus: 1 | divided_by: copy_px
+  # Even (the outline pattern runs on across the seam), at least 2, at most 50 (the for loop limit)
+  assign odd_copies = copies | modulo: 2
+  assign copies = copies | plus: odd_copies | at_least: 2 | at_most: 50
 -%}
 
 {%- comment -%} The solid repeats are extra bold (800): the page only loads regular and bold {%- endcomment -%}
@@ -36,7 +55,7 @@
             {%- for i in (1..copies) -%}
               {%- comment -%} Every second repeat in outline (copies is even, so the pattern runs on across the seam) {%- endcomment -%}
               {%- assign odd_repeat = forloop.index0 | modulo: 2 -%}
-              <span class="marquee__item{% if section.settings.outline and odd_repeat == 1 %} marquee__item--outline{% endif %}">{{ text | escape }}</span>
+              <span class="marquee__item{% if section.settings.outline and odd_repeat == 1 %} marquee__item--outline{% endif %}" dir="auto">{{ text | escape }}</span>
               {%- if separator != blank -%}
                 <span class="marquee__separator">{{ separator }}</span>
               {%- endif -%}
@@ -75,8 +94,10 @@
     background-color: var(--color-background);
   }
 
+  /* Left to right also on right-to-left stores: the loop slides by -50% (see the comment above) */
   .marquee__viewport {
     overflow: hidden;
+    direction: ltr;
   }
 
   .marquee__track {
@@ -119,18 +140,26 @@
   /*
     Moving: the track slides by one half (-50%), then starts over at 0; the two halves are the
     same, so the jump back can't be seen. Right = the same animation played in reverse.
+    is-moving is set by the script, together with showing the pause button: no JS (or reduced
+    motion, or animations off) = no movement and no button.
   */
   @media (prefers-reduced-motion: no-preference) {
-    .animations-on .marquee__track {
+    .motion-on .marquee.is-moving .marquee__track {
       animation: marquee-slide var(--marquee-duration, 40s) linear infinite;
     }
 
-    .animations-on .marquee--right .marquee__track {
+    .motion-on .marquee--right.is-moving .marquee__track {
       animation-direction: reverse;
     }
 
-    .animations-on .marquee:hover .marquee__track,
-    .animations-on .marquee.is-paused .marquee__track {
+    .motion-on .marquee.is-paused .marquee__track {
+      animation-play-state: paused;
+    }
+  }
+
+  /* Pause on hover only with a mouse: after a tap on a phone, :hover stays on */
+  @media (prefers-reduced-motion: no-preference) and (hover: hover) {
+    .motion-on .marquee.is-moving:hover .marquee__track {
       animation-play-state: paused;
     }
   }
@@ -182,23 +211,35 @@
 
 {% javascript %}
   /**
-   * <marquee-text>: shows the pause / play button when the text actually moves (animations on and
-   * motion allowed), and toggles is-paused, which stops the CSS animation where it is.
+   * <marquee-text>: starts the movement (is-moving) and shows the pause / play button, but only
+   * with "Enable animations" on (.motion-on) and motion allowed. The button and the movement are
+   * always on or off together, so the button never shows while nothing moves. A reduced-motion
+   * change while on the page stops or starts it. The button toggles is-paused, which stops the CSS
+   * animation where it is.
    */
   class MarqueeText extends HTMLElement {
     connectedCallback() {
-      const animations = document.documentElement.classList.contains('animations-on');
-      const motion = window.matchMedia('(prefers-reduced-motion: no-preference)').matches;
-      this.button = this.querySelector('.marquee__pause');
-      if (!this.button || !animations || !motion) return;
-
       /*
-        The listener is tied to an AbortController, and disconnectedCallback aborts it. The theme editor
-        re-attaches the section when it is moved, so connectedCallback runs again; without this, the
-        button would get a second listener and toggle twice per click (= nothing happens).
+        Every listener is tied to one AbortController, and disconnectedCallback aborts it. The theme
+        editor re-attaches the section when it is moved, so connectedCallback runs again; without
+        this, the button would get a second listener and toggle twice per click (= nothing happens).
       */
+      this.abortController?.abort();
       this.abortController = new AbortController();
-      this.button.hidden = false;
+      const { signal } = this.abortController;
+
+      this.button = this.querySelector('.marquee__pause');
+      if (!this.button || !document.documentElement.classList.contains('motion-on')) return;
+
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const update = () => {
+        const moving = !reduce.matches;
+        this.classList.toggle('is-moving', moving);
+        this.button.hidden = !moving;
+      };
+      update();
+      reduce.addEventListener('change', update, { signal });
+
       this.button.addEventListener(
         'click',
         () => {
@@ -206,7 +247,7 @@
           // The label stays "Pause"; aria-pressed says whether it is on (pressed = paused)
           this.button.setAttribute('aria-pressed', String(paused));
         },
-        { signal: this.abortController.signal }
+        { signal }
       );
     }
 
@@ -222,8 +263,11 @@
 {
   "name": "t:general.marquee",
   "tag": "section",
-  "class": "marquee-section",
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
     {
       "type": "text",
       "id": "text",
@@ -231,17 +275,36 @@
       "default": "Beauty heals nature, nature feeds beauty."
     },
     {
-      "type": "checkbox",
-      "id": "outline",
-      "label": "t:labels.marquee_outline",
-      "info": "t:labels.marquee_outline_info",
-      "default": true
-    },
-    {
       "type": "text",
       "id": "separator",
       "label": "t:labels.marquee_separator",
-      "info": "t:labels.marquee_separator_info"
+      "info": "t:labels.marquee_separator_example_info"
+    },
+    {
+      "type": "checkbox",
+      "id": "outline",
+      "label": "t:labels.marquee_outline",
+      "info": "t:labels.marquee_outline_alternate_info",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.layout"
+    },
+    {
+      "type": "range",
+      "id": "text_size",
+      "label": "t:labels.marquee_text_size",
+      "info": "t:labels.marquee_text_size_min_info",
+      "min": 40,
+      "max": 200,
+      "step": 5,
+      "unit": "px",
+      "default": 110
+    },
+    {
+      "type": "header",
+      "content": "t:labels.movement"
     },
     {
       "type": "select",
@@ -257,7 +320,7 @@
       "type": "range",
       "id": "speed",
       "label": "t:labels.marquee_speed",
-      "info": "t:labels.marquee_speed_info",
+      "info": "t:labels.marquee_speed_pause_info",
       "min": 10,
       "max": 120,
       "step": 5,
@@ -266,24 +329,7 @@
     },
     {
       "type": "header",
-      "content": "t:labels.style"
-    },
-    {
-      "type": "range",
-      "id": "text_size",
-      "label": "t:labels.marquee_text_size",
-      "info": "t:labels.marquee_text_size_info",
-      "min": 40,
-      "max": 200,
-      "step": 5,
-      "unit": "px",
-      "default": 110
-    },
-    {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -304,6 +350,16 @@
       "step": 8,
       "unit": "px",
       "default": 80
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ],
   "presets": [

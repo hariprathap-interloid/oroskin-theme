@@ -2,54 +2,74 @@
   About values (M8.4 part 6, design/briefs/about-us.md §4.6, exports "Default-9" (desktop),
   "Variant49" / "Variant50" (phone)): "What we stand for" / "Our core Values" and one Value card
   block per value, numbered 01, 02… by a CSS counter.
-  Desktop: 3 columns; with "Feature the first card" the first card is two rows tall (its photo at
-  the bottom). Phones and tablets: the first card full width (photo beside the text), the others in
-  2 columns. The cards fade up one after another (the global animation setting).
+  Desktop: 3 columns; with "Feature the first card" the first card is two rows tall, but only when
+  it has a photo and there are 3 or more cards (else it would be a tall, empty card).
+  Phones and tablets: 2 columns; with "Feature the first card" the first card takes the full width
+  (photo beside the text). A lone card in the last row is centred.
+  No heading = a hidden h2, so the cards' h3 titles never come straight after the page's h1.
+  The cards fade up one after another (Scroll animation); never in the page's first section.
+
+  The Value card blocks are captured first: an empty card draws nothing on the store, so the
+  section shows on the store only when at least one card drew a .value-card (in the theme editor
+  it always shows, with a note when no card shows).
 {%- endcomment -%}
 
 {%- liquid
+  capture blocks_html
+    content_for 'blocks'
+  endcapture
+
+  assign has_cards = false
+  if blocks_html contains 'class="value-card'
+    assign has_cards = true
+  endif
+
   assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
 -%}
 
 {% render 'screen-scale' %}
 
-{%- comment -%}
-  The cards' numbers use the heading font at a thin weight (200) and the titles at semibold (600):
-  the page only loads regular and bold, so this section loads those two weights itself
-  (font_modify returns nothing when the chosen font has no such cut, and the nearest one is used).
-{%- endcomment -%}
-{% style %}
-  {{ settings.type_heading_font | font_modify: 'weight', '200' | font_face: font_display: 'swap' }}
-  {{ settings.type_heading_font | font_modify: 'weight', '600' | font_face: font_display: 'swap' }}
-{% endstyle %}
+{%- if has_cards or request.design_mode -%}
+  {%- comment -%}
+    The cards' numbers use the heading font at a thin weight (200) and the titles at semibold (600):
+    the page only loads regular and bold, so this section loads those two weights itself
+    (font_modify returns nothing when the chosen font has no such cut, and the nearest one is used).
+  {%- endcomment -%}
+  {% style %}
+    {{ settings.type_heading_font | font_modify: 'weight', '200' | font_face: font_display: 'swap' }}
+    {{ settings.type_heading_font | font_modify: 'weight', '600' | font_face: font_display: 'swap' }}
+  {% endstyle %}
 
-<div
-  class="about-values full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
-  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};"
->
-  <div class="about-values__inner">
-    {%- if section.settings.eyebrow != blank or section.settings.heading != blank -%}
+  <div
+    class="about-values full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
+    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;{% if section.settings.scale_screen %} --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};{% endif %}"
+  >
+    <div class="about-values__inner">
       <header class="about-values__header">
         {%- if section.settings.eyebrow != blank -%}
           <p class="eyebrow eyebrow--center">{{ section.settings.eyebrow | escape }}</p>
         {%- endif -%}
         {%- if section.settings.heading != blank -%}
           <h2 class="about-values__heading">{{ section.settings.heading }}</h2>
+        {%- else -%}
+          <h2 class="visually-hidden">{{ 'about.values_heading_hidden' | t }}</h2>
         {%- endif -%}
       </header>
-    {%- endif -%}
 
-    {%- if section.blocks.size > 0 -%}
-      <animate-on-scroll
-        class="about-values__list{% if section.settings.feature_first %} about-values__list--feature{% endif %}"
-      >
-        {% content_for 'blocks' %}
-      </animate-on-scroll>
-    {%- elsif request.design_mode -%}
-      <p class="about-values__empty">{{ 'about.values_empty' | t }}</p>
-    {%- endif -%}
+      {%- if blocks_html != blank -%}
+        <animate-on-scroll
+          class="about-values__list{% if section.settings.feature_first %} about-values__list--feature{% endif %}"
+        >
+          {{- blocks_html -}}
+        </animate-on-scroll>
+      {%- endif -%}
+
+      {%- unless has_cards -%}
+        <p class="about-values__empty">{{ 'about.values_empty' | t }}</p>
+      {%- endunless -%}
+    </div>
   </div>
-</div>
+{%- endif -%}
 
 {% stylesheet %}
   /*
@@ -58,8 +78,14 @@
     tall with a ~48 gap; card 01 spans both rows.
   */
   .about-values {
+    --px: min(calc(100vw / 1920), 0.0625rem);
+
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
     background-color: var(--color-background);
+  }
+
+  .about-values.section--screen-scale {
+    --px: min(calc(100vw / 1920), calc(100svh / 1031));
   }
 
   .about-values__inner {
@@ -71,13 +97,18 @@
   }
 
   .about-values__header {
-    margin-block-end: max(var(--space-xl), calc(40 * var(--px, 0.0625rem)));
+    margin-block-end: max(var(--space-xl), calc(40 * var(--px)));
     text-align: center;
   }
 
+  /* Only a hidden h2: no space under an empty header */
+  .about-values__header:not(:has(:not(.visually-hidden))) {
+    margin-block-end: 0;
+  }
+
   .about-values__heading {
-    margin: max(var(--space-lg), calc(40 * var(--px, 0.0625rem))) 0 0;
-    font-size: max(2rem, calc(66 * var(--px, 0.0625rem)));
+    margin: max(var(--space-lg), calc(40 * var(--px))) 0 0;
+    font-size: max(2rem, calc(66 * var(--px)));
     line-height: 1.15;
   }
 
@@ -86,34 +117,37 @@
     font-style: normal;
   }
 
+  /* The cards are the list's direct children (the blocks have no Shopify wrapper) */
   .about-values__list {
     counter-reset: value-card;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-auto-rows: minmax(max(16rem, calc(326 * var(--px, 0.0625rem))), auto);
-    gap: max(var(--space-xl), calc(48 * var(--px, 0.0625rem))) max(var(--space-xl), calc(50 * var(--px, 0.0625rem)));
+    grid-auto-rows: minmax(max(16rem, calc(326 * var(--px))), auto);
+    gap: max(var(--space-xl), calc(48 * var(--px))) max(var(--space-xl), calc(50 * var(--px)));
   }
 
-  /* Shopify wraps each block in a div: the wrappers are the grid items */
-  .about-values__list--feature > :first-child {
+  /* Two rows tall only with a photo to fill it and at least 2 more cards beside it */
+  .about-values__list--feature > .value-card--media:first-child:nth-last-child(n + 3) {
     grid-row: span 2;
   }
 
-  /* The cards fade up one after another */
-  .about-values__list > :nth-child(3n + 2) .value-card {
+  /* The cards fade up one after another, by column */
+  .about-values__list > :nth-child(3n + 2) {
     --animate-delay: 100ms;
   }
 
-  .about-values__list > :nth-child(3n + 3) .value-card {
+  .about-values__list > :nth-child(3n + 3) {
     --animate-delay: 200ms;
   }
 
-  .about-values__empty {
+  .about-values__empty,
+  .about-values__note {
     margin: 0;
+    font-style: italic;
     text-align: center;
   }
 
-  /* Phones and tablets (Variant49, answer 12): 2 columns, the featured card full width */
+  /* Phones and tablets (Variant49 / 50): 2 columns; the featured card full width */
   @media (max-width: 1199px) {
     .about-values__list {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -123,27 +157,38 @@
 
     .about-values__list--feature > :first-child {
       grid-column: 1 / -1;
-      grid-row: auto;
     }
 
-    .about-values__list > :nth-child(n) .value-card {
+    /*
+      A lone card in the last row: centred, one column wide. With the featured card, the others
+      start at child 2, so the lone one is an even child; without it, an odd child.
+    */
+    .about-values__list--feature > :last-child:nth-child(even):not(:first-child),
+    .about-values__list:not(.about-values__list--feature) > :last-child:nth-child(odd) {
+      grid-column: 1 / -1;
+      justify-self: center;
+      inline-size: calc(50% - var(--space-md) / 2);
+    }
+
+    /* Delays by column: column 2 = the odd children after the featured card, else the even ones */
+    .about-values__list > :nth-child(n) {
       --animate-delay: 0ms;
     }
 
-    .about-values__list > :nth-child(odd) .value-card {
+    .about-values__list--feature > :nth-child(odd):not(:first-child),
+    .about-values__list:not(.about-values__list--feature) > :nth-child(even) {
       --animate-delay: 100ms;
     }
   }
 
-  /* Phones: one card per row, so each card has room for its text */
   @media (max-width: 749px) {
     .about-values__list {
-      grid-template-columns: minmax(0, 1fr);
-      gap: var(--space-sm);
+      gap: 0.75rem;
     }
 
-    .about-values__list > :nth-child(n) .value-card {
-      --animate-delay: 0ms;
+    .about-values__list--feature > :last-child:nth-child(even):not(:first-child),
+    .about-values__list:not(.about-values__list--feature) > :last-child:nth-child(odd) {
+      inline-size: calc(50% - 0.375rem);
     }
 
     .about-values__heading {
@@ -156,13 +201,16 @@
 {
   "name": "t:general.about_values",
   "tag": "section",
-  "class": "about-values-section",
   "enabled_on": {
     "templates": ["page"]
   },
   "blocks": [{ "type": "_value-card" }],
   "max_blocks": 12,
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
     {
       "type": "text",
       "id": "eyebrow",
@@ -177,15 +225,8 @@
       "default": "Our core <em>Values</em>"
     },
     {
-      "type": "checkbox",
-      "id": "feature_first",
-      "label": "t:labels.values_feature_first",
-      "info": "t:labels.values_feature_first_info",
-      "default": true
-    },
-    {
       "type": "header",
-      "content": "t:labels.style"
+      "content": "t:labels.layout"
     },
     {
       "type": "select",
@@ -216,14 +257,14 @@
       "type": "checkbox",
       "id": "scale_screen",
       "label": "t:labels.scale_screen",
-      "info": "t:labels.scale_screen_info",
+      "info": "t:labels.about_scale_screen_info",
       "default": true
     },
     {
       "type": "range",
       "id": "text_scale",
       "label": "t:labels.text_scale",
-      "info": "t:labels.text_scale_info",
+      "info": "t:labels.about_text_scale_info",
       "min": 100,
       "max": 130,
       "step": 5,
@@ -232,10 +273,36 @@
       "visible_if": "{{ section.settings.scale_screen }}"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
+      "type": "checkbox",
+      "id": "feature_first",
+      "label": "t:labels.values_feature_first",
+      "info": "t:labels.about_values_feature_first_info",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:labels.animation_header"
+    },
+    {
+      "type": "select",
+      "id": "animation",
+      "label": "t:labels.animation",
+      "info": "t:labels.animation_info",
+      "options": [
+        {
+          "value": "none",
+          "label": "t:options.animation.none"
+        },
+        {
+          "value": "fade-up",
+          "label": "t:options.animation.fade_up"
+        }
+      ],
+      "default": "fade-up"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -256,6 +323,16 @@
       "step": 8,
       "unit": "px",
       "default": 120
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ],
   "presets": [

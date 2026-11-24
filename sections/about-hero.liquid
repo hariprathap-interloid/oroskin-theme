@@ -14,6 +14,10 @@
   page or an app the merchant chooses; the template points it at the contact page) shows on the
   store only with a link, and always in the theme editor.
   No scroll animation: it's the page's first section (never hide the first screen).
+
+  The card: the Discipline blocks are captured first. A block with no content draws nothing on the
+  store (an editor note in the theme editor), so the card shows on the store only when at least one
+  row drew a .discipline. No row = no card, and the story takes the whole width.
 {%- endcomment -%}
 
 {%- liquid
@@ -21,20 +25,34 @@
   assign brush_url = 'brush-underline.svg' | asset_url
   assign card_heading_id = 'AboutDisciplines-' | append: section.id
   assign phrase_settings = 'heading_line_2,heading_line_2_b,heading_line_2_c,heading_line_2_d' | split: ','
+
+  capture blocks_html
+    content_for 'blocks'
+  endcapture
+
+  assign has_disciplines = false
+  if blocks_html contains 'class="discipline'
+    assign has_disciplines = true
+  endif
+
+  assign show_card = has_disciplines
+  if request.design_mode
+    assign show_card = true
+  endif
 -%}
 
 {% render 'screen-scale' %}
 
 <div
   class="about-hero full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.fill_screen %} section--fill-screen{% endif %}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
-  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }}; --brush-underline: url('{{ brush_url }}'); --heading-scale: {{ section.settings.heading_scale | default: 100 | divided_by: 100.0 }};"
+  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;{% if section.settings.scale_screen %} --text-boost: {{ section.settings.text_scale | default: 100 | divided_by: 100.0 }};{% endif %} --brush-underline: url('{{ brush_url }}'); --heading-scale: {{ section.settings.heading_scale | default: 100 | divided_by: 100.0 }};"
 >
   <div class="about-hero__inner">
     {%- if section.settings.show_breadcrumb -%}
       {% render 'breadcrumb', current: page.title, class: 'about-hero__breadcrumb' %}
     {%- endif -%}
 
-    <div class="about-hero__grid">
+    <div class="about-hero__grid{% if show_card %} about-hero__grid--split{% endif %}">
       <div class="about-hero__story">
         <div class="about-hero__lettering">
           {%- if section.settings.script_text != blank -%}
@@ -133,7 +151,7 @@
         {%- if show_button or show_link -%}
           <div class="about-hero__actions">
             {%- if show_button -%}
-              <a class="button" href="{{ section.settings.button_link }}">{{ section.settings.button_label | escape }}</a>
+              <a class="button about-hero__button" href="{{ section.settings.button_link }}">{{ section.settings.button_label | escape }}</a>
             {%- endif -%}
             {%- if show_link -%}
               <a class="about-hero__link" href="{{ section.settings.link_url | default: '#' }}">
@@ -145,19 +163,24 @@
         {%- endif -%}
       </div>
 
-      <div
-        class="about-hero__card"
-        {% if section.settings.card_label != blank %}
-          role="group" aria-labelledby="{{ card_heading_id }}"
-        {% endif %}
-      >
-        {%- if section.settings.card_label != blank -%}
-          <h2 class="about-hero__card-label" id="{{ card_heading_id }}">{{ section.settings.card_label | escape }}</h2>
-        {%- endif -%}
-        <div class="about-hero__disciplines">
-          {% content_for 'blocks' %}
+      {%- if show_card -%}
+        <div
+          class="about-hero__card"
+          {% if section.settings.card_label != blank %}
+            role="group" aria-labelledby="{{ card_heading_id }}"
+          {% endif %}
+        >
+          {%- if section.settings.card_label != blank -%}
+            <h2 class="about-hero__card-label" id="{{ card_heading_id }}">{{ section.settings.card_label | escape }}</h2>
+          {%- endif -%}
+          <div class="about-hero__disciplines">
+            {{ blocks_html }}
+          </div>
+          {%- unless has_disciplines -%}
+            <p class="about-hero__note">{{ 'about.disciplines_empty' | t }}</p>
+          {%- endunless -%}
         </div>
-      </div>
+      {%- endif -%}
     </div>
   </div>
 </div>
@@ -170,8 +193,18 @@
     intro ~24px / 38px; button 250 x 58; text link label + 1px underline.
     Sizes are Figma px x --px (screen-scale) with rem floors, or tokens.
   */
+  /*
+    --px = one Figma pixel. With "Scale with the screen" off it follows the width only, never more
+    than 1px (without this value every size fell back to the 1920px size on phones).
+  */
   .about-hero {
+    --px: min(calc(100vw / 1920), 0.0625rem);
+
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
+  }
+
+  .about-hero.section--screen-scale {
+    --px: min(calc(100vw / 1920), calc(100svh / 1031));
   }
 
   .about-hero__inner {
@@ -183,32 +216,34 @@
   }
 
   .about-hero__breadcrumb {
-    margin-block-end: max(var(--space-lg), calc(32 * var(--px, 0.0625rem)));
+    margin-block-end: max(var(--space-lg), calc(32 * var(--px)));
   }
 
-  /* Phones and tablets: the story, then the card. Two columns from 1200px */
+  /* Phones and tablets: the story, then the card. Two columns from 1200px (only with the card) */
   .about-hero__grid {
     display: grid;
+    grid-template-columns: minmax(0, 1fr); /* never wider than the screen (the one-row buttons shrink) */
     gap: var(--space-2xl);
     align-items: center;
   }
 
   @media (min-width: 1200px) {
-    .about-hero__grid {
+    .about-hero__grid--split {
       grid-template-columns: minmax(0, 762fr) minmax(0, 996fr);
-      column-gap: calc(62 * var(--px, 0.0625rem));
+      column-gap: calc(62 * var(--px));
     }
   }
 
-  /* ---------- Lettering ---------- */
+  /* ---------- Lettering (relative: it holds the pause button) ---------- */
   .about-hero__lettering {
-    margin-block-end: max(var(--space-xl), calc(90 * var(--px, 0.0625rem)));
+    position: relative;
+    margin-block-end: max(var(--space-xl), calc(90 * var(--px)));
   }
 
   .about-hero__script {
-    margin: 0 0 calc(-0.15em) max(var(--space-xl), calc(100 * var(--px, 0.0625rem)));
+    margin: 0 0 calc(-0.15em) max(var(--space-xl), calc(100 * var(--px)));
     font-family: var(--font-heading--family);
-    font-size: max(1.75rem, calc(64 * var(--px, 0.0625rem)));
+    font-size: max(1.75rem, calc(64 * var(--px)));
     font-style: italic;
     line-height: 1.1;
   }
@@ -216,7 +251,7 @@
   .about-hero__heading {
     margin: 0;
     /* 125px at 1920, times the "Heading size" setting (--heading-scale, e.g. 0.8 = 80%) */
-    font-size: calc(max(2.75rem, calc(125 * var(--px, 0.0625rem))) * var(--heading-scale, 1));
+    font-size: calc(max(2.75rem, calc(125 * var(--px))) * var(--heading-scale, 1));
     line-height: 1.05;
     letter-spacing: -0.01em;
   }
@@ -226,10 +261,6 @@
   }
 
   /* Pause / play for the changing line: a small round glass button at the lettering's bottom right */
-  .about-hero__lettering {
-    position: relative;
-  }
-
   .about-hero__pause {
     position: absolute;
     inset-block-end: 0.5rem;
@@ -262,7 +293,7 @@
   }
 
   .about-hero__line--indent {
-    padding-inline-start: max(var(--space-lg), calc(57 * var(--px, 0.0625rem)));
+    padding-inline-start: max(var(--space-lg), calc(57 * var(--px)));
   }
 
   /* "Made *Slowly,*": the italic word in the accent colour, kept italic as in the Figma */
@@ -302,6 +333,7 @@
     leaving version rises out and fades, the next rises in from below.
   */
   .about-hero__rotator {
+    position: relative; /* holds the gliding brush */
     display: inline-grid;
   }
 
@@ -332,10 +364,6 @@
     under the current version's Bold word (--brush-x, --brush-y, --brush-w, in px inside the
     line), so it slides and stretches to the new word while the words change.
   */
-  .about-hero__rotator {
-    position: relative;
-  }
-
   .about-hero__brush {
     display: none;
   }
@@ -411,8 +439,8 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--space-lg) max(var(--space-xl), calc(85 * var(--px, 0.0625rem)));
-    margin-block-start: max(var(--space-xl), calc(80 * var(--px, 0.0625rem)));
+    gap: var(--space-lg) max(var(--space-xl), calc(85 * var(--px)));
+    margin-block-start: max(var(--space-xl), calc(80 * var(--px)));
   }
 
   /* "BOOK CONSULTATION →": accent label with an underline */
@@ -437,7 +465,7 @@
     transition: translate var(--duration-fast) var(--ease-out);
   }
 
-  @media (prefers-reduced-motion: no-preference) {
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
     .about-hero__link:hover .about-hero__link-arrow svg {
       translate: 0.25em 0;
     }
@@ -446,17 +474,17 @@
   /* ---------- Disciplines card ---------- */
   .about-hero__card {
     padding:
-      max(var(--space-xl), calc(53 * var(--px, 0.0625rem)))
-      max(var(--space-lg), calc(93 * var(--px, 0.0625rem)))
-      max(var(--space-xl), calc(50 * var(--px, 0.0625rem)))
-      max(var(--space-lg), calc(82 * var(--px, 0.0625rem)));
-    border-radius: max(var(--radius-md), calc(30 * var(--px, 0.0625rem)));
+      max(var(--space-xl), calc(53 * var(--px)))
+      max(var(--space-lg), calc(93 * var(--px)))
+      max(var(--space-xl), calc(50 * var(--px)))
+      max(var(--space-lg), calc(82 * var(--px)));
+    border-radius: max(var(--radius-md), calc(30 * var(--px)));
     background-color: var(--color-background);
     box-shadow: var(--shadow-card);
   }
 
   .about-hero__card-label {
-    margin: 0 0 max(var(--space-md), calc(40 * var(--px, 0.0625rem)));
+    margin: 0 0 max(var(--space-md), calc(40 * var(--px)));
     font-family: var(--font-body--family);
     font-size: var(--font-size-label);
     font-weight: var(--font-weight-medium);
@@ -469,20 +497,87 @@
     counter-reset: discipline;
   }
 
-  /* Phones (the 375px design): smaller indent, the buttons on one line */
+  /* Theme editor only: no Discipline row with content */
+  .about-hero__note {
+    margin: 0;
+    font-size: var(--font-size-small);
+    font-style: italic;
+    opacity: 0.75;
+  }
+
+  /*
+    Phones (mobile export Variant45, 375px). Fixed rem sizes, not the text tokens: in a scaled
+    section the tokens are multiplied by Text size, and the design wants small text here.
+    - "Our story" ~70px in, above "Slowly"; line 2 indented ~50px. The heading is ~44px at 375px
+      with the saved Heading size 85% (52px x 0.85); the vw cap and the smaller indent keep the
+      longest line 2 ("refilled always", nowrap) inside a 320px screen at Heading size 100%.
+    - The pause button goes to the top right, beside "Our story", away from the long line 2.
+    - Both buttons on one row with 11px labels; the button keeps a 44px tap height.
+  */
   @media (max-width: 749px) {
     .about-hero__script {
-      margin-inline-start: var(--space-xl);
+      margin-inline-start: min(4.375rem, 18vw);
+      font-size: 1.75rem;
+    }
+
+    .about-hero__heading {
+      font-size: calc(min(3.25rem, 13.5vw) * var(--heading-scale, 1));
+    }
+
+    .about-hero__line--indent {
+      padding-inline-start: min(3.125rem, 10vw);
+    }
+
+    .about-hero__pause {
+      inset-block: 0 auto;
+    }
+
+    .about-hero__text {
+      font-size: 0.875rem;
     }
 
     .about-hero__actions {
       flex-wrap: nowrap;
       justify-content: space-between;
-      gap: var(--space-md);
+      gap: var(--space-sm);
     }
 
-    .about-hero__actions .button {
-      padding-inline: var(--space-lg);
+    .about-hero__actions .about-hero__button {
+      flex-shrink: 1;
+      min-inline-size: 0;
+      min-block-size: 2.75rem;
+      padding-inline: clamp(0.75rem, 4.5vw, 1.25rem);
+      font-size: 0.6875rem;
+      letter-spacing: 0.1em;
+      white-space: nowrap;
+    }
+
+    .about-hero__link {
+      flex-shrink: 1;
+      gap: 0.375rem;
+      min-inline-size: 0;
+      min-block-size: 1.5rem;
+      font-size: 0.6875rem;
+      letter-spacing: 0.1em;
+      white-space: nowrap;
+    }
+
+    .about-hero__card-label {
+      font-size: 0.6875rem;
+      letter-spacing: 0.1em;
+    }
+  }
+
+  /* Small phones (320px): a little smaller labels and spacing, so both buttons still share one row */
+  @media (max-width: 374px) {
+    .about-hero__actions .about-hero__button,
+    .about-hero__link {
+      font-size: min(0.6875rem, 3.1vw);
+      letter-spacing: 0.05em;
+    }
+
+    .about-hero__card-label {
+      letter-spacing: 0.06em;
     }
   }
 {% endstylesheet %}
@@ -497,6 +592,8 @@
    * - Loops for as long as the page is open. WCAG 2.2.2 (moving content that runs longer than 5
    *   seconds needs a way to stop it): the pause / play button next to the heading stops it for
    *   good (until pressed again), and it also pauses while the pointer is over the heading.
+   * - A reduced-motion change while the page is open: setup() / teardown() start or stop the
+   *   line and show or hide the pause button (the visitor's pause choice is kept).
    */
   class AboutHeroRotator extends HTMLElement {
     connectedCallback() {
@@ -505,18 +602,36 @@
         The theme editor re-attaches the section when it is moved, so connectedCallback runs again;
         without this, the pause button would get a second listener and toggle twice per click.
       */
+      this.abortController?.abort();
       this.abortController = new AbortController();
       const { signal } = this.abortController;
 
       this.phrases = [...this.querySelectorAll('.about-hero__phrase')];
       const animations = document.documentElement.classList.contains('animations-on');
-      const motion = window.matchMedia('(prefers-reduced-motion: no-preference)').matches;
-      if (this.phrases.length < 2 || !animations || !motion) return;
+      if (this.phrases.length < 2 || !animations) return;
 
-      this.index = 0;
-      this.paused = false;
+      // After an editor re-attach, carry on from the version that shows
+      this.index = Math.max(0, this.phrases.findIndex((phrase) => phrase.classList.contains('is-active')));
+      this.paused ??= false;
       this.delay = Math.max(Number(this.dataset.interval) || 3, 1) * 1000;
       this.brush = this.querySelector('.about-hero__brush');
+      // The button sits next to the h1, in the same lettering block
+      this.pauseButton = this.closest('.about-hero__lettering')?.querySelector('.about-hero__pause');
+
+      this.addEventListener('pointerenter', () => this.stop(), { signal });
+      this.addEventListener('pointerleave', () => this.start(), { signal });
+      this.pauseButton?.addEventListener('click', () => this.togglePause(), { signal });
+
+      // Listened to before anything moves, so a later "motion allowed" also starts the line
+      this.motion = window.matchMedia('(prefers-reduced-motion: no-preference)');
+      this.motion.addEventListener('change', () => (this.motion.matches ? this.setup() : this.teardown()), { signal });
+
+      if (this.motion.matches) this.setup();
+    }
+
+    /** Starts the changing line (safe to call again: nothing is built twice) */
+    setup() {
+      this.running = true;
       this.setAttribute('data-ready', '');
 
       // The brush's first place: put it there at once (no glide in from the left)
@@ -526,21 +641,34 @@
         this.brush.getBoundingClientRect();
         this.brush.style.transition = '';
         // The heading's size changes with the screen: measure again when the line resizes
-        this.resize = new ResizeObserver(() => this.placeBrush());
-        this.resize.observe(this);
+        if (!this.resize) {
+          this.resize = new ResizeObserver(() => this.placeBrush());
+          this.resize.observe(this);
+        }
       }
 
-      this.addEventListener('pointerenter', () => this.stop(), { signal });
-      this.addEventListener('pointerleave', () => this.start(), { signal });
-
-      // The button sits next to the h1, in the same lettering block
-      this.pauseButton = this.closest('.about-hero__lettering')?.querySelector('.about-hero__pause');
       if (this.pauseButton) {
         this.pauseButton.hidden = false;
-        this.pauseButton.addEventListener('click', () => this.togglePause(), { signal });
+        this.pauseButton.setAttribute('aria-pressed', String(this.paused));
       }
 
       this.start();
+    }
+
+    /** Stops the line on its first version, as without JS, and hides the pause button */
+    teardown() {
+      this.running = false;
+      this.stop();
+      clearTimeout(this.leaveTimer);
+      this.resize?.disconnect();
+      this.resize = null;
+      this.index = 0;
+      this.phrases.forEach((phrase, i) => {
+        phrase.classList.remove('is-leaving');
+        phrase.classList.toggle('is-active', i === 0);
+      });
+      this.removeAttribute('data-ready');
+      if (this.pauseButton) this.pauseButton.hidden = true;
     }
 
     togglePause() {
@@ -557,6 +685,7 @@
       this.stop();
       clearTimeout(this.leaveTimer);
       this.resize?.disconnect();
+      this.resize = null;
     }
 
     /**
@@ -578,7 +707,7 @@
     }
 
     start() {
-      if (this.timer || this.paused) return;
+      if (this.timer || this.paused || !this.running) return;
       this.timer = setInterval(() => this.next(), this.delay);
     }
 
@@ -610,13 +739,16 @@
 {
   "name": "t:general.about_hero",
   "tag": "section",
-  "class": "about-hero-section",
   "enabled_on": {
     "templates": ["page"]
   },
   "blocks": [{ "type": "_discipline" }],
   "max_blocks": 6,
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
     {
       "type": "paragraph",
       "content": "t:labels.about_hero_help"
@@ -646,35 +778,6 @@
       "label": "t:labels.heading_line_2",
       "info": "t:labels.about_heading_info",
       "default": "worn <strong>daily</strong>"
-    },
-    {
-      "type": "inline_richtext",
-      "id": "heading_line_2_b",
-      "label": "t:labels.heading_line_2_b",
-      "info": "t:labels.heading_line_2_alt_info",
-      "default": "read <strong>openly</strong>"
-    },
-    {
-      "type": "inline_richtext",
-      "id": "heading_line_2_c",
-      "label": "t:labels.heading_line_2_c",
-      "default": "refilled <strong>always</strong>"
-    },
-    {
-      "type": "inline_richtext",
-      "id": "heading_line_2_d",
-      "label": "t:labels.heading_line_2_d"
-    },
-    {
-      "type": "range",
-      "id": "rotate_interval",
-      "label": "t:labels.heading_rotate_interval",
-      "info": "t:labels.heading_rotate_interval_info",
-      "min": 2,
-      "max": 8,
-      "step": 0.5,
-      "unit": "s",
-      "default": 3
     },
     {
       "type": "richtext",
@@ -707,14 +810,53 @@
       "info": "t:labels.about_link_info"
     },
     {
+      "type": "header",
+      "content": "t:labels.about_changing_line_group"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading_line_2_b",
+      "label": "t:labels.heading_line_2_b",
+      "info": "t:labels.heading_line_2_alt_info",
+      "default": "read <strong>openly</strong>"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading_line_2_c",
+      "label": "t:labels.heading_line_2_c",
+      "default": "refilled <strong>always</strong>"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading_line_2_d",
+      "label": "t:labels.heading_line_2_d"
+    },
+    {
+      "type": "range",
+      "id": "rotate_interval",
+      "label": "t:labels.heading_rotate_interval",
+      "info": "t:labels.heading_rotate_interval_info",
+      "min": 2,
+      "max": 8,
+      "step": 0.5,
+      "unit": "s",
+      "default": 3,
+      "visible_if": "{{ section.settings.heading_line_2_b != blank or section.settings.heading_line_2_c != blank or section.settings.heading_line_2_d != blank }}"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.about_card_group"
+    },
+    {
       "type": "text",
       "id": "card_label",
-      "label": "t:labels.about_card_label",
+      "label": "t:labels.about_card_heading",
+      "info": "t:labels.about_card_heading_info",
       "default": "The Oroskin, in three disciplines"
     },
     {
       "type": "header",
-      "content": "t:labels.style"
+      "content": "t:labels.layout"
     },
     {
       "type": "select",
@@ -752,14 +894,14 @@
       "type": "checkbox",
       "id": "scale_screen",
       "label": "t:labels.scale_screen",
-      "info": "t:labels.scale_screen_info",
+      "info": "t:labels.about_scale_screen_info",
       "default": true
     },
     {
       "type": "range",
       "id": "text_scale",
       "label": "t:labels.text_scale",
-      "info": "t:labels.text_scale_info",
+      "info": "t:labels.about_text_scale_info",
       "min": 100,
       "max": 130,
       "step": 5,
@@ -779,10 +921,8 @@
       "default": 100
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -803,6 +943,16 @@
       "step": 8,
       "unit": "px",
       "default": 48
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ],
   "presets": [

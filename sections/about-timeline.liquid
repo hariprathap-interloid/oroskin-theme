@@ -1,47 +1,68 @@
 {%- comment -%}
-  About timeline (M8.4 part 4, design/briefs/about-us.md §4.4, exports "Default-3" to "Default-6"):
-  "Our journey" / "Seven years, slowly." and one Milestone block per step on a vertical rail.
+  About timeline (M8.4 part 4, design/briefs/about-us.md §4.4, exports "Default-3" to "Default-6",
+  mobile "Variant45-3", "Variant46-2", "Variant47-2", "Variant48-1"): "Our journey" / "Seven years,
+  slowly." and one Milestone block per step on a vertical rail.
 
   While the visitor scrolls, the rail fills in the accent colour down to a reading line (60% down
   the screen); milestones above that line are "reached" (full colour), the ones below stay faded
   until the line gets to them (Default-4). The script only runs with animations on and motion
   allowed; otherwise (and without JS) the whole rail is filled and every milestone in full colour.
+
+  The blocks are rendered first and their HTML checked (a section can't read its theme blocks'
+  settings): an empty Milestone renders nothing on the store; no milestone = no section on the
+  store (the editor shows a note).
 {%- endcomment -%}
 
 {%- liquid
   assign scheme_id = section.settings.color_scheme.id | default: 'scheme-2'
+
+  capture blocks_html
+    content_for 'blocks'
+  endcapture
+  assign has_milestones = false
+  if blocks_html contains 'class="milestone"'
+    assign has_milestones = true
+  endif
 -%}
 
 {% render 'screen-scale' %}
 
-<about-timeline
-  class="about-timeline full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
-  style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px; --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};"
->
-  <div class="about-timeline__inner">
-    {%- if section.settings.eyebrow != blank or section.settings.heading != blank -%}
-      <header class="about-timeline__header">
-        {%- if section.settings.eyebrow != blank -%}
-          <p class="eyebrow eyebrow--center">{{ section.settings.eyebrow | escape }}</p>
-        {%- endif -%}
-        {%- if section.settings.heading != blank -%}
-          <h2 class="about-timeline__heading">{{ section.settings.heading }}</h2>
-        {%- endif -%}
-      </header>
-    {%- endif -%}
+{%- if has_milestones or request.design_mode -%}
+  <about-timeline
+    class="about-timeline full-width section-width--{{ section.settings.section_width | default: 'widest' }} color-{{ scheme_id }}{% if section.settings.scale_screen %} section--screen-scale{% endif %}"
+    style="--section-padding-top: {{ section.settings.padding_top }}px; --section-padding-bottom: {{ section.settings.padding_bottom }}px;{% if section.settings.scale_screen %} --text-boost: {{ section.settings.text_scale | default: 110 | divided_by: 100.0 }};{% endif %}"
+  >
+    <div class="about-timeline__inner">
+      {%- if section.settings.eyebrow != blank or section.settings.heading != blank -%}
+        <header class="about-timeline__header">
+          {%- if section.settings.eyebrow != blank -%}
+            <p class="eyebrow eyebrow--center">{{ section.settings.eyebrow | escape }}</p>
+          {%- endif -%}
+          {%- if section.settings.heading != blank -%}
+            <h2 class="about-timeline__heading">{{ section.settings.heading }}</h2>
+          {%- endif -%}
+        </header>
+      {%- endif -%}
+      {%- if section.settings.heading == blank -%}
+        {%- comment -%} The milestone titles are h3: they need an h2 above them {%- endcomment -%}
+        <h2 class="visually-hidden">{{ 'about.timeline_heading_hidden' | t }}</h2>
+      {%- endif -%}
 
-    {%- if section.blocks.size > 0 -%}
-      <div class="about-timeline__list">
-        <span class="about-timeline__rail" aria-hidden="true">
-          <span class="about-timeline__fill"></span>
-        </span>
-        {% content_for 'blocks' %}
-      </div>
-    {%- elsif request.design_mode -%}
-      <p class="about-timeline__empty">{{ 'about.timeline_empty' | t }}</p>
-    {%- endif -%}
-  </div>
-</about-timeline>
+      {%- unless has_milestones -%}
+        <p class="about-timeline__empty">{{ 'about.timeline_empty' | t }}</p>
+      {%- endunless -%}
+
+      {%- if blocks_html != blank -%}
+        <div class="about-timeline__list">
+          <span class="about-timeline__rail" aria-hidden="true">
+            <span class="about-timeline__fill"></span>
+          </span>
+          {{ blocks_html }}
+        </div>
+      {%- endif -%}
+    </div>
+  </about-timeline>
+{%- endif -%}
 
 {% stylesheet %}
   /*
@@ -50,14 +71,21 @@
     --rail-x / --content-x: the rail at x 237 and the content at x 301 (from the page's x 48).
   */
   .about-timeline {
+    /* One Figma pixel; with "Scale with the screen" also limited by the screen height */
+    --px: min(calc(100vw / 1920), 0.0625rem);
+
     display: block;
     padding-block: var(--section-padding-top) var(--section-padding-bottom);
     background-color: var(--color-background);
   }
 
+  .about-timeline.section--screen-scale {
+    --px: min(calc(100vw / 1920), calc(100svh / 1031));
+  }
+
   .about-timeline__inner {
-    --rail-x: max(1.25rem, calc(189 * var(--px, 0.0625rem)));
-    --content-x: max(3.5rem, calc(253 * var(--px, 0.0625rem)));
+    --rail-x: max(1.25rem, calc(189 * var(--px)));
+    --content-x: max(3.5rem, calc(253 * var(--px)));
 
     inline-size: min(
       calc(var(--section-width, var(--page-width)) - var(--page-margin) * 2),
@@ -67,13 +95,13 @@
   }
 
   .about-timeline__header {
-    margin-block-end: max(var(--space-xl), calc(45 * var(--px, 0.0625rem)));
+    margin-block-end: max(var(--space-xl), calc(45 * var(--px)));
     text-align: center;
   }
 
   .about-timeline__heading {
-    margin: max(var(--space-lg), calc(40 * var(--px, 0.0625rem))) 0 0;
-    font-size: max(2rem, calc(66 * var(--px, 0.0625rem)));
+    margin: max(var(--space-lg), calc(40 * var(--px))) 0 0;
+    font-size: max(2rem, calc(66 * var(--px)));
     line-height: 1.1;
   }
 
@@ -84,25 +112,27 @@
   }
 
   /*
-    The last milestone's rail piece stops a little under its marker (Default-4). Its wrapper is the
-    list's last child (Shopify wraps each block in a div, so .milestone itself is always a
-    :last-child of its wrapper).
+    Without the script, each milestone draws its own rail piece (::before, from its top to its
+    end). The last one stops a little under its marker (Default-4). The milestones are the list's
+    children ("tag": null); "1 of .milestone" skips an editor note after the last one.
   */
-  .about-timeline__list > :last-child .milestone::before,
-  .about-timeline__list > :last-child .milestone::after {
+  .about-timeline__list > .milestone:nth-last-child(1 of .milestone)::before {
     inset-block-end: auto;
-    block-size: calc(max(var(--space-xl), calc(40 * var(--px, 0.0625rem))) + 4.5rem);
+    block-size: calc(var(--milestone-pad-top) + 4.5rem);
   }
 
   /*
     With the script (data-ready), one rail for the whole list replaces the milestones' own pieces:
     a pale track and the accent fill, like a progress bar. The script sets --rail-top /
-    --rail-length (px, from the first marker to just past the last one) and --fill-px, easing it
-    so the fill glides instead of jumping with the wheel. When the visitor stops scrolling partway
-    through (is-waiting), a light sweeps down the fill three times as a hint to scroll on; scrolling
-    hides it at once. It never loops for long (WCAG 2.2.2).
+    --rail-length (px, from just above the first marker to just past the last one) and --fill-px,
+    easing it so the fill glides instead of jumping with the wheel. When the visitor stops scrolling
+    partway through (is-waiting), a light sweeps down the fill three times as a hint to scroll on;
+    scrolling hides it at once. It never loops for long (WCAG 2.2.2).
+    --rail-lead: how far the rail starts above the first marker (px: the script reads it).
   */
   .about-timeline__list {
+    --rail-lead: 0px;
+
     position: relative;
   }
 
@@ -170,14 +200,48 @@
   }
 
   .about-timeline__empty {
-    margin: 0;
+    margin: 0 0 var(--space-lg);
+    font-style: italic;
     text-align: center;
+  }
+
+  /*
+    Phones and tablets (Variant45-3 at 375px, tablets the same layout a little bigger): the rail
+    near the left edge, the content next to it, the year at the right. The rail starts ~20px above
+    the first marker (Variant45-3).
+  */
+  @media (max-width: 1199px) {
+    .about-timeline__inner {
+      --rail-x: 0.5rem;
+      --content-x: 2.5rem;
+    }
+
+    .about-timeline__list {
+      --rail-lead: 20px;
+    }
+
+    .about-timeline__header {
+      margin-block-end: var(--space-2xl);
+    }
+
+    .about-timeline__heading {
+      margin-block-start: var(--space-md);
+      font-size: 2.25rem;
+    }
   }
 
   @media (max-width: 749px) {
     .about-timeline__inner {
-      --rail-x: 0.6875rem;
-      --content-x: 2.25rem;
+      --rail-x: 0.375rem;
+      --content-x: 1.875rem;
+    }
+
+    .about-timeline__header {
+      margin-block-end: var(--space-xl);
+    }
+
+    .about-timeline__heading {
+      font-size: 1.625rem;
     }
   }
 {% endstylesheet %}
@@ -186,22 +250,42 @@
   /**
    * <about-timeline>: fills the rail while the visitor scrolls.
    *
-   * The reading line is 60% down the screen. measure() places one rail from the first marker to
-   * just past the last one and notes where each marker sits on it (px from the rail's top: these
-   * don't change while scrolling). Each frame, the target is how much of the rail lies above the
-   * reading line; the drawn fill moves a share of the way there (easing), so it glides instead of
-   * jumping with each wheel step. A milestone is reached (full colour) once the fill gets to its
-   * marker, so markers light up as the line arrives.
+   * The reading line is 60% down the screen. measure() places one rail from just above the first
+   * marker (--rail-lead) to just past the last one and notes where each marker sits on it (px from
+   * the list's top: these don't change while scrolling). Each frame, the target is how much of the
+   * rail lies above the reading line; the drawn fill moves a share of the way there (easing), so it
+   * glides instead of jumping with each wheel step. A milestone is reached (full colour) once the
+   * fill gets to its marker, so markers light up as the line arrives.
    * Off (nothing happens, so all is full colour): animations off (also in the theme editor) or
-   * reduced motion.
+   * reduced motion. A change of the reduced-motion setting while on the page stops (stop()) or
+   * starts (start()) it. Listeners are on AbortControllers: one for the element (the editor
+   * re-attaches a moved section, so connectedCallback can run again), one for the running effect.
    */
   class AboutTimeline extends HTMLElement {
     connectedCallback() {
+      this.controller?.abort();
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+
       this.list = this.querySelector('.about-timeline__list');
       this.milestones = [...this.querySelectorAll('.milestone')];
       const animations = document.documentElement.classList.contains('animations-on');
-      const motion = window.matchMedia('(prefers-reduced-motion: no-preference)').matches;
-      if (!this.list || !this.milestones.length || !animations || !motion) return;
+      if (!this.list || !this.milestones.length || !animations) return;
+
+      this.motion = window.matchMedia('(prefers-reduced-motion: no-preference)');
+      this.motion.addEventListener('change', () => (this.motion.matches ? this.start() : this.stop()), { signal });
+      if (this.motion.matches) this.start();
+    }
+
+    disconnectedCallback() {
+      this.controller?.abort();
+      this.stop();
+    }
+
+    start() {
+      if (this.running) return;
+      this.running = new AbortController();
+      const { signal } = this.running;
 
       this.drawn = 0;
       this.onScroll = () => this.requestTick();
@@ -209,7 +293,7 @@
       this.visibility = new IntersectionObserver(([entry]) => {
         this.visible = entry.isIntersecting;
         if (entry.isIntersecting) {
-          window.addEventListener('scroll', this.onScroll, { passive: true });
+          window.addEventListener('scroll', this.onScroll, { passive: true, signal });
           this.requestTick();
         } else {
           window.removeEventListener('scroll', this.onScroll);
@@ -229,12 +313,20 @@
       this.visibility.observe(this);
     }
 
-    disconnectedCallback() {
+    /** Back to the still state: full rail, every milestone in full colour, no sweep */
+    stop() {
+      if (!this.running) return;
+      this.running.abort();
+      this.running = null;
       this.visibility?.disconnect();
       this.resizer?.disconnect();
-      window.removeEventListener('scroll', this.onScroll);
       if (this.frame) cancelAnimationFrame(this.frame);
+      this.frame = null;
       clearTimeout(this.waitTimer);
+      this.visible = false;
+      this.removeAttribute('data-ready');
+      this.list.classList.remove('is-waiting');
+      this.milestones.forEach((milestone) => milestone.classList.remove('is-reached'));
     }
 
     // The hint shows only after the visitor has paused for a moment, partway through the rail
@@ -258,16 +350,17 @@
         return { milestone, size: box.height, middle: box.top + box.height / 2 - listTop };
       });
 
+      const lead = parseFloat(getComputedStyle(this.list).getPropertyValue('--rail-lead')) || 0;
       const first = this.markers[0];
       const last = this.markers[this.markers.length - 1];
-      this.railTop = first.middle;
-      this.railLength = last.middle + last.size * 2 - first.middle;
+      this.railTop = Math.max(first.middle - lead, 0);
+      this.railLength = last.middle + last.size * 2 - this.railTop;
       this.list.style.setProperty('--rail-top', `${this.railTop}px`);
       this.list.style.setProperty('--rail-length', `${this.railLength}px`);
     }
 
     requestTick() {
-      if (this.frame) return;
+      if (this.frame || !this.running) return;
       this.frame = requestAnimationFrame(() => {
         this.frame = null;
         this.tick();
@@ -306,13 +399,16 @@
 {
   "name": "t:general.about_timeline",
   "tag": "section",
-  "class": "about-timeline-section",
   "enabled_on": {
     "templates": ["page"]
   },
   "blocks": [{ "type": "_milestone" }],
   "max_blocks": 12,
   "settings": [
+    {
+      "type": "header",
+      "content": "t:labels.content"
+    },
     {
       "type": "text",
       "id": "eyebrow",
@@ -328,7 +424,7 @@
     },
     {
       "type": "header",
-      "content": "t:labels.style"
+      "content": "t:labels.layout"
     },
     {
       "type": "select",
@@ -359,14 +455,14 @@
       "type": "checkbox",
       "id": "scale_screen",
       "label": "t:labels.scale_screen",
-      "info": "t:labels.scale_screen_info",
+      "info": "t:labels.about_scale_screen_info",
       "default": true
     },
     {
       "type": "range",
       "id": "text_scale",
       "label": "t:labels.text_scale",
-      "info": "t:labels.text_scale_info",
+      "info": "t:labels.about_text_scale_info",
       "min": 100,
       "max": 130,
       "step": 5,
@@ -375,10 +471,8 @@
       "visible_if": "{{ section.settings.scale_screen }}"
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:labels.color_scheme",
-      "default": "scheme-2"
+      "type": "header",
+      "content": "t:labels.spacing"
     },
     {
       "type": "range",
@@ -399,6 +493,16 @@
       "step": 8,
       "unit": "px",
       "default": 80
+    },
+    {
+      "type": "header",
+      "content": "t:labels.colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
     }
   ],
   "presets": [

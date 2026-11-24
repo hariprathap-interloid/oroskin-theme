@@ -7,8 +7,38 @@
     its sticky layer to cross-fade them, and builds the side nav from the chapters' ids and headings.
     It's done this way because a section can't read a theme block's settings (in the section,
     section.blocks only gives "@theme" stand-ins), so each block draws its own photo.
+  - Empty (no label, heading, text, stat, image or video): nothing on the store, a note in the theme
+    editor. The section checks the captured blocks for class="chapter, so the note must not use that
+    class. "tag": null: no Shopify wrapper around the chapter.
+  - No image and no video: on the store a dark panel (the media box's own background and overlay);
+    the placeholder shows only in the theme editor.
 {%- endcomment -%}
 
+{%- liquid
+  assign is_empty = true
+  if block.settings.label != blank or block.settings.heading != blank or block.settings.text != blank
+    assign is_empty = false
+  elsif block.settings.stat_value != blank or block.settings.stat_label != blank
+    assign is_empty = false
+  elsif block.settings.image != blank or block.settings.video != blank
+    assign is_empty = false
+  endif
+
+  # Eager only when the chapters are the page's first section. The section is several screens tall, so
+  # the "first 3 sections" rule of section-loading would load every chapter photo (and the next
+  # section's photos) at once; a lazy photo one screen down still starts early (the browser loads lazy
+  # images about a screen before they show).
+  assign image_loading = 'lazy'
+  if section.index == 1
+    assign image_loading = 'eager'
+  endif
+-%}
+
+{%- if is_empty -%}
+  {%- if request.design_mode -%}
+    <p class="about-chapters__chapter-note" {{ block.shopify_attributes }}>{{ 'about.chapter_empty' | t }}</p>
+  {%- endif -%}
+{%- else -%}
 <article
   class="chapter"
   id="Chapter-{{ block.id }}"
@@ -16,6 +46,10 @@
 >
   <div class="chapter__media" aria-hidden="true">
     {%- if block.settings.video != blank -%}
+      {%- comment -%}
+        video_tag writes a poster <img> with no alt and no loading: it is decoration (alt="") and
+        only needed when the video shows (lazy)
+      {%- endcomment -%}
       {{
         block.settings.video
         | video_tag:
@@ -25,10 +59,10 @@
           loop: true,
           playsinline: true,
           preload: 'none'
+        | replace: '<img ', '<img alt="" loading="lazy" '
       }}
-    {%- else -%}
-      {%- comment -%} Lazy: the story is below the hero, so the photos load as it gets close {%- endcomment -%}
-      {% render 'image', image: block.settings.image, class: 'image--cover', alt: '', loading: 'lazy' %}
+    {%- elsif block.settings.image != blank or request.design_mode -%}
+      {% render 'image', image: block.settings.image, class: 'image--cover', alt: '', loading: image_loading %}
     {%- endif -%}
   </div>
 
@@ -53,6 +87,7 @@
     {%- endif -%}
   </div>
 </article>
+{%- endif -%}
 
 {% stylesheet %}
   /*
@@ -68,7 +103,7 @@
     align-items: center;
     min-block-size: 100svh;
     /* The same space above (clear of the header pill) and below, so the words sit in the screen's middle */
-    padding-block: max(6.5rem, calc(130 * var(--px, 0.0625rem)));
+    padding-block: max(6.5rem, calc(130 * var(--px)));
     padding-inline: var(--chapter-indent) var(--page-margin);
   }
 
@@ -103,12 +138,12 @@
   }
 
   .chapter__content {
-    max-inline-size: max(20rem, calc(1070 * var(--px, 0.0625rem)));
+    max-inline-size: max(20rem, calc(1070 * var(--px)));
     color: var(--chapter-text);
   }
 
   .chapter__label {
-    margin: 0 0 max(var(--space-md), calc(30 * var(--px, 0.0625rem)));
+    margin: 0 0 max(var(--space-md), calc(30 * var(--px)));
     color: var(--chapter-accent);
     font-size: var(--font-size-label);
     font-weight: var(--font-weight-medium);
@@ -121,14 +156,14 @@
     max-inline-size: 18ch;
     color: inherit;
     font-family: var(--font-heading--family);
-    font-size: max(1.75rem, calc(76 * var(--px, 0.0625rem)));
+    font-size: max(1.75rem, calc(76 * var(--px)));
     font-weight: 700;
     line-height: 1;
     text-wrap: balance;
   }
 
   .chapter__text {
-    margin-block-start: max(var(--space-lg), calc(45 * var(--px, 0.0625rem)));
+    margin-block-start: max(var(--space-lg), calc(45 * var(--px)));
     font-size: var(--font-size-body-lg);
     line-height: 1.6;
   }
@@ -147,15 +182,15 @@
     flex-wrap: wrap;
     align-items: baseline;
     gap: var(--space-xs) var(--space-sm);
-    max-inline-size: max(16rem, calc(940 * var(--px, 0.0625rem)));
-    margin: max(var(--space-xl), calc(70 * var(--px, 0.0625rem))) 0 0;
-    padding-block-start: max(var(--space-lg), calc(30 * var(--px, 0.0625rem)));
+    max-inline-size: max(16rem, calc(940 * var(--px)));
+    margin: max(var(--space-xl), calc(70 * var(--px))) 0 0;
+    padding-block-start: max(var(--space-lg), calc(30 * var(--px)));
     border-block-start: 1px solid color-mix(in srgb, var(--chapter-accent) 60%, transparent);
   }
 
   .chapter__stat-value {
     font-family: var(--font-body--family);
-    font-size: max(1.5rem, calc(36 * var(--px, 0.0625rem)));
+    font-size: max(1.5rem, calc(36 * var(--px)));
     font-weight: 700;
     line-height: 1;
   }
@@ -187,15 +222,63 @@
     }
   }
 
-  /* Phones (Variant45-2): smaller words */
+  /* Theme editor only: a Chapter block with no content */
+  .about-chapters__chapter-note {
+    position: relative;
+    margin: 0;
+    padding: var(--space-xl) var(--page-margin);
+    color: #ffffff;
+    font-style: italic;
+    text-align: center;
+  }
+
+  /*
+    Phones (Variant45-1 to Variant48, 375px): label ~9px, heading ~26px, text ~12px / 1.6, stat
+    value ~16px and label ~9px, no rule above the stat. Fixed rem sizes: the scaled section
+    multiplies the text tokens by Text size. The words start ~80px in (--chapter-indent, set by
+    the section), clear of the 01–04 nav. Less space above and below, so a 667px tall phone still
+    shows a long chapter in one screen.
+  */
   @media (max-width: 749px) {
+    .chapter {
+      padding-block: 6.5rem 3rem; /* the top stays clear of the header pill */
+    }
+
+    .chapter__label {
+      margin-block-end: 0.625rem;
+      font-size: 0.5625rem;
+      letter-spacing: 0.1em;
+    }
+
+    .chapter__heading {
+      font-size: 1.625rem;
+      line-height: 1.2;
+    }
+
     .chapter__text {
-      font-size: var(--font-size-body-sm);
+      margin-block-start: 0.875rem;
+      font-size: 0.75rem;
+      line-height: 1.6;
+    }
+
+    .chapter__text > * + * {
+      margin-block-start: var(--space-sm);
     }
 
     .chapter__stat {
+      gap: var(--space-xs);
+      margin-block-start: var(--space-xl);
       border-block-start: 0;
       padding-block-start: 0;
+    }
+
+    .chapter__stat-value {
+      font-size: 1rem;
+    }
+
+    .chapter__stat-label {
+      font-size: 0.5625rem;
+      letter-spacing: 0.1em;
     }
   }
 {% endstylesheet %}
@@ -203,18 +286,11 @@
 {% schema %}
 {
   "name": "t:general.chapter",
+  "tag": null,
   "settings": [
     {
-      "type": "image_picker",
-      "id": "image",
-      "label": "t:labels.image",
-      "info": "t:labels.chapter_image_info"
-    },
-    {
-      "type": "video",
-      "id": "video",
-      "label": "t:labels.video",
-      "info": "t:labels.chapter_video_info"
+      "type": "header",
+      "content": "t:labels.content"
     },
     {
       "type": "text",
@@ -234,6 +310,10 @@
       "label": "t:labels.text"
     },
     {
+      "type": "header",
+      "content": "t:labels.chapter_stat_group"
+    },
+    {
       "type": "text",
       "id": "stat_value",
       "label": "t:labels.stat_value"
@@ -242,6 +322,22 @@
       "type": "text",
       "id": "stat_label",
       "label": "t:labels.stat_label"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.chapter_media_group"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.image",
+      "info": "t:labels.chapter_image_info"
+    },
+    {
+      "type": "video",
+      "id": "video",
+      "label": "t:labels.video",
+      "info": "t:labels.chapter_video_info"
     }
   ],
   "presets": [

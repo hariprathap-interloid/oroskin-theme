@@ -1,50 +1,88 @@
 {%- comment -%}
   One card of the About values (design/briefs/about-us.md §4.6, exports "Default-9" (desktop),
   "Variant49" / "Variant50" (phone)): a round icon, the pale number "01" top right (a CSS counter
-  from the section), a title, the text and an optional photo at the bottom.
-  The section makes its first card two rows tall (Feature the first card); on phones and tablets
-  that card's photo sits beside its text.
+  from the section), a title, the text and an optional photo.
+  Desktop: the photo at the bottom; with "Feature the first card" the first card is two rows tall
+  (only with a photo and 3 or more cards). Phones and tablets: the featured first card takes the
+  full width with its photo beside the text; the other cards show their photo under the text.
+  "tag": null: no Shopify wrapper, so the article is the grid item (the section counts children)
+  and an empty card leaves no cell. An empty card (no title, text or photo) shows nothing on the
+  store and a note in the theme editor.
 {%- endcomment -%}
 
 {%- liquid
-  assign icon = block.settings.icon | default: 'diamond'
-  assign icon_file = 'icon-' | append: icon | append: '.svg'
+  assign has_content = false
+  if block.settings.title != blank or block.settings.text != blank or block.settings.image != blank
+    assign has_content = true
+  endif
+
+  assign animation = section.settings.animation | default: 'fade-up'
+  if section.index == 1
+    assign animation = 'none'
+  endif
 -%}
 
-<article
-  class="value-card{% if block.settings.image != blank %} value-card--media{% endif %}"
-  data-animate="fade-up"
-  {{ block.shopify_attributes }}
->
-  <div class="value-card__body">
-    <div class="value-card__top">
-      {%- if icon != 'none' -%}
-        <span class="value-card__icon" aria-hidden="true">{{ icon_file | inline_asset_content }}</span>
+{%- if has_content -%}
+  {%- liquid
+    assign icon = block.settings.icon | default: 'diamond'
+    assign icon_file = 'icon-' | append: icon | append: '.svg'
+  -%}
+
+  <article
+    class="value-card{% if block.settings.image != blank %} value-card--media{% endif %}"
+    {% if animation != 'none' %}
+      data-animate="{{ animation }}"
+    {% endif %}
+    {{ block.shopify_attributes }}
+  >
+    <div class="value-card__body">
+      <div class="value-card__top">
+        {%- if icon != 'none' -%}
+          <span class="value-card__icon" aria-hidden="true">{{ icon_file | inline_asset_content }}</span>
+        {%- endif -%}
+        <span class="value-card__number" aria-hidden="true"></span>
+      </div>
+
+      {%- if block.settings.title != blank -%}
+        <h3 class="value-card__title">{{ block.settings.title | escape }}</h3>
       {%- endif -%}
-      <span class="value-card__number" aria-hidden="true"></span>
+
+      {%- if block.settings.text != blank -%}
+        <div class="value-card__text">{{ block.settings.text }}</div>
+      {%- endif -%}
     </div>
 
-    {%- if block.settings.title != blank -%}
-      <h3 class="value-card__title">{{ block.settings.title | escape }}</h3>
-    {%- endif -%}
+    {%- if block.settings.image != blank -%}
+      {%- liquid
+        capture image_loading
+          render 'section-loading'
+        endcapture
+        assign image_loading = image_loading | strip
 
-    {%- if block.settings.text != blank -%}
-      <div class="value-card__text">{{ block.settings.text }}</div>
+        # Desktop: a third of the content width less the card padding. Phones and tablets: a small card's
+        # photo under its text (half the row less the padding: ~42vw tablets, ~36vw phones) is the larger
+        # place; the featured card's photo column (0.7 of 1.7 of its inside) is a little smaller.
+        if section.settings.section_width == 'narrow'
+          assign image_sizes = '(min-width: 1200px) min(30vw, 340px), (min-width: 750px) 42vw, 36vw'
+        else
+          assign image_sizes = '(min-width: 1200px) 30vw, (min-width: 750px) 42vw, 36vw'
+        endif
+      -%}
+      <div class="value-card__media">
+        {% render 'image',
+          image: block.settings.image,
+          class: 'image--cover',
+          alt: '',
+          widths: '300, 450, 600, 800, 1100',
+          sizes: image_sizes,
+          loading: image_loading
+        %}
+      </div>
     {%- endif -%}
-  </div>
-
-  {%- if block.settings.image != blank -%}
-    <div class="value-card__media">
-      {% render 'image',
-        image: block.settings.image,
-        class: 'image--cover',
-        alt: '',
-        sizes: '(min-width: 1200px) 30vw, 45vw',
-        loading: 'lazy'
-      %}
-    </div>
-  {%- endif -%}
-</article>
+  </article>
+{%- elsif request.design_mode -%}
+  <p class="about-values__note" {{ block.shopify_attributes }}>{{ 'about.value_card_empty' | t }}</p>
+{%- endif -%}
 
 {% stylesheet %}
   /*
@@ -53,17 +91,19 @@
     ~20%, top right (its top in line with the icon); title heading font semibold ~36px accent,
     ~24px under the icon; text body ~18px / 29px, ~30px under the title; photo 471x225, radius ~24,
     ~20px under the text, at the card's bottom.
+    Phones (Variant49 / 50, 375px): padding ~16–20, icon ~26px, number ~26px, title ~17px, text
+    ~10–11px; the featured card's photo ~120x195 beside the text (text column : photo ~ 1 : 0.7).
   */
   .value-card {
     counter-increment: value-card;
     display: flex;
     flex-direction: column;
-    gap: max(var(--space-md), calc(20 * var(--px, 0.0625rem)));
+    gap: max(var(--space-md), calc(20 * var(--px)));
     block-size: 100%;
     box-sizing: border-box;
-    padding: max(var(--space-lg), calc(32 * var(--px, 0.0625rem)));
+    padding: max(var(--space-lg), calc(32 * var(--px)));
     border: 1px solid var(--color-card-border);
-    border-radius: max(1rem, calc(24 * var(--px, 0.0625rem)));
+    border-radius: max(1rem, calc(24 * var(--px)));
     background-color: color-mix(in srgb, var(--color-accent) 2%, var(--color-background));
     box-shadow: 0 2px 10px 0 #0000001a;
   }
@@ -85,16 +125,16 @@
     display: grid;
     flex-shrink: 0;
     place-items: center;
-    inline-size: max(2.75rem, calc(50 * var(--px, 0.0625rem)));
-    block-size: max(2.75rem, calc(50 * var(--px, 0.0625rem)));
+    inline-size: max(2.75rem, calc(50 * var(--px)));
+    block-size: max(2.75rem, calc(50 * var(--px)));
     border-radius: 50%;
     background-color: color-mix(in srgb, var(--color-accent) 10%, transparent);
     color: var(--color-accent);
   }
 
   .value-card__icon svg {
-    inline-size: max(1.25rem, calc(24 * var(--px, 0.0625rem)));
-    block-size: max(1.25rem, calc(24 * var(--px, 0.0625rem)));
+    inline-size: max(1.25rem, calc(24 * var(--px)));
+    block-size: max(1.25rem, calc(24 * var(--px)));
   }
 
   /* "01", "02"…: the section's counter (one per card) */
@@ -110,21 +150,21 @@
     margin: 0;
     color: color-mix(in srgb, var(--color-accent) 20%, transparent);
     font-family: var(--font-heading--family);
-    font-size: max(3rem, calc(90 * var(--px, 0.0625rem)));
+    font-size: max(3rem, calc(90 * var(--px)));
     font-weight: 200;
     line-height: 1;
   }
 
   .value-card__title {
-    margin: max(var(--space-md), calc(24 * var(--px, 0.0625rem))) 0 0;
+    margin: max(var(--space-md), calc(24 * var(--px))) 0 0;
     color: var(--color-accent);
-    font-size: max(1.5rem, calc(36 * var(--px, 0.0625rem)));
+    font-size: max(1.5rem, calc(36 * var(--px)));
     font-weight: 600;
     line-height: 1.1;
   }
 
   .value-card__text {
-    margin-block-start: max(var(--space-lg), calc(30 * var(--px, 0.0625rem)));
+    margin-block-start: max(var(--space-lg), calc(30 * var(--px)));
     font-size: var(--font-size-body-sm);
     line-height: 1.6;
   }
@@ -134,7 +174,7 @@
   }
 
   .value-card__text > * + * {
-    margin-block-start: max(var(--space-md), calc(24 * var(--px, 0.0625rem)));
+    margin-block-start: max(var(--space-md), calc(24 * var(--px)));
   }
 
   /*
@@ -145,8 +185,8 @@
     position: relative;
     overflow: hidden;
     flex: 1 1 0;
-    min-block-size: max(10rem, calc(225 * var(--px, 0.0625rem)));
-    border-radius: max(1rem, calc(24 * var(--px, 0.0625rem)));
+    min-block-size: max(10rem, calc(225 * var(--px)));
+    border-radius: max(1rem, calc(24 * var(--px)));
   }
 
   .value-card__media .image {
@@ -160,7 +200,11 @@
     block-size: 100%;
   }
 
-  /* Phones and tablets (Variant49): smaller type; the photo card puts its photo beside the text */
+  /*
+    Phones and tablets: smaller type. The featured first card (the section adds --feature) puts its
+    photo beside the text, as tall as the text (the img is absolute, so the row height comes from
+    the text); the other cards keep the photo under their text.
+  */
   @media (max-width: 1199px) {
     .value-card {
       gap: var(--space-sm);
@@ -182,47 +226,107 @@
     }
 
     .value-card__title {
+      margin-block-start: var(--space-sm);
       font-size: clamp(1.125rem, 3.5vw, 1.75rem);
     }
 
     .value-card__text {
+      margin-block-start: var(--space-sm);
       font-size: clamp(0.75rem, 2vw, 1rem);
     }
 
-    .value-card--media {
+    .value-card__media {
+      flex: none;
+      min-block-size: 0;
+      aspect-ratio: 16 / 10;
+    }
+
+    /* The icon row stays full width (the number at the card's corner); the photo sits beside the title and text */
+    .about-values__list--feature > .value-card--media:first-child {
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(0, 0.7fr);
-      align-items: start;
+      grid-template-rows: auto auto 1fr;
+      grid-template-areas:
+        "top top"
+        "title media"
+        "text media";
+      gap: 0 var(--space-md);
     }
 
-    .value-card__title {
+    .about-values__list--feature > .value-card--media:first-child .value-card__body {
+      display: contents;
+    }
+
+    .about-values__list--feature > .value-card--media:first-child .value-card__top {
+      grid-area: top;
+    }
+
+    .about-values__list--feature > .value-card--media:first-child .value-card__title {
+      grid-area: title;
+    }
+
+    .about-values__list--feature > .value-card--media:first-child .value-card__text {
+      grid-area: text;
+    }
+
+    .about-values__list--feature > .value-card--media:first-child .value-card__media {
+      grid-area: media;
+      min-block-size: 10rem;
       margin-block-start: var(--space-sm);
-    }
-
-    .value-card__text {
-      margin-block-start: var(--space-sm);
-    }
-
-    .value-card--media .value-card__media {
-      align-self: center;
-      min-block-size: 0;
-      aspect-ratio: 3 / 5;
+      aspect-ratio: auto;
     }
   }
 
-  /* Phones: one card per row (the section), so the text can be bigger and the photo goes under it */
+  /* Phones (Variant49 / 50): compact cards, 2 per row (the section) */
   @media (max-width: 749px) {
+    .value-card {
+      gap: var(--space-sm);
+      padding: 1rem;
+      border-radius: 1.25rem;
+    }
+
+    .value-card__icon {
+      inline-size: 1.625rem;
+      block-size: 1.625rem;
+    }
+
+    .value-card__icon svg {
+      inline-size: 0.875rem;
+      block-size: 0.875rem;
+    }
+
+    .value-card__number {
+      font-size: 1.75rem;
+    }
+
+    .value-card__title {
+      margin-block-start: 0.75rem;
+      font-size: 1.0625rem;
+      line-height: 1.2;
+    }
+
     .value-card__text {
-      font-size: var(--font-size-body-sm);
+      margin-block-start: 0.75rem;
+      font-size: 0.6875rem;
+      line-height: 1.65;
     }
 
-    .value-card--media {
-      display: flex;
+    .value-card__text > * + * {
+      margin-block-start: 0.75rem;
     }
 
-    .value-card--media .value-card__media {
-      flex: none;
-      aspect-ratio: 16 / 10;
+    .value-card__media {
+      border-radius: 0.875rem;
+    }
+
+    .about-values__list--feature > .value-card--media:first-child {
+      column-gap: 0.75rem;
+    }
+
+    .about-values__list--feature > .value-card--media:first-child .value-card__media {
+      min-block-size: 8rem;
+      margin-block-start: 0.75rem;
+      border-radius: 1.25rem;
     }
   }
 {% endstylesheet %}
@@ -230,6 +334,7 @@
 {% schema %}
 {
   "name": "t:general.value_card",
+  "tag": null,
   "settings": [
     {
       "type": "select",
@@ -264,7 +369,7 @@
       "type": "image_picker",
       "id": "image",
       "label": "t:labels.image",
-      "info": "t:labels.value_image_info"
+      "info": "t:labels.about_value_image_info"
     }
   ],
   "presets": [

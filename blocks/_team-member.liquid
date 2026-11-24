@@ -2,20 +2,37 @@
   One person of the About team (design/briefs/about-us.md §4.5 + answer 11, exports "Default-8",
   "image.png" (hover), "leaders" (phone)): a square photo with an outline role word over its top
   edge ("FOUNDER"), then the name and role.
-  - Hover or keyboard focus inside (focus-within): the card becomes a dark panel, the role word rises
-    with a faded copy above it, the name and role move onto the photo's bottom, round glass social
-    buttons show at the photo's top right and the quote shows under the photo. On touch, a tap
-    gives the hover state.
+  - Open state (hover on devices with a mouse, or the card's button: tap, click, Enter / Space): the
+    card becomes a dark panel, the role word rises with faded copies above it, the name and role
+    move onto the photo's bottom, round social buttons show at the photo's top right and the quote
+    shows under the photo. The button is a real disclosure (aria-expanded + aria-controls), so touch
+    and keyboard work; the section's script (<about-team-list>) toggles it and Escape closes it.
+  - Without JS (and before the script is defined) the quote shows under the caption, so every
+    visitor can read it.
   - The role word and the name on the photo are copies (aria-hidden): screen readers get the name and
-    role once, from the caption. The quote is always in the page (only faded), so screen readers
-    read it too.
+    role once, from the caption. The role word's letters are CSS content (data-word), so contrast
+    checkers skip the decoration.
+  - "tag": null: no Shopify wrapper, so the article is the grid item (the section counts children)
+    and an empty person leaves no cell. An empty person (no photo, name, role or quote) shows
+    nothing on the store and a note in the theme editor.
 {%- endcomment -%}
 
 {%- liquid
   assign name = block.settings.name
-  assign photo_alt = block.settings.image.alt | default: name
+  assign role = block.settings.role
+  assign quote = block.settings.quote
+
+  assign has_content = false
+  if block.settings.image != blank or name != blank or role != blank or quote != blank
+    assign has_content = true
+  endif
+
+  assign animation = section.settings.animation | default: 'fade-up'
+  if section.index == 1
+    assign animation = 'none'
+  endif
+
   assign networks = 'instagram,facebook,linkedin' | split: ','
-  assign new_window = 'accessibility.new_window' | t
   assign has_social = false
   for network in networks
     if block.settings[network] != blank
@@ -24,87 +41,160 @@
   endfor
 -%}
 
-<article
-  class="team-member"
-  data-animate="fade-up"
-  {{ block.shopify_attributes }}
->
-  {%- if block.settings.role_word != blank -%}
-    <p class="team-member__word" data-word="{{ block.settings.role_word | escape }}" aria-hidden="true">
-      {{- block.settings.role_word | escape -}}
-    </p>
-  {%- endif -%}
+{%- if has_content -%}
+  {%- liquid
+    assign name_escaped = name | escape
+    assign photo_alt = block.settings.image.alt | default: name
+    assign new_window = 'accessibility.new_window' | t
+    assign quote_id = 'TeamQuote-' | append: block.id
+    assign social_id = 'TeamSocial-' | append: block.id
 
-  <div class="team-member__media">
-    {% render 'image',
-      image: block.settings.image,
-      class: 'image--cover',
-      alt: photo_alt,
-      width: 800,
-      height: 800,
-      crop: 'center',
-      sizes: '(min-width: 1200px) 25vw, (min-width: 750px) 45vw, 50vw',
-      loading: 'lazy'
-    %}
+    # The outline word shrinks to fit the card: its width in em (bold capitals ~0.74em each).
+    assign word_em = block.settings.role_word | size | times: 0.74 | at_least: 1
 
-    {%- if name != blank or block.settings.role != blank -%}
-      <div class="team-member__overlay" aria-hidden="true">
-        {%- if name != blank -%}
-          <p class="team-member__overlay-name">{{ name | escape }}</p>
-        {%- endif -%}
-        {%- if block.settings.role != blank -%}
-          <p class="team-member__overlay-role">{{ block.settings.role | escape }}</p>
-        {%- endif -%}
+    capture image_loading
+      render 'section-loading'
+    endcapture
+    assign image_loading = image_loading | strip
+
+    # The card's real width: desktop 3 columns of 393 Figma px (1425px list, 123px gaps), tablets and
+    # phones 2 columns of the 48rem list (one gap of --space-md).
+    if section.settings.scale_screen
+      assign image_sizes = '(min-width: 1200px) 21vw, (min-width: 750px) min(46vw, 384px), 45vw'
+    else
+      assign image_sizes = '(min-width: 1200px) min(21vw, 393px), (min-width: 750px) min(46vw, 384px), 45vw'
+    endif
+
+    # The card's button opens the quote (and the social buttons); without a quote or social link it has nothing to show.
+    assign controls = ''
+    if quote != blank
+      assign controls = quote_id
+    endif
+    if has_social
+      assign controls = controls | append: ' ' | append: social_id | strip
+    endif
+  -%}
+
+  <article
+    class="team-member"
+    {% if animation != 'none' %}
+      data-animate="{{ animation }}"
+    {% endif %}
+    {% if block.settings.role_word != blank %}
+      style="--word-em: {{ word_em }};"
+    {% endif %}
+    {{ block.shopify_attributes }}
+  >
+    {%- if block.settings.role_word != blank -%}
+      <div class="team-member__word" data-word="{{ block.settings.role_word | escape }}" aria-hidden="true">
+        <span class="team-member__word-echo" data-word="{{ block.settings.role_word | escape }}"></span>
       </div>
     {%- endif -%}
 
-    {%- if has_social -%}
-      <ul class="team-member__social" role="list">
-        {%- for network in networks -%}
-          {%- liquid
-            assign link = block.settings[network]
-            if link == blank
-              continue
-            endif
-            assign network_key = 'social.' | append: network
-            assign network_name = network_key | t
-            assign icon_file = 'icon-' | append: network | append: '.svg'
-          -%}
-          <li>
-            <a
-              class="team-member__social-link"
-              href="{{ link }}"
-              target="_blank"
-              rel="noopener"
-            >
-              {{- icon_file | inline_asset_content -}}
-              <span class="visually-hidden">
-                {{- 'about.team_social' | t: name: name, network: network_name }} ({{ new_window }})
-              </span>
-            </a>
-          </li>
-        {%- endfor -%}
-      </ul>
-    {%- endif -%}
-  </div>
-
-  <div class="team-member__below">
-    <div class="team-member__caption">
-      {%- if name != blank -%}
-        <h3 class="team-member__name">{{ name | escape }}</h3>
+    <div class="team-member__media">
+      {%- if block.settings.image != blank or request.design_mode -%}
+        {% render 'image',
+          image: block.settings.image,
+          class: 'image--cover',
+          alt: photo_alt,
+          width: 800,
+          height: 800,
+          crop: 'center',
+          widths: '240, 360, 480, 640, 800',
+          sizes: image_sizes,
+          loading: image_loading
+        %}
       {%- endif -%}
-      {%- if block.settings.role != blank -%}
-        <p class="team-member__role">{{ block.settings.role | escape }}</p>
+
+      {%- if name != blank or role != blank -%}
+        <div class="team-member__overlay" aria-hidden="true">
+          {%- if name != blank -%}
+            <p class="team-member__overlay-name">{{ name_escaped }}</p>
+          {%- endif -%}
+          {%- if role != blank -%}
+            <p class="team-member__overlay-role">{{ role | escape }}</p>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+
+      {%- if has_social -%}
+        <ul class="team-member__social" id="{{ social_id }}" role="list">
+          {%- for network in networks -%}
+            {%- liquid
+              assign link = block.settings[network]
+              if link == blank
+                continue
+              endif
+              assign network_key = 'social.' | append: network
+              assign network_name = network_key | t
+              assign icon_file = 'icon-' | append: network | append: '.svg'
+              if name != blank
+                assign link_label = 'about.team_social' | t: name: name_escaped, network: network_name
+              else
+                assign link_label = network_name
+              endif
+            -%}
+            <li>
+              <a
+                class="team-member__social-link"
+                href="{{ link }}"
+                target="_blank"
+                rel="noopener"
+              >
+                {{- icon_file | inline_asset_content -}}
+                <span class="visually-hidden">{{ link_label }} ({{ new_window }})</span>
+              </a>
+            </li>
+          {%- endfor -%}
+        </ul>
       {%- endif -%}
     </div>
 
-    {%- if block.settings.quote != blank -%}
-      <blockquote class="team-member__quote">
-        <p>“{{ block.settings.quote | escape }}”</p>
-      </blockquote>
-    {%- endif -%}
-  </div>
-</article>
+    <div class="team-member__below">
+      <div class="team-member__caption">
+        {%- if name != blank -%}
+          <h3 class="team-member__name">{{ name_escaped }}</h3>
+        {%- endif -%}
+        {%- if role != blank -%}
+          <p class="team-member__role">{{ role | escape }}</p>
+        {%- endif -%}
+      </div>
+
+      {%- if controls != blank -%}
+        {%- liquid
+          if quote != blank and name != blank
+            assign toggle_label = 'about.team_quote_toggle' | t: name: name_escaped
+          elsif quote != blank
+            assign toggle_label = 'about.team_quote_toggle_plain' | t
+          elsif name != blank
+            assign toggle_label = 'about.team_links_toggle' | t: name: name_escaped
+          else
+            assign toggle_label = 'about.team_links_toggle_plain' | t
+          endif
+        -%}
+        {%- comment -%} Covers the card (transparent); hidden until the script can make it work {%- endcomment -%}
+        <button
+          type="button"
+          class="team-member__toggle"
+          aria-expanded="false"
+          aria-controls="{{ controls }}"
+          data-member-toggle
+          hidden
+        >
+          <span class="visually-hidden">{{ toggle_label }}</span>
+        </button>
+      {%- endif -%}
+
+      {%- if quote != blank -%}
+        <blockquote class="team-member__quote" id="{{ quote_id }}">
+          <p>“{{ quote | escape }}”</p>
+        </blockquote>
+      {%- endif -%}
+    </div>
+  </article>
+{%- elsif request.design_mode -%}
+  <p class="about-team__note" {{ block.shopify_attributes }}>{{ 'about.team_member_empty' | t }}</p>
+{%- endif -%}
 
 {% stylesheet %}
   /*
@@ -112,22 +202,39 @@
     and a faint white fill, centred on the photo's top edge; name heading font ~36px; role accent
     label ~18px letter-spaced, ~20px under the name.
     Hover (image.png): a dark panel (~#1f1f1f, radius ~16) 12px around the photo and the quote; name
-    ~30px and role (white) on the photo's bottom over a dark fade; 3 round glass buttons (~40px)
-    stacked in the photo's top right; quote body ~17px white; the role word ~1.1em higher, with a
-    faded copy above it. The panel uses the scheme's text colour (dark on light schemes).
+    ~30px and role (white) on the photo's bottom over a dark fade; 3 round buttons (~40px) stacked
+    in the photo's top right; quote body ~17px white; the role word ~1.1em higher, with a faded copy
+    above it. The panel uses the scheme's text colour (dark on light schemes).
+
+    --open is 0 (rest) or 1 (open): every part reads it, so the open state is set in one place
+    (hover on mouse devices, or the button's .is-open) and transitions still run.
   */
   .team-member {
-    --member-pad: max(0.625rem, calc(12 * var(--px, 0.0625rem)));
+    --open: 0;
+    --member-pad: max(0.625rem, calc(12 * var(--px)));
     --member-panel: var(--color-text);
     --member-on-panel: var(--color-background);
+    --word-size: max(1.5rem, calc(48 * var(--px)));
 
     position: relative;
     isolation: isolate;
     display: flex;
     flex-direction: column;
+    /* The role word's size reads the card's width (cqi) */
+    container-type: inline-size;
   }
 
-  /* The dark panel, drawn around the photo and the text below it */
+  @media (hover: hover) {
+    .team-member:hover {
+      --open: 1;
+    }
+  }
+
+  .team-member.is-open {
+    --open: 1;
+  }
+
+  /* The dark panel, drawn around the photo and the text below it (only once the script runs, see the quote) */
   .team-member::before {
     content: "";
     position: absolute;
@@ -139,40 +246,64 @@
     opacity: 0;
   }
 
-  /* The outline role word, over the photo's top edge; ::before is the faded copy that rises above it */
+  about-team-list:defined .team-member::before {
+    opacity: var(--open);
+  }
+
+  /*
+    The outline role word, over the photo's top edge. Its letters are ::before (CSS content, so
+    contrast checkers skip the decoration); the echo's ::before / ::after are the faded copies that
+    rise above it. A long word gets smaller to fit the card (--word-em from Liquid, 96cqi = the card
+    less a small margin); an older browser without container units keeps the first font-size and
+    the … cuts it.
+  */
   .team-member__word {
     position: absolute;
     z-index: 2;
     inset-block-start: 0;
     inset-inline: 0;
-    margin: 0;
     color: #ffffff66;
     font-family: var(--font-body--family);
-    font-size: max(1.5rem, calc(48 * var(--px, 0.0625rem)));
+    font-size: var(--word-size);
+    font-size: min(var(--word-size), calc(96cqi / var(--word-em, 8)));
     font-weight: 700;
     line-height: 1;
     text-align: center;
     text-transform: uppercase;
     white-space: nowrap;
     -webkit-text-stroke: 1px var(--color-accent);
-    transform: translateY(-55%);
+    transform: translateY(calc(-55% - (var(--member-pad) + 0.6em) * var(--open)));
     pointer-events: none;
   }
 
-  /* Two faded copies (hover): ::before just above the word, ::after above that, fainter */
   .team-member__word::before,
-  .team-member__word::after {
+  .team-member__word-echo::before,
+  .team-member__word-echo::after {
     content: attr(data-word);
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .team-member__word-echo {
+    position: absolute;
+    inset: 0;
+  }
+
+  /* Two faded copies (open): ::before just above the word, ::after above that, fainter */
+  .team-member__word-echo::before,
+  .team-member__word-echo::after {
     position: absolute;
     inset: 0;
     color: #ffffff99;
     -webkit-text-stroke: 1px color-mix(in srgb, var(--color-text) 14%, transparent);
-    opacity: 0;
-    transform: translateY(0);
+    opacity: var(--open);
+    transform: translateY(calc(-0.8em * var(--open)));
   }
 
-  .team-member__word::after {
+  .team-member__word-echo::after {
     -webkit-text-stroke-color: color-mix(in srgb, var(--color-text) 8%, transparent);
+    transform: translateY(calc(-1.6em * var(--open)));
   }
 
   .team-member__media {
@@ -190,21 +321,21 @@
     block-size: 100%;
   }
 
-  /* Name + role on the photo (hover): over a dark fade at the bottom */
+  /* Name + role on the photo (open): over a dark fade at the bottom */
   .team-member__overlay {
     position: absolute;
     inset: auto 0 0;
     padding: 4rem var(--space-md) var(--space-md);
     background: linear-gradient(to bottom, #00000000, #000000a6);
     color: #ffffff;
-    opacity: 0;
-    transform: translateY(0.75rem);
+    opacity: var(--open);
+    transform: translateY(calc((1 - var(--open)) * 0.75rem));
   }
 
   .team-member__overlay-name {
     margin: 0;
     font-family: var(--font-heading--family);
-    font-size: max(1.375rem, calc(30 * var(--px, 0.0625rem)));
+    font-size: max(1.375rem, calc(30 * var(--px)));
     line-height: 1.2;
   }
 
@@ -217,6 +348,7 @@
 
   .team-member__social {
     position: absolute;
+    z-index: 2;
     inset-block-start: var(--space-sm);
     inset-inline-end: var(--space-sm);
     display: flex;
@@ -225,59 +357,99 @@
     margin: 0;
     padding: 0;
     list-style: none;
-    opacity: 0;
-    transform: translateX(0.5rem);
-    /* Hidden buttons can't be tapped (a first tap opens the card); keyboard focus still reaches them */
+    opacity: var(--open);
+    transform: translateX(calc((1 - var(--open)) * 0.5rem));
+    /* Hidden buttons can't be tapped (the card's button takes the tap); keyboard focus still reaches them */
     pointer-events: none;
   }
 
-  .team-member:hover .team-member__social,
-  .team-member:focus-within .team-member__social {
+  .team-member.is-open .team-member__social {
     pointer-events: auto;
   }
 
+  /* Keyboard focus on a social button shows the buttons only (the card's button keeps its own state) */
+  .team-member__social:focus-within {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+
+  @media (hover: hover) {
+    .team-member:hover .team-member__social {
+      pointer-events: auto;
+    }
+  }
+
+  /* No backdrop blur (it repainted on every scroll frame): an almost solid white circle */
   .team-member__social-link {
     display: grid;
     place-items: center;
-    inline-size: max(2.75rem, calc(52 * var(--px, 0.0625rem)));
-    block-size: max(2.75rem, calc(52 * var(--px, 0.0625rem)));
+    inline-size: max(2.75rem, calc(52 * var(--px)));
+    block-size: max(2.75rem, calc(52 * var(--px)));
     border-radius: 50%;
-    background-color: #ffffff40;
+    background-color: #ffffffd9;
     box-shadow: var(--shadow-header);
     color: var(--color-accent);
-    -webkit-backdrop-filter: blur(var(--glass-frost));
-    backdrop-filter: blur(var(--glass-frost));
   }
 
-  .team-member__social-link:hover {
-    background-color: #ffffffcc;
+  @media (hover: hover) {
+    .team-member__social-link:hover {
+      background-color: #ffffff;
+    }
   }
 
   .team-member__social-link svg {
-    inline-size: max(1.375rem, calc(24 * var(--px, 0.0625rem)));
-    block-size: max(1.375rem, calc(24 * var(--px, 0.0625rem)));
+    inline-size: max(1.375rem, calc(24 * var(--px)));
+    block-size: max(1.375rem, calc(24 * var(--px)));
   }
 
-  /* The caption (rest) and the quote (hover) share one cell, so the card's height doesn't jump */
+  /* The card's button: transparent, over the whole panel (the social buttons sit above it) */
+  .team-member__toggle {
+    position: absolute;
+    z-index: 1;
+    inset: calc(var(--member-pad) * -1);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: calc(var(--radius-sm) - 3px + var(--member-pad));
+    background: none;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .team-member__toggle[hidden] {
+    display: none;
+  }
+
+  /*
+    Without JS (and before the script is defined) the quote shows under the caption, in the text
+    colour. Once defined, the caption (rest) and the quote (open) share one cell, so the card's
+    height doesn't jump on hover.
+  */
   .team-member__below {
     display: grid;
-    margin-block-start: max(var(--space-md), calc(20 * var(--px, 0.0625rem)));
+    gap: var(--space-sm);
+    margin-block-start: max(var(--space-md), calc(20 * var(--px)));
   }
 
-  .team-member__caption,
-  .team-member__quote {
+  about-team-list:defined .team-member__caption,
+  about-team-list:defined .team-member__quote {
     grid-area: 1 / 1;
+  }
+
+  about-team-list:defined .team-member__caption {
+    opacity: calc(1 - var(--open));
   }
 
   .team-member__name {
     margin: 0;
-    font-size: max(1.5rem, calc(36 * var(--px, 0.0625rem)));
+    font-size: max(1.5rem, calc(36 * var(--px)));
     font-weight: 400;
     line-height: 1.2;
   }
 
   .team-member__role {
-    margin: max(var(--space-sm), calc(16 * var(--px, 0.0625rem))) 0 0;
+    margin: max(var(--space-sm), calc(16 * var(--px))) 0 0;
     color: var(--color-accent);
     font-size: var(--font-size-label);
     letter-spacing: var(--letter-spacing-label);
@@ -287,56 +459,24 @@
 
   .team-member__quote {
     margin: 0;
-    color: var(--member-on-panel);
     font-size: var(--font-size-body-sm);
     line-height: 1.6;
-    opacity: 0;
+  }
+
+  about-team-list:defined .team-member__quote {
+    color: var(--member-on-panel);
+    opacity: var(--open);
   }
 
   .team-member__quote p {
     margin: 0;
   }
 
-  /* ---------- Hover / keyboard focus ---------- */
-  .team-member:hover::before,
-  .team-member:focus-within::before,
-  .team-member:hover .team-member__overlay,
-  .team-member:focus-within .team-member__overlay,
-  .team-member:hover .team-member__social,
-  .team-member:focus-within .team-member__social,
-  .team-member:hover .team-member__quote,
-  .team-member:focus-within .team-member__quote {
-    opacity: 1;
-    transform: none;
-  }
-
-  .team-member:hover .team-member__caption,
-  .team-member:focus-within .team-member__caption {
-    opacity: 0;
-  }
-
-  .team-member:hover .team-member__word,
-  .team-member:focus-within .team-member__word {
-    transform: translateY(calc(-55% - var(--member-pad) - 0.6em));
-  }
-
-  .team-member:hover .team-member__word::before,
-  .team-member:focus-within .team-member__word::before {
-    opacity: 1;
-    transform: translateY(-0.8em);
-  }
-
-  .team-member:hover .team-member__word::after,
-  .team-member:focus-within .team-member__word::after {
-    opacity: 1;
-    transform: translateY(-1.6em);
-  }
-
   @media (prefers-reduced-motion: no-preference) {
     .team-member::before,
     .team-member__word,
-    .team-member__word::before,
-    .team-member__word::after,
+    .team-member__word-echo::before,
+    .team-member__word-echo::after,
     .team-member__overlay,
     .team-member__social,
     .team-member__caption,
@@ -349,8 +489,8 @@
 
   /* Phones and tablets ("leaders"): smaller words, smaller panel padding */
   @media (max-width: 1199px) {
-    .team-member__word {
-      font-size: clamp(1.125rem, 4.5vw, 2.25rem);
+    .team-member {
+      --word-size: clamp(1.125rem, 4.5vw, 2.25rem);
     }
 
     .team-member__name {
@@ -368,8 +508,46 @@
     }
   }
 
-  /* Phones: the photo is ~160px tall, so smaller buttons keep all three on it */
+  /*
+    Phones: the card is ~160px wide, so a quote in the caption's cell would leave a tall empty space
+    under every card. The quote takes the caption's place only while the card is open (the button),
+    and the dark panel follows the button only (a narrow window with a mouse would otherwise show
+    the dark caption on the dark panel).
+  */
   @media (max-width: 749px) {
+    about-team-list:defined .team-member::before {
+      opacity: 0;
+    }
+
+    about-team-list:defined .team-member.is-open::before {
+      opacity: 1;
+    }
+
+    about-team-list:defined .team-member__caption {
+      opacity: 1;
+    }
+
+    about-team-list:defined .team-member__quote {
+      display: none;
+      grid-area: auto;
+      opacity: 1;
+    }
+
+    about-team-list:defined .team-member.is-open .team-member__quote {
+      display: block;
+    }
+
+    /* Open: the caption leaves the flow but stays for screen readers (the name on the photo is aria-hidden) */
+    about-team-list:defined .team-member.is-open:has(.team-member__quote) .team-member__caption {
+      position: absolute;
+      inline-size: 1px;
+      block-size: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    /* The photo is ~160px tall, so smaller buttons keep all three on it */
     .team-member__social {
       inset-block-start: var(--space-xs);
       inset-inline-end: var(--space-xs);
@@ -391,6 +569,7 @@
 {% schema %}
 {
   "name": "t:general.team_member",
+  "tag": null,
   "settings": [
     {
       "type": "image_picker",
@@ -402,7 +581,7 @@
       "type": "text",
       "id": "role_word",
       "label": "t:labels.team_role_word",
-      "info": "t:labels.team_role_word_info",
+      "info": "t:labels.about_team_role_word_info",
       "default": "Founder"
     },
     {
@@ -421,7 +600,7 @@
       "type": "textarea",
       "id": "quote",
       "label": "t:labels.team_quote",
-      "info": "t:labels.team_quote_info"
+      "info": "t:labels.about_team_quote_info"
     },
     {
       "type": "header",

@@ -1,60 +1,81 @@
 {%- comment -%}
   One slide of the About pillars section (design/briefs/about-us.md §4.3, exports "Default-2",
-  "Default-12", "Default-13", mobile "Variant45-3"): "01 · Mission", the heading, a text and a
-  checklist with accent ticks.
+  "Default-12", "Default-13", mobile "Variant45-2", "Variant46-1", "Variant47-1"): "01 · Mission",
+  the heading, a text and a checklist with accent ticks.
   - The number (01, 02…) is a CSS counter on the section, so it follows the block order.
   - Checklist: one point per line of the Checklist setting.
-  - With the section's script running, the slides lie on top of each other and only the current
-    one shows (is-active); without JS they simply stack.
+  - data-pillar marks a slide: the section counts them in the rendered HTML. An empty Pillar (no
+    label, heading, text or checklist) renders nothing on the store; in the editor it is a slide
+    with a note, so it can still be selected.
+  - "tag": null: no Shopify wrapper, the .pillar is the slide itself (the section stacks its
+    children in one grid cell).
+  - With the section's script running and pinned, the slides lie on top of each other and only
+    the current one shows (is-active); otherwise they simply stack.
 {%- endcomment -%}
 
 {%- liquid
   assign points = block.settings.checklist | newline_to_br | split: '<br />'
+
+  assign is_empty = true
+  if block.settings.label != blank or block.settings.heading != blank
+    assign is_empty = false
+  elsif block.settings.text != blank or block.settings.checklist != blank
+    assign is_empty = false
+  endif
 -%}
 
-<div class="pillar" {{ block.shopify_attributes }}>
-  <p class="pillar__label">
-    {%- if block.settings.label != blank -%}
-      <span class="pillar__label-text">{{ block.settings.label | escape }}</span>
+{%- if is_empty -%}
+  {%- if request.design_mode -%}
+    <div class="pillar pillar--empty" data-pillar {{ block.shopify_attributes }}>
+      <p class="pillar__note">{{ 'about.pillar_empty' | t }}</p>
+    </div>
+  {%- endif -%}
+{%- else -%}
+  <div class="pillar" data-pillar {{ block.shopify_attributes }}>
+    <p class="pillar__label">
+      {%- if block.settings.label != blank -%}
+        <span class="pillar__label-text">{{ block.settings.label | escape }}</span>
+      {%- endif -%}
+    </p>
+
+    {%- if block.settings.heading != blank -%}
+      <h2 class="pillar__heading">{{ block.settings.heading | escape }}</h2>
     {%- endif -%}
-  </p>
 
-  {%- if block.settings.heading != blank -%}
-    <h2 class="pillar__heading">{{ block.settings.heading | escape }}</h2>
-  {%- endif -%}
+    {%- if block.settings.text != blank -%}
+      <div class="pillar__text">{{ block.settings.text }}</div>
+    {%- endif -%}
 
-  {%- if block.settings.text != blank -%}
-    <div class="pillar__text">{{ block.settings.text }}</div>
-  {%- endif -%}
-
-  {%- if block.settings.checklist != blank -%}
-    <ul class="pillar__checklist">
-      {%- for point in points -%}
-        {%- assign point_text = point | strip -%}
-        {%- if point_text != blank -%}
-          <li class="pillar__point">
-            <span class="pillar__check" aria-hidden="true">{{ 'icon-check.svg' | inline_asset_content }}</span>
-            {{- point_text | escape -}}
-          </li>
-        {%- endif -%}
-      {%- endfor -%}
-    </ul>
-  {%- endif -%}
-</div>
+    {%- if block.settings.checklist != blank -%}
+      <ul class="pillar__checklist">
+        {%- for point in points -%}
+          {%- assign point_text = point | strip -%}
+          {%- if point_text != blank -%}
+            <li class="pillar__point">
+              <span class="pillar__check" aria-hidden="true">{{ 'icon-check.svg' | inline_asset_content }}</span>
+              {{- point_text | escape -}}
+            </li>
+          {%- endif -%}
+        {%- endfor -%}
+      </ul>
+    {%- endif -%}
+  </div>
+{%- endif -%}
 
 {% stylesheet %}
   /*
     Figma 1920 (Default-2): label y 265 (accent label, "01 · MISSION"); heading ~66px regular, 2
     lines, ~770 wide (y 330–460); text 24px / 38px (y 515–615); checklist from y 712, rows 58px
-    apart: tick 16px at x 55, text at x 102 (body-lg). Sizes: Figma px x --px with rem floors.
+    apart: tick 16px at x 55, text at x 102 (body-lg). Sizes: Figma px x --px (set by the
+    section) with rem floors.
   */
   .pillar {
     counter-increment: pillar;
-    max-inline-size: max(20rem, calc(810 * var(--px, 0.0625rem)));
+    max-inline-size: max(20rem, calc(810 * var(--px)));
   }
 
   .pillar__label {
-    margin: 0 0 max(var(--space-lg), calc(52 * var(--px, 0.0625rem)));
+    margin: 0 0 max(var(--space-lg), calc(52 * var(--px)));
     color: var(--color-accent);
     font-size: var(--font-size-label);
     font-weight: var(--font-weight-medium);
@@ -74,14 +95,14 @@
   .pillar__heading {
     margin: 0;
     font-family: var(--font-heading--family);
-    font-size: max(2rem, calc(66 * var(--px, 0.0625rem)));
+    font-size: max(2rem, calc(66 * var(--px)));
     font-weight: var(--font-heading--weight);
     line-height: 1.1;
     text-wrap: balance;
   }
 
   .pillar__text {
-    margin-block-start: max(var(--space-lg), calc(50 * var(--px, 0.0625rem)));
+    margin-block-start: max(var(--space-lg), calc(50 * var(--px)));
     font-size: var(--font-size-body-lg);
     line-height: 1.6;
   }
@@ -96,8 +117,8 @@
 
   .pillar__checklist {
     display: grid;
-    gap: max(var(--space-md), calc(26 * var(--px, 0.0625rem)));
-    margin: max(var(--space-xl), calc(90 * var(--px, 0.0625rem))) 0 0;
+    gap: max(var(--space-md), calc(26 * var(--px)));
+    margin: max(var(--space-xl), calc(90 * var(--px))) 0 0;
     padding: 0;
     list-style: none;
     font-size: var(--font-size-body-lg);
@@ -107,7 +128,7 @@
   .pillar__point {
     display: flex;
     align-items: baseline;
-    gap: max(var(--space-md), calc(33 * var(--px, 0.0625rem)));
+    gap: max(var(--space-md), calc(33 * var(--px)));
   }
 
   .pillar__check {
@@ -117,14 +138,26 @@
 
   .pillar__check svg {
     display: block;
-    inline-size: max(0.875rem, calc(16 * var(--px, 0.0625rem)));
+    inline-size: max(0.875rem, calc(16 * var(--px)));
     block-size: auto;
   }
 
-  /* Phones (Variant45-3): tighter */
+  /* Editor only: an empty Pillar */
+  .pillar__note {
+    margin: 0;
+    font-style: italic;
+    opacity: 0.7;
+  }
+
+  /*
+    Phones (Variant45-2 at 375px): label ~10px, heading 26px, text 13px with tall lines (~24px),
+    checklist 12px, rows 30px apart. Fixed rem values: the screen-scale tokens are clamped and
+    multiplied by Text size, which made the phone text too big.
+  */
   @media (max-width: 749px) {
     .pillar__label {
       margin-block-end: var(--space-md);
+      font-size: 0.625rem;
     }
 
     .pillar__heading {
@@ -133,13 +166,22 @@
 
     .pillar__text {
       margin-block-start: var(--space-md);
-      font-size: var(--font-size-body-sm);
+      font-size: 0.8125rem;
+      line-height: 1.8;
     }
 
     .pillar__checklist {
-      gap: var(--space-sm);
+      gap: 0.75rem;
       margin-block-start: var(--space-lg);
-      font-size: var(--font-size-body-sm);
+      font-size: 0.75rem;
+    }
+
+    .pillar__point {
+      gap: var(--space-md);
+    }
+
+    .pillar__check svg {
+      inline-size: 0.75rem;
     }
   }
 {% endstylesheet %}
@@ -147,6 +189,7 @@
 {% schema %}
 {
   "name": "t:general.pillar",
+  "tag": null,
   "settings": [
     {
       "type": "text",

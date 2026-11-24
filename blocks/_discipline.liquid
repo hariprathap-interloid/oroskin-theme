@@ -8,6 +8,11 @@
   - Name: the Title setting, else the collection's title. Count: "Count text" if typed, else the
     collection's product count ("19 formulas"). Photo: the Image setting, else the collection's image.
   - The number (01, 02…) is a CSS counter on the card, so it follows the block order.
+  - Empty (no collection, title, count text, image or text; the Link text has a default, so it does
+    not count): nothing on the store, a note in the theme editor. The section checks the captured
+    blocks for class="discipline, so the note must not use that class. "tag": null: no Shopify
+    wrapper, so an empty row leaves nothing in the card.
+  - No photo on the store: no photo box, the text takes the row (the placeholder is editor only).
 {%- endcomment -%}
 
 {%- liquid
@@ -20,13 +25,36 @@
     assign count_text = 'about.formulas' | t: count: discipline.products_count
   endif
 
-  # The open row's photo is on the first screen: load it at once there, lazily anywhere else
+  assign is_empty = false
+  if discipline == blank and block.settings.title == blank and block.settings.count_text == blank
+    if block.settings.image == blank and block.settings.text == blank
+      assign is_empty = true
+    endif
+  endif
+
+  assign show_media = true
+  if image == blank
+    unless request.design_mode
+      assign show_media = false
+    endunless
+  endif
+
+  # The open row's photo is on the first screen: the page's loading rule (eager in the first sections).
+  # Closed rows stay lazy: their photo is hidden inside a closed <details> until a visitor opens it.
   assign image_loading = 'lazy'
-  if section.index == 1 and block.settings.open
-    assign image_loading = 'eager'
+  if block.settings.open
+    capture image_loading
+      render 'section-loading'
+    endcapture
+    assign image_loading = image_loading | strip
   endif
 -%}
 
+{%- if is_empty -%}
+  {%- if request.design_mode -%}
+    <p class="about-hero__discipline-note" {{ block.shopify_attributes }}>{{ 'about.discipline_empty' | t }}</p>
+  {%- endif -%}
+{%- else -%}
 <details
   class="discipline"
   name="about-disciplines-{{ section.id }}"
@@ -43,32 +71,47 @@
     {%- endif -%}
   </summary>
 
-  <div class="discipline__panel">
-    <div class="discipline__media">
-      {%- if image != blank -%}
-        {{
-          image
-          | image_url: width: 960
-          | image_tag: widths: '320, 480, 640, 960', sizes: '(min-width: 1200px) 320px, 40vw', alt: '', loading: image_loading
-        }}
-      {%- else -%}
-        {{ 'collection-1' | placeholder_svg_tag: 'discipline__placeholder' }}
-      {%- endif -%}
-    </div>
+  <div class="discipline__panel{% unless show_media %} discipline__panel--no-media{% endunless %}">
+    {%- if show_media -%}
+      <div class="discipline__media">
+        {%- if image != blank -%}
+          {%- comment -%}
+            sizes = the photo's real width (measured): ~15–16% of the screen from 1200px (it scales with
+            the screen, also past 1920px: 408px at 2560), ~31% on tablets, 35–39% on phones
+          {%- endcomment -%}
+          {{
+            image
+            | image_url: width: 960
+            | image_tag:
+              widths: '240, 320, 480, 640, 960',
+              sizes: '(min-width: 1200px) 16vw, (min-width: 750px) 32vw, 40vw',
+              alt: '',
+              loading: image_loading
+          }}
+        {%- else -%}
+          {{ 'collection-1' | placeholder_svg_tag: 'discipline__placeholder' }}
+        {%- endif -%}
+      </div>
+    {%- endif -%}
 
     <div class="discipline__body">
       {%- if block.settings.text != blank -%}
         <div class="discipline__text">{{ block.settings.text }}</div>
       {%- endif -%}
       {%- if discipline != blank and block.settings.link_label != blank -%}
+        {%- comment -%} The hidden name makes each link unique for screen readers ("Shop Fragrance") {%- endcomment -%}
         <a class="discipline__link" href="{{ discipline.url }}">
           {{- block.settings.link_label | escape -}}
+          {%- if title != blank -%}
+            <span class="visually-hidden">{{ ' ' }}{{ title | escape }}</span>
+          {%- endif -%}
           <span class="discipline__link-arrow" aria-hidden="true">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
         </a>
       {%- endif -%}
     </div>
   </div>
 </details>
+{%- endif -%}
 
 {% stylesheet %}
   /*
@@ -83,10 +126,10 @@
 
   .discipline__summary {
     display: grid;
-    grid-template-columns: max(2rem, calc(58 * var(--px, 0.0625rem))) minmax(0, 1fr) auto;
+    grid-template-columns: max(2rem, calc(58 * var(--px))) minmax(0, 1fr) auto;
     align-items: center;
     gap: var(--space-sm);
-    padding-block: max(var(--space-sm), calc(18 * var(--px, 0.0625rem)));
+    padding-block: max(var(--space-sm), calc(18 * var(--px)));
     cursor: pointer;
     list-style: none;
   }
@@ -114,23 +157,43 @@
 
   .discipline__title {
     font-family: var(--font-heading--family);
-    font-size: max(2rem, calc(64 * var(--px, 0.0625rem)));
+    font-size: max(2rem, calc(64 * var(--px)));
     font-weight: var(--font-heading--weight);
     line-height: 1.2;
     transition: color var(--duration-fast) var(--ease-out);
   }
 
-  .discipline[open] .discipline__title,
-  .discipline__summary:hover .discipline__title {
+  .discipline[open] .discipline__title {
     color: var(--color-accent);
+  }
+
+  @media (hover: hover) {
+    .discipline__summary:hover .discipline__title {
+      color: var(--color-accent);
+    }
   }
 
   .discipline__panel {
     display: grid;
     grid-template-columns: minmax(0, 318fr) minmax(0, 450fr);
     align-items: start;
-    gap: max(var(--space-lg), calc(54 * var(--px, 0.0625rem)));
-    padding-block: max(var(--space-sm), calc(16 * var(--px, 0.0625rem))) max(var(--space-md), calc(24 * var(--px, 0.0625rem)));
+    gap: max(var(--space-lg), calc(54 * var(--px)));
+    padding-block: max(var(--space-sm), calc(16 * var(--px))) max(var(--space-md), calc(24 * var(--px)));
+  }
+
+  /* No photo on the store: the text takes the whole row */
+  .discipline__panel--no-media {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Theme editor only: a Discipline block with no content */
+  .about-hero__discipline-note {
+    margin: 0;
+    padding-block: var(--space-sm);
+    border-block-end: 1px solid var(--color-border);
+    font-size: var(--font-size-small);
+    font-style: italic;
+    opacity: 0.75;
   }
 
   /*
@@ -187,8 +250,8 @@
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: max(var(--space-md), calc(40 * var(--px, 0.0625rem)));
-    padding-block-start: max(var(--space-sm), calc(30 * var(--px, 0.0625rem)));
+    gap: max(var(--space-md), calc(40 * var(--px)));
+    padding-block-start: max(var(--space-sm), calc(30 * var(--px)));
   }
 
   .discipline__text {
@@ -218,7 +281,7 @@
     transition: translate var(--duration-fast) var(--ease-out);
   }
 
-  @media (prefers-reduced-motion: no-preference) {
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
     .discipline__link:hover .discipline__link-arrow svg {
       translate: 0.15em -0.15em;
     }
@@ -226,11 +289,21 @@
 
   /*
     Phones (mobile export Variant45, 375px): a smaller name so it never runs into the count, the
-    count on the open row only, and the photo kept beside the text (~135px : the rest).
+    count on the open row only, and the photo kept beside the text (~135px : the rest). Fixed rem
+    sizes: the scaled section multiplies the text tokens by Text size. Number ~8px, count ~9px.
   */
   @media (max-width: 749px) {
     .discipline__summary {
       gap: var(--space-xs);
+    }
+
+    .discipline__number {
+      font-size: 0.5rem;
+    }
+
+    .discipline__count {
+      font-size: 0.5625rem;
+      letter-spacing: 0.1em;
     }
 
     .discipline__title {
@@ -254,7 +327,7 @@
 
     .discipline__text,
     .discipline__link {
-      font-size: var(--font-size-body-sm);
+      font-size: 0.75rem;
     }
   }
 {% endstylesheet %}
@@ -292,6 +365,7 @@
 {% schema %}
 {
   "name": "t:general.discipline",
+  "tag": null,
   "settings": [
     {
       "type": "collection",
