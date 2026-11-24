@@ -125,12 +125,19 @@
   # Product card blocks that show: a product or a title (sold-out products too: the card only links to them)
   assign card_count = 0
   for block in section.blocks
-    if block.settings.product != blank or block.settings.title != blank or is_editor
+    assign card_shows = is_editor
+    if block.settings.product != blank
+      assign card_shows = true
+    endif
+    if block.settings.title != blank
+      assign card_shows = true
+    endif
+    if card_shows
       assign card_count = card_count | plus: 1
     endif
   endfor
-  assign show_card = false
-  if card_count > 0 or is_editor
+  assign show_card = is_editor
+  if card_count > 0
     assign show_card = true
   endif
   assign rotates = false
@@ -144,16 +151,31 @@
     assign show_button = true
   endif
 
-  assign has_content = false
-  if section.settings.eyebrow != blank or section.settings.heading != blank or section.settings.text != blank or show_button
+  assign has_content = show_button
+  if section.settings.eyebrow != blank
+    assign has_content = true
+  endif
+  if section.settings.heading != blank
+    assign has_content = true
+  endif
+  if section.settings.text != blank
     assign has_content = true
   endif
 
   # Nothing to show on the store (no text, no products, no video, no poster) = no section
-  assign show_section = true
-  unless has_content or card_count > 0 or has_video or poster != blank or is_editor
-    assign show_section = false
-  endunless
+  assign show_section = is_editor
+  if has_content
+    assign show_section = true
+  endif
+  if card_count > 0
+    assign show_section = true
+  endif
+  if has_video
+    assign show_section = true
+  endif
+  if poster != blank
+    assign show_section = true
+  endif
 
   assign interval = section.settings.seconds | default: 6 | times: 1000
 -%}
@@ -213,15 +235,12 @@
 
       {%- if section.settings.heading != blank -%}
         <{{ heading_tag }} class="video-banner__heading">{{ section.settings.heading }}</{{ heading_tag }}>
-      {%- else -%}
-        {%- comment -%} The card titles need a parent heading {%- endcomment -%}
-        {%- liquid
-          assign hidden_heading = section.settings.eyebrow
-          if hidden_heading == blank
-            assign hidden_heading = 'sections.video_banner.heading_hidden' | t
-          endif
-        -%}
-        <{{ heading_tag }} class="visually-hidden">{{ hidden_heading | escape }}</{{ heading_tag }}>
+      {%- elsif show_card -%}
+        {%- comment -%}
+          The card titles need a parent heading. Not the eyebrow (screen readers would hear it two times);
+          no cards = no hidden heading (it would name products the section does not have).
+        {%- endcomment -%}
+        <{{ heading_tag }} class="visually-hidden">{{ 'sections.video_banner.heading_hidden' | t }}</{{ heading_tag }}>
       {%- endif -%}
 
       {%- if section.settings.text != blank -%}
@@ -235,7 +254,7 @@
         </a>
       {%- endif -%}
 
-      {%- if request.design_mode and has_video == false and poster == blank -%}
+      {%- if request.design_mode and is_placeholder -%}
         <p class="video-banner__note">{{ 'sections.video_banner.video_empty' | t }}</p>
       {%- endif -%}
     </div>
@@ -674,7 +693,7 @@
     left: 50%;
     inline-size: 0.375rem;
     aspect-ratio: 1;
-    margin-inline-start: -0.1875rem;
+    margin-left: -0.1875rem;
     border-radius: 50%;
     background-color: var(--color-accent);
   }
@@ -1342,7 +1361,10 @@
       }
       if (!this.video.paused) return;
       // The browser can refuse (power saving, data saver): show the button as paused, so a tap starts it
-      this.video.play()?.catch(() => {
+      // An AbortError only means our own pause() (off screen, hidden tab) came before the first frame: the
+      // next update() plays it again
+      this.video.play()?.catch((error) => {
+        if (error?.name === 'AbortError') return;
         this.videoPaused = true;
         this.update();
       });
@@ -1366,7 +1388,11 @@
         const active = n === this.index;
         item.classList.toggle('is-active', active);
         item.inert = !active;
-        item.toggleAttribute('aria-hidden', !active);
+        if (active) {
+          item.removeAttribute('aria-hidden');
+        } else {
+          item.setAttribute('aria-hidden', 'true');
+        }
         if (!active) return;
         // The photo of a product that was hidden loads lazily: ask for it now
         item.querySelector('img[loading="lazy"]')?.setAttribute('loading', 'eager');
