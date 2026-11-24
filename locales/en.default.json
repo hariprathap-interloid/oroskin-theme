@@ -193,6 +193,10 @@
     "page_of": "Page {{ current }} of {{ total }}",
     "page": "Page"
   },
+  "meta": {
+    "tagged": "tagged \"{{ tags }}\"",
+    "page": "Page {{ page }}"
+  },
   "password": {
     "title": "This shop is private",
     "password": "Password",
