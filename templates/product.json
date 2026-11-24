@@ -104,40 +104,36 @@
                 "o1": {
                   "type": "_offer",
                   "settings": {
-                    "bank": "Axis Bank",
-                    "offer": "10% instant discount",
-                    "detail": "Up to $60 • Credit cards",
-                    "code": "AXIS10"
+                    "bank": "Bank or card name",
+                    "offer": "Describe the offer",
+                    "detail": "Add the conditions"
                   },
                   "blocks": {}
                 },
                 "o2": {
                   "type": "_offer",
                   "settings": {
-                    "bank": "ICICI Bank",
-                    "offer": "Flat $40 instant discount",
-                    "detail": "On orders above $300",
-                    "code": "ICICI40"
+                    "bank": "Bank or card name",
+                    "offer": "Describe the offer",
+                    "detail": "Add the conditions"
                   },
                   "blocks": {}
                 },
                 "o3": {
                   "type": "_offer",
                   "settings": {
-                    "bank": "SBI Card",
-                    "offer": "3% off + 10% back",
-                    "detail": "Instant gift vouchers",
-                    "code": "SBI10"
+                    "bank": "Bank or card name",
+                    "offer": "Describe the offer",
+                    "detail": "Add the conditions"
                   },
                   "blocks": {}
                 },
                 "o4": {
                   "type": "_offer",
                   "settings": {
-                    "bank": "HDFC Bank",
-                    "offer": "Flat $50 discount",
-                    "detail": "Using promo code HDFC6",
-                    "code": "HDFC6"
+                    "bank": "Bank or card name",
+                    "offer": "Describe the offer",
+                    "detail": "Add the conditions"
                   },
                   "blocks": {}
                 }
@@ -153,7 +149,7 @@
               "type": "product-pickup",
               "settings": {
                 "heading": "",
-                "delivery_note": "Delivery in 2–3 business days",
+                "delivery_note": "Add your delivery time",
                 "show_pickup": true
               },
               "blocks": {}
@@ -168,7 +164,7 @@
                   "type": "_product-feature",
                   "settings": {
                     "builtin_icon": "recyclable",
-                    "label": "Recyclable"
+                    "label": "Feature name"
                   },
                   "blocks": {}
                 },
@@ -176,7 +172,7 @@
                   "type": "_product-feature",
                   "settings": {
                     "builtin_icon": "vegan",
-                    "label": "Vegan"
+                    "label": "Feature name"
                   },
                   "blocks": {}
                 },
@@ -184,7 +180,7 @@
                   "type": "_product-feature",
                   "settings": {
                     "builtin_icon": "cruelty-free",
-                    "label": "Cruelty-free"
+                    "label": "Feature name"
                   },
                   "blocks": {}
                 },
@@ -192,7 +188,7 @@
                   "type": "_product-feature",
                   "settings": {
                     "builtin_icon": "paraben-free",
-                    "label": "Parabens free"
+                    "label": "Feature name"
                   },
                   "blocks": {}
                 }
@@ -251,11 +247,6 @@
       "settings": {
         "eyebrow": "Bought together",
         "heading": "Pairs <em>well with</em>",
-        "products": [
-          "radiance-vitamin-c-serum",
-          "magnolia-bloom-body-oil",
-          "rose-eau-de-parfum"
-        ],
         "limit": 3,
         "preselect": false,
         "section_width": "widest",
@@ -291,7 +282,7 @@
         "t4": {
           "type": "tab",
           "settings": {
-            "label": "Clinical results",
+            "label": "Results",
             "anchor": "clinical-results"
           }
         },
@@ -336,28 +327,28 @@
           "type": "spec",
           "settings": {
             "label": "Texture",
-            "value": "Weightless oil-serum"
+            "value": "Add a value"
           }
         },
         "s2": {
           "type": "spec",
           "settings": {
             "label": "Finish",
-            "value": "Satin, non-shifting"
+            "value": "Add a value"
           }
         },
         "s3": {
           "type": "spec",
           "settings": {
             "label": "Format",
-            "value": "Apothecary glass, refillable"
+            "value": "Add a value"
           }
         },
         "s4": {
           "type": "spec",
           "settings": {
             "label": "Origin",
-            "value": "Compounded in Grasse"
+            "value": "Add a value"
           }
         },
         "h1": {
@@ -365,8 +356,8 @@
           "settings": {
             "x": 66,
             "y": 28,
-            "title": "Dew, not shine",
-            "text": "A satin glow that settles in seconds."
+            "title": "Feature name",
+            "text": "Describe the part this dot points to."
           }
         },
         "h2": {
@@ -374,8 +365,8 @@
           "settings": {
             "x": 55,
             "y": 40,
-            "title": "Lipid veil",
-            "text": "Ceramides hold water in through the day."
+            "title": "Feature name",
+            "text": "Describe the part this dot points to."
           }
         },
         "h3": {
@@ -383,36 +374,36 @@
           "settings": {
             "x": 45,
             "y": 72,
-            "title": "Refillable glass",
-            "text": "Keep the bottle; refill the serum."
+            "title": "Feature name",
+            "text": "Describe the part this dot points to."
           }
         },
         "f1": {
           "type": "figure",
           "settings": {
-            "value": "98%",
-            "label": "Felt skin softer"
+            "value": "100%",
+            "label": "Describe what this number shows"
           }
         },
         "f2": {
           "type": "figure",
           "settings": {
-            "value": "14 Days",
-            "label": "Visible barrier repair"
+            "value": "30",
+            "label": "Describe what this number shows"
           }
         },
         "f3": {
           "type": "figure",
           "settings": {
             "value": "0",
-            "label": "Silicones"
+            "label": "Describe what this number shows"
           }
         },
         "f4": {
           "type": "figure",
           "settings": {
             "value": "100%",
-            "label": "Recyclable glass"
+            "label": "Describe what this number shows"
           }
         }
       },
@@ -431,11 +422,10 @@
       ],
       "settings": {
         "anchor": "overview",
-        "eyebrow": "The object",
-        "heading": "Written for <em>the senses,</em> not the spec sheet.",
-        "text": "<p>The formula was built backwards — from the finish. We wanted the look of skin caught in late afternoon light, then reverse-engineered a lipid system that could hold it through a full day of wear.</p>",
-        "image": "shopify://shop_images/d25e9d3b6caacff864387637efd0c84e17cf417b.png",
-        "quote": "It behaves less like a treatment and more like <em>a change of light</em>",
+        "eyebrow": "Overview",
+        "heading": "Tell the story of <em>this product</em>",
+        "text": "<p>Describe what the product is, how it feels and why you made it. Use this text to help customers understand what makes it different.</p>",
+        "quote": "Add a short quote about <em>this product</em>",
         "section_width": "widest",
         "color_scheme": "",
         "padding_top": 64,
@@ -449,90 +439,90 @@
           "type": "benefit",
           "settings": {
             "icon": "drop",
-            "title": "72-hour hydration",
-            "text": "A lipid-mimicking veil of ceramide NP, squalane and glacial water holds moisture through three full days."
+            "title": "Key benefit",
+            "text": "Describe a key benefit of this product in one or two short sentences."
           }
         },
         "b2": {
           "type": "benefit",
           "settings": {
             "icon": "flask",
-            "title": "Small-batch craft",
-            "text": "Blended in Grasse in batches of 400, cold-filled into recyclable glass and numbered by hand."
+            "title": "Key benefit",
+            "text": "Describe a key benefit of this product in one or two short sentences."
           }
         },
         "b3": {
           "type": "benefit",
           "settings": {
             "icon": "sparkles",
-            "title": "Soft-focus finish",
-            "text": "Micronised pigment diffuses light across the skin — luminous in daylight, never glittering under flash."
+            "title": "Key benefit",
+            "text": "Describe a key benefit of this product in one or two short sentences."
           }
         },
         "b4": {
           "type": "benefit",
           "settings": {
             "icon": "hours",
-            "title": "12-hour wear",
-            "text": "Transfer-resistant through coffee, calls and closing hours. Removes cleanly with a single cleanse."
+            "title": "Key benefit",
+            "text": "Describe a key benefit of this product in one or two short sentences."
           }
         },
         "b5": {
           "type": "benefit",
           "settings": {
             "icon": "leaf",
-            "title": "Clean by omission",
-            "text": "No silicones, sulphates, parabens or mineral oil. Vegan, cruelty-free, Leaping Bunny certified."
+            "title": "Key benefit",
+            "text": "Describe a key benefit of this product in one or two short sentences."
           }
         },
         "b6": {
           "type": "benefit",
           "settings": {
             "icon": "shield-check",
-            "title": "Barrier-first formula",
-            "text": "Dermatologist tested on sensitive skin. Non-comedogenic, fragrance-optional, pH balanced at 5.5."
+            "title": "Key benefit",
+            "text": "Describe a key benefit of this product in one or two short sentences."
           }
         },
         "p1": {
           "type": "spec",
           "settings": {
             "label": "Skin type",
-            "value": "All types, including reactive"
+            "value": "Add a value"
           }
         },
         "p2": {
           "type": "spec",
           "settings": {
-            "label": "Key actives",
-            "value": "Niacinamide 5%, Ceramide NP, Squalane"
+            "label": "Key ingredients",
+            "value": "Add a value"
           }
         },
         "p3": {
           "type": "spec",
           "settings": {
             "label": "Texture",
-            "value": "Weightless fluid-to-silk"
+            "value": "Add a value"
           }
         },
         "p4": {
           "type": "spec",
           "settings": {
             "label": "Finish",
-            "value": "Satin, buildable"
+            "value": "Add a value"
           }
         },
         "p5": {
           "type": "spec",
           "settings": {
             "label": "Free from",
-            "value": "Silicones • Sulphates • Parabens"
+            "value": "Add a value"
           }
         },
         "p6": {
           "type": "spec",
           "settings": {
             "label": "Certification",
-            "value": "Vegan • Leaping Bunny • Dermatologist tested"
+            "value": "Add a value"
           }
         }
       },
@@ -553,8 +543,8 @@
       "settings": {
         "anchor": "highlights",
         "eyebrow": "Highlights",
-        "heading": "<em>Six reasons</em> it earns its shelf.",
-        "text": "<p>Ritual Serum No. 01 was formulated backwards — from how skin feels at the end of the day, to the molecules that get it there.</p>",
+        "heading": "<em>Key benefits</em> of this product",
+        "text": "<p>Introduce the product in a few words and tell customers what makes it different.</p>",
         "section_width": "widest",
         "color_scheme": "",
         "padding_top": 64,
@@ -567,37 +557,33 @@
         "s1": {
           "type": "step",
           "settings": {
-            "title": "Cleanse & press dry",
-            "text": "Begin on skin still faintly damp — the serum travels further on moisture.",
-            "image": "shopify://shop_images/image_667.jpg",
-            "caption": "Blot with linen — never wipe."
+            "title": "Step title",
+            "text": "Explain how to use the product in this step.",
+            "caption": "Add a short tip."
           }
         },
         "s2": {
           "type": "step",
           "settings": {
-            "title": "Four drops, warmed",
-            "text": "Warm four drops between your palms for a few seconds.",
-            "image": "shopify://shop_images/image_670.jpg",
-            "caption": "Body heat opens the oils."
+            "title": "Step title",
+            "text": "Explain how to use the product in this step.",
+            "caption": "Add a short tip."
           }
         },
         "s3": {
           "type": "step",
           "settings": {
-            "title": "Press, never rub",
-            "text": "Press your palms to the cheeks, forehead and neck, holding each for a breath.",
-            "image": "shopify://shop_images/image_669.jpg",
-            "caption": "Pressure, not friction."
+            "title": "Step title",
+            "text": "Explain how to use the product in this step.",
+            "caption": "Add a short tip."
           }
         },
         "s4": {
           "type": "step",
           "settings": {
-            "title": "Seal & rest",
-            "text": "Finish with your moisturiser and let it settle before bed.",
-            "image": "shopify://shop_images/Component_1639.jpg",
-            "caption": "Let the night do the rest."
+            "title": "Step title",
+            "text": "Explain how to use the product in this step.",
+            "caption": "Add a short tip."
           }
         }
       },
@@ -610,7 +596,7 @@
       "settings": {
         "anchor": "how-to-use",
         "eyebrow": "How to use",
-        "heading": "Four minutes, performed the same way, <em>every evening.</em>",
+        "heading": "Show customers how to use the product, <em>step by step</em>",
         "seconds": 5,
         "section_width": "widest",
         "color_scheme": "",
@@ -624,28 +610,28 @@
         "r1": {
           "type": "result",
           "settings": {
-            "label": "reported visibly brighter skin",
+            "label": "Describe the result this number shows",
             "value": 94
           }
         },
         "r2": {
           "type": "result",
           "settings": {
-            "label": "measured improved elasticity",
+            "label": "Describe the result this number shows",
             "value": 88
           }
         },
         "r3": {
           "type": "result",
           "settings": {
-            "label": "saw reduced pigmentation",
+            "label": "Describe the result this number shows",
             "value": 79
           }
         },
         "r4": {
           "type": "result",
           "settings": {
-            "label": "found it comfortable daily",
+            "label": "Describe the result this number shows",
             "value": 97
           }
         }
@@ -658,14 +644,12 @@
       ],
       "settings": {
         "anchor": "clinical-results",
-        "eyebrow": "Clinical results",
-        "heading": "Twelve weeks, 142 participants, <em>no retouching.</em>",
-        "before": "shopify://shop_images/1894ec2e516c8ad0a7fc78817f607230629fa0c2.png",
-        "before_label": "Week 0",
-        "after": "shopify://shop_images/81ac94d9974a1d94cc98afcdf48e6c63991272a9.png",
-        "after_label": "Week 12",
+        "eyebrow": "Results",
+        "heading": "Show the results customers <em>can see</em>",
+        "before_label": "Before",
+        "after_label": "After",
         "start": 50,
-        "ring_label": "Radiance",
+        "ring_label": "Result",
         "section_width": "widest",
         "color_scheme": "",
         "padding_top": 64,
@@ -678,61 +662,55 @@
         "review_1": {
           "type": "review",
           "settings": {
-            "avatar": "shopify://shop_images/39aab73a45c612abf014cd8387797410e717c3ab.jpg",
-            "name": "Prince",
-            "place": "Canada",
+            "name": "Customer name",
+            "place": "Location",
             "rating": 4.8,
-            "text": "I bought this to fade old acne marks. It feels gentle on my sensitive skin and has visibly lightened my dark spots in about three weeks."
+            "text": "Share what a customer says about this product."
           }
         },
         "review_2": {
           "type": "review",
           "settings": {
-            "avatar": "shopify://shop_images/f5a8bcc390d41cf5cdcbc8e12d63402eabc96110.jpg",
-            "name": "Sara",
-            "place": "U.K",
+            "name": "Customer name",
+            "place": "Location",
             "rating": 4.9,
-            "text": "The texture is nice and hydrating, but I did not notice a huge difference in my dark spots even after finishing the whole bottle."
+            "text": "Share what a customer says about this product."
           }
         },
         "review_3": {
           "type": "review",
           "settings": {
-            "avatar": "shopify://shop_images/c9dc32848619b2f7395a3d971c83962cd484f4e3.jpg",
-            "name": "Aadhaya",
-            "place": "Dubai",
+            "name": "Customer name",
+            "place": "Location",
             "rating": 4.6,
-            "text": "Highly hydrating! It plumps up my dry patches instantly while giving that targeted radiance look."
+            "text": "Share what a customer says about this product."
           }
         },
         "review_4": {
           "type": "review",
           "settings": {
-            "avatar": "shopify://shop_images/4a2044d2febfca6537972cdb1ac62ed509ed8ed3.jpg",
-            "name": "Zara",
-            "place": "USA",
+            "name": "Customer name",
+            "place": "Location",
             "rating": 4.9,
-            "text": "Very lightweight and watery. It layers perfectly under my heavy moisturizer and doesn't pill when I apply sunscreen over it."
+            "text": "Share what a customer says about this product."
           }
         },
         "review_5": {
           "type": "review",
           "settings": {
-            "avatar": "shopify://shop_images/389d48c3df5ee8b67ef377543c9b31f0e430e2a6.jpg",
-            "name": "Sam",
-            "place": "USA",
+            "name": "Customer name",
+            "place": "Location",
             "rating": 4.7,
-            "text": "Great for sun spots. It smoothed out my skin texture and blurred my dark patches over a few weeks."
+            "text": "Share what a customer says about this product."
           }
         },
         "review_6": {
           "type": "review",
           "settings": {
-            "avatar": "shopify://shop_images/faa1c8058a578c2a8a62f56f20fc78f3dad2eb3e.png",
-            "name": "Jasmine",
-            "place": "U.K",
+            "name": "Customer name",
+            "place": "Location",
             "rating": 4.9,
-            "text": "This serum is a game-changer! It is super lightweight, non-sticky, and absorbs in seconds. After two weeks of use, my dull skin has a fresh, natural glow."
+            "text": "Share what a customer says about this product."
           }
         }
       },
@@ -749,11 +727,9 @@
         "eyebrow": "Voices",
         "heading": "What our <em>customers</em> say",
         "write_label": "Write a review",
-        "write_link": "",
         "visible": 3,
         "motion": "scroll",
         "interval": 5,
-        "float_image": "shopify://shop_images/18b4d5aff561df49910306885f5046f82ca42d99.png",
         "float_size": 330,
         "float_motion": "repeat",
         "word": "Reviews",
@@ -769,36 +745,36 @@
         "question_1": {
           "type": "question",
           "settings": {
-            "question": "Can I use this with retinol?",
-            "answer": "<p>Yes — alternate nights to begin. After a month most skins tolerate both in one routine, serum first.</p>"
+            "question": "How do I use this product?",
+            "answer": "<p>Add the answer to this question.</p>"
           }
         },
         "question_2": {
           "type": "question",
           "settings": {
-            "question": "Will it break me out?",
-            "answer": "<p>It's non-comedogenic and fragrance-free. Patch test first; if your skin feels tight, use it every other day for the first week.</p>"
+            "question": "Is this product right for me?",
+            "answer": "<p>Add the answer to this question.</p>"
           }
         },
         "question_3": {
           "type": "question",
           "settings": {
-            "question": "Is it pregnancy safe?",
-            "answer": "<p>It contains no retinoids or salicylic acid, but please check with your doctor before starting new skincare.</p>"
+            "question": "How long does shipping take?",
+            "answer": "<p>Add the answer to this question.</p>"
           }
         },
         "question_4": {
           "type": "question",
           "settings": {
-            "question": "How long does one bottle last?",
-            "answer": "<p>About two months, using two or three drops morning and night.</p>"
+            "question": "What size is this product?",
+            "answer": "<p>Add the answer to this question.</p>"
           }
         },
         "question_5": {
           "type": "question",
           "settings": {
-            "question": "Is it suitable for sensitive skin?",
-            "answer": "<p>Yes. It's dermatologist tested on sensitive skin, with no alcohol or added fragrance.</p>"
+            "question": "Can I return this product?",
+            "answer": "<p>Add the answer to this question.</p>"
           }
         }
       },
@@ -812,7 +788,7 @@
       "settings": {
         "anchor": "faq",
         "eyebrow": "FAQ",
-        "heading": "A short <em>conversation.</em>",
+        "heading": "Frequently asked <em>questions</em>",
         "show_form": true,
         "form_label": "Ask us anything",
         "form_heading": "Didn't find your answer?",
@@ -830,11 +806,9 @@
         "eyebrow": "You may also love",
         "heading": "",
         "link_label": "View all",
-        "link_url": "",
         "limit": 2,
         "columns": 2,
         "card_shape": "890 / 398",
-        "products": [],
         "animation": "fade-up",
         "section_width": "widest",
         "color_scheme": "scheme-2",

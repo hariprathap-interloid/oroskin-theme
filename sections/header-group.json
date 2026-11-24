@@ -17,41 +17,33 @@
         "announcement_band": {
           "type": "announcement",
           "settings": {
-            "text": "OroSkin • Signature collection • Estd. 2026",
-            "link": "",
+            "text": "Share news or an offer with your customers",
             "link_label": ""
           }
         },
         "announcement_AkLVKK": {
           "type": "announcement",
           "settings": {
-            "text": "Free shipping on orders over $200&nbsp;",
-            "link": "shopify://policies/shipping-policy",
-            "link_label": "Shipping details"
+            "text": "Announce a new product or collection"
           }
         },
         "announcement_q9zJBA": {
           "type": "announcement",
           "settings": {
-            "text": "The Glow-Up Event: up to 40% off&nbsp;",
-            "link": "shopify://collections/all",
-            "link_label": "Shop the sale"
+            "text": "Share news or an offer with your customers",
+            "link": "shopify://collections/all"
           }
         },
         "announcement_WhHLt6": {
           "type": "announcement",
           "settings": {
-            "text": "New arrivals are here&nbsp;",
-            "link": "shopify://collections/new-arrivals",
-            "link_label": "See new arrivals"
+            "text": "Share news or an offer with your customers"
           }
         },
         "announcement_qq4iCy": {
           "type": "announcement",
           "settings": {
-            "text": "Easy 30-day returns",
-            "link": "shopify://policies/refund-policy",
-            "link_label": "Returns policy"
+            "text": "Share news or an offer with your customers"
           }
         }
       },
@@ -87,31 +79,19 @@
         "mega_menu_card_ddfbEt": {
           "type": "mega_menu_card",
           "settings": {
-            "collection": "",
-            "link": "",
-            "title": "Fragrance",
-            "image": "shopify://shop_images/Fragrance-banner.png",
-            "text": "Signature scents and eaux crafted by master perfumers for every mood."
+            "collection": ""
           }
         },
         "mega_menu_card_iMhUBB": {
           "type": "mega_menu_card",
           "settings": {
-            "collection": "",
-            "link": "",
-            "title": "Skincare",
-            "image": "shopify://shop_images/Skincare-banner.png",
-            "text": "Dermatologist-tested formulas for luminous, glass-like skin."
+            "collection": ""
           }
         },
         "mega_menu_card_th8bK7": {
           "type": "mega_menu_card",
           "settings": {
-            "collection": "",
-            "link": "",
-            "title": "Makeup",
-            "image": "shopify://shop_images/Makeup-banner.png",
-            "text": "Effortless, radiant color for the face, lips and eyes — clean and buildable."
+            "collection": ""
           }
         }
       },

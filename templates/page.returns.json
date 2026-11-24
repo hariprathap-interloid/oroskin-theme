@@ -13,11 +13,11 @@
       "type": "returns-hero",
       "settings": {
         "show_breadcrumb": true,
-        "badge_number": "60",
+        "badge_number": "00",
         "badge_label": "Days",
-        "eyebrow": "Returns & refunds",
-        "heading": "No questions. Not <em>one.</em>",
-        "text": "<p>If a formula is not right for your skin we collect it from your door and refund in full — even if the bottle is half empty. Skin is personal; a return is not a failure.</p>",
+        "eyebrow": "Returns and refunds",
+        "heading": "Our return <em>policy</em>",
+        "text": "<p>Explain your return policy in a few sentences. Tell customers how long they have to return an item, what condition it must be in, and how they get their refund.</p>",
         "section_width": "widest",
         "scale_screen": true,
         "text_scale": 100,
@@ -32,36 +32,36 @@
         "open": {
           "type": "_return-step",
           "settings": {
-            "title": "Open the order",
-            "text": "<p>Find it in your archive and choose Return. Tell us which pieces and, if you like, why.</p>",
-            "label": "Within 60 days"
+            "title": "Start the return",
+            "text": "<p>Explain what the customer does in this step.</p>",
+            "label": "Add a time limit"
           },
           "blocks": {}
         },
         "courier": {
           "type": "_return-step",
           "settings": {
-            "title": "We book the courier",
-            "text": "<p>A collection slot is offered for the next working day. No printer, no label, no queue.</p>",
-            "label": "Same day"
+            "title": "Pack the item",
+            "text": "<p>Explain what the customer does in this step.</p>",
+            "label": "Add a short note"
           },
           "blocks": {}
         },
         "hand": {
           "type": "_return-step",
           "settings": {
-            "title": "Hand it over",
-            "text": "<p>Reuse the original box or any box. The courier scans it at your door and that is your proof.</p>",
-            "label": "At your door"
+            "title": "Send it back",
+            "text": "<p>Explain what the customer does in this step.</p>",
+            "label": "Add a short note"
           },
           "blocks": {}
         },
         "refund": {
           "type": "_return-step",
           "settings": {
-            "title": "Refunded in full",
-            "text": "<p>We release the refund the moment it is collected — not when it reaches us.</p>",
-            "label": "2–3 days to your bank"
+            "title": "Get a refund",
+            "text": "<p>Explain what the customer does in this step.</p>",
+            "label": "Add the refund time"
           },
           "blocks": {}
         }
@@ -85,10 +85,10 @@
     "lists": {
       "type": "returns-lists",
       "settings": {
-        "yes_title": "Always returnable",
-        "yes_items": "Opened and part-used formulas\nA shade that turned out wrong\nGifts, refunded to the giver or as credit\nAnything damaged in transit, replaced first",
-        "no_title": "The few exceptions",
-        "no_items": "Pieces redeemed entirely with Circle points — returned as points\nEngraved or personalised commissions\nAnything sent back after the sixtieth day",
+        "yes_title": "What you can return",
+        "yes_items": "Add an item type that customers can return\nAdd one item type on each line\nAdd the conditions, if there are any",
+        "no_title": "What you cannot return",
+        "no_items": "Add an item type that customers cannot return\nAdd one item type on each line",
         "section_width": "widest",
         "scale_screen": true,
         "text_scale": 100,
@@ -103,17 +103,15 @@
         "policy": "refund",
         "layout": "rows",
         "show_breadcrumb": false,
-        "eyebrow": "Refund policy",
-        "heading": "The full refund <em>policy</em>",
-        "intro": "<p>The exact terms, as they apply to every order.</p>",
-        "in_force_label": "",
+        "eyebrow": "Privacy policy",
+        "heading": "Our <em>policy</em>",
+        "in_force_label": "In force",
         "in_force_date": "",
         "in_force_meta": "",
         "show_cta": false,
-        "cta_heading": "",
+        "cta_heading": "Questions about this policy?",
         "cta_text": "",
-        "cta_label": "",
-        "cta_link": "",
+        "cta_label": "Write message",
         "section_width": "widest",
         "scale_screen": true,
         "text_scale": 100,
@@ -126,11 +124,9 @@
       "type": "cta-card",
       "settings": {
         "heading": "Ready to send something back?",
-        "text": "Open the order in your archive and we will book the courier — no printer, no queue.",
+        "text": "Tell customers what to do next and what happens after they select the button.",
         "button_label": "Start a return",
-        "button_link": "",
         "second_label": "",
-        "second_link": "",
         "style": "tinted",
         "section_width": "widest",
         "scale_screen": true,

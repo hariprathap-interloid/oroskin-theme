@@ -13,28 +13,24 @@
       "type": "collection-banner",
       "settings": {
         "show_breadcrumb": true,
-        "sentence": "<em>Clinical Beauty</em> [image_1] [break]<em>Formulations</em> [image_2] with [break]Absolute Integrity. [image_3]",
+        "sentence": "<em>Introduce</em> [image_1] [break]<em>your</em> [image_2] collection [break]in one sentence. [image_3]",
         "title_position": "start",
         "sentence_layout": "staggered",
         "line_1_indent": 0,
         "line_2_indent": 1.5,
         "line_3_indent": 11,
         "show_description": false,
-        "image_1": "shopify://shop_images/bfcc8debd300a8262da8efa53b4808b1c1cf36cf.png",
         "image_1_size": 100,
         "image_1_rotate": 0,
         "image_1_shift": 0,
-        "image_2": "shopify://shop_images/2b76eaf47616def43288061d35ae2cad3d200a7c.png",
         "image_2_size": 300,
         "image_2_rotate": 50,
         "image_2_shift": 15,
-        "image_3": "shopify://shop_images/image_635.png",
         "image_3_size": 100,
         "image_3_rotate": 0,
         "image_3_shift": 0,
         "under_header": true,
         "use_collection_image": false,
-        "image": "shopify://shop_images/image_639.png",
         "image_width": 24,
         "section_width": "widest",
         "padding_top": 40,
@@ -48,7 +44,6 @@
       "settings": {
         "show_title": false,
         "show_pills": true,
-        "pills_menu": "collection-pills",
         "pill_image_animation": "collection-pills--image-scale",
         "pill_image_size": 200,
         "show_count": true,
@@ -63,7 +58,7 @@
         "show_rating": true,
         "show_description": true,
         "cart_options": "add_first",
-        "empty_collection": "new-arrivals",
+        "empty_collection": "all",
         "empty_heading": "You might <em>love</em>",
         "padding_top": 32,
         "padding_bottom": 96,
@@ -77,9 +72,8 @@
           "type": "_icon-feature",
           "settings": {
             "icon": "truck",
-            "title": "Free shipping",
-            "text": "<p>Orders over $200 qualify for fast, free delivery</p>",
-            "link": ""
+            "title": "Shipping",
+            "text": "<p>Describe your shipping offer.</p>"
           },
           "blocks": {}
         },
@@ -88,8 +82,7 @@
           "settings": {
             "icon": "shield",
             "title": "Secure payment",
-            "text": "<p>Trusted payment processing with advanced security</p>",
-            "link": ""
+            "text": "<p>Tell customers how you keep their payments safe.</p>"
           },
           "blocks": {}
         },
@@ -97,9 +90,8 @@
           "type": "_icon-feature",
           "settings": {
             "icon": "return",
-            "title": "Easy 30-day returns",
-            "text": "<p>Try it for 30 days first, decide when you're ready.</p>",
-            "link": ""
+            "title": "Easy returns",
+            "text": "<p>Describe your return policy.</p>"
           },
           "blocks": {}
         },
@@ -107,9 +99,8 @@
           "type": "_icon-feature",
           "settings": {
             "icon": "headset",
-            "title": "Trusted service",
-            "text": "<p>Our dedicated support staff is always on duty</p>",
-            "link": ""
+            "title": "Customer service",
+            "text": "<p>Tell customers how to contact you.</p>"
           },
           "blocks": {}
         }
@@ -141,27 +132,27 @@
         "promo_skincare": {
           "type": "tile",
           "settings": {
-            "collection": "skincare",
+            "collection": "all",
             "eyebrow": "Shop sale",
-            "badge": "10% offer",
+            "badge": "Add an offer",
             "link_label": "Shop all"
           }
         },
         "promo_makeup": {
           "type": "tile",
           "settings": {
-            "collection": "makeup",
-            "eyebrow": "Shop new",
-            "badge": "The double deal",
+            "collection": "all",
+            "eyebrow": "Shop sale",
+            "badge": "Add an offer",
             "link_label": "Shop all"
           }
         },
         "promo_fragrance": {
           "type": "tile",
           "settings": {
-            "collection": "fragrance",
-            "eyebrow": "Shop bestsellers",
-            "badge": "Buy 2 get 1",
+            "collection": "all",
+            "eyebrow": "Shop sale",
+            "badge": "Add an offer",
             "link_label": "Shop all"
           }
         }
@@ -172,7 +163,7 @@
         "promo_fragrance"
       ],
       "settings": {
-        "heading": "",
+        "heading": "Where would you like to start?",
         "tile_style": "promo",
         "section_width": "widest",
         "color_scheme": "scheme-2",

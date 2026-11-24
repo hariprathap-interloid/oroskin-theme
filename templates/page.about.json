@@ -15,10 +15,10 @@
         "fragrance": {
           "type": "_discipline",
           "settings": {
-            "collection": "fragrance",
+            "collection": "all",
             "title": "Fragrance",
             "count_text": "",
-            "text": "<p>Naturals-led, 22% concentration, six-hour verified wear.</p>",
+            "text": "<p>Describe this product category in one short line.</p>",
             "link_label": "Shop",
             "open": true
           },
@@ -27,10 +27,10 @@
         "skincare": {
           "type": "_discipline",
           "settings": {
-            "collection": "skincare",
+            "collection": "all",
             "title": "Skincare",
             "count_text": "",
-            "text": "<p>Actives at their clinical dose, printed on every carton.</p>",
+            "text": "<p>Tell customers what makes this category different.</p>",
             "link_label": "Shop",
             "open": false
           },
@@ -39,10 +39,10 @@
         "makeup": {
           "type": "_discipline",
           "settings": {
-            "collection": "makeup",
+            "collection": "all",
             "title": "Makeup",
             "count_text": "",
-            "text": "<p>Forty-two shades mapped by undertone, in refillable cases.</p>",
+            "text": "<p>Add a short line about the products in this category.</p>",
             "link_label": "Shop",
             "open": false
           },
@@ -57,18 +57,17 @@
       "settings": {
         "show_breadcrumb": true,
         "script_text": "Our story",
-        "heading_line_1": "Made <em>Slowly,</em>",
-        "heading_line_2": "worn <strong>daily</strong>",
-        "heading_line_2_b": "read <strong>openly</strong>",
-        "heading_line_2_c": "refilled <strong>always</strong>",
+        "heading_line_1": "Your <em>story,</em>",
+        "heading_line_2": "told <strong>simply</strong>",
+        "heading_line_2_b": "shared <strong>openly</strong>",
+        "heading_line_2_c": "written <strong>clearly</strong>",
         "heading_line_2_d": "",
         "rotate_interval": 3,
-        "text": "<p>OroSkin is a fragrance, skincare and makeup house built on three unfashionable ideas: name your growers, dose your actives honestly, and make packaging you refill instead of replace.</p>",
+        "text": "<p>Share the story behind your brand. Tell customers who you are, what you make and the ideas that guide your work.</p>",
         "button_label": "Shop all products",
         "button_link": "shopify://collections/all",
-        "link_label": "Book consultation",
-        "link_url": "shopify://pages/contact",
-        "card_label": "The Oroskin, in three disciplines",
+        "link_label": "Contact us",
+        "card_label": "What we make",
         "section_width": "widest",
         "fill_screen": true,
         "scale_screen": true,
@@ -85,49 +84,40 @@
         "fragrance": {
           "type": "_chapter",
           "settings": {
-            "image": "shopify://shop_images/54156b3ad7fe4887714e7aa75fef6d9c10aedbeb.png",
-            "label": "Chapter I · Fragrance",
-            "heading": "Rose picked before the heat can take its oil.",
-            "text": "<p>Damask rose loses its most volatile molecules the moment the sun warms the petal, so our growers in Isparta harvest between 4 and 8am and the flowers reach the still the same morning. It takes roughly 3,600 blossoms to yield the rose absolute in one 30ml eau de parfum, dosed at 22% concentration, naturals-led, and verified for six hours of wear on skin rather than on blotter paper.</p>",
-            "stat_value": "3,600",
-            "stat_label": "Blossoms per 30ml flacon"
+            "label": "Chapter I · Your topic",
+            "heading": "Describe the first part of your story.",
+            "stat_value": "100",
+            "stat_label": "Describe what this number shows"
           },
           "blocks": {}
         },
         "skincare": {
           "type": "_chapter",
           "settings": {
-            "image": "shopify://shop_images/8518c87a1311e5cae1d14986425bce4831a70c0c.png",
-            "label": "Chapter II · Skincare",
-            "heading": "Actives kept at their clinical dose, not their marketing dose.",
-            "text": "<p>Every serum starts from the concentration the studies used, not the one that looks good on a label. We print each active's percentage on the carton, test every batch for stability at three temperatures, and keep reformulating until the texture is as good as the dose: often more than forty rounds before a formula is signed off.</p>",
-            "stat_value": "40+",
-            "stat_label": "Formulation rounds per serum"
+            "label": "Chapter II · Your topic",
+            "heading": "Explain the next step of your process and why it matters.",
+            "stat_value": "100+",
+            "stat_label": "Describe what this number shows"
           },
           "blocks": {}
         },
         "makeup": {
           "type": "_chapter",
           "settings": {
-            "image": "shopify://shop_images/4a7e016d40502af4862f8a18ec9ac14fcac1c8b4.png",
-            "label": "Chapter III · Makeup",
-            "heading": "Forty-two shades mapped by undertone, not lightness.",
-            "text": "<p>Our colour lab matched the complexion range across warm, neutral, olive and cool undertone families, then re-tested every shade under daylight, tungsten and evening LED so it reads true in all three. Lip and cheek pigments are pressed with camellia and squalane so colour wears like skincare, and every powder pan and lipstick bullet drops into a refillable case.</p>",
-            "stat_value": "42",
-            "stat_label": "Shades, four undertone families"
+            "label": "Chapter III · Your topic",
+            "heading": "Describe what makes this part of your work different.",
+            "stat_value": "100",
+            "stat_label": "Describe what this number shows"
           },
           "blocks": {}
         },
         "ritual": {
           "type": "_chapter",
           "settings": {
-            "image": "shopify://shop_images/af9d7365f878bbc82fade78e116a881bafbc3ef1.png",
-            "video": "shopify://files/videos/homepage-classic-watches-datejust-video-autoplay.webm",
-            "label": "Chapter IV · The ritual",
-            "heading": "Finally, it becomes three quiet minutes.",
-            "text": "<p>The last brief we write is emotional: how the flacon should sound when opened, how the cream should feel at the third use, what the scent should leave behind on a linen sleeve. Fragrance, skincare and colour arrive in glass and aluminium made to be refilled: 71% less carbon per use, and no virgin plastic anywhere in the line.</p>",
-            "stat_value": "71%",
-            "stat_label": "Lower carbon per refill"
+            "label": "Chapter IV · Your topic",
+            "heading": "End with what your customer gets.",
+            "stat_value": "100%",
+            "stat_label": "Describe what this number shows"
           },
           "blocks": {}
         }
@@ -153,9 +143,8 @@
           "type": "_pillar",
           "settings": {
             "label": "Mission",
-            "heading": "Make beauty you can read as easily as you can wear.",
-            "text": "<p>We formulate fragrance, skincare and colour at clinical doses, print every percentage on the carton, and name the grower behind each botanical. No proprietary blends, no silent dilutions.</p>",
-            "checklist": "Full dose disclosure on all 68 formulas\nNine named growers, long-term contracts\nRefillable glass and aluminium only"
+            "heading": "Describe your mission in one short sentence.",
+            "checklist": "Add a point that supports your mission\nAdd a second point\nAdd a third point"
           },
           "blocks": {}
         },
@@ -163,9 +152,8 @@
           "type": "_pillar",
           "settings": {
             "label": "Vision",
-            "heading": "A beauty house measured in decades, not launches.",
-            "text": "<p>By 2030 we want every OroSkin object to be refilled more often than it is bought: a shelf that ages with you, with formulas revised only when the evidence asks for it.</p>",
-            "checklist": "Zero virgin plastic across the line\nEvery claim backed by in-vivo panels\nFormulas revised, not replaced"
+            "heading": "Describe where you want your brand to go.",
+            "checklist": "Add a point that supports your vision\nAdd a second point\nAdd a third point"
           },
           "blocks": {}
         },
@@ -173,9 +161,8 @@
           "type": "_pillar",
           "settings": {
             "label": "Promise",
-            "heading": "Three quiet minutes that actually do something.",
-            "text": "<p>Texture is not decoration. A serum should absorb in eleven seconds, a fragrance should still read at hour six, and a compact should close with a sound you trust. We test all three.</p>",
-            "checklist": "11-second absorption standard\n6-hour wear verification on skin\nVegan, cruelty-free, dermatologist-reviewed"
+            "heading": "Describe what you promise your customers.",
+            "checklist": "Add a point that supports your promise\nAdd a second point\nAdd a third point"
           },
           "blocks": {}
         }
@@ -186,13 +173,6 @@
         "promise"
       ],
       "settings": {
-        "image_1": "shopify://shop_images/ffe0001888aefda5ffecde40985020524cd495d1.png",
-        "image_2": "shopify://shop_images/31038e5e4d8264fe6801fb289237a5b14d361dfb_1.png",
-        "image_3": "shopify://shop_images/8230345724c2d31168a6d12bec49570352621800.png",
-        "image_4": "shopify://shop_images/af5a6edf2970737d17087b5c61e700cd933bff18.png",
-        "image_5": "shopify://shop_images/e004a88cd03ccbd2deab848a14d4b1544886a1ab.png",
-        "image_6": "shopify://shop_images/4a7e016d40502af4862f8a18ec9ac14fcac1c8b4.png",
-        "image_8": "shopify://shop_images/23c90ac8336726b908b03a80a204a5d9a04444f0.png",
         "drift": true,
         "section_width": "widest",
         "scale_screen": true,
@@ -206,60 +186,55 @@
         "beginning": {
           "type": "_milestone",
           "settings": {
-            "year": "2019",
+            "year": "Year",
             "pill": "The beginning",
-            "title": "A lab above a perfumery",
-            "text": "<p>Two chemists rent a Grasse attic and begin suspending gold leaf in jasmine water.</p>",
-            "stat_value": "6m²",
-            "stat_label": "The entire first lab"
+            "title": "Describe this milestone",
+            "stat_value": "100",
+            "stat_label": "Describe what this number shows"
           },
           "blocks": {}
         },
         "breakthrough": {
           "type": "_milestone",
           "settings": {
-            "year": "2021",
-            "pill": "The breakthrough",
-            "title": "Ferment No. 47",
-            "text": "<p>Forty-six batches collapse. The forty-seventh holds past ninety days, and ninety days becomes the house rule.</p>",
-            "stat_value": "47",
-            "stat_label": "Batches before one held"
+            "year": "Year",
+            "pill": "The next step",
+            "title": "Add your next milestone",
+            "stat_value": "100+",
+            "stat_label": "Describe what this number shows"
           },
           "blocks": {}
         },
         "expansion": {
           "type": "_milestone",
           "settings": {
-            "year": "2023",
-            "pill": "The expansion",
-            "title": "Three cities, one atelier",
-            "text": "<p>Paris keeps the formulas; New York and Seoul keep only the couriers. Shipping local halves the freight.</p>",
-            "stat_value": "−54%",
-            "stat_label": "Freight emissions"
+            "year": "Year",
+            "pill": "Today",
+            "title": "Add a recent milestone",
+            "stat_value": "100%",
+            "stat_label": "Describe what this number shows"
           },
           "blocks": {}
         },
         "commitment": {
           "type": "_milestone",
           "settings": {
-            "year": "2024",
-            "pill": "The commitment",
-            "title": "The refill programme",
-            "text": "<p>Every vessel redrawn in glass or aluminium, engineered for a hundred cycles.</p>",
+            "year": "Year",
+            "pill": "The beginning",
+            "title": "Describe this milestone",
             "stat_value": "100",
-            "stat_label": "Refills per vessel"
+            "stat_label": "Describe what this number shows"
           },
           "blocks": {}
         },
         "now": {
           "type": "_milestone",
           "settings": {
-            "year": "2026",
-            "pill": "Now",
-            "title": "Small, on purpose",
-            "text": "<p>The collection is capped. When a new piece enters, an older one retires.</p>",
-            "stat_value": "11",
-            "stat_label": "Pieces, and no more"
+            "year": "Year",
+            "pill": "The beginning",
+            "title": "Describe this milestone",
+            "stat_value": "100",
+            "stat_label": "Describe what this number shows"
           },
           "blocks": {}
         }
@@ -273,7 +248,7 @@
       ],
       "settings": {
         "eyebrow": "Our journey",
-        "heading": "<em>Seven years</em>, slowly.",
+        "heading": "<em>Our story</em>, step by step.",
         "section_width": "widest",
         "scale_screen": true,
         "text_scale": 110,
@@ -288,42 +263,27 @@
         "elise": {
           "type": "_team-member",
           "settings": {
-            "image": "shopify://shop_images/ce8bb538f323b313e46531003d391857fe649be7.jpg",
-            "role_word": "Founder",
-            "name": "Elise Beaumont",
-            "role": "Founder & creative director",
-            "quote": "Luxury is not a price. It is the feeling that someone cared about every detail before you ever opened the box.",
-            "instagram": "https://www.instagram.com/",
-            "facebook": "https://www.facebook.com/",
-            "linkedin": "https://www.linkedin.com/"
+            "role_word": "Role",
+            "name": "Team member name",
+            "role": "Job title"
           },
           "blocks": {}
         },
         "ananya": {
           "type": "_team-member",
           "settings": {
-            "image": "shopify://shop_images/223b7d018c4157ed5f356b5a797c771a86fa7387.jpg",
-            "role_word": "Co-founder",
-            "name": "Ananya Sharma",
-            "role": "Co-founder & formulator",
-            "quote": "Technology should disappear into the experience. At OroSkin, every interaction should feel like magic, not mechanics.",
-            "instagram": "https://www.instagram.com/",
-            "facebook": "https://www.facebook.com/",
-            "linkedin": "https://www.linkedin.com/"
+            "role_word": "Role",
+            "name": "Team member name",
+            "role": "Job title"
           },
           "blocks": {}
         },
         "sophia": {
           "type": "_team-member",
           "settings": {
-            "image": "shopify://shop_images/5b302b90de9fc2836947ed91b166fdf253ce82ec.jpg",
-            "role_word": "Co-founder",
-            "name": "Sophia Marie",
-            "role": "Co-founder & chemist",
-            "quote": "A formula earns its place on the shelf when the evidence asks for it, never when the calendar does.",
-            "instagram": "https://www.instagram.com/",
-            "facebook": "https://www.facebook.com/",
-            "linkedin": "https://www.linkedin.com/"
+            "role_word": "Role",
+            "name": "Team member name",
+            "role": "Job title"
           },
           "blocks": {}
         }
@@ -334,10 +294,10 @@
         "sophia"
       ],
       "settings": {
-        "eyebrow": "The visionaries",
-        "heading": "Meet the minds <em>behind </em><em><strong>OroSkin</strong></em>",
-        "text": "<p>Three individuals from three different worlds — fashion, science, and technology — united by the belief that luxury beauty deserves a platform as extraordinary as the products themselves.</p>",
-        "side_word": "Our experts",
+        "eyebrow": "Our team",
+        "heading": "Meet the people <em>behind <strong>the brand</strong></em>",
+        "text": "<p>Introduce the people behind your brand. Tell customers where they come from, what they do and what brings them together.</p>",
+        "side_word": "Our people",
         "show_arrows": true,
         "section_width": "widest",
         "scale_screen": true,
@@ -354,9 +314,8 @@
           "type": "_value-card",
           "settings": {
             "icon": "diamond",
-            "title": "Uncompromising curation",
-            "text": "<p>We believe that less is more. Our selection process is painstaking, deliberate, and driven by a single question: does this product truly deserve a place in someone's ritual?</p><p>Less than 8% of products submitted make it onto our platform. The rest are returned with a personal note explaining why.</p>",
-            "image": "shopify://shop_images/58e4d37bb17ffc9f1fe2545f8088ea02887ec090.png"
+            "title": "Quality",
+            "text": "<p>Describe a value that guides your work and why it matters to your customers.</p>"
           },
           "blocks": {}
         },
@@ -364,8 +323,8 @@
           "type": "_value-card",
           "settings": {
             "icon": "lashes",
-            "title": "Conscious beauty",
-            "text": "<p>Sustainability is not a trend — it's our responsibility. Every partner brand must meet our rigorous environmental and ethical standards.</p>"
+            "title": "Responsibility",
+            "text": "<p>Explain how this value shapes the way you make your products.</p>"
           },
           "blocks": {}
         },
@@ -373,8 +332,8 @@
           "type": "_value-card",
           "settings": {
             "icon": "heart-bold",
-            "title": "Client above all",
-            "text": "<p>Every decision — from packaging to pricing — is made with one person in mind: the luminary who trusts us with their ritual.</p>"
+            "title": "Customer care",
+            "text": "<p>Tell customers what they can expect from you when they shop with you.</p>"
           },
           "blocks": {}
         },
@@ -382,8 +341,8 @@
           "type": "_value-card",
           "settings": {
             "icon": "graduation",
-            "title": "Beauty education",
-            "text": "<p>We empower our community with knowledge. Because the most transformative beauty choice is always an informed one.</p>"
+            "title": "Quality",
+            "text": "<p>Describe a value that guides your work and why it matters to your customers.</p>"
           },
           "blocks": {}
         },
@@ -391,8 +350,8 @@
           "type": "_value-card",
           "settings": {
             "icon": "globe",
-            "title": "Global inclusivity",
-            "text": "<p>Beauty belongs to everyone. We curate for every skin tone, every culture, every ritual — without exception.</p>"
+            "title": "Quality",
+            "text": "<p>Describe a value that guides your work and why it matters to your customers.</p>"
           },
           "blocks": {}
         }
@@ -423,22 +382,22 @@
           "type": "_stat-figure",
           "settings": {
             "source": "typed",
-            "value": "98",
+            "value": "100",
             "prefix": "",
             "suffix": "%",
-            "title": "Would buy again",
-            "text": "Of 31,400 verified clients"
+            "title": "Add a figure",
+            "text": "Describe what this number shows"
           }
         },
         "rating": {
           "type": "_stat-figure",
           "settings": {
             "source": "typed",
-            "value": "4.9",
+            "value": "50",
             "prefix": "",
             "suffix": "",
-            "title": "Average rating",
-            "text": "Across every piece we make"
+            "title": "Add a figure",
+            "text": "Describe what this number shows"
           }
         },
         "products": {
@@ -448,19 +407,19 @@
             "collection": "all",
             "prefix": "",
             "suffix": "+",
-            "title": "Global products",
-            "text": "Luxury products curated globally"
+            "title": "Products",
+            "text": "Products in the chosen collection"
           }
         },
         "awards": {
           "type": "_stat-figure",
           "settings": {
             "source": "typed",
-            "value": "15",
+            "value": "10",
             "prefix": "",
             "suffix": "",
-            "title": "Total awards",
-            "text": "Industry awards since 2018"
+            "title": "Add a figure",
+            "text": "Describe what this number shows"
           }
         }
       },
@@ -472,7 +431,7 @@
       ],
       "settings": {
         "eyebrow": "By the numbers",
-        "heading": "<em>Proof,</em> not promises.",
+        "heading": "Our story in <em>numbers</em>",
         "stagger": true,
         "section_width": "widest",
         "scale_screen": true,
@@ -485,7 +444,7 @@
     "marquee": {
       "type": "marquee",
       "settings": {
-        "text": "Beauty heals nature, nature feeds beauty.",
+        "text": "Add a short line that sums up your brand.",
         "separator": "",
         "direction": "left",
         "speed": 40,

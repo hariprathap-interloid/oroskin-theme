@@ -15,8 +15,8 @@
         "readers": {
           "type": "_blog-stat-card",
           "settings": {
-            "value": "2.4M",
-            "text": "Monthly readers across all journal editions",
+            "value": "100",
+            "text": "Describe what this number shows",
             "icon": "eye"
           },
           "blocks": {}
@@ -24,8 +24,8 @@
         "saved": {
           "type": "_blog-stat-card",
           "settings": {
-            "value": "48K",
-            "text": "Articles saved by readers this month",
+            "value": "100",
+            "text": "Describe what this number shows",
             "icon": "heart"
           },
           "blocks": {}
@@ -33,8 +33,8 @@
         "authored": {
           "type": "_blog-stat-card",
           "settings": {
-            "value": "120",
-            "text": "Expert-authored articles and editorials",
+            "value": "100",
+            "text": "Describe what this number shows",
             "icon": "pencil"
           },
           "blocks": {}
@@ -42,8 +42,8 @@
         "award": {
           "type": "_blog-stat-card",
           "settings": {
-            "value": "3x",
-            "text": "Award-nominated beauty publication",
+            "value": "100",
+            "text": "Describe what this number shows",
             "icon": "award"
           },
           "blocks": {}
@@ -57,9 +57,9 @@
       ],
       "settings": {
         "show_breadcrumb": true,
-        "eyebrow": "Beauty intelligence",
-        "heading": "Radiant skin and <em>beauty secrets</em>",
-        "text": "<p>Where beauty meets culture, science meets ritual, and every story is an invitation to discover your most luminous self.</p><p>By blending time-tested subcontinent traditions with modern dermatological science, we decode the secrets to healthy skin while celebrating the rich diversity of South Asian skin tones through expert-backed guides and clean ingredient breakdowns.</p>",
+        "eyebrow": "Our blog",
+        "heading": "Introduce your <em>blog</em>",
+        "text": "<p>Use this text to tell readers what your blog is about and what they can find here.</p><p>Add a second paragraph for more details, such as the topics you write about and how often you post new articles.</p>",
         "articles_label": "Articles",
         "articles_value": "",
         "authors_label": "Authors",
@@ -82,15 +82,12 @@
       "settings": {
         "heading": "<em>Trending</em> this week",
         "link_label": "View all",
-        "link": "",
         "show_meta_topic": false,
         "reading_speed": 200,
         "show_video": true,
         "video_position": "left",
-        "video_url": "https://youtu.be/nabwuTwtlnM?si=EHS15mrbhpg7Q50t",
-        "poster": "shopify://shop_images/6514468765eb7d5b1a064a890e7e065fdac9f2c3.png",
-        "video_label": "Video · 12:40",
-        "video_title": "The OroSkin lab: building a winter skincare routine from scratch",
+        "video_label": "Video",
+        "video_title": "Add a title that tells viewers what your video is about",
         "video_radius": 50,
         "section_width": "widest",
         "fill_screen": true,
@@ -109,7 +106,6 @@
         "show_tags": true,
         "sticky_toolbar": true,
         "show_featured": true,
-        "featured_article": "",
         "featured_label": "Featured story",
         "layout": "mixed",
         "per_page": 12,
@@ -130,9 +126,8 @@
           "type": "_icon-feature",
           "settings": {
             "icon": "truck",
-            "title": "Free shipping",
-            "text": "<p>Orders over $200 qualify for fast, free delivery</p>",
-            "link": ""
+            "title": "Shipping",
+            "text": "<p>Describe your shipping offer.</p>"
           },
           "blocks": {}
         },
@@ -141,8 +136,7 @@
           "settings": {
             "icon": "shield",
             "title": "Secure payment",
-            "text": "<p>Trusted payment processing with advanced security</p>",
-            "link": ""
+            "text": "<p>Tell customers how you keep their payments safe.</p>"
           },
           "blocks": {}
         },
@@ -150,9 +144,8 @@
           "type": "_icon-feature",
           "settings": {
             "icon": "return",
-            "title": "Easy 30-day returns",
-            "text": "<p>Try it for 30 days first, decide when you're ready.</p>",
-            "link": ""
+            "title": "Easy returns",
+            "text": "<p>Describe your return policy.</p>"
           },
           "blocks": {}
         },
@@ -160,9 +153,8 @@
           "type": "_icon-feature",
           "settings": {
             "icon": "headset",
-            "title": "Trusted service",
-            "text": "<p>Our dedicated support staff is always on duty</p>",
-            "link": ""
+            "title": "Customer service",
+            "text": "<p>Tell customers how to contact you.</p>"
           },
           "blocks": {}
         }

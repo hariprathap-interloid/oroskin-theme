@@ -12,8 +12,7 @@
     "main": {
       "type": "search",
       "settings": {
-        "suggestions_menu": "collection-pills",
-        "suggestions_collection": "new-arrivals",
+        "suggestions_collection": "all",
         "suggestions_heading": "You might <em>love</em>"
       }
     }

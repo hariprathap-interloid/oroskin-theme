@@ -1,3 +1,12 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
 {
   "sections": {
     "policy": {
@@ -7,7 +16,6 @@
         "in_force_label": "In force",
         "show_cta": false,
         "cta_label": "Write message",
-        "cta_link": "",
         "section_width": "widest",
         "scale_screen": true,
         "text_scale": 100,
@@ -16,12 +24,11 @@
         "padding_bottom": 96,
         "policy": "terms",
         "layout": "contents",
-        "eyebrow": "Terms of use",
-        "heading": "The agreement, <em>in plain words.</em>",
-        "intro": "<p>Nine clauses. Written to be read once and understood — not to be survived. In force from 1 August 2026.</p>",
+        "eyebrow": "Privacy policy",
+        "heading": "Our <em>policy</em>",
         "in_force_date": "",
         "in_force_meta": "",
-        "cta_heading": "Exercise any of these in one message.",
+        "cta_heading": "Questions about this policy?",
         "cta_text": ""
       }
     }

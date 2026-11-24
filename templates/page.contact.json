@@ -14,15 +14,14 @@
       "settings": {
         "show_breadcrumb": true,
         "eyebrow": "Get in touch",
-        "heading": "We're here, <em>always.</em>",
-        "text": "<p>Every luminary deserves a personal touch. Whether it's a question about a ritual, a concern with your order, or simply a desire to connect — we are here, human and present, for you.</p>",
-        "image": "shopify://shop_images/image_715.png",
-        "stat_value": "97%",
-        "stat_label": "Satisfaction rate",
-        "support_title": "Live support available now",
-        "support_hours": "Mon–Fri 9am–9pm · Sat–Sun 10am–6pm CET",
+        "heading": "Contact <em>us</em>",
+        "text": "<p>Tell customers what they can contact you about and how soon you reply. Add a sentence about your team or your service to make the page personal.</p>",
+        "stat_value": "00%",
+        "stat_label": "Describe this number",
+        "support_title": "Customer support",
+        "support_hours": "Add your opening hours",
         "form_heading": "Send a message",
-        "topics": "Order & shipping, Returns, Product query, Press & partnerships, Others",
+        "topics": "Orders, Shipping, Returns, Products, Other",
         "show_order_number": true,
         "section_width": "widest",
         "fill_screen": true,
@@ -41,17 +40,16 @@
           "type": "_contact-channel",
           "settings": {
             "icon": "chat",
-            "label": "Fastest response",
+            "label": "Add a short label",
             "title": "Live chat",
             "value_type": "none",
             "email": "",
             "phone": "",
             "whatsapp_number": "",
             "whatsapp_message": "",
-            "text": "<p>Speak directly with a beauty concierge. No bots — only humans who love beauty.</p>",
-            "status": "Online now",
-            "link_label": "Start conversation",
-            "link": ""
+            "text": "<p>Tell customers what this channel is for and how soon you reply.</p>",
+            "status": "Add a status",
+            "link_label": "Start conversation"
           },
           "blocks": {}
         },
@@ -66,10 +64,9 @@
             "phone": "",
             "whatsapp_number": "",
             "whatsapp_message": "",
-            "text": "<p>We reply to every message personally within 4 hours during business days.</p>",
-            "status": "",
-            "link_label": "Send email",
-            "link": ""
+            "text": "<p>Tell customers how soon you reply to emails.</p>",
+            "status": "Add a status",
+            "link_label": "Send email"
           },
           "blocks": {}
         },
@@ -81,13 +78,11 @@
             "title": "Call us",
             "value_type": "phone",
             "email": "",
-            "phone": "+44 20 7946 0958",
             "whatsapp_number": "",
             "whatsapp_message": "",
-            "text": "<p>Toll-free from the US, UK and EU. For orders, returns and concierge requests.</p>",
-            "status": "",
-            "link_label": "Call now",
-            "link": ""
+            "text": "<p>Tell customers when they can call and what you can help with.</p>",
+            "status": "Add a status",
+            "link_label": "Call now"
           },
           "blocks": {}
         },
@@ -100,12 +95,9 @@
             "value_type": "whatsapp",
             "email": "",
             "phone": "",
-            "whatsapp_number": "+44 20 7946 0958",
-            "whatsapp_message": "Hello Oroskin",
-            "text": "<p>Prefer to message? Our concierge team is on WhatsApp for discreet, personal support.</p>",
-            "status": "",
-            "link_label": "Open WhatsApp",
-            "link": ""
+            "text": "<p>Tell customers what they can message you about.</p>",
+            "status": "Add a status",
+            "link_label": "Open WhatsApp"
           },
           "blocks": {}
         }
@@ -135,7 +127,7 @@
         "new_york": {
           "type": "_map-pin",
           "settings": {
-            "name": "New York",
+            "name": "City",
             "type_label": "Flagship",
             "x": 29,
             "y": 36,
@@ -146,8 +138,8 @@
         "london": {
           "type": "_map-pin",
           "settings": {
-            "name": "London",
-            "type_label": "Studio",
+            "name": "City",
+            "type_label": "Office",
             "x": 50,
             "y": 35,
             "types": "Offices"
@@ -157,7 +149,7 @@
         "dubai": {
           "type": "_map-pin",
           "settings": {
-            "name": "Dubai",
+            "name": "City",
             "type_label": "Pop-up",
             "x": 61,
             "y": 45,
@@ -168,7 +160,7 @@
         "tokyo": {
           "type": "_map-pin",
           "settings": {
-            "name": "Tokyo",
+            "name": "City",
             "type_label": "Office",
             "x": 81,
             "y": 41,
@@ -184,8 +176,8 @@
         "tokyo"
       ],
       "settings": {
-        "eyebrow": "Global presence",
-        "heading": "Find us <em>worldwide</em>",
+        "eyebrow": "Our locations",
+        "heading": "Where to <em>find</em> us",
         "show_filters": true,
         "filter_all": "All locations",
         "ratio": "2.695",
@@ -214,33 +206,30 @@
             "paris": {
               "type": "_location-card",
               "settings": {
-                "code": "FR",
-                "title": "Paris — Headquarters",
-                "address": "14 Rue du Faubourg Saint-Honoré\n75008 Paris, France",
-                "hours": "Mon–Fri · 9am – 7pm CET",
-                "map_link": "https://maps.app.goo.gl/815Z2mcYXokrQRrj8"
+                "code": "XX",
+                "title": "City",
+                "address": "Street address\nCity, postal code, country",
+                "hours": "Add your opening hours"
               },
               "blocks": {}
             },
             "new_york": {
               "type": "_location-card",
               "settings": {
-                "code": "US",
-                "title": "New York",
-                "address": "432 West Broadway, Suite 300\nSoHo, New York NY 10012",
-                "hours": "Mon–Fri · 9am – 6pm EST",
-                "map_link": ""
+                "code": "XX",
+                "title": "City",
+                "address": "Street address\nCity, postal code, country",
+                "hours": "Add your opening hours"
               },
               "blocks": {}
             },
             "tokyo": {
               "type": "_location-card",
               "settings": {
-                "code": "JP",
-                "title": "Tokyo",
-                "address": "2-11-3 Minami-Aoyama\nMinato-ku, Tokyo 107-0062",
-                "hours": "Mon–Fri · 10am – 7pm JST",
-                "map_link": ""
+                "code": "XX",
+                "title": "City",
+                "address": "Street address\nCity, postal code, country",
+                "hours": "Add your opening hours"
               },
               "blocks": {}
             }
@@ -261,9 +250,8 @@
               "settings": {
                 "network": "instagram",
                 "name": "Instagram",
-                "handle": "@oroskin.beauty",
-                "followers": "1.2M followers",
-                "link": ""
+                "handle": "@youraccount",
+                "followers": "Add your follower count"
               },
               "blocks": {}
             },
@@ -272,9 +260,8 @@
               "settings": {
                 "network": "x",
                 "name": "Twitter/X",
-                "handle": "@oroskin",
-                "followers": "340k followers",
-                "link": ""
+                "handle": "@youraccount",
+                "followers": "Add your follower count"
               },
               "blocks": {}
             },
@@ -283,9 +270,8 @@
               "settings": {
                 "network": "youtube",
                 "name": "YouTube",
-                "handle": "OroSkin Beauty",
-                "followers": "215k followers",
-                "link": ""
+                "handle": "Your channel name",
+                "followers": "Add your follower count"
               },
               "blocks": {}
             },
@@ -294,9 +280,8 @@
               "settings": {
                 "network": "facebook",
                 "name": "Facebook",
-                "handle": "OroSkin Beauty Co.",
-                "followers": "896k followers",
-                "link": ""
+                "handle": "Your page name",
+                "followers": "Add your follower count"
               },
               "blocks": {}
             },
@@ -305,9 +290,8 @@
               "settings": {
                 "network": "linkedin",
                 "name": "LinkedIn",
-                "handle": "OroSkin Beauty Co.",
-                "followers": "58k followers",
-                "link": "https://in.linkedin.com/company/interloid-technologies"
+                "handle": "Your page name",
+                "followers": "Add your follower count"
               },
               "blocks": {}
             }
@@ -323,7 +307,7 @@
       },
       "settings": {
         "locations_eyebrow": "Visit our office",
-        "locations_heading": "Our global locations",
+        "locations_heading": "Our locations",
         "social_eyebrow": "Find us online",
         "social_heading": "Connect on social",
         "social_icon_style": "brand",
