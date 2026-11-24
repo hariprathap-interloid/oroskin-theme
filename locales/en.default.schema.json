@@ -692,7 +692,7 @@
     "header_color_scheme": "Header color scheme",
     "solid_background": "Solid header background",
     "solid_background_info": "Fills the full width behind the header with the header color scheme. The page then starts below the header. Not used on pages where the header is transparent.",
-    "customer_account_menu_info": "Shown in the account menu when a customer is signed in.",
+    "customer_account_menu_info": "The links in the account window that opens from the account button. Use the same menu as your customer account pages (Orders, Profile).",
     "mega_menu_color_scheme": "Mega menu color scheme",
     "mobile_show_search_bar": "Show search in the bar",
     "mobile_show_search_bar_info": "Phones only. Needs \"Show search in the header\" on in Theme settings → Search.",

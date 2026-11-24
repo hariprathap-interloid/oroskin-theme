@@ -266,12 +266,6 @@
     "shop_all": "Shop all",
     "search": "Search",
     "login": "Login",
-    "account_menu": {
-      "open": "Account menu for {{ name }}",
-      "greeting": "Hi, {{ name }}",
-      "orders": "Orders",
-      "sign_out": "Sign out"
-    },
     "open_menu": "Open menu",
     "back": "Back",
     "menu_tools": "Search and cart",

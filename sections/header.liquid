@@ -89,7 +89,6 @@
     {% render 'header-drawer',
       links: section.settings.menu.links,
       logo: logo_markup_lazy,
-      account_links: linklists[section.settings.customer_account_menu].links,
       scheme: section.settings.drawer_color_scheme,
       cards: section.blocks,
       image_fit: section.settings.mega_menu_image_fit,
@@ -146,77 +145,25 @@
       </cart-count>
 
       {%- comment -%}
-        Account (decision 6: the account pages are Shopify's own, on shopify.com). Our own menu instead of
-        Shopify's <shopify-account> popup, so it matches the theme:
-        - signed out: the Figma's red LOGIN pill, a link to Shopify's sign-in page
-        - signed in (the customer object exists): a round glass button with the customer's initial opens a
-          panel: "Hi, name", the email, the links of the "Customer account menu" (Shopify keeps that menu
-          with Orders and Profile) and Sign out. The panel is a native popover: Escape and a click outside
-          close it, the browser handles the open state; the script only places it under the button.
+        Account: Shopify's <shopify-account> component (Theme Store requirement: in the header on desktop AND
+        phones). Shopify draws the button's click target and the account sheet (sign-in options for a signed-out
+        customer, the "Customer account menu" links and sign out); the theme only styles it:
+        - signed out: our LOGIN pill goes into the component's "signed-out-avatar" slot (the component wraps
+          it in its own button, so the slot holds no link or button of its own)
+        - signed in: the component shows the customer's initial; the CSS variables below give it our round
+          glass button look, and the sheet takes the header scheme's colours, the theme fonts and corners.
+        Legacy customer accounts: the component links straight to the sign-in page instead.
       {%- endcomment -%}
       {%- if shop.customer_accounts_enabled -%}
-        {%- if customer -%}
-          {%- liquid
-            assign account_menu_id = 'AccountMenu-' | append: section.id
-            assign account_name = customer.first_name | default: customer.name | default: customer.email
-            assign account_initial = account_name | slice: 0 | upcase
-            assign account_links = linklists[section.settings.customer_account_menu].links
-          -%}
-          <account-menu class="header__account">
-            <button
-              type="button"
-              class="header__icon-button header__avatar"
-              popovertarget="{{ account_menu_id }}"
-              aria-label="{{ 'header.account_menu.open' | t: name: account_name | escape_once }}"
-            >
-              <span aria-hidden="true">{{ account_initial }}</span>
-            </button>
-            <div id="{{ account_menu_id }}" class="account-menu" popover>
-              {%- comment -%} Head: the initial in a circle, then "Hi, name" and the email; the close button on the right {%- endcomment -%}
-              <div class="account-menu__head">
-                <span class="account-menu__initial" aria-hidden="true">{{ account_initial }}</span>
-                <div class="account-menu__who">
-                  <p class="account-menu__greeting">{{ 'header.account_menu.greeting' | t: name: account_name }}</p>
-                  {%- if customer.email != blank -%}
-                    <p class="account-menu__email">{{ customer.email | escape }}</p>
-                  {%- endif -%}
-                </div>
-                <button type="button" class="account-menu__close" popovertarget="{{ account_menu_id }}" popovertargetaction="hide">
-                  <span class="visually-hidden">{{ 'header.close_menu' | t }}</span>
-                  <span aria-hidden="true">{{ 'icon-close.svg' | inline_asset_content }}</span>
-                </button>
-              </div>
-
-              {%- comment -%} The account links (Shopify's Orders / Profile) as full-width rows with an arrow {%- endcomment -%}
-              <ul class="account-menu__links" role="list">
-                {%- for link in account_links -%}
-                  <li>
-                    <a class="account-menu__link" href="{{ link.url }}">
-                      <span>{{ link.title | escape }}</span>
-                      <span class="account-menu__arrow" aria-hidden="true">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
-                    </a>
-                  </li>
-                {%- else -%}
-                  <li>
-                    <a class="account-menu__link" href="{{ routes.account_url }}">
-                      <span>{{ 'header.account_menu.orders' | t }}</span>
-                      <span class="account-menu__arrow" aria-hidden="true">{{ 'icon-arrow.svg' | inline_asset_content }}</span>
-                    </a>
-                  </li>
-                {%- endfor -%}
-              </ul>
-
-              <a class="account-menu__link account-menu__signout" href="{{ routes.account_logout_url }}">
-                <span>{{ 'header.account_menu.sign_out' | t }}</span>
-              </a>
-            </div>
-          </account-menu>
-        {%- else -%}
-          <a class="button header__login" href="{{ routes.account_login_url }}">
-            {{ 'icon-account.svg' | inline_asset_content | remove: 'slot="signed-out-avatar"' }}
+        <shopify-account
+          class="header__account{% if customer %} header__account--signed-in{% endif %}"
+          menu="{{ section.settings.customer_account_menu | default: 'customer-account-main-menu' }}"
+        >
+          <span slot="signed-out-avatar" class="button header__login">
+            {{- 'icon-account.svg' | inline_asset_content | remove: 'slot="signed-out-avatar"' -}}
             <span class="header__login-text">{{- 'header.login' | t -}}</span>
-          </a>
-        {%- endif -%}
+          </span>
+        </shopify-account>
       {%- endif -%}
     </div>
   </div>
@@ -537,8 +484,53 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /*
+    Account: Shopify's <shopify-account> (see the markup). Its own button (part "signed-out-avatar") is
+    reset to a bare click target, so our LOGIN pill in the slot shows as before. Signed in, the component
+    draws the initial: its CSS variables give it the size and colours of our round glass buttons, and the
+    host carries the glass shadow. The account sheet takes the header scheme's colours, the theme fonts and
+    the theme corners. Shopify can update the component; only these variables and the part are styled.
+  */
   .header__account {
+    --shopify-account-color-background: var(--color-background);
+    --shopify-account-color-text: var(--color-text);
+    --shopify-account-color-accent: var(--color-button, var(--color-accent));
+    --shopify-account-color-accent-text: var(--color-button-text, var(--color-background));
+    --shopify-account-font-body: var(--font-body--family);
+    --shopify-account-font-heading: var(--font-heading--family);
+    --shopify-account-radius-base: var(--radius-md);
+    --shopify-account-dialog-position-top: var(--header-space);
+    --shopify-account-avatar-size: 3.125rem;
+    --shopify-account-signed-in-avatar-size: 3.125rem;
+    --shopify-account-signed-in-avatar-color-background: var(--color-glass-strong);
+    --shopify-account-signed-in-avatar-color-text: var(--color-accent);
+
     display: inline-flex;
+    flex-shrink: 0;
+  }
+
+  .header__account--signed-in {
+    border-radius: var(--radius-pill);
+    box-shadow: var(--shadow-header);
+  }
+
+  /* Shopify gives its button a ~50px minimum size: our pill in the slot sets the size instead */
+  .header__account::part(signed-out-avatar) {
+    display: inline-flex;
+    min-inline-size: 0;
+    min-block-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: none;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .header__account::part(signed-out-avatar):focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
   }
 
   .header__login {
@@ -549,204 +541,6 @@
   .header__login svg {
     inline-size: var(--icon-size);
     block-size: var(--icon-size);
-  }
-
-  /*
-    Signed in: a glass circle with the customer's initial in the accent colour. The body font (the
-    heading serif's tall letter shapes sat the initial off-centre), centred with flexbox; no border, and
-    the focus ring only for the keyboard.
-  */
-  .header .header__avatar {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 0;
-    outline: none;
-    color: var(--color-accent);
-    font-family: var(--font-body--family);
-    font-size: 1.125rem;
-    font-weight: var(--font-weight-medium);
-    line-height: 1;
-    cursor: pointer;
-  }
-
-  .header .header__avatar:focus-visible {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 3px;
-  }
-
-  /*
-    The account panel: a native popover (top layer), placed by the script under the avatar, its right
-    edge lined up with it (--account-top / --account-left). The browser centres a popover by default
-    (inset 0, margin auto) and gives it a black border: both reset. A glass card in the scheme's
-    background colour with a soft shadow, no borders inside: head (initial, name, email, close), a
-    hairline, the link rows, a hairline, Sign out. It inherits the header's colour scheme (inheritance
-    follows the page structure, even in the top layer), so a dark scheme gives a dark card.
-  */
-  .account-menu {
-    position: fixed;
-    inset: auto;
-    inset-block-start: var(--account-top, 6rem);
-    inset-inline-start: var(--account-left, auto);
-    inline-size: min(19rem, calc(100vw - 2rem));
-    margin: 0;
-    padding: var(--space-sm);
-    border: 0;
-    border-radius: 1.25rem;
-    background-color: color-mix(in srgb, var(--color-background) 92%, transparent);
-    box-shadow: 0 12px 40px #0000001f, 0 2px 8px #0000000d;
-    color: var(--color-text);
-    -webkit-backdrop-filter: blur(var(--glass-frost));
-    backdrop-filter: blur(var(--glass-frost));
-  }
-
-  .account-menu:popover-open {
-    display: flex;
-    flex-direction: column;
-  }
-
-  @media (prefers-reduced-motion: no-preference) {
-    .account-menu:popover-open {
-      animation: account-menu-in 0.25s var(--ease-out);
-    }
-  }
-
-  @keyframes account-menu-in {
-    from {
-      opacity: 0;
-      translate: 0 -0.5rem;
-    }
-  }
-
-  /* Head: initial | name + email | close, all vertically centred */
-  .account-menu__head {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    padding: var(--space-sm) var(--space-sm) var(--space-md);
-    border-block-end: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
-  }
-
-  .account-menu__initial {
-    display: inline-flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-    inline-size: 2.75rem;
-    block-size: 2.75rem;
-    border-radius: 50%;
-    background-color: color-mix(in srgb, var(--color-accent) 10%, var(--color-background));
-    color: var(--color-accent);
-    font-size: 1.125rem;
-    font-weight: var(--font-weight-medium);
-    line-height: 1;
-  }
-
-  .account-menu__who {
-    flex: 1;
-    min-inline-size: 0;
-  }
-
-  .account-menu__greeting {
-    margin: 0;
-    font-family: var(--font-heading--family);
-    font-size: 1.25rem;
-    line-height: 1.2;
-  }
-
-  .account-menu__email {
-    margin: 0.125rem 0 0;
-    overflow: hidden;
-    color: color-mix(in srgb, var(--color-text) 62%, var(--color-background));
-    font-size: var(--font-size-small);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .account-menu .account-menu__close {
-    display: inline-flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-    align-self: flex-start;
-    inline-size: 2rem;
-    block-size: 2rem;
-    min-block-size: 0;
-    margin: 0;
-    padding: 0;
-    border: 0;
-    border-radius: 50%;
-    background-color: transparent;
-    box-shadow: none;
-    color: color-mix(in srgb, var(--color-text) 62%, var(--color-background));
-    cursor: pointer;
-    transition:
-      background-color var(--duration-fast) var(--ease-out),
-      color var(--duration-fast) var(--ease-out);
-  }
-
-  .account-menu .account-menu__close:hover {
-    background-color: color-mix(in srgb, var(--color-text) 6%, transparent);
-    color: var(--color-text);
-  }
-
-  .account-menu__close svg {
-    inline-size: 0.75rem;
-    block-size: 0.75rem;
-  }
-
-  /* Link rows: label left, arrow right, a soft tint on hover; no borders */
-  .account-menu__links {
-    margin: 0;
-    padding: var(--space-xs) 0;
-    border-block-end: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
-    list-style: none;
-  }
-
-  .account-menu__link {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-sm);
-    min-block-size: 2.75rem;
-    padding-inline: var(--space-sm);
-    border-radius: 0.75rem;
-    color: var(--color-text);
-    font-size: var(--font-size-body-sm);
-    line-height: 1.2;
-    text-decoration: none;
-    transition:
-      background-color var(--duration-fast) var(--ease-out),
-      color var(--duration-fast) var(--ease-out);
-  }
-
-  .account-menu__link:hover,
-  .account-menu__link:focus-visible {
-    background-color: color-mix(in srgb, var(--color-accent) 7%, transparent);
-    color: var(--color-accent);
-  }
-
-  .account-menu__arrow {
-    display: inline-flex;
-    opacity: 0.5;
-    transition:
-      opacity var(--duration-fast) var(--ease-out),
-      translate var(--duration-fast) var(--ease-out);
-  }
-
-  .account-menu__link:is(:hover, :focus-visible) .account-menu__arrow {
-    opacity: 1;
-    translate: 0.125rem 0;
-  }
-
-  .account-menu__arrow svg {
-    inline-size: 0.75rem;
-    block-size: auto;
-  }
-
-  .account-menu .account-menu__signout {
-    margin-block-start: var(--space-xs);
-    color: var(--color-accent);
   }
 
   /* The menu button stays clickable while a transparent header is "at rest" (like the actions) */
@@ -905,6 +699,12 @@
       block-size: 1rem;
     }
 
+    /* The signed-in initial: the same 40px as the other round buttons */
+    .header__account {
+      --shopify-account-avatar-size: 2.5rem;
+      --shopify-account-signed-in-avatar-size: 2.5rem;
+    }
+
     /* Solid background: the same 12px under the small pill as above it */
     .header--solid {
       padding-block-end: var(--space-sm);
@@ -958,8 +758,9 @@
       gap: var(--space-xs);
     }
 
-    .header__login {
+    .header .header__login {
       gap: var(--space-2xs);
+      block-size: 2.5rem;
       min-block-size: 2.5rem;
       padding-inline: var(--space-md);
       white-space: nowrap;
@@ -1009,11 +810,11 @@
       }
 
       /*
-        Account, search and cart live in the drawer here. Search and cart can stay in the bar (header settings
-        "Small screens" add header--m-search / header--m-cart). Only the search BUTTON is hidden: its popup
-        <dialog> sits in the same element and must still open from the drawer.
+        Search and cart live in the drawer here; they can stay in the bar (header settings "Small screens"
+        add header--m-search / header--m-cart). Only the search BUTTON is hidden: its popup <dialog> sits in
+        the same element and must still open from the drawer. The account button always stays in the bar
+        (Theme Store: <shopify-account> visible in the mobile header), as a round icon (below).
       */
-      .header__actions :is(.header__account, .header__login),
       .header:not(.header--m-search) .header__actions [data-search-open],
       .header:not(.header--m-cart) .header__actions cart-count > a {
         display: none;
@@ -1021,14 +822,12 @@
 
       /*
         Transparent header at rest (top of the homepage, Figma mobile hero): no pill and no logo (the hero has
-        its own), so there is room for search, cart and LOGIN / the account initial in the bar. Once the page
-        scrolls they go back into the drawer. (This selector outweighs the hiding rule above.)
-      */
-      /*
+        its own), so there is room for search and cart in the bar too. Once the page scrolls they go back
+        into the drawer. (This selector outweighs the hiding rule above.)
         At rest the round buttons sit straight on the hero photo, so they are smaller than in the pill
         (36px circles, 16px icons) and cover less of the photo. --rest-button / --icon-size are read by
-        search, cart, LOGIN / the account initial and the menu button below. Once the page scrolls, the
-        pill's sizes (40px, 18px) come back.
+        search, cart, the account button and the menu button below. Once the page scrolls, the pill's sizes
+        (40px, 18px) come back.
       */
       .header--transparent:not(.is-scrolled):not(:has(:focus-visible)):not(:has(.menu__dropdown[open])) {
         --rest-button: 2.25rem;
@@ -1037,35 +836,28 @@
 
       .header--transparent:not(.is-scrolled):not(:has(:focus-visible)):not(:has(.menu__dropdown[open]))
         .header__actions
-        :is([data-search-open], cart-count > a, .header__avatar) {
+        :is([data-search-open], cart-count > a) {
         display: inline-grid; /* the round button's own display: centres the icon (place-items) */
         inline-size: var(--rest-button);
         block-size: var(--rest-button);
       }
 
-      .header--transparent:not(.is-scrolled):not(:has(:focus-visible)):not(:has(.menu__dropdown[open]))
-        .header__actions
-        .header__avatar {
-        display: inline-flex; /* the initial is centred with flexbox (see .header__avatar) */
-        font-size: 1rem;
+      /* The account on phones: a round icon button like search and cart (LOGIN signed out, the initial signed in) */
+      .header__account {
+        --shopify-account-avatar-size: var(--rest-button, 2.5rem);
+        --shopify-account-signed-in-avatar-size: var(--rest-button, 2.5rem);
       }
 
-      .header--transparent:not(.is-scrolled):not(:has(:focus-visible)):not(:has(.menu__dropdown[open]))
-        .header__actions
-        .header__account {
-        display: inline-flex;
-      }
-
-      .header--transparent:not(.is-scrolled):not(:has(:focus-visible)):not(:has(.menu__dropdown[open]))
-        .header__actions
-        .header__login {
-        display: inline-flex;
-        inline-size: var(--rest-button);
-        min-block-size: var(--rest-button);
+      /* Two classes: the global .button rule loads after this file and beats one class */
+      .header .header__login {
+        justify-content: center;
+        inline-size: var(--rest-button, 2.5rem);
+        min-inline-size: 0;
+        min-block-size: var(--rest-button, 2.5rem);
         padding: 0;
       }
 
-      /* LOGIN at rest is a round icon button like search and cart: the word is only for screen readers */
+      /* The word LOGIN is only for screen readers on phones */
       .header__login-text {
         position: absolute;
         inline-size: 1px;
@@ -1194,90 +986,6 @@
   }
 
   if (!customElements.get('cart-count')) customElements.define('cart-count', CartCount);
-
-  /**
-   * <account-menu>: the signed-in customer's panel is a native popover (the browser opens and closes it:
-   * the avatar button, Escape, a click outside). This places it: under the avatar, its right edge lined
-   * up with the avatar's, kept inside the screen.
-   * While it is open, the avatar can move or disappear: the window is resized, or the page scrolls and a
-   * transparent header changes from "at rest" to the full pill (the pill gets narrower on desktop; on
-   * phones the avatar goes back into the drawer). On each of those changes the panel follows the avatar,
-   * or closes when the avatar is no longer shown. The listeners exist only while the panel is open.
-   */
-  class AccountMenu extends HTMLElement {
-    connectedCallback() {
-      this.button = this.querySelector('[popovertarget]');
-      this.panel = this.querySelector('[popover]');
-      if (!this.button || !this.panel) return;
-      this.onBeforeToggle = (event) => {
-        if (event.newState === 'open') this.place();
-      };
-      this.onToggle = (event) => {
-        if (event.newState === 'open') this.watch();
-        else this.unwatch();
-      };
-      this.panel.addEventListener('beforetoggle', this.onBeforeToggle);
-      this.panel.addEventListener('toggle', this.onToggle);
-    }
-
-    disconnectedCallback() {
-      this.panel?.removeEventListener('beforetoggle', this.onBeforeToggle);
-      this.panel?.removeEventListener('toggle', this.onToggle);
-      this.unwatch();
-    }
-
-    /** Follow the avatar while the panel is open (one check per frame at most) */
-    watch() {
-      this.unwatch();
-      this.watcher = new AbortController();
-      const { signal } = this.watcher;
-      const update = () => {
-        if (this.frame) return;
-        this.frame = requestAnimationFrame(() => {
-          this.frame = null;
-          this.follow();
-        });
-      };
-      window.addEventListener('resize', update, { signal });
-      window.addEventListener('scroll', update, { passive: true, signal });
-      // The pill's width animates after "is-scrolled" changes: place the panel again when THAT transition ends
-      // (hover transitions inside the header also bubble a transitionend; they are ignored)
-      const bar = this.closest('.header__bar');
-      bar?.addEventListener(
-        'transitionend',
-        (event) => {
-          if (event.target === bar && event.propertyName === 'max-inline-size') update();
-        },
-        { signal }
-      );
-    }
-
-    unwatch() {
-      this.watcher?.abort();
-      this.watcher = null;
-      if (this.frame) cancelAnimationFrame(this.frame);
-      this.frame = null;
-    }
-
-    /** The avatar is hidden (display: none in the bar): close. Otherwise move the panel under it. */
-    follow() {
-      if (!this.panel.matches(':popover-open')) return;
-      const visible = this.button.checkVisibility ? this.button.checkVisibility() : this.button.offsetParent !== null;
-      if (!visible) this.panel.hidePopover();
-      else this.place();
-    }
-
-    place() {
-      const rect = this.button.getBoundingClientRect();
-      const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-      const width = Math.min(19 * rem, window.innerWidth - 2 * rem); // the panel's CSS width (.account-menu)
-      const left = Math.max(rem, Math.min(rect.right - width, window.innerWidth - width - rem));
-      this.panel.style.setProperty('--account-top', `${rect.bottom + 0.75 * rem}px`);
-      this.panel.style.setProperty('--account-left', `${left}px`);
-    }
-  }
-
-  if (!customElements.get('account-menu')) customElements.define('account-menu', AccountMenu);
 {% endjavascript %}
 
 {% schema %}
