@@ -14,6 +14,12 @@
 [environments.dev]
 store = "oroskin-dev"
 
+# Theme Store demo store (client transfer store, created 2026-11-25). The live theme there is Horizon:
+# never push to it. OroSkin was pushed there as an unpublished theme (#192308478227).
+[environments.demo]
+store = "oroskin-xd0mbaxx"
+theme = "192308478227"
+
 # Performance benchmark store, loaded with Shopify's test product CSV (enable later)
 # [environments.bench]
 # store = "oroskin-bench"
