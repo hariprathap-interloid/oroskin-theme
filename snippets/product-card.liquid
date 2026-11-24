@@ -46,6 +46,7 @@
   @param {string} [image_ratio] - Card style: 'portrait' (4:5, default), 'square', 'landscape' (4:3) or 'original'
   @param {string} [sizes] - The image's sizes attribute. Default: 4 per row on desktop, 2 on phones
   @param {string} [loading] - 'eager' or 'lazy' to override the image snippet's automatic choice
+  @param {boolean} [priority] - true for the page's largest image (LCP): eager + fetchpriority high
   @param {boolean} [show_secondary_image] - Show the second product image on hover (default false)
   @param {string} [heading_tag] - Tag for the title, default 'h3'
   @param {boolean} [show_details] - Tile style: reveal the details panel on hover / keyboard focus
@@ -154,7 +155,7 @@
       {%- liquid
         # The image is decorative here (alt=""): the title link right below names the product, so a
         # screen reader would otherwise hear the name twice.
-        render 'image', image: product.featured_media.preview_image, class: image_class, sizes: image_sizes, alt: '', loading: loading
+        render 'image', image: product.featured_media.preview_image, class: image_class, sizes: image_sizes, alt: '', loading: loading, priority: priority
         if secondary_image
           render 'image', image: secondary_image, class: 'image--cover product-card__secondary', sizes: image_sizes, alt: '', loading: 'lazy'
         endif
@@ -1110,8 +1111,9 @@
     outline-offset: 2px;
   }
 
+  /* 65%: grey text needs at least a 62% mix for 4.5:1 (55% gave 3.74:1); the value can still be picked (Notify me) */
   .product-card__option--sold-out {
-    color: color-mix(in srgb, var(--color-text) 55%, transparent);
+    color: color-mix(in srgb, var(--color-text) 65%, transparent);
     text-decoration: line-through;
   }
 

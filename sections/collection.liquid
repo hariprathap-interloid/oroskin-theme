@@ -393,11 +393,27 @@
                 if forloop.index <= 4
                   assign loading = 'eager'
                 endif
-                # With the column switch the photos stay lazy: an eager photo starts while the browser reads
-                # the HTML, before any script, so a saved "fewer" view (bigger photos) would download each
-                # first-row photo twice. Lazy photos load after the switch has set their sizes.
+                # The first card is the page's largest image on phones and laptops (Lighthouse LCP):
+                # high priority on the first page of results
+                assign card_priority = false
+                if forloop.first
+                  if paginate.current_page == 1
+                    assign card_priority = true
+                  endif
+                endif
+
+                # With the column switch: an eager photo starts while the browser reads the HTML, before
+                # the switch script sets the visitor's view. So only the first 2 cards (the first row on
+                # phones, the LCP) load straight away, with the sizes of the bigger "fewer" view: one
+                # download is big enough for both views (a smaller view never needs a second, bigger file).
+                # The others stay lazy and load after the switch has set their sizes.
+                assign card_sizes_override = ''
                 if show_switch
                   assign loading = 'lazy'
+                  if forloop.index <= 2
+                    assign loading = 'eager'
+                    assign card_sizes_override = sizes_fewer
+                  endif
                 endif
 
                 # Bento: this tile's place.
@@ -432,6 +448,9 @@
                     assign sizes = '(min-width: 1200px) 100vw, (min-width: 990px) 33vw, (min-width: 750px) 50vw, 100vw'
                   endif
                 endif
+                if card_sizes_override != blank
+                  assign sizes = card_sizes_override
+                endif
               -%}
               <li class="collection-grid__item" {% if tile_style != blank %}style="{{ tile_style }}"{% endif %}>
                 {%- render 'product-card',
@@ -440,6 +459,7 @@
                   image_ratio: section.settings.image_ratio,
                   sizes: sizes,
                   loading: loading,
+                  priority: card_priority,
                   heading_tag: 'h2',
                   show_details: section.settings.show_details,
                   show_rating: section.settings.show_rating,
