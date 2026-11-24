@@ -71,8 +71,8 @@
     box-shadow: var(--shadow-header);
     color: var(--color-accent);
     transition: color var(--duration-normal) var(--ease-out);
-    -webkit-backdrop-filter: blur(var(--glass-frost));
-    backdrop-filter: blur(var(--glass-frost));
+    /* No backdrop-filter: the icons sit on the footer's flat panel (nothing to blur), and on phones a
+       blur under the floating header showed dark while the icons scrolled under it */
   }
 
   /*

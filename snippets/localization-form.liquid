@@ -148,8 +148,7 @@
     transition:
       color var(--duration-fast) var(--ease-out),
       background-color var(--duration-fast) var(--ease-out);
-    -webkit-backdrop-filter: blur(var(--glass-frost));
-    backdrop-filter: blur(var(--glass-frost));
+    /* No backdrop-filter: flat footer panel behind (nothing to blur); a blur showed dark under the header on phones */
   }
 
   /*

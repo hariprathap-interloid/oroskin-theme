@@ -132,8 +132,7 @@
     background-color: var(--color-glass-strong);
     box-shadow: var(--shadow-card);
     font-size: var(--font-size-caption);
-    -webkit-backdrop-filter: blur(var(--glass-frost));
-    backdrop-filter: blur(var(--glass-frost));
+    /* No backdrop-filter: flat footer panel behind (nothing to blur); a blur showed dark under the header on phones */
   }
 
   .newsletter-form .newsletter-form__input:hover {
