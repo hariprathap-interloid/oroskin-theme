@@ -583,6 +583,14 @@
     white-space: nowrap;
   }
 
+  /*
+    Solid fill: the global .button fill is 85% (Figma), and here the photo shows through the glass card
+    behind it, so white text fell under 4.5:1 (3.8:1 with #8a6a1f). Two classes: .button loads later.
+  */
+  .button.product-deck__buy {
+    background-color: var(--color-button);
+  }
+
   .product-deck__buy-icon svg {
     display: block;
     inline-size: 1.5em;

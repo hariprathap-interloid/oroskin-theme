@@ -21,8 +21,8 @@ store = "oroskin-xd0mbaxx"
 theme = "192308478227"
 
 # Performance benchmark store, loaded with Shopify's test product CSV (enable later)
-# [environments.bench]
-# store = "oroskin-bench"
+[environments.bench]
+store = "test-data-pzlfkfsm"
 
 # Phase 1 public showcase store (client transfer store or paid store, never a dev store)
 # [environments.showcase]
