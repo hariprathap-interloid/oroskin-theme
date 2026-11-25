@@ -42,6 +42,49 @@
     <span class="visually-hidden">{{ 'header.open_menu' | t }}</span>
   </button>
 
+  {%- comment -%}
+    Without JavaScript the button above can't open the <dialog> (showModal), so on phones there was no way
+    to the menu (Theme Store: navigation must work without JavaScript). This native <details> takes its
+    place: all menu levels as plain links in a panel under the bar. Inside <noscript>, so with JavaScript
+    it is never built.
+  {%- endcomment -%}
+  <noscript>
+    <details class="header-drawer__fallback">
+      <summary class="header__icon-button header-drawer__toggle">
+        {{ 'icon-menu.svg' | inline_asset_content }}
+        <span class="visually-hidden">{{ 'header.open_menu' | t }}</span>
+      </summary>
+      <nav
+        class="header-drawer__fallback-panel{% if scheme %} color-{{ scheme.id }}{% endif %}"
+        aria-label="{{ 'accessibility.main_menu' | t }}"
+      >
+        <ul role="list">
+          {%- for link in links -%}
+            <li>
+              <a href="{{ link.url }}">{{ link.title | escape }}</a>
+              {%- if link.links != blank -%}
+                <ul role="list">
+                  {%- for child in link.links -%}
+                    <li>
+                      <a href="{{ child.url }}">{{ child.title | escape }}</a>
+                      {%- if child.links != blank -%}
+                        <ul role="list">
+                          {%- for grandchild in child.links -%}
+                            <li><a href="{{ grandchild.url }}">{{ grandchild.title | escape }}</a></li>
+                          {%- endfor -%}
+                        </ul>
+                      {%- endif -%}
+                    </li>
+                  {%- endfor -%}
+                </ul>
+              {%- endif -%}
+            </li>
+          {%- endfor -%}
+        </ul>
+      </nav>
+    </details>
+  </noscript>
+
   <dialog
     id="HeaderDrawer"
     class="header-drawer__dialog{% if scheme %} color-{{ scheme.id }}{% endif %}"
@@ -162,6 +205,65 @@
   */
   .header-drawer {
     display: var(--drawer-display, none);
+  }
+
+  /*
+    No JavaScript: the <noscript> menu (see the markup) takes the button's place in the bar's grid
+    (column 3) and opens a panel under the pill, with every level as plain, indented links
+  */
+  @media (scripting: none) {
+    .header-drawer > .header-drawer__toggle {
+      display: none;
+    }
+
+    .header-drawer noscript {
+      display: contents;
+    }
+
+    .header-drawer__fallback {
+      grid-column: 3;
+      grid-row: 1;
+    }
+
+    .header-drawer__fallback > summary {
+      list-style: none;
+      cursor: pointer;
+    }
+
+    .header-drawer__fallback > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .header-drawer__fallback-panel {
+      position: absolute;
+      inset-block-start: calc(100% + var(--space-sm));
+      inset-inline: 0;
+      z-index: 2;
+      max-block-size: 70svh;
+      overflow-y: auto;
+      padding: var(--space-md) var(--space-lg);
+      border-radius: var(--radius-lg);
+      background-color: var(--color-background);
+      box-shadow: var(--shadow-header);
+      color: var(--color-text);
+    }
+
+    .header-drawer__fallback-panel ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .header-drawer__fallback-panel ul ul {
+      padding-inline-start: var(--space-md);
+    }
+
+    .header-drawer__fallback-panel a {
+      display: block;
+      padding-block: var(--space-xs);
+      color: inherit;
+      text-decoration: none;
+    }
   }
 
   /*

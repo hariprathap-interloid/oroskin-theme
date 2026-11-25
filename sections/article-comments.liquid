@@ -37,9 +37,9 @@
       data-loaded-text="{{ 'blog.comments.loaded' | t | escape }}"
       data-form-id="{{ form_id }}"
       {% if blog.moderated? %}
-        data-sent-text="{{ 'blog.comments.success_moderated' | t | escape }}"
+        data-sent-text="{{ 'blog.comments.success_moderated' | t | escape_once }}"
       {% else %}
-        data-sent-text="{{ 'blog.comments.success' | t | escape }}"
+        data-sent-text="{{ 'blog.comments.success' | t | escape_once }}"
       {% endif %}
     >
       <div class="article-comments__content">

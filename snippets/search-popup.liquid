@@ -68,7 +68,7 @@
   data-section-id="predictive-search"
   data-types="{{ search_types }}"
   data-limit="{{ settings.search_results_limit | default: 6 }}"
-  data-label-error="{{ 'search.popup.error' | t | escape }}"
+  data-label-error="{{ 'search.popup.error' | t | escape_once }}"
 >
   <a
     class="header__icon-button"
