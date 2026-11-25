@@ -60,6 +60,17 @@
       aria-describedby="{{ success_id }}"
     {% endif %}
   >
+  {%- comment -%}
+    The theme's own line for an empty or wrong email (in place of the browser's bubble, as the contact
+    form): the script fills it from data-missing / data-format. Without JavaScript the browser checks.
+  {%- endcomment -%}
+  <p
+    class="newsletter-form__error"
+    id="{{ form_id }}-check"
+    data-missing="{{ 'contact.form.error_email' | t | escape_once }}"
+    data-format="{{ 'contact.form.error_email_format' | t | escape_once }}"
+    hidden
+  ></p>
 
   <button type="submit" class="button newsletter-form__button">
     {%- if button_label != blank -%}
@@ -159,6 +170,37 @@
     margin-block-start: 1.875rem; /* 30px under the field, Figma */
   }
 
+  /* Empty or wrong email: a round "!" and the text under the field (the contact form's look) */
+  .newsletter-form__error {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2xs);
+    margin: var(--space-xs) 0 0;
+    color: var(--color-error);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.4;
+  }
+
+  .newsletter-form__error[hidden] {
+    display: none;
+  }
+
+  .newsletter-form__error::before {
+    content: "!" / "";
+    display: grid;
+    flex: none;
+    place-items: center;
+    inline-size: 1.1em;
+    block-size: 1.1em;
+    margin-block-start: 0.15em;
+    border-radius: 50%;
+    background-color: var(--color-error);
+    color: #ffffff;
+    font-size: 0.85em;
+    line-height: 1;
+  }
+
   /* Error text, or the success message's <auto-dismiss> wrapper, under the button */
   .newsletter-form__message {
     margin: 0;
@@ -250,5 +292,49 @@
     document.addEventListener('DOMContentLoaded', focusNewsletterResult);
   } else {
     focusNewsletterResult();
+  }
+
+  /**
+   * Empty or wrong email: the browser fires "invalid" before it would show its own bubble. Stopping it
+   * (preventDefault) hides the bubble; the form still isn't sent and the browser still focuses the field.
+   * Our line under the field says what is wrong (aria-invalid + aria-describedby for screen readers). It
+   * goes away as soon as the address is correct. Listening on the document (capture: "invalid" doesn't
+   * bubble) also covers forms added later, e.g. a Newsletter section added in the theme editor. One
+   * listener per page.
+   */
+  if (!window.newsletterCheck) {
+    window.newsletterCheck = true;
+    const describe = (field, id, on) => {
+      const ids = (field.getAttribute('aria-describedby') || '').split(' ').filter((item) => item && item !== id);
+      if (on) ids.unshift(id);
+      if (ids.length) field.setAttribute('aria-describedby', ids.join(' '));
+      else field.removeAttribute('aria-describedby');
+    };
+
+    document.addEventListener(
+      'invalid',
+      (event) => {
+        const field = event.target;
+        const line = field.closest?.('.newsletter-form')?.querySelector('.newsletter-form__error');
+        if (!line) return;
+        event.preventDefault();
+        line.textContent = field.validity.valueMissing ? line.dataset.missing : line.dataset.format;
+        line.hidden = false;
+        field.setAttribute('aria-invalid', 'true');
+        describe(field, line.id, true);
+        field.focus();
+      },
+      true
+    );
+
+    document.addEventListener('input', (event) => {
+      const field = event.target;
+      const line = field.closest?.('.newsletter-form')?.querySelector('.newsletter-form__error');
+      // validity.valid only reads the state (checkValidity() would fire "invalid" again on every key)
+      if (!line || line.hidden || !field.validity?.valid) return;
+      line.hidden = true;
+      field.removeAttribute('aria-invalid');
+      describe(field, line.id, false);
+    });
   }
 {% endjavascript %}
