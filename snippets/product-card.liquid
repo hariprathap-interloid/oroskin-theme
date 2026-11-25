@@ -150,48 +150,30 @@
       </p>
     {%- endif -%}
   {%- endcapture -%}
-  <div class="product-card product-card--{{ card_style }}{% if secondary_image %} product-card--has-secondary{% endif %}">
-    <div class="product-card__media {{ media_class }}">
-      {%- liquid
-        # The image is decorative here (alt=""): the title link right below names the product, so a
-        # screen reader would otherwise hear the name twice.
-        render 'image', image: product.featured_media.preview_image, class: image_class, sizes: image_sizes, alt: '', loading: loading, priority: priority
-        if secondary_image
-          render 'image', image: secondary_image, class: 'image--cover product-card__secondary', sizes: image_sizes, alt: '', loading: 'lazy'
-        endif
-      -%}
-
-      <div class="product-card__badges">
-        {%- if product.available == false -%}
-          <span class="product-card__badge color-{{ settings.sold_out_badge_color_scheme.id }}">{{ 'products.sold_out' | t }}</span>
-        {%- elsif on_sale -%}
-          <span class="product-card__badge color-{{ settings.sale_badge_color_scheme.id }}">{{ 'products.badge.sale' | t }}</span>
-        {%- endif -%}
-        {%- comment -%}
-          The product's "Badges" field (custom.badges): snippets/product-badges reads it (list or single
-          value) and draws each badge (own colours for a Badge metaobject entry, else the default badge
-          colour scheme).
-        {%- endcomment -%}
-        {% render 'product-badges', field: product.metafields.custom.badges %}
-      </div>
-    </div>
-
-    {%- if card_style == 'full' -%}
-      {%- liquid
-        assign variant = product.selected_or_first_available_variant
-        assign first_option = product.options_with_values.first
+  {%- if card_style == 'full' -%}
+    {%- liquid
+      assign variant = product.selected_or_first_available_variant
+        # The option the card shows: the FIRST option (user, 2026-11-25: preferring the color option made
+        # every test product show "red / blue" and hid sizes). Its values are choices on every product
+        # with options: a value = the first in-stock variant with that value (else the first one with
+        # it); the other options are chosen on the product page
+        assign card_option = product.options_with_values.first
+        assign option_key = 'option' | append: card_option.position
         assign options_interactive = false
-        if product.options.size == 1 and product.has_only_default_variant == false
+        unless product.has_only_default_variant
           assign options_interactive = true
-        endif
+        endunless
 
-        # Only 6 values show: the card's variant must be one of them (the first available one, else the
+        # Only 6 values show: the card's variant must be one of them (the first in stock, else the
         # first), so the price and BUY never belong to a value the shopper can't see
         if options_interactive
-          assign variant = first_option.values.first.variant
-          for value in first_option.values limit: 6
-            if value.available
-              assign variant = value.variant
+          assign value_variants = product.variants | where: option_key, card_option.values.first.name
+          assign variant = value_variants.first
+          for value in card_option.values limit: 6
+            assign value_variants = product.variants | where: option_key, value.name
+            assign in_stock = value_variants | where: 'available' | first
+            if in_stock
+              assign variant = in_stock
               break
             endif
           endfor
@@ -211,7 +193,134 @@
 
         assign buy_url = routes.cart_url | append: '/' | append: variant.id | append: ':1'
         assign card_id = 'Card-' | append: product.id | append: '-' | append: section.id
-      -%}
+    -%}
+  {%- endif -%}
+
+  {%- liquid
+    # Full card with 2+ media: the photo slider (swipe, dots, arrows on hover; at most 5 images). The
+    # second-image hover swap is off then. Every slide uses the media's preview image, so a video or a
+    # 3D model shows its poster (Theme Store: rich media must not break the card)
+    assign has_slider = false
+    if card_style == 'full' and product.media.size > 1
+      assign has_slider = true
+      assign secondary_image = nil
+      assign slide_count = product.media.size | at_most: 5
+    endif
+
+    # The photo box's height as a share of the card width: the "Add to cart" pill sits on its bottom
+    # edge (desktop hover layout). 'original' = the first image's own shape
+    assign card_style_attr = ''
+    if card_style == 'full'
+      case ratio
+        when 'square'
+          assign media_h = 1
+        when 'landscape'
+          assign media_h = 0.75
+        when 'original'
+          # No image (aspect_ratio empty): the portrait shape, never a division by nothing
+          assign media_h = 1.25
+          assign first_ratio = product.featured_media.preview_image.aspect_ratio | default: 0
+          if first_ratio > 0
+            assign media_h = 1.0 | divided_by: first_ratio
+          endif
+        else
+          assign media_h = 1.25
+      endcase
+      assign card_style_attr = '--card-media-h: ' | append: media_h | append: ';'
+      # A slider needs one shape for every slide: 'original' = the first image's shape, cropped
+      if has_slider and ratio == 'original'
+        assign media_aspect = product.featured_media.preview_image.aspect_ratio | default: 0.8
+        assign card_style_attr = card_style_attr | append: ' --card-media-ratio: ' | append: media_aspect | append: ';'
+        assign image_class = 'image--cover'
+      endif
+    endif
+  -%}
+
+  <div
+    class="product-card product-card--{{ card_style }}{% if secondary_image %} product-card--has-secondary{% endif %}{% unless product.available %} product-card--sold-out{% endunless %}"
+    {% if card_style_attr != blank %}
+      style="{{ card_style_attr }}"
+    {% endif %}
+  >
+    <div class="product-card__media {{ media_class }}{% if has_slider %} product-card__media--slider{% endif %}">
+      {%- if has_slider -%}
+        {%- comment -%}
+          Each slide is a link to the product (tabindex -1, hidden from screen readers: the title link
+          names the product once). The track sits above the title link's stretched box, so a swipe moves
+          the photos. Arrows and dots are mouse / touch helpers (no tab stops: 24 cards would add 48)
+        {%- endcomment -%}
+        <card-gallery class="product-card__gallery">
+          <div class="product-card__slides" data-card-slides>
+            {%- for media in product.media limit: 5 -%}
+              <a class="product-card__slide" href="{{ product.url }}" tabindex="-1" aria-hidden="true" data-media-id="{{ media.id }}">
+                {%- if forloop.first -%}
+                  {% render 'image', image: media.preview_image, class: image_class, sizes: image_sizes, alt: '', loading: loading, priority: priority %}
+                {%- else -%}
+                  {% render 'image', image: media.preview_image, class: image_class, sizes: image_sizes, alt: '', loading: 'lazy' %}
+                {%- endif -%}
+              </a>
+            {%- endfor -%}
+          </div>
+          <span class="product-card__arrow product-card__arrow--prev" data-card-prev aria-hidden="true">
+            {{- 'icon-chevron.svg' | inline_asset_content -}}
+          </span>
+          <span class="product-card__arrow product-card__arrow--next" data-card-next aria-hidden="true">
+            {{- 'icon-chevron.svg' | inline_asset_content -}}
+          </span>
+          <span class="product-card__dots" aria-hidden="true">
+            {%- for i in (1..slide_count) -%}
+              <span class="product-card__dot{% if forloop.first %} is-active{% endif %}" data-card-dot="{{ forloop.index0 }}"></span>
+            {%- endfor -%}
+          </span>
+        </card-gallery>
+      {%- else -%}
+        {%- liquid
+          # The image is decorative here (alt=""): the title link right below names the product, so a
+          # screen reader would otherwise hear the name twice.
+          render 'image', image: product.featured_media.preview_image, class: image_class, sizes: image_sizes, alt: '', loading: loading, priority: priority
+          if secondary_image
+            render 'image', image: secondary_image, class: 'image--cover product-card__secondary', sizes: image_sizes, alt: '', loading: 'lazy'
+          endif
+        -%}
+      {%- endif -%}
+
+      <div class="product-card__badges">
+        {%- if card_style == 'full' -%}
+          {%- comment -%}
+            Full card (design): the product's own badges first (Trending, New), then the discount ("-30%",
+            the same number as the "Save" pill; the script follows the chosen value). Sold out: its badge
+          {%- endcomment -%}
+          {% render 'product-badges', field: product.metafields.custom.badges %}
+          {%- if product.available == false -%}
+            <span class="product-card__badge color-{{ settings.sold_out_badge_color_scheme.id }}">{{ 'products.sold_out' | t }}</span>
+          {%- endif -%}
+          <span
+            class="product-card__badge product-card__badge--discount color-{{ settings.sale_badge_color_scheme.id }}"
+            data-card-discount
+            data-template="{{ 'products.card.discount' | t: percent: '[percent]' | escape }}"
+            {% if save_percent == 0 %}
+              hidden
+            {% endif %}
+          >
+            {{- 'products.card.discount' | t: percent: save_percent -}}
+          </span>
+        {%- else -%}
+          {%- if product.available == false -%}
+            <span class="product-card__badge color-{{ settings.sold_out_badge_color_scheme.id }}">{{ 'products.sold_out' | t }}</span>
+          {%- elsif on_sale -%}
+            <span class="product-card__badge color-{{ settings.sale_badge_color_scheme.id }}">{{ 'products.badge.sale' | t }}</span>
+          {%- endif -%}
+          {%- comment -%}
+            The product's "Badges" field (custom.badges): snippets/product-badges reads it (list or single
+            value) and draws each badge (own colours for a Badge metaobject entry, else the default badge
+            colour scheme).
+          {%- endcomment -%}
+          {% render 'product-badges', field: product.metafields.custom.badges %}
+        {%- endif -%}
+      </div>
+    </div>
+
+    {%- if card_style == 'full' -%}
       <card-options class="product-card__body" data-cart-url="{{ routes.cart_url }}">
         <div class="product-card__meta">
           {%- comment -%} The product type only (the design's short "SKINCARE" line); the subtitle can be a whole sentence {%- endcomment -%}
@@ -262,112 +371,119 @@
           </span>
         </div>
 
-        {%- unless product.has_only_default_variant -%}
-          {%- liquid
-            assign is_swatch = false
-            if first_option.values.first.swatch != blank
-              assign is_swatch = true
-            endif
-          -%}
-          {%- if options_interactive -%}
-            <fieldset class="product-card__options{% if is_swatch %} product-card__options--swatches{% endif %}">
-              <legend class="visually-hidden">{{ first_option.name | escape }}</legend>
-              {%- for value in first_option.values limit: 6 -%}
-                {%- liquid
-                  assign value_variant = value.variant
-                  assign input_id = card_id | append: '-' | append: forloop.index
-                  assign value_save = 0
-                  if value_variant.compare_at_price > value_variant.price
-                    assign value_save = value_variant.compare_at_price | minus: value_variant.price | times: 100.0 | divided_by: value_variant.compare_at_price | round
+        {%- if options_interactive -%}
+          <fieldset class="product-card__options">
+            <legend class="visually-hidden">{{ card_option.name | escape }}</legend>
+            {%- for value in card_option.values limit: 6 -%}
+              {%- liquid
+                assign value_variants = product.variants | where: option_key, value.name
+                assign value_variant = value_variants | where: 'available' | first
+                unless value_variant
+                  assign value_variant = value_variants.first
+                endunless
+                assign input_id = card_id | append: '-' | append: forloop.index
+                assign value_save = 0
+                if value_variant.compare_at_price > value_variant.price
+                  assign value_save = value_variant.compare_at_price | minus: value_variant.price | times: 100.0 | divided_by: value_variant.compare_at_price | round
+                endif
+                assign value_add_name = product.title | append: ' - ' | append: value_variant.title
+
+                # A text pill; a colour dot only when the value has a Shopify swatch (Products > the
+                # product > the option's values: a colour or an image, e.g. lipstick shades)
+                assign value_look = 'text'
+                if value.swatch.color or value.swatch.image
+                  assign value_look = 'swatch'
+                endif
+
+                # The photo to show: its slide (first 5 media), else a <template> the script swaps in
+                assign value_media = value_variant.featured_media
+                assign value_media_template = false
+                if value_media
+                  if has_slider == false
+                    assign value_media_template = true
+                  elsif value_media.position > 5
+                    assign value_media_template = true
                   endif
-                  assign value_add_name = product.title | append: ' - ' | append: value.name
-                -%}
-                <input
-                  class="visually-hidden"
-                  type="radio"
-                  id="{{ input_id }}"
-                  name="{{ card_id }}"
-                  value="{{ value_variant.id }}"
-                  data-available="{{ value.available }}"
-                  data-save="{{ value_save }}"
-                  data-add-name="{{ value_add_name | escape }}"
-                  data-add-label="{{ 'products.quick_add.add' | t: title: value_add_name | escape }}"
-                  data-added-label="{{ 'products.quick_add.added' | t: title: value_add_name | escape }}"
-                  {% if value_variant.id == variant.id %}
-                    checked
-                  {% endif %}
-                >
-                <label
-                  class="product-card__option{% if is_swatch %} product-card__option--swatch{% endif %}{% unless value.available %} product-card__option--sold-out{% endunless %}"
-                  for="{{ input_id }}"
-                  {% if is_swatch %}
-                    title="{{ value.name | escape }}"
-                    {% if value.swatch.color %}
-                      style="--swatch-color: {{ value.swatch.color }};"
-                    {% endif %}
-                  {% endif %}
-                >
-                  {%- if is_swatch -%}
+                endif
+              -%}
+              <input
+                class="visually-hidden"
+                type="radio"
+                id="{{ input_id }}"
+                name="{{ card_id }}"
+                value="{{ value_variant.id }}"
+                data-available="{{ value_variant.available }}"
+                data-save="{{ value_save }}"
+                data-add-name="{{ value_add_name | escape }}"
+                data-add-label="{{ 'products.quick_add.add' | t: title: value_add_name | escape }}"
+                data-added-label="{{ 'products.quick_add.added' | t: title: value_add_name | escape }}"
+                {% if value_media %}
+                  data-media-id="{{ value_media.id }}"
+                {% endif %}
+                {% if value_variant.id == variant.id %}
+                  checked
+                {% endif %}
+              >
+              <label
+                class="product-card__option product-card__option--{{ value_look }}{% unless value_variant.available %} product-card__option--sold-out{% endunless %}"
+                for="{{ input_id }}"
+                {% if value_look != 'text' %}
+                  title="{{ value.name | escape }}"
+                {% endif %}
+                {% if value_look == 'swatch' and value.swatch.color %}
+                  style="--swatch-color: {{ value.swatch.color }};"
+                {% endif %}
+              >
+                {%- case value_look -%}
+                  {%- when 'swatch' -%}
                     {%- if value.swatch.image -%}
                       {{ value.swatch.image | image_url: width: 48 | image_tag: alt: '', loading: 'lazy' }}
                     {%- endif -%}
                     <span class="visually-hidden">{{ value.name | escape }}</span>
                   {%- else -%}
                     {{- value.name | escape -}}
-                  {%- endif -%}
-                </label>
-                {%- if price_templates -%}
-                  <template data-price-for="{{ value_variant.id }}">{% render 'price', product: product, variant: value_variant %}</template>
-                {%- endif -%}
-              {%- endfor -%}
-            </fieldset>
-          {%- else -%}
-            {%- comment -%} Several options: the first option's values, for information (the product page chooses) {%- endcomment -%}
-            <ul class="product-card__options product-card__options--static{% if is_swatch %} product-card__options--swatches{% endif %}" role="list">
-              {%- for value in first_option.values limit: 6 -%}
-                <li
-                  class="product-card__option{% if is_swatch %} product-card__option--swatch{% endif %}"
-                  {% if is_swatch and value.swatch.color %}
-                    style="--swatch-color: {{ value.swatch.color }};"
-                  {% endif %}
-                >
-                  {%- if is_swatch -%}
-                    <span class="visually-hidden">{{ value.name | escape }}</span>
-                  {%- else -%}
-                    {{- value.name | escape -}}
-                  {%- endif -%}
-                </li>
-              {%- endfor -%}
-            </ul>
-          {%- endif -%}
-        {%- endunless -%}
+                {%- endcase -%}
+              </label>
+              {%- if price_templates -%}
+                <template data-price-for="{{ value_variant.id }}">{% render 'price', product: product, variant: value_variant %}</template>
+              {%- endif -%}
+              {%- if value_media_template -%}
+                <template data-media-for="{{ value_media.id }}">
+                  {%- render 'image', image: value_media.preview_image, class: image_class, sizes: image_sizes, alt: '', loading: 'lazy' -%}
+                </template>
+              {%- endif -%}
+            {%- endfor -%}
+          </fieldset>
+        {%- endif -%}
 
         <div class="product-card__buy">
           {%- if product.available -%}
             <div class="product-card__buy-now{% if cart_text %} product-card__buy-now--text{% endif %}" data-card-buy>
-              {%- if cart_text -%}
-                {% render 'quick-add',
-                  product: product,
-                  style: 'pill',
-                  size: 44,
-                  label: cart_label,
-                  icon_image: cart_icon_image,
-                  show_icon: cart_show_icon,
-                  options: 'add_first',
-                  class: 'product-card__quick-add product-card__cart-text',
-                  id_suffix: quick_add_suffix
-                %}
-              {%- else -%}
-                {% render 'quick-add',
-                  product: product,
-                  size: 40,
-                  icon_color: 'var(--color-accent)',
-                  icon_image: cart_icon_image,
-                  options: 'add_first',
-                  class: 'product-card__quick-add',
-                  id_suffix: quick_add_suffix
-                %}
-              {%- endif -%}
+              {%- comment -%}
+                One cart button, always the text pill ("Add to cart" + the product name for screen readers).
+                Cart button style "round" (default): on phones / tablets the CSS shows it as a round icon
+                (the text visually hidden), on a desktop card with a mouse it is the "ADD TO CART" pill that
+                appears over the photo on hover (design). "With text": the text pill everywhere.
+              {%- endcomment -%}
+              {%- liquid
+                assign quick_add_class = 'product-card__quick-add'
+                if cart_text
+                  assign quick_add_class = quick_add_class | append: ' product-card__cart-text'
+                else
+                  assign quick_add_class = quick_add_class | append: ' product-card__quick-add--icon'
+                endif
+              -%}
+              {% render 'quick-add',
+                product: product,
+                style: 'pill',
+                size: 44,
+                label: cart_label,
+                icon_image: cart_icon_image,
+                show_icon: cart_show_icon,
+                options: 'add_first',
+                class: quick_add_class,
+                id_suffix: quick_add_suffix
+              %}
               <a class="button product-card__buy-link" href="{{ buy_url }}" data-card-buy-link>
                 {%- case settings.card_buy_icon -%}
                   {%- when 'none' -%}
@@ -1096,10 +1212,6 @@
     cursor: pointer;
   }
 
-  .product-card__options--static .product-card__option {
-    cursor: default;
-  }
-
   :checked + .product-card__option {
     border-color: var(--color-text);
     background-color: var(--color-text);
@@ -1136,12 +1248,176 @@
   }
 
   .product-card__option--swatch img {
+    display: block;
     inline-size: 100%;
     block-size: 100%;
     object-fit: cover;
   }
 
-  /* Cart + BUY at the bottom, BUY on the right (design) */
+  /* A sold-out dot: faded (a line can't cross a dot) */
+  .product-card__option--sold-out.product-card__option--swatch {
+    opacity: 0.45;
+  }
+
+  /*
+    ---------- Full card: photo slider (design 2026-11-25) ----------
+    The track scrolls sideways with snap points (swipe on touch). It sits above the title link's
+    stretched box (z-index 2), so a swipe moves the photos; each slide is itself a link to the product.
+    Arrows (hover) and dots are mouse / touch helpers; badges and the cart pill sit above the track.
+  */
+  /* "Original" shape with a slider: every slide takes the first photo's shape (the others: their ratio class) */
+  .product-card__media--original.product-card__media--slider {
+    aspect-ratio: var(--card-media-ratio, 0.8);
+  }
+
+  .product-card__gallery {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: block;
+  }
+
+  .product-card__slides {
+    display: flex;
+    block-size: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .product-card__slides::-webkit-scrollbar {
+    display: none;
+  }
+
+  .product-card__slide {
+    display: block;
+    flex: 0 0 100%;
+    scroll-snap-align: start;
+  }
+
+  .product-card__slide .image {
+    block-size: 100%;
+  }
+
+  .product-card--full .product-card__badges {
+    z-index: 3;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .product-card__badge[hidden] {
+    display: none;
+  }
+
+  /* Dots (design): white, the shown photo a longer pill */
+  .product-card__dots {
+    position: absolute;
+    inset-block-end: var(--space-sm);
+    inset-inline: 0;
+    z-index: 1;
+    display: flex;
+    justify-content: center;
+    gap: 0.3rem;
+    pointer-events: none;
+  }
+
+  .product-card__dot {
+    inline-size: 0.375rem;
+    block-size: 0.375rem;
+    border-radius: var(--radius-pill);
+    background-color: #ffffffa6;
+    box-shadow: 0 0 2px #00000040;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: inline-size var(--duration-fast) var(--ease-out);
+  }
+
+  .product-card__dot.is-active {
+    inline-size: 1.25rem;
+    background-color: #ffffff;
+  }
+
+  /* Arrows: only with a mouse, shown while the card is hovered */
+  .product-card__arrow {
+    position: absolute;
+    inset-block-start: 50%;
+    z-index: 1;
+    display: none;
+    place-items: center;
+    inline-size: 2rem;
+    block-size: 2rem;
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--color-background) 88%, transparent);
+    box-shadow: var(--shadow-button);
+    color: var(--color-text);
+    cursor: pointer;
+    opacity: 0;
+    translate: 0 -50%;
+    transition: opacity var(--duration-fast) var(--ease-out);
+  }
+
+  .product-card__arrow svg {
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
+  }
+
+  .product-card__arrow--prev {
+    inset-inline-start: var(--space-xs);
+  }
+
+  .product-card__arrow--next {
+    inset-inline-end: var(--space-xs);
+  }
+
+  /* The theme's chevron points down: next turns to point to the end side, prev to the start side */
+  .product-card__arrow--next svg {
+    rotate: -90deg;
+  }
+
+  .product-card__arrow--prev svg {
+    rotate: 90deg;
+  }
+
+  .product-card__arrow--next:dir(rtl) svg {
+    rotate: 90deg;
+  }
+
+  .product-card__arrow--prev:dir(rtl) svg {
+    rotate: -90deg;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .product-card__arrow {
+      display: grid;
+    }
+
+    .product-card:hover .product-card__arrow {
+      opacity: 1;
+    }
+  }
+
+  .product-card__arrow:hover {
+    color: var(--color-accent);
+  }
+
+  /* Sold out (design): the photo fades */
+  .product-card--sold-out .product-card__media :is(.image, .product-card__slides) {
+    opacity: 0.6;
+  }
+
+  /*
+    ---------- Full card: buy row ----------
+    The card is a size container, so the layout follows the card's own width (any column count):
+    - small (under 15rem, 2 per row on phones): price, options, then the cart circle (left) + BUY (right)
+    - medium (15rem and wider, touch screens): price, then options (left) + cart circle + BUY (right)
+    - large (15rem and wider with a mouse): options, then price + BUY in one row; the cart button is the
+      "ADD TO CART" pill that appears over the bottom of the photo on hover (design)
+  */
+  .product-card--full {
+    container: product-card / inline-size;
+  }
+
   .product-card__buy {
     position: relative;
     z-index: 2;
@@ -1156,11 +1432,16 @@
     gap: var(--space-xs);
   }
 
-  .product-card__buy-link,
-  .product-card__notify {
+  /*
+    Cart circle and BUY as one pair, both 44px tall. Two classes: the global .button rule loads after
+    this file and beat the one-class rule (height, padding)
+  */
+  .product-card .product-card__buy-link,
+  .product-card .product-card__notify {
     gap: 0.4em;
-    min-block-size: 2.25rem;
-    padding-inline: 1em;
+    min-block-size: 2.75rem;
+    padding-block: 0;
+    padding-inline: 1.1rem;
     font-size: var(--font-size-caption);
   }
 
@@ -1177,25 +1458,210 @@
     block-size: 1.1em;
   }
 
-  /* The BUY cart icon is drawn small in its 22px box: a bigger box keeps its arrow readable */
-  .product-card__buy-link svg {
-    inline-size: 1.5em;
-    block-size: 1.5em;
+  /* The BUY cart icon is drawn small in its box: 1.25rem (20px), the same as the cart circle's icon */
+  .product-card .product-card__buy-link svg {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
   }
 
   .product-card__buy-link img {
     object-fit: contain;
   }
 
-  /* A long BUY text wraps inside the button, never out of the card */
+  /*
+    BUY keeps its width (flex: none) and wraps only between words: "anywhere" broke "BUY" into B / U / Y
+    (and BU / Y at 390px) when the row was short
+  */
   .product-card__buy-link {
-    min-inline-size: 0;
+    flex: none;
     text-align: center;
   }
 
   .product-card__buy-label {
+    overflow-wrap: normal;
+  }
+
+  /* The cart button in its round look ("round" style): the text visually hidden, a 44px circle */
+  .product-card .product-card__quick-add--icon .quick-add__button {
+    flex: none;
+    inline-size: var(--quick-add-size, 2.75rem);
     min-inline-size: 0;
-    overflow-wrap: anywhere;
+    block-size: var(--quick-add-size, 2.75rem);
+    padding: 0;
+    gap: 0;
+  }
+
+  .product-card__quick-add--icon .quick-add__label {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* The cart icon: 45% of the 44px circle (~20px; quick-add's own share is 35%) */
+  .product-card .product-card__quick-add:not(.product-card__cart-text) .quick-add__cart {
+    inline-size: calc(var(--quick-add-size, 50px) * 0.45);
+    block-size: calc(var(--quick-add-size, 50px) * 0.45);
+  }
+
+  /* A very narrow card (320px phones, 2 per row: a 105px row): BUY without its icon, a smaller circle */
+  @container product-card (max-width: 9.5rem) {
+    .product-card .product-card__buy-link {
+      padding-inline: 0.75rem;
+    }
+
+    .product-card .product-card__buy-link :is(svg, img) {
+      display: none;
+    }
+
+    /* 40px (quick-add writes its own 44px size inline, so the size is set on the button itself) */
+    .product-card .product-card__quick-add--icon .quick-add__button {
+      inline-size: 2.5rem;
+      block-size: 2.5rem;
+    }
+
+    .product-card__buy-now {
+      gap: 0.375rem;
+    }
+  }
+
+  /* Medium: options on the left of the cart + BUY row */
+  @container product-card (min-width: 15rem) {
+    .product-card--full .product-card__body {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        'meta meta'
+        'title title'
+        'price price'
+        'options buy';
+      align-items: center;
+    }
+
+    .product-card--full .product-card__meta {
+      grid-area: meta;
+    }
+
+    .product-card--full .product-card__title {
+      grid-area: title;
+    }
+
+    .product-card--full .product-card__pricing {
+      grid-area: price;
+    }
+
+    .product-card--full .product-card__options {
+      grid-area: options;
+    }
+
+    .product-card--full .product-card__buy {
+      grid-area: buy;
+      align-self: end;
+      padding-block-start: 0;
+    }
+
+    /* No options: the buttons take the whole row, BUY still on the right */
+    .product-card--full .product-card__body:not(:has(.product-card__options)) {
+      grid-template-areas:
+        'meta meta'
+        'title title'
+        'price price'
+        'buy buy';
+    }
+  }
+
+  /*
+    Large, with a mouse: options, then price + BUY in one row. The cart button leaves the row and sits
+    over the bottom of the photo (its top = the photo's height, from --card-media-h x the card width,
+    less 3.75rem), shown while the card is hovered, while it has keyboard focus and while it adds
+  */
+  @media (hover: hover) and (pointer: fine) {
+    @container product-card (min-width: 15rem) {
+      .product-card--full .product-card__body {
+        grid-template-areas:
+          'meta meta'
+          'title title'
+          'options options'
+          'price buy';
+      }
+
+      .product-card--full .product-card__body:not(:has(.product-card__options)) {
+        grid-template-areas:
+          'meta meta'
+          'title title'
+          'price buy';
+      }
+
+      .product-card--full .product-card__buy {
+        position: static;
+      }
+
+      .product-card--full :is(.product-card__buy-link, .product-card__notify) {
+        position: relative;
+        z-index: 2;
+      }
+
+      .product-card--full .product-card__quick-add {
+        position: absolute;
+        inset-block-start: calc(var(--card-media-h, 1.25) * 100cqi - 3.75rem);
+        inset-inline: 0;
+        z-index: 4;
+        display: flex;
+        justify-content: center;
+        pointer-events: none;
+        opacity: 0;
+        translate: 0 0.5rem;
+        transition:
+          opacity var(--duration-fast) var(--ease-out),
+          translate var(--duration-fast) var(--ease-out);
+      }
+
+      .product-card--full:hover .product-card__quick-add,
+      .product-card--full .product-card__quick-add:focus-within,
+      .product-card--full .product-card__quick-add:is(.is-adding, .is-added, .is-resetting, .is-error) {
+        opacity: 1;
+        translate: 0 0;
+      }
+
+      .product-card--full:hover .product-card__quick-add .quick-add__button,
+      .product-card--full .product-card__quick-add:focus-within .quick-add__button {
+        pointer-events: auto;
+      }
+
+      /* The design's red pill with the cart icon and "ADD TO CART" (also for the "round" style) */
+      .product-card--full .product-card__quick-add .quick-add__button {
+        inline-size: auto;
+        block-size: auto;
+        min-block-size: 2.75rem;
+        padding-inline: 1.25rem;
+        gap: var(--space-xs);
+        background-color: var(--color-button);
+        box-shadow: var(--shadow-button);
+        color: var(--color-button-text);
+        font-size: var(--font-size-caption);
+      }
+
+      .product-card--full .product-card__quick-add .quick-add__button:hover {
+        background-color: color-mix(in srgb, var(--color-button) 88%, #000000);
+        color: var(--color-button-text);
+      }
+
+      .product-card--full .product-card__quick-add--icon .quick-add__label {
+        position: static;
+        inline-size: auto;
+        block-size: auto;
+        clip-path: none;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .product-card--full .product-card__quick-add {
+          translate: none;
+          transition: none;
+        }
+      }
+    }
   }
 
   /*
@@ -1245,31 +1711,71 @@
     connectedCallback() {
       this.controller?.abort();
       this.controller = new AbortController();
-      this.addEventListener('change', (event) => this.choose(event.target), { signal: this.controller.signal });
+      this.addEventListener('change', (event) => this.choose(event.target, true), { signal: this.controller.signal });
       // The cart button was rendered with its own first variant: start in step with the checked value
+      // (the photo stays: the first photo is the product's, not moved on page load)
       const checked = this.querySelector('input[type="radio"]:checked');
-      if (checked) this.choose(checked);
+      if (checked) this.choose(checked, false);
+    }
+
+    /**
+     * Shows the chosen value's photo: its slide when it is one of the first 5, else the photo from its
+     * <template> in place of the first slide (or the only photo). The first photo comes back when its
+     * own value is chosen again
+     */
+    showMedia(id) {
+      if (!id) return;
+      const card = this.closest('.product-card');
+      const gallery = card?.querySelector('card-gallery');
+      const slides = gallery ? [...gallery.querySelectorAll('.product-card__slide')] : [];
+      const index = slides.findIndex((slide) => slide.dataset.mediaId === id);
+      const holder = slides[0] || card?.querySelector('.product-card__media');
+      const image = holder?.querySelector('.image');
+
+      // This value's photo is already the swapped-in one: just show it
+      if (this.swapped?.id === id) {
+        gallery?.go(0);
+        return;
+      }
+      if (this.swapped) {
+        // Put the first photo back before showing another one
+        image?.replaceWith(this.swapped.image);
+        this.swapped = null;
+      }
+      if (index >= 0) {
+        gallery.go(index);
+        return;
+      }
+      const template = this.querySelector(`template[data-media-for="${id}"]`);
+      const current = holder?.querySelector('.image');
+      if (!template || !current) return;
+      this.swapped = { id, image: current };
+      current.replaceWith(template.content.cloneNode(true));
+      gallery?.go(0);
     }
 
     disconnectedCallback() {
       this.controller?.abort();
     }
 
-    choose(input) {
+    choose(input, showPhoto) {
       if (input.type !== 'radio') return;
       const id = input.value;
+      if (showPhoto) this.showMedia(input.dataset.mediaId);
 
       // No templates = every value costs the same: the price stays
       const price = this.querySelector('[data-card-price]');
       const template = this.querySelector(`template[data-price-for="${id}"]`);
       if (price && template) price.replaceChildren(template.content.cloneNode(true));
 
-      const save = this.querySelector('[data-card-save]');
-      if (save) {
-        const percent = Number(input.dataset.save) || 0;
-        save.hidden = percent === 0;
-        save.textContent = (save.dataset.template || '').replace('[percent]', percent);
-      }
+      // The "Save 24%" pill and the "-24%" badge on the photo (outside this element) show the same number
+      const percent = Number(input.dataset.save) || 0;
+      const discounts = [this.querySelector('[data-card-save]'), this.closest('.product-card')?.querySelector('[data-card-discount]')];
+      discounts.forEach((element) => {
+        if (!element) return;
+        element.hidden = percent === 0;
+        element.textContent = (element.dataset.template || '').replace('[percent]', percent);
+      });
 
       const quickAdd = this.querySelector('quick-add');
       if (quickAdd) {
@@ -1297,4 +1803,85 @@
   }
 
   if (!customElements.get('card-options')) customElements.define('card-options', CardOptions);
+
+  /**
+   * <card-gallery> (full card with 2+ photos): the track scrolls sideways (swipe, snap points); the
+   * arrows (mouse, on hover) and the dots move it one photo. The dots follow the scroll. The next photo
+   * is loaded early (when the pointer enters the card, on a touch, and after each move): a lazy image in
+   * a sideways track only loads once it is scrolled into view, so the first swipe showed an empty slide.
+   * One AbortController for the editor re-attach.
+   */
+  class CardGallery extends HTMLElement {
+    connectedCallback() {
+      this.controller?.abort();
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+      this.track = this.querySelector('[data-card-slides]');
+      if (!this.track) return;
+      this.slides = [...this.track.children];
+      this.dots = [...this.querySelectorAll('[data-card-dot]')];
+      this.index = 0;
+
+      this.track.addEventListener(
+        'scroll',
+        () => {
+          if (this.frame) return;
+          this.frame = requestAnimationFrame(() => {
+            this.frame = null;
+            this.update();
+          });
+        },
+        { signal, passive: true }
+      );
+
+      this.addEventListener(
+        'click',
+        (event) => {
+          const dot = event.target.closest('[data-card-dot]');
+          if (dot) this.go(Number(dot.dataset.cardDot));
+          else if (event.target.closest('[data-card-prev]')) this.go(this.index - 1);
+          else if (event.target.closest('[data-card-next]')) this.go(this.index + 1);
+        },
+        { signal }
+      );
+
+      const card = this.closest('.product-card') || this;
+      card.addEventListener('pointerenter', () => this.warm(this.index + 1), { signal });
+      this.track.addEventListener('touchstart', () => this.warm(this.index + 1), { signal, passive: true });
+    }
+
+    disconnectedCallback() {
+      this.controller?.abort();
+      if (this.frame) cancelAnimationFrame(this.frame);
+      this.frame = null;
+    }
+
+    /** The photo in view (scrollLeft is negative in right-to-left pages) */
+    update() {
+      const width = this.track.clientWidth || 1;
+      const index = Math.min(this.slides.length - 1, Math.round(Math.abs(this.track.scrollLeft) / width));
+      if (index === this.index) return;
+      this.index = index;
+      this.dots.forEach((dot, i) => dot.classList.toggle('is-active', i === index));
+      this.warm(index + 1);
+    }
+
+    /** Moves to a photo; past the last one it goes back to the first (and the other way round) */
+    go(index) {
+      const count = this.slides.length;
+      const target = (index + count) % count;
+      const rtl = getComputedStyle(this.track).direction === 'rtl';
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      this.warm(target);
+      this.track.scrollTo({ left: target * this.track.clientWidth * (rtl ? -1 : 1), behavior: reduced ? 'auto' : 'smooth' });
+    }
+
+    /** Loads one photo now (lazy images in a sideways track wait until they are scrolled into view) */
+    warm(index) {
+      const image = this.slides[index]?.querySelector('img');
+      if (image && image.loading === 'lazy') image.loading = 'eager';
+    }
+  }
+
+  if (!customElements.get('card-gallery')) customElements.define('card-gallery', CardGallery);
 {% endjavascript %}

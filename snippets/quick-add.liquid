@@ -165,7 +165,8 @@
       {%- if button_style == 'pill' -%}
         <button type="submit" class="quick-add__button">
           {{ quick_add_art }}
-          {{- pill_label | escape -}}
+          {%- comment -%} In a span, so a caller can hide only the text (the product card's round look) {%- endcomment -%}
+          <span class="quick-add__label">{{ pill_label | escape }}</span>
           {{- hidden_name -}}
         </button>
       {%- else -%}

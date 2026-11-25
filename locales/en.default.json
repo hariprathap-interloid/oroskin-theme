@@ -424,6 +424,7 @@
       },
       "view_details": "View details",
       "save": "Save {{ percent }}%",
+      "discount": "-{{ percent }}%",
       "buy": "Buy",
       "notify": "Notify me"
     },
