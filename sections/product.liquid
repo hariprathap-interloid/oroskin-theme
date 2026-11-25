@@ -231,6 +231,19 @@
   }
 
   /*
+    Videos, YouTube / Vimeo and 3D models have controls: in a narrow column a 16:9 video was ~66px tall
+    and the controls and buttons covered it. They are at least 10rem tall (a video fills the taller box)
+  */
+  .product__media:is(.product__media--video, .product__media--external_video, .product__media--model) {
+    min-block-size: 10rem;
+  }
+
+  /* Shopify's 3D play button is 62px: too big for a gallery tile (the image viewer keeps the full size) */
+  .product__media .shopify-model-viewer-ui__button--poster {
+    scale: 0.65;
+  }
+
+  /*
     The product-media snippet has its own (larger) radius and tint: it takes this frame's radius, so the
     corners match and nothing shows behind the image (its tint still shows while the image loads)
   */
@@ -376,6 +389,15 @@
     loadModelViewer() {
       if (!this.querySelector('model-viewer') || this.modelViewerLoaded || !window.Shopify?.loadFeatures) return;
       this.modelViewerLoaded = true;
+      // The controls' own stylesheet (Shopify's CDN): without it the zoom buttons show as big "+" boxes
+      // and the poster is not laid out. One link per page, shared with Featured product
+      if (!document.getElementById('ModelViewerStyle')) {
+        const link = document.createElement('link');
+        link.id = 'ModelViewerStyle';
+        link.rel = 'stylesheet';
+        link.href = 'https://cdn.shopify.com/shopifycloud/model-viewer-ui/assets/v1.0/model-viewer-ui.css';
+        document.head.append(link);
+      }
       window.Shopify.loadFeatures([
         {
           name: 'model-viewer-ui',

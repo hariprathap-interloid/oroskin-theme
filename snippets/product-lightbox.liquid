@@ -700,6 +700,11 @@
     open(index) {
       this.show(index);
       this.dialog.showModal();
+      // A video started in the page gallery kept playing behind the viewer (two sounds at once)
+      const section = this.closest('.shopify-section') || document;
+      section.querySelectorAll('.product-media').forEach((media) => {
+        if (!this.contains(media)) this.pauseIn(media);
+      });
     }
 
     /** Shows one medium (wrapping round at both ends), updates the counter and the outlined thumbnail */
@@ -773,9 +778,13 @@
      */
     pauseMedia() {
       const slide = this.slides[this.current];
-      if (!slide) return;
-      slide.querySelectorAll('video').forEach((video) => video.pause());
-      slide.querySelectorAll('iframe').forEach((frame) => {
+      if (slide) this.pauseIn(slide);
+    }
+
+    /** Pauses every video and YouTube / Vimeo player inside one element (a slide, a gallery item) */
+    pauseIn(root) {
+      root.querySelectorAll('video').forEach((video) => video.pause());
+      root.querySelectorAll('iframe').forEach((frame) => {
         const src = frame.getAttribute('src') || '';
         if (src.includes('vimeo')) {
           frame.contentWindow?.postMessage('{"method":"pause"}', '*');

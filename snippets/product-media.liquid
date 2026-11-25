@@ -34,7 +34,8 @@
         {{ media | external_video_tag: loading: 'lazy' }}
       {%- endif -%}
     {%- when 'model' -%}
-      {{ media | model_viewer_tag: reveal: 'interaction', toggleable: true }}
+      {%- comment -%} image_size: the cover image before play (the default small one is blurry in the image viewer) {%- endcomment -%}
+      {{ media | model_viewer_tag: reveal: 'interaction', toggleable: true, image_size: '1024x' }}
     {%- else -%}
       {{ media | media_tag }}
   {%- endcase -%}
@@ -55,6 +56,24 @@
     inline-size: 100%;
     block-size: 100%;
     border: 0;
+  }
+
+  /*
+    3D: Shopify's control script wraps <model-viewer> in its own div, which has no size of its own: it
+    and the model were 0 x 0 (empty tile, the play button cut off in the corner). It fills the box
+  */
+  .product-media .shopify-model-viewer-ui {
+    position: absolute;
+    inset: 0;
+  }
+
+  /*
+    Shopify's zoom / full screen column sits bottom right; in a small gallery tile it reached up to the
+    gallery's "open viewer" button (top right). Bottom left instead (the image is not mirrored in RTL)
+  */
+  .product-media .shopify-model-viewer-ui .shopify-model-viewer-ui__controls-area {
+    right: auto;
+    left: 10px;
   }
 
   .product-media .image > img,

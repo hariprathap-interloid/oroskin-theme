@@ -478,6 +478,14 @@
     loadModelViewer() {
       if (!this.querySelector('model-viewer') || this.modelViewerLoaded || !window.Shopify?.loadFeatures) return;
       this.modelViewerLoaded = true;
+      // The controls' own stylesheet (Shopify's CDN), one link per page (shared with the Product section)
+      if (!document.getElementById('ModelViewerStyle')) {
+        const link = document.createElement('link');
+        link.id = 'ModelViewerStyle';
+        link.rel = 'stylesheet';
+        link.href = 'https://cdn.shopify.com/shopifycloud/model-viewer-ui/assets/v1.0/model-viewer-ui.css';
+        document.head.append(link);
+      }
       window.Shopify.loadFeatures([
         {
           name: 'model-viewer-ui',
