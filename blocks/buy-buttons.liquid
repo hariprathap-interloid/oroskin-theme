@@ -704,9 +704,18 @@
 
   /*
     A value that can't be bought with the other chosen values: dimmed (default), or also crossed out
-    ("Unavailable values" setting). It can still be chosen: the button then says Sold out / Unavailable
+    ("Unavailable values" setting). It can still be chosen: the button then says Sold out / Unavailable.
+    Pills: no opacity (it faded the text to 1.97:1 and a chosen pill's white on accent to 2.81:1, and a
+    pill that can be chosen is not exempt from contrast): a dashed, paler border and a light tint
+    instead; the text keeps the pill's own grey (passes 4.5:1). Swatches have no text: they still fade.
   */
-  .buy-buttons__pill-input[data-state] + :is(.buy-buttons__pill, .buy-buttons__swatch) {
+  .buy-buttons__pill-input[data-state] + .buy-buttons__pill {
+    border-style: dashed;
+    border-color: color-mix(in srgb, var(--color-border) 60%, transparent);
+    background-color: color-mix(in srgb, var(--color-text) 5%, transparent);
+  }
+
+  .buy-buttons__pill-input[data-state] + .buy-buttons__swatch {
     opacity: 0.45;
   }
 
@@ -1265,16 +1274,21 @@
     }
 
     /*
-      Figma phone (Variant96): quantity, Add to cart and Buy now in one row. Smaller stepper and padding;
-      the row still wraps when the card is too narrow for the labels
+      Phones (user, 2026-11-25; the Figma Variant96 put all three in one row, which made them small and
+      close together): quantity and Add to cart share the first row, Buy now gets its own full-width row
+      below. The labels keep a readable size
     */
     .buy-buttons--inline .buy-buttons__row {
-      gap: var(--space-sm) 0.375rem;
+      gap: var(--space-sm);
     }
 
-    /* 24px − / +: the WCAG 2.2 minimum target size */
+    .buy-buttons--inline .buy-buttons__payment {
+      flex-basis: 100%;
+    }
+
+    /* 32px − / + (above the WCAG 2.2 minimum of 24px) */
     .buy-buttons--inline .buy-buttons__step {
-      inline-size: 1.5rem;
+      inline-size: 2rem;
     }
 
     /* Room for 3 digits (a B2B rule can start at 6 and go up in steps) */
@@ -1284,16 +1298,20 @@
 
     .buy-buttons--inline .buy-buttons__submit,
     .buy-buttons--inline .buy-buttons__payment .shopify-payment-button__button--unbranded {
-      gap: 0.25rem;
-      padding-inline: 0.375rem;
-      font-size: 0.6875rem; /* Figma phone ~11px */
-      letter-spacing: 0.05em;
+      gap: var(--space-xs);
+      padding-inline: var(--space-md);
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+    }
+
+    .buy-buttons--inline .buy-buttons__payment .shopify-payment-button__button--unbranded {
+      inline-size: 100%;
     }
 
     .buy-buttons--inline .buy-buttons__submit-icon svg,
     .buy-buttons--inline .buy-buttons__payment .shopify-payment-button__button--unbranded::before {
-      inline-size: 1rem;
-      block-size: 1rem;
+      inline-size: 1.125rem;
+      block-size: 1.125rem;
     }
   }
   /*
@@ -1329,10 +1347,22 @@
   }
 
   /*
-    Small phones (under 390px) and the first laptop widths (990–1079px, the narrowest info card): no icons
-    in the two buttons, so the row still fits
+    The first laptop widths (990–1079px, the narrowest info card): no icons in the two buttons, so the row
+    still fits (phones now give Buy now its own row, so they keep the icons)
   */
-  @media (max-width: 389px), (min-width: 990px) and (max-width: 1079px) {
+  /* Small phones (under 390px): Add to cart without its icon and with less padding, so it still fits
+     beside the quantity (at 320px it went to a row of its own) */
+  @media (max-width: 389px) {
+    .buy-buttons--inline .buy-buttons__submit-icon {
+      display: none;
+    }
+
+    .buy-buttons--inline .buy-buttons__submit {
+      padding-inline: var(--space-sm);
+    }
+  }
+
+  @media (min-width: 990px) and (max-width: 1079px) {
     .buy-buttons--inline .buy-buttons__submit-icon,
     .buy-buttons--inline .buy-buttons__payment .shopify-payment-button__button--unbranded::before {
       display: none;

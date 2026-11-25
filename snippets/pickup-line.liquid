@@ -1,0 +1,115 @@
+{% doc %}
+  The pickup line of one variant, for the "Delivery and pickup" block: "Pickup available at <store>",
+  the ready time, and the link that opens the store list ("Check availability at other stores" with
+  2+ pickup stores, "View store information" with one). Nothing when no pickup store has the variant
+  in stock (Theme Store: the banner goes when pickup isn't possible).
+
+  Shopify fills variant.store_availabilities only for the selected variant (or the first available one)
+  of a page, so the block renders this for that variant only, and sections/pickup-availability.liquid
+  renders it for any other variant when the shopper picks one.
+
+  @param {variant} variant - The variant
+  @param {string} [drawer_id] - The id of the side panel <dialog> (the block's); the script sets it
+    on a line that came from the section
+
+  @example
+  {% render 'pickup-line', variant: product.selected_or_first_available_variant, drawer_id: 'PickupDrawer-1' %}
+{% enddoc %}
+
+{%- liquid
+  # Pickup stores that stock this variant, and the first one where it is in stock now
+  assign pickup_place = nil
+  assign pickup_count = 0
+  for availability in variant.store_availabilities
+    if availability.pick_up_enabled
+      assign pickup_count = pickup_count | plus: 1
+      if pickup_place == nil and availability.available
+        assign pickup_place = availability
+      endif
+    endif
+  endfor
+  # Escaped before it goes into the _html translation (a filter can't sit inside a filter argument)
+  assign pickup_location = pickup_place.location.name | escape
+-%}
+
+{%- if pickup_place -%}
+  <li class="product-pickup__line" data-pickup-line="{{ variant.id }}">
+    <span class="product-pickup__icon" aria-hidden="true">{{ 'icon-box.svg' | inline_asset_content }}</span>
+    <span>
+      {{ 'products.pickup.available_html' | t: location: pickup_location }}
+      {%- if pickup_place.pick_up_time != blank -%}
+        <span class="product-pickup__time">{{ pickup_place.pick_up_time }}</span>
+      {%- endif -%}
+      <button
+        type="button"
+        class="product-pickup__open"
+        aria-haspopup="dialog"
+        {% if drawer_id != blank %}
+          aria-controls="{{ drawer_id }}"
+        {% endif %}
+        data-pickup-open="{{ variant.id }}"
+      >
+        {%- if pickup_count > 1 -%}
+          {{- 'products.pickup.check_other' | t -}}
+        {%- else -%}
+          {{- 'products.pickup.view_store' | t -}}
+        {%- endif -%}
+      </button>
+    </span>
+  </li>
+{%- endif -%}
+
+{% stylesheet %}
+  .product-pickup__line {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    font-size: var(--font-size-body-sm);
+  }
+
+  .product-pickup__icon {
+    display: inline-flex;
+    flex: none;
+    margin-block-start: 0.1em;
+    color: var(--color-accent);
+  }
+
+  .product-pickup__icon svg {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+  }
+
+  /* "Usually ready in 24 hours" on its own line, grey */
+  .product-pickup__time {
+    display: block;
+    color: color-mix(in srgb, var(--color-text) 65%, var(--color-background));
+    font-size: var(--font-size-small);
+  }
+
+  /* "Check availability at other stores" / "View store information": a text link under the line */
+  .product-pickup__open {
+    display: block;
+    margin: var(--space-2xs) 0 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-size: var(--font-size-small);
+    text-align: start;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    cursor: pointer;
+  }
+
+  .product-pickup__open:hover {
+    color: var(--color-accent);
+  }
+
+  /* No JavaScript: the panel can't open */
+  @media (scripting: none) {
+    .product-pickup__open {
+      display: none;
+    }
+  }
+{% endstylesheet %}

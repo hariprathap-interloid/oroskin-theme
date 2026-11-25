@@ -486,7 +486,14 @@
     "pickup": {
       "heading": "Delivery and pickup",
       "available_html": "Pickup available at <strong>{{ location }}</strong>",
-      "unavailable_html": "Pickup currently unavailable at <strong>{{ location }}</strong>"
+      "check_other": "Check availability at other stores",
+      "view_store": "View store information",
+      "drawer_title": "Pickup availability",
+      "close": "Close store list",
+      "loading": "Loading stores…",
+      "error": "Couldn’t load the stores. Please try again.",
+      "status_available": "Pickup available",
+      "status_unavailable": "Pickup currently unavailable"
     },
     "videos": {
       "heading": "Product short videos",

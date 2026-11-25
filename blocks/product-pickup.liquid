@@ -2,10 +2,14 @@
   Delivery and pickup (Figma PDP "DELIVERY CHECK", replaced: Shopify has no delivery-date-by-postcode
   API, so the brief chose a delivery note + Shopify's pickup availability):
   - a delivery note with a truck icon (the merchant's text, e.g. "Delivery in 2–3 business days")
-  - pickup in store (Theme Store requirement): for the chosen variant, the first location that has
-    pickup turned on, with "Usually ready in 24 hours" (Settings > Locations > the location > pickup).
-    One line per variant, rendered by Liquid; the script shows the chosen variant's ("variant:change",
-    on its own section, as the Stock block). Nothing when no location offers pickup.
+  - pickup in store (Theme Store requirement): for the chosen variant, the first pickup location where
+    it is in stock, with "Usually ready in 24 hours" (Settings > Shipping and delivery > Pickup in store),
+    and a link ("Check availability at other stores", or "View store information" with one store) that
+    opens a side panel with every pickup store. The line is snippets/pickup-line.liquid. Shopify fills
+    store_availabilities only for the page's selected variant, so Liquid draws that variant's line, and
+    on "variant:change" (its own section, as the Stock block) the script loads the new variant's line and
+    store list from sections/pickup-availability.liquid in one request (kept per variant). No line when
+    no pickup location has the variant in stock.
 
   @example
   {% content_for 'block', type: 'product-pickup', id: 'product-pickup' %}
@@ -34,43 +38,47 @@
     {%- endif -%}
 
     {%- if pickup_product != blank and block.settings.show_pickup -%}
-      {%- for variant in pickup_product.variants -%}
-        {%- liquid
-          # The first location with pickup turned on that stocks this variant (available or not)
-          assign pickup_place = nil
-          for availability in variant.store_availabilities
-            if availability.pick_up_enabled
-              assign pickup_place = availability
-              break
-            endif
-          endfor
-          # Escaped before it goes into the _html translation (a filter can't sit inside a filter argument)
-          assign pickup_location = pickup_place.location.name | escape
-        -%}
-        {%- if pickup_place -%}
-          <li
-            class="product-pickup__line"
-            data-variant-id="{{ variant.id }}"
-            {% unless variant == pickup_variant %}
-              hidden
-            {% endunless %}
-          >
-            <span class="product-pickup__icon" aria-hidden="true">{{ 'icon-box.svg' | inline_asset_content }}</span>
-            <span>
-              {%- if pickup_place.available -%}
-                {{ 'products.pickup.available_html' | t: location: pickup_location }}
-                {%- if pickup_place.pick_up_time != blank -%}
-                  <span class="product-pickup__time">{{ pickup_place.pick_up_time }}</span>
-                {%- endif -%}
-              {%- else -%}
-                {{ 'products.pickup.unavailable_html' | t: location: pickup_location }}
-              {%- endif -%}
-            </span>
-          </li>
-        {%- endif -%}
-      {%- endfor -%}
+      {%- comment -%}
+        Only the page's variant: Shopify fills store_availabilities only for it. Another variant's line
+        comes from sections/pickup-availability.liquid when the shopper picks it (the script)
+      {%- endcomment -%}
+      {%- assign drawer_id = 'PickupDrawer-' | append: block.id -%}
+      {% render 'pickup-line', variant: pickup_variant, drawer_id: drawer_id %}
     {%- endif -%}
   </ul>
+
+  {%- if pickup_product != blank and block.settings.show_pickup -%}
+    {%- comment -%}
+      The side panel with every pickup store of the chosen variant (name, in stock or not, ready time,
+      address, phone). Its list loads only when opened: sections/pickup-availability.liquid, through
+      Shopify's section rendering for that variant (a 100-variant product would else carry every
+      address of every variant in the page)
+    {%- endcomment -%}
+    <dialog
+      id="PickupDrawer-{{ block.id }}"
+      class="product-pickup__drawer"
+      aria-labelledby="PickupDrawerTitle-{{ block.id }}"
+      data-product-url="{{ pickup_product.url }}"
+    >
+      <div class="product-pickup__drawer-panel">
+        <div class="product-pickup__drawer-head">
+          <h2 id="PickupDrawerTitle-{{ block.id }}" class="product-pickup__drawer-title">
+            {{- 'products.pickup.drawer_title' | t -}}
+          </h2>
+          <button type="button" class="product-pickup__close" data-pickup-close>
+            {{ 'icon-close.svg' | inline_asset_content }}
+            <span class="visually-hidden">{{ 'products.pickup.close' | t }}</span>
+          </button>
+        </div>
+        <div
+          class="product-pickup__body"
+          data-pickup-body
+          data-loading="{{ 'products.pickup.loading' | t }}"
+          data-error="{{ 'products.pickup.error' | t }}"
+        ></div>
+      </div>
+    </dialog>
+  {%- endif -%}
 </product-pickup>
 
 {% stylesheet %}
@@ -83,34 +91,119 @@
     list-style: none;
   }
 
-  .product-pickup__line {
+  /* The line itself (icon, ready time, the link) is styled in snippets/pickup-line.liquid */
+
+  /*
+    The side panel (user's choice A, 2026-11-25): slides in from the end side like the phone menu drawer,
+    full height, rounded on its inner side. Colours from the product section's scheme (inherited).
+  */
+  .product-pickup__drawer {
+    inset-block: 0;
+    inset-inline: auto 0;
+    inline-size: min(26rem, 90vw);
+    max-inline-size: none;
+    block-size: 100dvh;
+    max-block-size: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-start-start-radius: 25px;
+    border-end-start-radius: 25px;
+    background-color: var(--color-background);
+    box-shadow: 0 4px 15px #b9b9b940;
+    color: var(--color-text);
+  }
+
+  .product-pickup__drawer::backdrop {
+    background-color: #00000040;
+  }
+
+  html:has(.product-pickup__drawer[open]) {
+    overflow: hidden;
+  }
+
+  .animations-on .product-pickup__drawer {
+    transition:
+      translate var(--duration-base) var(--ease-out),
+      display var(--duration-base) allow-discrete,
+      overlay var(--duration-base) allow-discrete;
+    translate: 100% 0;
+  }
+
+  .animations-on .product-pickup__drawer:dir(rtl) {
+    translate: -100% 0;
+  }
+
+  .animations-on .product-pickup__drawer[open] {
+    translate: 0 0;
+  }
+
+  @starting-style {
+    .animations-on .product-pickup__drawer[open] {
+      translate: 100% 0;
+    }
+
+    .animations-on .product-pickup__drawer[open]:dir(rtl) {
+      translate: -100% 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animations-on .product-pickup__drawer {
+      transition: none;
+    }
+  }
+
+  /* Head (title + close), then the list, which scrolls when there are many stores */
+  .product-pickup__drawer-panel {
     display: flex;
-    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-lg);
+    block-size: 100%;
+    padding: var(--space-lg);
+  }
+
+  .product-pickup__drawer-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: var(--space-sm);
-    font-size: var(--font-size-body-sm);
   }
 
-  .product-pickup__line[hidden] {
-    display: none;
+  .product-pickup__drawer-title {
+    margin: 0;
+    font-size: var(--font-size-h3);
   }
 
-  .product-pickup__icon {
-    display: inline-flex;
-    flex: none;
-    margin-block-start: 0.1em;
+  .product-pickup__close {
+    display: inline-grid;
+    flex-shrink: 0;
+    place-items: center;
+    inline-size: 2.375rem;
+    block-size: 2.375rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--color-text) 6%, var(--color-background));
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .product-pickup__close:is(:hover, :focus-visible) {
     color: var(--color-accent);
   }
 
-  .product-pickup__icon svg {
-    inline-size: 1.25rem;
-    block-size: 1.25rem;
+  .product-pickup__close svg {
+    inline-size: 0.875rem;
+    block-size: 0.875rem;
   }
 
-  /* "Usually ready in 24 hours" on its own line, grey */
-  .product-pickup__time {
-    display: block;
-    color: color-mix(in srgb, var(--color-text) 65%, var(--color-background));
-    font-size: var(--font-size-small);
+  .product-pickup__body {
+    flex: 1;
+    min-block-size: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   /* Nothing to show (no delivery note, no pickup line for the chosen variant): no heading either */
@@ -128,6 +221,70 @@
       const { signal } = this.controller;
       const scope = this.closest('.shopify-section') || document;
       scope.addEventListener('variant:change', (event) => this.show(event.detail), { signal });
+
+      this.drawer = this.querySelector('.product-pickup__drawer');
+      // variant id -> a promise of { line, list } HTML from the section (loaded one time each)
+      this.cache = this.cache || new Map();
+      this.addEventListener(
+        'click',
+        (event) => {
+          const opener = event.target.closest('[data-pickup-open]');
+          if (opener) this.open(opener.dataset.pickupOpen);
+          if (event.target.closest('[data-pickup-close]')) this.drawer.close();
+        },
+        { signal }
+      );
+      // A click on the dimmed backdrop (the dialog element itself, outside the panel) closes it
+      this.drawer?.addEventListener(
+        'click',
+        (event) => {
+          if (event.target === this.drawer) this.drawer.close();
+        },
+        { signal }
+      );
+    }
+
+    /**
+     * One variant's pickup line and store list, from sections/pickup-availability.liquid (one request per
+     * variant, kept; a failed one is forgotten so the next try asks again). The product's own URL keeps a
+     * language prefix such as /fr; /variants/<id> renders the section without a product (empty)
+     */
+    load(variantId) {
+      if (this.cache.has(variantId)) return this.cache.get(variantId);
+      const url = `${this.drawer.dataset.productUrl}?variant=${variantId}&section_id=pickup-availability`;
+      const request = fetch(url)
+        .then((response) => {
+          if (!response.ok) throw new Error(response.status);
+          return response.text();
+        })
+        .then((text) => {
+          const html = new DOMParser().parseFromString(text, 'text/html');
+          const list = html.querySelector('[data-pickup-list]');
+          if (!list) throw new Error('no list');
+          return { line: html.querySelector('[data-pickup-summary]')?.innerHTML.trim() || '', list: list.outerHTML };
+        })
+        .catch((error) => {
+          this.cache.delete(variantId);
+          throw error;
+        });
+      this.cache.set(variantId, request);
+      return request;
+    }
+
+    /** Opens the side panel and shows the store list of one variant */
+    async open(variantId) {
+      if (!this.drawer) return;
+      const body = this.drawer.querySelector('[data-pickup-body]');
+      this.drawer.showModal();
+      this.opening = variantId;
+      body.textContent = body.dataset.loading;
+      try {
+        const { list } = await this.load(variantId);
+        // Another variant's link was pressed meanwhile: show only the newest
+        if (this.opening === variantId) body.innerHTML = list;
+      } catch (error) {
+        if (this.opening === variantId) body.textContent = body.dataset.error;
+      }
     }
 
     disconnectedCallback() {
@@ -135,14 +292,28 @@
     }
 
     /**
-     * variantId null = the chosen options match no variant ("Unavailable"): every variant line hides.
-     * A variant with no pickup location has no line: then they all hide too. The delivery note has no
-     * data-variant-id, so it always stays. An event without a variantId changes nothing.
+     * The chosen variant changed: its pickup line replaces the old one (loaded from the section; none when
+     * no pickup store has it in stock). variantId null = the chosen options match no variant
+     * ("Unavailable"): no line. The delivery note always stays. An event without a variantId changes nothing.
      */
-    show(detail) {
-      if (!detail || detail.variantId === undefined) return;
+    async show(detail) {
+      if (!detail || detail.variantId === undefined || !this.drawer) return;
       const id = detail.variantId === null ? null : String(detail.variantId);
-      this.querySelectorAll('[data-variant-id]').forEach((line) => (line.hidden = line.dataset.variantId !== id));
+      const current = this.querySelector('[data-pickup-line]');
+      if (current?.dataset.pickupLine === id) return;
+      // The old variant's line goes at once (it would show a wrong store while the new one loads)
+      current?.remove();
+      this.showing = id;
+      if (id === null) return;
+      try {
+        const { line } = await this.load(id);
+        if (this.showing !== id || !line || this.querySelector('[data-pickup-line]')) return;
+        const list = this.querySelector('.product-pickup__list');
+        list.insertAdjacentHTML('beforeend', line);
+        list.querySelector('[data-pickup-line] [data-pickup-open]')?.setAttribute('aria-controls', this.drawer.id);
+      } catch (error) {
+        // No line: the shopper still sees the delivery note and can buy
+      }
     }
   }
 

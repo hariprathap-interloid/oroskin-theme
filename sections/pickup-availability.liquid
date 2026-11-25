@@ -1,0 +1,128 @@
+{%- comment -%}
+  Pickup availability: the store list of one variant, for the side panel of the "Delivery and pickup"
+  block (blocks/product-pickup.liquid). Never placed on a template: the block loads it with Shopify's
+  section rendering, <product url>?variant=<id>&section_id=pickup-availability, which renders the product
+  page for that variant (so product.selected_or_first_available_variant is that variant). The shorter
+  /variants/<id> address renders it without a product (empty list).
+
+  Each location that has pickup turned on and stocks the variant: name, in stock or not, the ready
+  time, the address and the phone number.
+{%- endcomment -%}
+
+{%- liquid
+  assign pickup_variant = product.selected_or_first_available_variant
+-%}
+
+<div class="pickup-availability">
+  {%- if pickup_variant -%}
+    {%- comment -%} The block's line for this variant (an inert template: the script copies it) {%- endcomment -%}
+    <template data-pickup-summary>{% render 'pickup-line', variant: pickup_variant %}</template>
+
+    <div data-pickup-list>
+      <p class="pickup-availability__product">
+        <strong>{{ product.title | escape }}</strong>
+        {%- unless product.has_only_default_variant -%}
+          <span>{{ pickup_variant.title | escape }}</span>
+        {%- endunless -%}
+      </p>
+
+      <ul class="pickup-availability__list" role="list">
+        {%- for availability in pickup_variant.store_availabilities -%}
+          {%- if availability.pick_up_enabled -%}
+            <li class="pickup-availability__store">
+              <h3 class="pickup-availability__name">{{ availability.location.name | escape }}</h3>
+              {%- if availability.available -%}
+                <p class="pickup-availability__status pickup-availability__status--in">
+                  {{- 'products.pickup.status_available' | t -}}
+                </p>
+                {%- if availability.pick_up_time != blank -%}
+                  <p class="pickup-availability__time">{{ availability.pick_up_time }}</p>
+                {%- endif -%}
+              {%- else -%}
+                <p class="pickup-availability__status">{{ 'products.pickup.status_unavailable' | t }}</p>
+              {%- endif -%}
+              {%- assign store_address = availability.location.address | format_address -%}
+              {%- if store_address != blank -%}
+                <div class="pickup-availability__address">{{ store_address }}</div>
+              {%- endif -%}
+              {%- if availability.location.address.phone != blank -%}
+                <p class="pickup-availability__phone">{{ availability.location.address.phone | escape }}</p>
+              {%- endif -%}
+            </li>
+          {%- endif -%}
+        {%- endfor -%}
+      </ul>
+    </div>
+  {%- endif -%}
+</div>
+
+{% stylesheet %}
+  /* Shown in the side panel of blocks/product-pickup.liquid */
+  .pickup-availability__product {
+    margin: 0 0 var(--space-md);
+    font-size: var(--font-size-body-sm);
+  }
+
+  .pickup-availability__product span {
+    display: block;
+    color: color-mix(in srgb, var(--color-text) 65%, var(--color-background));
+  }
+
+  .pickup-availability__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .pickup-availability__store {
+    padding-block: var(--space-md);
+    border-block-start: 1px solid var(--color-border);
+    font-size: var(--font-size-body-sm);
+  }
+
+  .pickup-availability__name {
+    margin: 0 0 var(--space-2xs);
+    font-family: var(--font-body--family);
+    font-size: var(--font-size-body);
+    font-weight: 600;
+  }
+
+  .pickup-availability__status {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin: 0;
+  }
+
+  /* A dot before the status: accent = in stock, grey = not */
+  .pickup-availability__status::before {
+    content: "";
+    flex: none;
+    inline-size: 0.5rem;
+    block-size: 0.5rem;
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--color-text) 40%, var(--color-background));
+  }
+
+  .pickup-availability__status--in::before {
+    background-color: var(--color-accent);
+  }
+
+  .pickup-availability__time,
+  .pickup-availability__address,
+  .pickup-availability__phone {
+    margin: var(--space-2xs) 0 0;
+    color: color-mix(in srgb, var(--color-text) 65%, var(--color-background));
+  }
+
+  .pickup-availability__address p {
+    margin: 0;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.pickup_availability",
+  "settings": []
+}
+{% endschema %}
